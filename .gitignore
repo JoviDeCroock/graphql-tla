@@ -1,0 +1,5 @@
+node_modules/
+states/
+*_TTrace_*.tla
+*_TTrace_*.bin
+.DS_Store
