@@ -247,6 +247,8 @@ Reading and running graphql-js 16.15.0 and 17.1.0 while writing these specs turn
 - **Adapters:** every adapter answers execution, but only some answer the other areas (see the sheet). The references themselves were checked differentially against graphql-js only, so a bug they share with graphql-js shows up as a pass everywhere.
 - **Scenario specs:** the `@defer`, `@stream`, mutation and subscription specs each model one fixed operation.
 
+[docs/spec-comparison.md](docs/spec-comparison.md) compares the references with the spec chapter by chapter: what each covers, the readings they take where the spec is ambiguous, and what they don't model.
+
 ## Writing specs
 
 See [docs/writing-specs.md](docs/writing-specs.md) for the layout, the mutant format, and the tla-ts pitfalls this repo ran into.
