@@ -2,13 +2,16 @@
   "name": "graphql-tla",
   "version": "0.0.0",
   "private": true,
-  "description": "GraphQL execution semantics as TLA+ specifications: a hand-written reference, a generic executor, and incremental delivery, mutation and subscription models, model checked with tla-ts and checked against graphql-js",
+  "description": "GraphQL's spec as TLA+: hand-written references for execution, validation, coercion, the type system, introspection and the language, a conformance kit that checks any implementation against them, and models of mutations, subscriptions, @defer and @stream, all model checked with tla-ts",
   "type": "module",
   "scripts": {
     "fixtures": "node scripts/generate-fixtures.mjs",
-    "check": "node scripts/generate-fixtures.mjs --check && node scripts/check.mjs && node scripts/graphql-js.mjs",
+    "check": "npm run check:fixtures && npm run check:specs && npm run check:graphql-js && npm run check:differentials",
+    "check:fixtures": "node scripts/generate-fixtures.mjs --check",
     "check:specs": "node scripts/check.mjs",
-    "check:graphql-js": "node scripts/graphql-js.mjs",
+    "check:graphql-js": "node kit/cli.mjs run execution --strict --adapter \"node adapters/graphql-js/adapter.mjs --graphql 16\" && node kit/cli.mjs run execution --strict --adapter \"node adapters/graphql-js/adapter.mjs --graphql 17\"",
+    "check:differentials": "node scripts/differential-lexer.mjs && node scripts/differential-validation.mjs && node scripts/differential-coercion.mjs && node scripts/differential-type-system.mjs",
+    "check:mutants": "node scripts/differential-lexer.mjs --mutants && node scripts/differential-validation.mjs --mutants && node scripts/differential-coercion.mjs --mutants && node scripts/differential-type-system.mjs --mutants",
     "typecheck": "tsc"
   },
   "devDependencies": {
@@ -19,5 +22,8 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "bin": {
+    "graphql-tla": "kit/cli.mjs"
   }
 }

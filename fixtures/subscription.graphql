@@ -1,0 +1,23 @@
+# One subscription event (§6.2.3.2 ExecuteSubscriptionEvent): the root
+# field resolves against the event, then completes like a query.
+# maxListLength: 0
+
+type Query {
+  ok: Boolean
+}
+
+type Subscription {
+  postLiked: Post!
+}
+
+type Post {
+  likes: Int!
+  title: String
+}
+
+subscription {
+  postLiked {
+    likes
+    title
+  }
+}

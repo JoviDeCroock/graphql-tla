@@ -1,0 +1,29 @@
+# Mutation root fields execute serially (§6.3.4): each one, with its whole
+# sub-selection, completes before the next one starts.
+# maxListLength: 0
+
+type Query {
+  ok: Boolean
+}
+
+type Mutation {
+  first: Payload
+  second: Payload!
+  third: Payload
+}
+
+type Payload {
+  likes: Int!
+}
+
+mutation {
+  first {
+    likes
+  }
+  second {
+    likes
+  }
+  third {
+    likes
+  }
+}

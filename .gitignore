@@ -3,3 +3,6 @@ states/
 *_TTrace_*.tla
 *_TTrace_*.bin
 .DS_Store
+adapters/*/target/
+adapters/*/bin/
+adapters/*/obj/

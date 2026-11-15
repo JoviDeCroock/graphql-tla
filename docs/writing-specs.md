@@ -51,3 +51,8 @@ See [tla-ts's guide](https://github.com/aidenybai/tla-ts/blob/main/docs/typescri
 - **`@always`:** properties take `before` and compare the previous state with the current one. Prefer them to "flag" variables for statements about change, such as no retraction.
 - **Actions that call recursive helpers:** compute everything first, then assign. Once an action has assigned a variable, later reads must see the new value, so tla-ts inlines any helper called after that point. Inlining a recursive helper overflows the compiler's stack (`RangeError: Maximum call stack size exceeded`). Read into `const`s before the first assignment.
 - **Recursive helpers as callbacks:** don't pass one by name, as in `.map(jsonOf)` inside `jsonOf`, which overflows the stack too. Write `.map((c) => jsonOf(c))`.
+
+## tla-ts's TLA+ checker
+
+- **Mutual recursion:** declare every operator in a recursive cycle in one `RECURSIVE` line, including ones that don't call themselves (`CompleteFields` in `Reference.tla`).
+- **Recursive operators under `[]`:** a temporal property `[](P(vars))` whose `P` reaches a `RECURSIVE` operator overflows the checker's stack while it works out the formula's level. State it as an action property instead, `[][P(vars')]_vars`, which says the same of every state after the first; `RootFieldsAreSerial` in `ExecutionConformance.tla` does this.

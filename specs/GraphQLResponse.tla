@@ -12,7 +12,8 @@
 (* A response is sent exactly once, it is valid (Reference!Valid) for the  *)
 (* resolvers settled when it was sent, it never changes afterwards, and    *)
 (* it is eventually sent. Resolvers in abandoned subtrees may keep         *)
-(* settling after the response is out.                                     *)
+(* settling after the response is out. A mutation's root fields settle     *)
+(* serially (Reference!SeriallyExecuted).                                  *)
 (***************************************************************************)
 EXTENDS Reference
 
@@ -31,12 +32,14 @@ Init ==
 
 Settle ==
   /\ Extends(outcomes', outcomes)
+  /\ SeriallyExecuted(fx, outcomes')
   /\ UNCHANGED <<fx, sent, data, errors>>
 
 Respond ==
   /\ ~sent
   /\ sent'
   /\ Extends(outcomes', outcomes)
+  /\ SeriallyExecuted(fx, outcomes')
   /\ Valid(fx, outcomes', data', errors')
   /\ UNCHANGED fx
 

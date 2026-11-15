@@ -1,0 +1,24 @@
+# With @experimental_disableErrorPropagation (graphql-js 17), an execution
+# error nulls the position where it happened, even a Non-Null one, and
+# nothing propagates (the onError / semantic nullability proposal).
+# maxListLength: 0
+
+type Query {
+  version: String!
+  user: User
+}
+
+type User {
+  id: ID!
+  bestFriend: User!
+}
+
+query @experimental_disableErrorPropagation {
+  version
+  user {
+    id
+    bestFriend {
+      id
+    }
+  }
+}

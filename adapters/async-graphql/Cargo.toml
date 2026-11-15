@@ -1,0 +1,13 @@
+[package]
+name = "graphql-tla-async-graphql"
+version = "0.1.0"
+edition = "2021"
+publish = false
+rust-version = "1.87"
+resolver = "3"
+
+[dependencies]
+async-graphql = { version = "=7.0.17", default-features = false, features = ["dynamic-schema"] }
+async-graphql-parser = "=7.0.17"
+futures = "0.3"
+serde_json = { version = "1", features = ["preserve_order"] }

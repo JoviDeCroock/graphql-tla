@@ -74,9 +74,7 @@ const readFixture = (file) => {
   );
   const schema = buildASTSchema({ kind: Kind.DOCUMENT, definitions });
   const operations = document.definitions.filter((d) => d.kind === Kind.OPERATION_DEFINITION);
-  if (operations.length !== 1 || operations[0].operation !== "query") {
-    throw new Error(`${file}: expected exactly one query`);
-  }
+  if (operations.length !== 1) throw new Error(`${file}: expected exactly one operation`);
   const operation = operations[0];
 
   const header = (key) => text.match(new RegExp(`^# ${key}: (.*)$`, "m"))?.[1];
@@ -128,11 +126,21 @@ const readFixture = (file) => {
   return {
     id: basename(file, ".graphql"),
     data: {
-      schema: { query: schema.getQueryType().name, types },
+      schema: {
+        query: schema.getQueryType()?.name ?? "",
+        mutation: schema.getMutationType()?.name ?? "",
+        subscription: schema.getSubscriptionType()?.name ?? "",
+        types,
+      },
+      operationType: operation.operation,
       operation: selections(operation.selectionSet),
       fragments,
       variables,
       maxListLength: Number(header("maxListLength") ?? 2),
+      errorPropagation: !(operation.directives ?? []).some(
+        (d) => d.name.value === "experimental_disableErrorPropagation",
+      ),
+      invalidResults: header("invalidResults") === "true",
     },
   };
 };

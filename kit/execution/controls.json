@@ -1,0 +1,1397 @@
+{
+ "generatedFrom": "graphql-js 17.1.0",
+ "bases": [
+  {
+   "v": 1,
+   "fixture": "fragments",
+   "trace": [
+    {
+     "call": [
+      "node"
+     ],
+     "type": "Node",
+     "after": 0
+    },
+    {
+     "settle": [
+      "node"
+     ],
+     "outcome": {
+      "kind": "error"
+     }
+    }
+   ],
+   "response": {
+    "errors": [
+     {
+      "message": "resolver at node failed",
+      "locations": [
+       {
+        "line": 2,
+        "column": 3
+       }
+      ],
+      "path": [
+       "node"
+      ]
+     }
+    ],
+    "data": {
+     "node": null
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "lists",
+   "trace": [
+    {
+     "call": [
+      "posts"
+     ],
+     "type": "[Post!]",
+     "after": 0
+    },
+    {
+     "call": [
+      "tags"
+     ],
+     "type": "[String]!",
+     "after": 0
+    },
+    {
+     "settle": [
+      "posts"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "tags"
+     ],
+     "outcome": {
+      "kind": "list",
+      "length": 0
+     }
+    }
+   ],
+   "response": {
+    "data": {
+     "posts": null,
+     "tags": []
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "lists",
+   "trace": [
+    {
+     "call": [
+      "posts"
+     ],
+     "type": "[Post!]",
+     "after": 0
+    },
+    {
+     "call": [
+      "tags"
+     ],
+     "type": "[String]!",
+     "after": 0
+    },
+    {
+     "settle": [
+      "posts"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "tags"
+     ],
+     "outcome": {
+      "kind": "list",
+      "length": 2
+     }
+    },
+    {
+     "call": [
+      "tags",
+      "0"
+     ],
+     "type": "String",
+     "after": 2
+    },
+    {
+     "call": [
+      "tags",
+      "1"
+     ],
+     "type": "String",
+     "after": 2
+    },
+    {
+     "settle": [
+      "tags",
+      "0"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "tags",
+      "1"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "response": {
+    "data": {
+     "posts": null,
+     "tags": [
+      null,
+      null
+     ]
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "unions",
+   "trace": [
+    {
+     "call": [
+      "search"
+     ],
+     "type": "[SearchResult!]",
+     "after": 0
+    },
+    {
+     "call": [
+      "matrix"
+     ],
+     "type": "[[Int!]]!",
+     "after": 0
+    },
+    {
+     "settle": [
+      "search"
+     ],
+     "outcome": {
+      "kind": "list",
+      "length": 1
+     }
+    },
+    {
+     "call": [
+      "search",
+      "0"
+     ],
+     "type": "SearchResult!",
+     "after": 1
+    },
+    {
+     "settle": [
+      "matrix"
+     ],
+     "outcome": {
+      "kind": "list",
+      "length": 0
+     }
+    },
+    {
+     "settle": [
+      "search",
+      "0"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "Post"
+     }
+    },
+    {
+     "call": [
+      "search",
+      "0",
+      "title"
+     ],
+     "type": "String!",
+     "after": 3
+    },
+    {
+     "settle": [
+      "search",
+      "0",
+      "title"
+     ],
+     "outcome": {
+      "kind": "leaf"
+     }
+    }
+   ],
+   "response": {
+    "data": {
+     "search": [
+      {
+       "__typename": "Post",
+       "title": "v"
+      }
+     ],
+     "matrix": []
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "subscription",
+   "trace": [
+    {
+     "call": [
+      "postLiked"
+     ],
+     "type": "Post!",
+     "after": 0
+    },
+    {
+     "settle": [
+      "postLiked"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "response": {
+    "errors": [
+     {
+      "message": "Cannot return null for non-nullable field Subscription.postLiked.",
+      "locations": [
+       {
+        "line": 2,
+        "column": 3
+       }
+      ],
+      "path": [
+       "postLiked"
+      ]
+     }
+    ],
+    "data": null
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "mutation",
+   "trace": [
+    {
+     "call": [
+      "first"
+     ],
+     "type": "Payload",
+     "after": 0
+    },
+    {
+     "settle": [
+      "first"
+     ],
+     "outcome": {
+      "kind": "error"
+     }
+    },
+    {
+     "call": [
+      "second"
+     ],
+     "type": "Payload!",
+     "after": 1
+    },
+    {
+     "settle": [
+      "second"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "response": {
+    "errors": [
+     {
+      "message": "resolver at first failed",
+      "locations": [
+       {
+        "line": 2,
+        "column": 3
+       }
+      ],
+      "path": [
+       "first"
+      ]
+     },
+     {
+      "message": "Cannot return null for non-nullable field Mutation.second.",
+      "locations": [
+       {
+        "line": 5,
+        "column": 3
+       }
+      ],
+      "path": [
+       "second"
+      ]
+     }
+    ],
+    "data": null
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "fragments",
+   "trace": [
+    {
+     "call": [
+      "node"
+     ],
+     "type": "Node",
+     "after": 0
+    },
+    {
+     "settle": [
+      "node"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "response": {
+    "data": {
+     "node": null
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "mutation",
+   "trace": [
+    {
+     "call": [
+      "first"
+     ],
+     "type": "Payload",
+     "after": 0
+    },
+    {
+     "settle": [
+      "first"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "call": [
+      "second"
+     ],
+     "type": "Payload!",
+     "after": 1
+    },
+    {
+     "settle": [
+      "second"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "response": {
+    "errors": [
+     {
+      "message": "Cannot return null for non-nullable field Mutation.second.",
+      "locations": [
+       {
+        "line": 5,
+        "column": 3
+       }
+      ],
+      "path": [
+       "second"
+      ]
+     }
+    ],
+    "data": null
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "lists",
+   "trace": [
+    {
+     "call": [
+      "posts"
+     ],
+     "type": "[Post!]",
+     "after": 0
+    },
+    {
+     "call": [
+      "tags"
+     ],
+     "type": "[String]!",
+     "after": 0
+    },
+    {
+     "settle": [
+      "posts"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "tags"
+     ],
+     "outcome": {
+      "kind": "list",
+      "length": 1
+     }
+    },
+    {
+     "call": [
+      "tags",
+      "0"
+     ],
+     "type": "String",
+     "after": 2
+    },
+    {
+     "settle": [
+      "tags",
+      "0"
+     ],
+     "outcome": {
+      "kind": "error"
+     }
+    }
+   ],
+   "response": {
+    "errors": [
+     {
+      "message": "resolver at tags.0 failed",
+      "locations": [
+       {
+        "line": 5,
+        "column": 3
+       }
+      ],
+      "path": [
+       "tags",
+       0
+      ]
+     }
+    ],
+    "data": {
+     "posts": null,
+     "tags": [
+      null
+     ]
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "noPropagation",
+   "trace": [
+    {
+     "call": [
+      "version"
+     ],
+     "type": "String!",
+     "after": 0
+    },
+    {
+     "call": [
+      "user"
+     ],
+     "type": "User",
+     "after": 0
+    },
+    {
+     "settle": [
+      "version"
+     ],
+     "outcome": {
+      "kind": "leaf"
+     }
+    },
+    {
+     "settle": [
+      "user"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "response": {
+    "data": {
+     "version": "v",
+     "user": null
+    }
+   }
+  }
+ ],
+ "controls": [
+  {
+   "name": "drops the only error",
+   "clause": "nullsExplained",
+   "base": 0,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "error"
+      }
+     }
+    ],
+    "response": {
+     "data": {
+      "node": null
+     }
+    }
+   }
+  },
+  {
+   "name": "reports an error twice",
+   "clause": "errorPathsUnique",
+   "base": 0,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "error"
+      }
+     }
+    ],
+    "response": {
+     "errors": [
+      {
+       "message": "resolver at node failed",
+       "locations": [
+        {
+         "line": 2,
+         "column": 3
+        }
+       ],
+       "path": [
+        "node"
+       ]
+      },
+      {
+       "message": "resolver at node failed",
+       "locations": [
+        {
+         "line": 2,
+         "column": 3
+        }
+       ],
+       "path": [
+        "node"
+       ]
+      }
+     ],
+     "data": {
+      "node": null
+     }
+    }
+   }
+  },
+  {
+   "name": "nulls a value without an error",
+   "clause": "dataMatches",
+   "base": 1,
+   "case": {
+    "v": 1,
+    "fixture": "lists",
+    "trace": [
+     {
+      "call": [
+       "posts"
+      ],
+      "type": "[Post!]",
+      "after": 0
+     },
+     {
+      "call": [
+       "tags"
+      ],
+      "type": "[String]!",
+      "after": 0
+     },
+     {
+      "settle": [
+       "posts"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "tags"
+      ],
+      "outcome": {
+       "kind": "list",
+       "length": 0
+      }
+     }
+    ],
+    "response": {
+     "data": {
+      "posts": null,
+      "tags": null
+     }
+    }
+   }
+  },
+  {
+   "name": "reorders response keys",
+   "clause": "keyOrder",
+   "base": 1,
+   "case": {
+    "v": 1,
+    "fixture": "lists",
+    "trace": [
+     {
+      "call": [
+       "posts"
+      ],
+      "type": "[Post!]",
+      "after": 0
+     },
+     {
+      "call": [
+       "tags"
+      ],
+      "type": "[String]!",
+      "after": 0
+     },
+     {
+      "settle": [
+       "posts"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "tags"
+      ],
+      "outcome": {
+       "kind": "list",
+       "length": 0
+      }
+     }
+    ],
+    "response": {
+     "data": {
+      "tags": [],
+      "posts": null
+     }
+    }
+   }
+  },
+  {
+   "name": "drops a list item",
+   "clause": "dataMatches",
+   "base": 2,
+   "case": {
+    "v": 1,
+    "fixture": "lists",
+    "trace": [
+     {
+      "call": [
+       "posts"
+      ],
+      "type": "[Post!]",
+      "after": 0
+     },
+     {
+      "call": [
+       "tags"
+      ],
+      "type": "[String]!",
+      "after": 0
+     },
+     {
+      "settle": [
+       "posts"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "tags"
+      ],
+      "outcome": {
+       "kind": "list",
+       "length": 2
+      }
+     },
+     {
+      "call": [
+       "tags",
+       "0"
+      ],
+      "type": "String",
+      "after": 2
+     },
+     {
+      "call": [
+       "tags",
+       "1"
+      ],
+      "type": "String",
+      "after": 2
+     },
+     {
+      "settle": [
+       "tags",
+       "0"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "tags",
+       "1"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "data": {
+      "posts": null,
+      "tags": [
+       null
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "answers __typename with the wrong type",
+   "clause": "dataMatches",
+   "base": 3,
+   "case": {
+    "v": 1,
+    "fixture": "unions",
+    "trace": [
+     {
+      "call": [
+       "search"
+      ],
+      "type": "[SearchResult!]",
+      "after": 0
+     },
+     {
+      "call": [
+       "matrix"
+      ],
+      "type": "[[Int!]]!",
+      "after": 0
+     },
+     {
+      "settle": [
+       "search"
+      ],
+      "outcome": {
+       "kind": "list",
+       "length": 1
+      }
+     },
+     {
+      "call": [
+       "search",
+       "0"
+      ],
+      "type": "SearchResult!",
+      "after": 1
+     },
+     {
+      "settle": [
+       "matrix"
+      ],
+      "outcome": {
+       "kind": "list",
+       "length": 0
+      }
+     },
+     {
+      "settle": [
+       "search",
+       "0"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "Post"
+      }
+     },
+     {
+      "call": [
+       "search",
+       "0",
+       "title"
+      ],
+      "type": "String!",
+      "after": 3
+     },
+     {
+      "settle": [
+       "search",
+       "0",
+       "title"
+      ],
+      "outcome": {
+       "kind": "leaf"
+      }
+     }
+    ],
+    "response": {
+     "data": {
+      "search": [
+       {
+        "__typename": "Query",
+        "title": "v"
+       }
+      ],
+      "matrix": []
+     }
+    }
+   }
+  },
+  {
+   "name": "reports an error at a position that has a value",
+   "clause": "errorsInsideNulls",
+   "base": 1,
+   "case": {
+    "v": 1,
+    "fixture": "lists",
+    "trace": [
+     {
+      "call": [
+       "posts"
+      ],
+      "type": "[Post!]",
+      "after": 0
+     },
+     {
+      "call": [
+       "tags"
+      ],
+      "type": "[String]!",
+      "after": 0
+     },
+     {
+      "settle": [
+       "posts"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "tags"
+      ],
+      "outcome": {
+       "kind": "list",
+       "length": 0
+      }
+     }
+    ],
+    "response": {
+     "data": {
+      "posts": null,
+      "tags": []
+     },
+     "errors": [
+      {
+       "message": "x",
+       "path": [
+        "tags"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "drops every error from a null data",
+   "clause": "nullsExplained",
+   "base": 4,
+   "case": {
+    "v": 1,
+    "fixture": "subscription",
+    "trace": [
+     {
+      "call": [
+       "postLiked"
+      ],
+      "type": "Post!",
+      "after": 0
+     },
+     {
+      "settle": [
+       "postLiked"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "data": null
+    }
+   }
+  },
+  {
+   "name": "drops an earlier root field's error once a mutation nulls data",
+   "clause": "serialErrorsKept",
+   "base": 5,
+   "case": {
+    "v": 1,
+    "fixture": "mutation",
+    "trace": [
+     {
+      "call": [
+       "first"
+      ],
+      "type": "Payload",
+      "after": 0
+     },
+     {
+      "settle": [
+       "first"
+      ],
+      "outcome": {
+       "kind": "error"
+      }
+     },
+     {
+      "call": [
+       "second"
+      ],
+      "type": "Payload!",
+      "after": 1
+     },
+     {
+      "settle": [
+       "second"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "data": null,
+     "errors": [
+      {
+       "message": "Cannot return null for non-nullable field Mutation.second.",
+       "locations": [
+        {
+         "line": 5,
+         "column": 3
+        }
+       ],
+       "path": [
+        "second"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "responds while a resolver it needs is pending",
+   "clause": "complete",
+   "base": 6,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0
+     }
+    ],
+    "response": {
+     "data": {
+      "node": null
+     }
+    }
+   }
+  },
+  {
+   "name": "calls a mutation's root fields at once",
+   "clause": "calledSerially",
+   "base": 7,
+   "case": {
+    "v": 1,
+    "fixture": "mutation",
+    "trace": [
+     {
+      "call": [
+       "first"
+      ],
+      "type": "Payload",
+      "after": 0
+     },
+     {
+      "call": [
+       "second"
+      ],
+      "type": "Payload!",
+      "after": 0
+     },
+     {
+      "settle": [
+       "first"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "second"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "errors": [
+      {
+       "message": "Cannot return null for non-nullable field Mutation.second.",
+       "locations": [
+        {
+         "line": 5,
+         "column": 3
+        }
+       ],
+       "path": [
+        "second"
+       ]
+      }
+     ],
+     "data": null
+    }
+   }
+  },
+  {
+   "name": "writes a list index in an error path as a string",
+   "clause": "malformed",
+   "base": 8,
+   "case": {
+    "v": 1,
+    "fixture": "lists",
+    "trace": [
+     {
+      "call": [
+       "posts"
+      ],
+      "type": "[Post!]",
+      "after": 0
+     },
+     {
+      "call": [
+       "tags"
+      ],
+      "type": "[String]!",
+      "after": 0
+     },
+     {
+      "settle": [
+       "posts"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "tags"
+      ],
+      "outcome": {
+       "kind": "list",
+       "length": 1
+      }
+     },
+     {
+      "call": [
+       "tags",
+       "0"
+      ],
+      "type": "String",
+      "after": 2
+     },
+     {
+      "settle": [
+       "tags",
+       "0"
+      ],
+      "outcome": {
+       "kind": "error"
+      }
+     }
+    ],
+    "response": {
+     "errors": [
+      {
+       "message": "resolver at tags.0 failed",
+       "locations": [
+        {
+         "line": 5,
+         "column": 3
+        }
+       ],
+       "path": [
+        "tags",
+        "0"
+       ]
+      }
+     ],
+     "data": {
+      "posts": null,
+      "tags": [
+       null
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "adds an entry to the response",
+   "clause": "malformed",
+   "base": 6,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "data": {
+      "node": null
+     },
+     "status": "ok"
+    }
+   }
+  },
+  {
+   "name": "leaves out data",
+   "clause": "malformed",
+   "base": 6,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {}
+   }
+  },
+  {
+   "name": "returns a leaf other than the canonical value",
+   "clause": "malformed",
+   "base": 9,
+   "case": {
+    "v": 1,
+    "fixture": "noPropagation",
+    "trace": [
+     {
+      "call": [
+       "version"
+      ],
+      "type": "String!",
+      "after": 0
+     },
+     {
+      "call": [
+       "user"
+      ],
+      "type": "User",
+      "after": 0
+     },
+     {
+      "settle": [
+       "version"
+      ],
+      "outcome": {
+       "kind": "leaf"
+      }
+     },
+     {
+      "settle": [
+       "user"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "data": {
+      "version": "w",
+      "user": null
+     }
+    }
+   }
+  },
+  {
+   "name": "calls a resolver twice",
+   "clause": "malformed",
+   "base": 6,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0
+     }
+    ],
+    "response": {
+     "data": {
+      "node": null
+     }
+    }
+   }
+  },
+  {
+   "name": "reports the wrong type for a call",
+   "clause": "malformed",
+   "base": 6,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Boolean",
+      "after": 0
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "data": {
+      "node": null
+     }
+    }
+   }
+  }
+ ]
+}

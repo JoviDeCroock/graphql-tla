@@ -41,11 +41,21 @@ export type Selection = {
 export type Fragment = { typeCondition: string; selectionSet: Selection[] };
 
 export type Fixture = {
-  schema: { query: string; types: Map<string, TypeDef> };
+  // Root operation type names; "" when the schema has no such root.
+  schema: { query: string; mutation: string; subscription: string; types: Map<string, TypeDef> };
+  operationType: "query" | "mutation" | "subscription";
   operation: Selection[];
   fragments: Map<string, Fragment>;
   variables: Map<string, boolean>;
   maxListLength: number;
+  // false when the operation carries @experimental_disableErrorPropagation
+  // (graphql-js 17): an execution error nulls its own position, Non-Null or
+  // not, instead of propagating to the parent.
+  errorPropagation: boolean;
+  // Whether resolvers may also produce results of the wrong shape: an object
+  // for a leaf (a result coercion error), a non-list for a list, or a runtime
+  // type that isn't a possible type.
+  invalidResults: boolean;
 };
 
 // A response path. List indices are strings, "0" not 0, so that every
@@ -60,9 +70,11 @@ export type Outcome = {
   length: number;
 };
 
-// A response value. Objects keep their keys in order.
+// A response value. Objects keep their keys in order. Leaf values are
+// abstracted to "" except for __typename, whose value is the type name.
 export type Json = {
   kind: "null" | "leaf" | "object" | "list";
+  value: string;
   entries: Entry[];
   items: Json[];
 };

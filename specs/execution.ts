@@ -44,8 +44,8 @@ type Position = { type: TypeRef; fields: Selection[] };
 // or still pending.
 type Status = "value" | "null" | "nulled" | "error" | "pending";
 
-const NULL: Json = { kind: "null", entries: [], items: [] };
-const LEAF: Json = { kind: "leaf", entries: [], items: [] };
+const NULL: Json = { kind: "null", value: "", entries: [], items: [] };
+const LEAF: Json = { kind: "leaf", value: "", entries: [], items: [] };
 
 // ---------------------------------------------------------------------------
 // State
@@ -54,6 +54,10 @@ const LEAF: Json = { kind: "leaf", entries: [], items: [] };
 let fixture!: FixtureId;
 let variant!: Variant;
 let started = false;
+// How many root fields have started, and whether a mutation stopped
+// executing root fields after data was nulled.
+let startedRoots = 0;
+let stopped = false;
 
 // Positions whose resolver is running.
 let running = new Set<Path>();
@@ -136,11 +140,26 @@ const collectSubfields = (objectType: string, fields: Selection[], i: number, gr
         collect(objectType, fields[i].selectionSet, 0, { groups, visited: new Set<string>() }).groups,
       );
 
+// §6.2: the root type for the operation's type.
+const rootType = () =>
+  fx().operationType === "query"
+    ? fx().schema.query
+    : fx().operationType === "mutation"
+      ? fx().schema.mutation
+      : fx().schema.subscription;
+
 const rootGroups = () =>
-  collect(fx().schema.query, fx().operation, 0, { groups: [], visited: new Set<string>() }).groups;
+  collect(rootType(), fx().operation, 0, { groups: [], visited: new Set<string>() }).groups;
+
+// __typename is answered from the runtime type, without a resolver.
+const isTypename = (group: Group) => group.fields[0].name === "__typename";
 
 const fieldType = (objectType: string, group: Group) =>
   fx().schema.types.get(objectType)!.fields.get(group.fields[0].name)!;
+
+// Whether an execution error at a position of this type propagates to its
+// parent. Off for every position under @experimental_disableErrorPropagation.
+const propagates = (type: TypeRef) => isNonNull(type) && fx().errorPropagation;
 
 // ---------------------------------------------------------------------------
 // Positions
@@ -153,7 +172,7 @@ const groupsOf = (path: Path, position: Position) =>
 const positionOf = (path: Path): Position =>
   path.length === 1
     ? {
-        type: fieldType(fx().schema.query, rootGroups().find((g) => g.key === path[0])!),
+        type: fieldType(rootType(), rootGroups().find((g) => g.key === path[0])!),
         fields: rootGroups().find((g) => g.key === path[0])!.fields,
       }
     : childPosition(path.slice(0, -1), positionOf(path.slice(0, -1)), path[path.length - 1]);
@@ -166,75 +185,132 @@ const childPosition = (parent: Path, position: Position, key: string): Position 
         fields: groupsOf(parent, position).find((g) => g.key === key)!.fields,
       };
 
-// The child positions an object or list outcome creates, in order.
+// The outcome kind a value of this type needs.
+const expectedKind = (position: Position) =>
+  isList(nullable(position.type))
+    ? "list"
+    : fx().schema.types.get(position.type.name)!.kind === "scalar"
+      ? "leaf"
+      : "object";
+
+// A result of the wrong shape: an object for a scalar (result coercion
+// fails), anything but a list for a list type ("Expected Iterable"), or an
+// object whose runtime type isn't a possible type.
+const isWrongShape = (position: Position, outcome: Outcome) =>
+  outcome.kind !== "null" &&
+  outcome.kind !== "error" &&
+  (outcome.kind !== expectedKind(position) ||
+    (outcome.kind === "object" &&
+      !fx().schema.types.get(position.type.name)!.possibleTypes.has(outcome.type)));
+
+// The child positions an object or list outcome creates, in order. A result
+// of the wrong shape has none.
 const childPaths = (path: Path, position: Position, outcome: Outcome): Path[] =>
-  outcome.kind === "list"
-    ? Array.from({ length: outcome.length }, (_, i) => [...path, `${i}`])
-    : outcome.kind === "object"
-      ? collectSubfields(outcome.type, position.fields, 0, []).map((g) => [...path, g.key])
-      : [];
+  isWrongShape(position, outcome)
+    ? []
+    : outcome.kind === "list"
+      ? Array.from({ length: outcome.length }, (_, i) => [...path, `${i}`])
+      : outcome.kind === "object"
+        ? collectSubfields(outcome.type, position.fields, 0, [])
+            .filter((g) => !isTypename(g))
+            .map((g) => [...path, g.key])
+        : [];
 
 // The child positions of a settled position.
 const childrenOf = (path: Path, position: Position): Path[] =>
   childPaths(path, position, outcomes.get(path)!);
+
+// Wrong-shape results a fixture with invalidResults may also produce. An
+// object type has no runtime type to get wrong; only an abstract type does.
+const wrongShapes = (position: Position): Set<Outcome> =>
+  !fx().invalidResults
+    ? new Set<Outcome>()
+    : expectedKind(position) === "leaf"
+      ? new Set<Outcome>([{ kind: "object", type: "", length: 0 }])
+      : expectedKind(position) === "list"
+        ? new Set<Outcome>([{ kind: "leaf", type: "", length: 0 }])
+        : fx().schema.types.get(position.type.name)!.kind === "object"
+          ? new Set<Outcome>()
+          : new Set(
+            fx()
+              .schema.types.keys()
+              .filter(
+                (t) =>
+                  fx().schema.types.get(t)!.kind === "object" &&
+                  !fx().schema.types.get(position.type.name)!.possibleTypes.has(t),
+              )
+              .map((t) => ({ kind: "object", type: t, length: 0 }) as Outcome),
+          );
 
 // What a resolver at this position may produce.
 const choicesFor = (position: Position): Set<Outcome> =>
   new Set<Outcome>([
     { kind: "null", type: "", length: 0 },
     { kind: "error", type: "", length: 0 },
-  ]).union(
-    isList(nullable(position.type))
-      ? new Set(
-          Array.from({ length: fx().maxListLength + 1 }, (_, n) => ({ kind: "list", type: "", length: n }) as Outcome),
-        )
-      : fx().schema.types.get(position.type.name)!.kind === "scalar"
-        ? new Set<Outcome>([{ kind: "leaf", type: "", length: 0 }])
-        : new Set(
-            fx()
-              .schema.types.get(position.type.name)!
-              .possibleTypes.values()
-              .map((t) => ({ kind: "object", type: t, length: 0 }) as Outcome),
-          ),
-  );
+  ])
+    .union(
+      expectedKind(position) === "list"
+        ? new Set(
+            Array.from({ length: fx().maxListLength + 1 }, (_, n) => ({ kind: "list", type: "", length: n }) as Outcome),
+          )
+        : expectedKind(position) === "leaf"
+          ? new Set<Outcome>([{ kind: "leaf", type: "", length: 0 }])
+          : new Set(
+              fx()
+                .schema.types.get(position.type.name)!
+                .possibleTypes.values()
+                .map((t) => ({ kind: "object", type: t, length: 0 }) as Outcome),
+            ),
+    )
+    .union(wrongShapes(position));
 
 // ---------------------------------------------------------------------------
 // Completion, as the executor tracks it
 // ---------------------------------------------------------------------------
 
+// An execution error raised at this position: an error, a result of the
+// wrong shape, or null where the type is Non-Null.
+const raisesError = (path: Path, outcome: Outcome) =>
+  outcome.kind === "error" ||
+  isWrongShape(positionOf(path), outcome) ||
+  (outcome.kind === "null" && isNonNull(positionOf(path).type));
+
+// What an execution error at or below this position makes it.
+const failed = (path: Path): Status => (propagates(positionOf(path).type) ? "error" : "nulled");
+
 const statusOf = (path: Path): Status =>
   !outcomes.has(path)
     ? "pending"
-    : outcomes.get(path)!.kind === "error"
-      ? isNonNull(positionOf(path).type) ? "error" : "nulled"
+    : raisesError(path, outcomes.get(path)!)
+      ? failed(path)
       : outcomes.get(path)!.kind === "null"
-        ? isNonNull(positionOf(path).type) ? "error" : "null"
+        ? "null"
         : outcomes.get(path)!.kind === "leaf"
           ? "value"
           : childrenOf(path, positionOf(path)).some((c) => statusOf(c) === "error")
-            ? isNonNull(positionOf(path).type) ? "error" : "nulled"
+            ? failed(path)
             : childrenOf(path, positionOf(path)).some((c) => statusOf(c) === "pending")
               ? "pending"
               : "value";
 
+// The root fields that have started.
+const rootPaths = (count: number): Path[] => rootGroups().filter((g) => !isTypename(g)).slice(0, count).map((g) => [g.key]);
+
 const rootStatus = (): Status =>
-  rootGroups().some((g) => statusOf([g.key]) === "error")
+  rootGroups().some((g) => !isTypename(g) && statusOf([g.key]) === "error")
     ? "nulled"
-    : rootGroups().some((g) => statusOf([g.key]) === "pending")
+    : rootGroups().some((g) => !isTypename(g) && statusOf([g.key]) === "pending")
       ? "pending"
       : "value";
 
-// Whether a field error already nulled this position or one above it.
+// Whether an execution error already nulled this position or one above it.
 const isInNulledSubtree = (path: Path): boolean =>
   rootStatus() === "nulled" ||
   Array.from({ length: path.length - 1 }, (_, i) => path.slice(0, i + 1)).some(
     (p) => statusOf(p) === "nulled" || statusOf(p) === "error",
   );
 
-// A resolver result that is a field error: an error, or null where the
-// type is Non-Null.
-const raisesError = (path: Path, outcome: Outcome) =>
-  outcome.kind === "error" || (outcome.kind === "null" && isNonNull(positionOf(path).type));
+const typenameJson = (type: string): Json => ({ kind: "leaf", value: type, entries: [], items: [] });
 
 const jsonOf = (path: Path): Json =>
   statusOf(path) !== "value"
@@ -242,17 +318,29 @@ const jsonOf = (path: Path): Json =>
     : outcomes.get(path)!.kind === "leaf"
       ? LEAF
       : outcomes.get(path)!.kind === "list"
-        ? { kind: "list", entries: [], items: childrenOf(path, positionOf(path)).map((c) => jsonOf(c)) }
+        ? { kind: "list", value: "", entries: [], items: childrenOf(path, positionOf(path)).map((c) => jsonOf(c)) }
         : {
             kind: "object",
+            value: "",
             items: [],
-            entries: childrenOf(path, positionOf(path)).map((c) => ({ key: c[c.length - 1], value: jsonOf(c) })),
+            entries: groupsOf(path, positionOf(path)).map((g) => ({
+              key: g.key,
+              value: isTypename(g) ? typenameJson(outcomes.get(path)!.type) : jsonOf([...path, g.key]),
+            })),
           };
 
 const responseData = (): Json =>
   rootStatus() !== "value"
     ? NULL
-    : { kind: "object", items: [], entries: rootGroups().map((g) => ({ key: g.key, value: jsonOf([g.key]) })) };
+    : {
+        kind: "object",
+        value: "",
+        items: [],
+        entries: rootGroups().map((g) => ({
+          key: g.key,
+          value: isTypename(g) ? typenameJson(rootType()) : jsonOf([g.key]),
+        })),
+      };
 
 // ---------------------------------------------------------------------------
 // Actions
@@ -262,13 +350,35 @@ const responseData = (): Json =>
 // after an assignment makes tla-ts inline helpers to see the new state, and
 // the recursive helpers here can't be inlined.
 
-// ExecuteQuery: collect the root fields and start their resolvers.
+// ExecuteRootSelectionSet: start the root fields' resolvers, all at once for
+// a query or a subscription event, only the first for a mutation.
 /** @fair */
 export const start = () => {
   if (started) return;
-  const roots = new Set(rootGroups().map((g) => [g.key]));
+  const count = fx().operationType === "mutation" ? 1 : rootGroups().length;
+  const roots = new Set(rootPaths(count));
   started = true;
+  startedRoots = count;
   running = roots;
+};
+
+// Serial execution (§6.3.4): a mutation's next root field starts once the
+// previous one has completed, sub-selection included.
+/** @fair */
+export const startNextRootField = () => {
+  if (!started || stopped || fx().operationType !== "mutation") return;
+  if (startedRoots >= rootPaths(rootGroups().length).length) return;
+  if (statusOf(rootPaths(startedRoots)[startedRoots - 1]) === "pending") return;
+  const next = new Set(rootPaths(startedRoots + 1)).difference(new Set(rootPaths(startedRoots)));
+  startedRoots = startedRoots + 1;
+  running = running.union(next);
+};
+
+// Once data is null, the executor may skip the remaining root fields
+// (graphql-js does), or carry on (§6.3.3 allows both).
+export const skipRemainingRootFields = () => {
+  if (stopped || rootStatus() !== "nulled") return;
+  stopped = true;
 };
 
 // A resolver settles. An object or a list starts its children's resolvers
@@ -307,4 +417,7 @@ export const respond = () => {
 // ---------------------------------------------------------------------------
 
 /** @terminating */
-export const isFinished = () => sent && running.size === 0;
+export const isFinished = () =>
+  sent &&
+  running.size === 0 &&
+  (stopped || fx().operationType !== "mutation" || startedRoots === rootPaths(rootGroups().length).length);

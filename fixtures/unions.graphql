@@ -1,0 +1,33 @@
+# A union resolved to its member types, __typename, a nested list, and
+# results of the wrong shape: an object for a scalar (a result coercion
+# error), a non-list for a list, and a runtime type that isn't a member.
+# maxListLength: 1
+# invalidResults: true
+
+union SearchResult = User | Post
+
+type User {
+  name: String
+}
+
+type Post {
+  title: String!
+}
+
+type Query {
+  search: [SearchResult!]
+  matrix: [[Int!]]!
+}
+
+query {
+  search {
+    __typename
+    ... on User {
+      name
+    }
+    ... on Post {
+      title
+    }
+  }
+  matrix
+}

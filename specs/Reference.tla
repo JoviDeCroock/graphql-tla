@@ -21,9 +21,10 @@
 (*                selectionSet]                                            *)
 (*   outcome     [kind, type, length]   kind \in {"object", "leaf",        *)
 (*                                      "list", "null", "error"}           *)
-(*   json        [kind, entries, items] kind \in {"null", "leaf",          *)
+(*   json        [kind, value, entries, items]  kind \in {"null", "leaf",  *)
 (*                                      "object", "list"}; entries is a    *)
-(*                                      sequence of [key, value]           *)
+(*                                      sequence of [key, value]; a leaf's *)
+(*                                      value is "" except for __typename  *)
 (*   path        a sequence of strings; list indices are "0", "1", ...     *)
 (***************************************************************************)
 EXTENDS Integers, Sequences, FiniteSets, TLC
@@ -38,6 +39,17 @@ Nullable(type) == IF IsNonNull(type) THEN OfType(type) ELSE type
 
 TypeDef(fx, name) == fx.schema.types[name]
 FieldType(fx, objectType, fieldName) == TypeDef(fx, objectType).fields[fieldName]
+
+\* §6.2: the root type for the operation's type.
+RootType(fx) ==
+  CASE fx.operationType = "query" -> fx.schema.query
+    [] fx.operationType = "mutation" -> fx.schema.mutation
+    [] OTHER -> fx.schema.subscription
+
+\* Whether execution errors propagate (§6.4.4). graphql-js 17's
+\* @experimental_disableErrorPropagation turns this off: an error nulls the
+\* position where it happened, Non-Null or not.
+Propagates(fx, type) == fx.errorPropagation /\ IsNonNull(type)
 
 -----------------------------------------------------------------------------
 (* §6.3.2 Field Collection *)
@@ -121,8 +133,8 @@ CollectSubfields(fx, objectType, fields) ==
 -----------------------------------------------------------------------------
 (* §6.4 Executing Fields, over an oracle *)
 
-NullJson == [kind |-> "null", entries |-> <<>>, items |-> <<>>]
-LeafJson == [kind |-> "leaf", entries |-> <<>>, items |-> <<>>]
+NullJson == [kind |-> "null", value |-> "", entries |-> <<>>, items |-> <<>>]
+LeafJson == [kind |-> "leaf", value |-> "", entries |-> <<>>, items |-> <<>>]
 
 \* The result of completing one response position:
 \*   kind    "value"    completed to a non-null value
@@ -138,7 +150,8 @@ LeafJson == [kind |-> "leaf", entries |-> <<>>, items |-> <<>>]
 \*   raised  every path in its subtree where a field error was raised
 \*   cause   the raised paths whose propagation made it "nulled" or "error"
 \*   nulls   [path, cause] for each "nulled" position that is visible in
-\*           the response: not inside a position that is itself null
+\*           the response: not inside a position that is itself null. While
+\*           execution is pending, the positions nulled so far.
 Result(kind, json, raised, cause, nulls) ==
   [kind |-> kind, json |-> json, raised |-> raised, cause |-> cause, nulls |-> nulls]
 
@@ -166,23 +179,44 @@ Combine(path, results, json) ==
      THEN Result("error", NullJson, raised,
                  UNION {results[i].cause : i \in errors}, {})
      ELSE IF \E i \in DOMAIN results : results[i].kind = "pending"
-     THEN Result("pending", NullJson, raised, {}, {})
+     THEN Result("pending", NullJson, raised, {},
+                 UNION {results[i].nulls : i \in DOMAIN results})
      ELSE Result("value", json, raised, {},
                  UNION {results[i].nulls : i \in DOMAIN results})
 
-RECURSIVE CompletePosition(_, _, _, _, _), CompleteNullable(_, _, _, _, _)
+RECURSIVE CompletePosition(_, _, _, _, _), CompleteNullable(_, _, _, _, _), CompleteFields(_, _, _, _, _)
+
+\* The fields an object completes, in order: __typename is answered from
+\* the runtime type without a resolver (§4.4); every other field is
+\* executed.
+CompleteFields(fx, O, path, objectType, grouped) ==
+  [i \in DOMAIN grouped |->
+     IF grouped[i].fields[1].name = "__typename"
+     THEN Result("value", [LeafJson EXCEPT !.value = objectType], {}, {}, {})
+     ELSE CompletePosition(fx, O, Append(path, grouped[i].key),
+                           FieldType(fx, objectType, grouped[i].fields[1].name),
+                           grouped[i].fields)]
+
+ObjectJson(grouped, results) ==
+  [kind |-> "object", value |-> "", items |-> <<>>,
+   entries |-> [i \in DOMAIN grouped |-> [key |-> grouped[i].key, value |-> results[i].json]]]
 
 \* ExecuteField and CompleteValue for the position at `path` of declared
 \* type `type`, selected by `fields`. Non-Null handling (§6.4.3 step 1 and
 \* §6.4.4) happens here; CompleteNullable completes the inner type.
 CompletePosition(fx, O, path, type, fields) ==
   LET inner == CompleteNullable(fx, O, path, Nullable(type), fields) IN
+  \* "If completedResult is null, raise an execution error": for a
+  \* Non-Null type, the error is raised here when the inner result is a
+  \* plain null.
+  LET cause == IF inner.kind = "null" THEN {path} ELSE inner.cause IN
   CASE inner.kind \in {"value", "pending"} -> inner
-    [] IsNonNull(type) ->
-         \* "If completedResult is null, raise an execution error": the
-         \* error is raised here when the inner result is a plain null.
-         LET cause == IF inner.kind = "null" THEN {path} ELSE inner.cause IN
+    [] Propagates(fx, type) ->
          Result("error", NullJson, inner.raised \cup cause, cause, {})
+    [] IsNonNull(type) ->
+         \* Without propagation the error nulls this position.
+         Result("nulled", NullJson, inner.raised \cup cause, cause,
+                {[path |-> path, cause |-> cause]})
     [] inner.kind = "null" -> inner
     [] OTHER ->
          Result("nulled", NullJson, inner.raised, inner.cause,
@@ -206,7 +240,7 @@ CompleteNullable(fx, O, path, type, fields) ==
                           CompletePosition(fx, O, Append(path, ToString(i - 1)),
                                            OfType(type), fields)]
            IN Combine(path, items,
-                      [kind |-> "list", entries |-> <<>>,
+                      [kind |-> "list", value |-> "", entries |-> <<>>,
                        items |-> [i \in DOMAIN items |-> items[i].json]])
       [] ~(outcome.type \in TypeDef(fx, type.name).possibleTypes) ->
            Result("error", NullJson, {path}, {path}, {})
@@ -214,30 +248,22 @@ CompleteNullable(fx, O, path, type, fields) ==
            \* CompleteValue for an object: collect the subfields for the
            \* runtime type and execute them (ExecuteCollectedFields).
            LET grouped == CollectSubfields(fx, outcome.type, fields)
-               children == [i \in DOMAIN grouped |->
-                             CompletePosition(fx, O, Append(path, grouped[i].key),
-                                              FieldType(fx, outcome.type, grouped[i].fields[1].name),
-                                              grouped[i].fields)]
-           IN Combine(path, children,
-                      [kind |-> "object", items |-> <<>>,
-                       entries |-> [i \in DOMAIN grouped |->
-                                     [key |-> grouped[i].key, value |-> children[i].json]]])
+               children == CompleteFields(fx, O, path, outcome.type, grouped)
+           IN Combine(path, children, ObjectJson(grouped, children))
 
-\* §6.2.1 ExecuteQuery and §6.3.1 ExecuteRootSelectionSet, then §6.4.4: "If
-\* every response position from the root of the request to the source of
-\* the execution error has a Non-Null type", data is null. The root is a
-\* "nulled" position at path <<>> for the purposes of `nulls`.
+\* §6.2 ExecuteQuery, ExecuteMutation, and ExecuteSubscriptionEvent for one
+\* event, then §6.3.1 ExecuteRootSelectionSet and §6.4.4: "If every
+\* response position from the root of the request to the source of the
+\* execution error has a Non-Null type", data is null. The root is a
+\* "nulled" position at path <<>> for the purposes of `nulls`. Serial and
+\* normal execution complete to the same value; SeriallyExecuted below is
+\* what tells them apart.
+RootGroups(fx) == CollectFields(fx, RootType(fx), fx.operation)
+
 ExecuteQuery(fx, O) ==
-  LET rootType == fx.schema.query
-      grouped == CollectFields(fx, rootType, fx.operation)
-      fields == [i \in DOMAIN grouped |->
-                  CompletePosition(fx, O, <<grouped[i].key>>,
-                                   FieldType(fx, rootType, grouped[i].fields[1].name),
-                                   grouped[i].fields)]
-      data == Combine(<<>>, fields,
-                      [kind |-> "object", items |-> <<>>,
-                       entries |-> [i \in DOMAIN grouped |->
-                                     [key |-> grouped[i].key, value |-> fields[i].json]]])
+  LET grouped == RootGroups(fx)
+      fields == CompleteFields(fx, O, <<>>, RootType(fx), grouped)
+      data == Combine(<<>>, fields, ObjectJson(grouped, fields))
   IN IF data.kind = "error"
      THEN Result("nulled", NullJson, data.raised, data.cause,
                  {[path |-> <<>>, cause |-> data.cause]})
@@ -249,32 +275,128 @@ ExecuteQuery(fx, O) ==
 IsPrefix(prefix, path) ==
   Len(prefix) <= Len(path) /\ SubSeq(path, 1, Len(prefix)) = prefix
 
+\* Whether an execution error had already nulled a position above `path`,
+\* given O: data itself, or a nullable position on the way to `path`.
+IsNulledAbove(fx, O, path) ==
+  LET result == ExecuteQuery(fx, O) IN
+  \/ result.kind = "nulled"
+  \/ \E null \in result.nulls : null.path # path /\ IsPrefix(null.path, path)
+
+\* O restricted to the root fields before the ith, in collected order.
+RootsBefore(fx, O, i) ==
+  LET keys == {RootGroups(fx)[k].key : k \in 1..(i - 1)} IN
+  [path \in {p \in DOMAIN O : p[1] \in keys} |-> O[path]]
+
+\* §6.4.4: an execution error "must be added to the errors list". For a
+\* query that only bites through nullsExplained: §6.3.3 lets siblings that
+\* "have not yet executed or have not yet yielded a value" be cancelled, so
+\* an error missing from a nulled subtree can always be blamed on some
+\* schedule. A mutation has no such schedule: §6.3.4 completes each root
+\* field before the next one starts, so by the time root field i runs,
+\* every error raised under earlier root fields has been raised and can't
+\* be cancelled. Each must be reported unless an earlier error had already
+\* nulled its position (graphql-spec#1184), even if root field i then
+\* nulls data.
+SerialErrorsKept(fx, O, errors) ==
+  fx.operationType # "mutation" \/
+    \A i \in 2..Len(RootGroups(fx)) :
+      LET before == RootsBefore(fx, O, i)
+          started == \E p \in DOMAIN O : p[1] = RootGroups(fx)[i].key
+      IN started =>
+           \A p \in ExecuteQuery(fx, before).raised :
+             IsNulledAbove(fx, before, p) \/ \E e \in DOMAIN errors : errors[e] = p
+
+\* Two JSON values are the same up to the order of object keys.
+RECURSIVE SameJson(_, _)
+SameJson(a, b) ==
+  /\ a.kind = b.kind
+  /\ a.value = b.value
+  /\ Len(a.items) = Len(b.items)
+  /\ \A i \in DOMAIN a.items : SameJson(a.items[i], b.items[i])
+  /\ Len(a.entries) = Len(b.entries)
+  /\ \A i \in DOMAIN a.entries :
+       \E j \in DOMAIN b.entries :
+         a.entries[i].key = b.entries[j].key /\ SameJson(a.entries[i].value, b.entries[j].value)
+
 \* data and errors (a sequence of error paths) are a valid response once
-\* the resolvers in O have settled:
+\* the resolvers in O have settled. Each clause is named, so a checker can
+\* say which one a response breaks:
 \*
-\* 1. Execution is complete, and data is exactly the completed value.
-\* 2. Every error is an execution error that was raised, at the path
-\*    where it was raised (§7.1.6).
-\* 3. No two errors share a path (§6.4.4: "each error added to the errors
-\*    list during execution must have a unique response path").
-\* 4. Every error is inside a null in data. An error never accompanies a
-\*    value it didn't null.
-\* 5. Every null that an error caused is reported: at least one error from
-\*    the raised paths whose propagation reached it is in errors.
+\*   complete           execution is complete.
+\*   dataMatches        data is the completed value, up to key order.
+\*   keyOrder           data's keys are in collected field order. §7.2.2
+\*                      says a serialization format that supports ordered
+\*                      maps "should" keep it, so this one is a SHOULD.
+\*   errorsWereRaised   every error is an execution error that was raised,
+\*                      at the path where it was raised (§7.1.6).
+\*   errorPathsUnique   no two errors share a path (§6.4.4: "each error
+\*                      added to the errors list during execution must have
+\*                      a unique response path").
+\*   errorsInsideNulls  every error is inside a null in data. An error
+\*                      never accompanies a value it didn't null.
+\*   nullsExplained     every null that an error caused is reported: at
+\*                      least one error from the raised paths whose
+\*                      propagation reached it is in errors.
+\*   serialErrorsKept   a mutation reports every error its earlier root
+\*                      fields raised (SerialErrorsKept above).
 \*
 \* Errors raised inside a subtree that was already nulled may or may not be
 \* reported. §6.3.3 lets an executor cancel those resolvers outright, and
 \* graphql-js 16.13 and later, and 17, drop their errors (graphql-js#4458,
 \* implementing graphql-spec#1184).
-Valid(fx, O, data, errors) ==
+Clauses(fx, O, data, errors) ==
   LET result == ExecuteQuery(fx, O) IN
-  /\ result.kind # "pending"
-  /\ data = result.json
-  /\ \A i \in DOMAIN errors : errors[i] \in result.raised
-  /\ \A i, j \in DOMAIN errors : i # j => errors[i] # errors[j]
-  /\ \A i \in DOMAIN errors : \E null \in result.nulls : IsPrefix(null.path, errors[i])
-  /\ \A null \in result.nulls : \E i \in DOMAIN errors : errors[i] \in null.cause
+  [complete |-> result.kind # "pending",
+   dataMatches |-> SameJson(data, result.json),
+   keyOrder |-> ~SameJson(data, result.json) \/ data = result.json,
+   errorsWereRaised |-> \A i \in DOMAIN errors : errors[i] \in result.raised,
+   errorPathsUnique |-> \A i, j \in DOMAIN errors : i # j => errors[i] # errors[j],
+   errorsInsideNulls |->
+     \A i \in DOMAIN errors : \E null \in result.nulls : IsPrefix(null.path, errors[i]),
+   nullsExplained |->
+     \A null \in result.nulls : \E i \in DOMAIN errors : errors[i] \in null.cause,
+   serialErrorsKept |-> SerialErrorsKept(fx, O, errors)]
+
+\* The names of the clauses a response breaks.
+FailedClauses(fx, O, data, errors) ==
+  LET clauses == Clauses(fx, O, data, errors) IN
+  {name \in DOMAIN clauses : ~clauses[name]}
+
+Valid(fx, O, data, errors) == FailedClauses(fx, O, data, errors) = {}
 
 \* Whether a response can be sent yet.
 IsComplete(fx, O) == ExecuteQuery(fx, O).kind # "pending"
+
+\* §6.3.4 Normal and Serial Execution: a mutation's root fields execute
+\* serially, in the order of the collected fields map, each one completed
+\* before the next is executed. EarlierRootsComplete says every root field
+\* before the one with response key `key` has completed, given O.
+EarlierRootsComplete(fx, O, key) ==
+  LET grouped == RootGroups(fx)
+      fields == CompleteFields(fx, O, <<>>, RootType(fx), grouped)
+  IN \A j \in DOMAIN grouped :
+       grouped[j].key = key => \A k \in 1..(j - 1) : fields[k].kind # "pending"
+
+\* No resolver under a root field settles before every earlier root field
+\* has completed.
+SeriallyExecuted(fx, O) ==
+  fx.operationType # "mutation" \/
+    \A path \in DOMAIN O : EarlierRootsComplete(fx, O, path[1])
+
+\* The same, over a trace of what an implementation did: a sequence of
+\* [kind, path, outcome], where kind is "call" (a resolver was called) or
+\* "settle" (it produced outcome). No root field's resolver is called before
+\* every earlier root field has completed, given what had settled by then.
+\* Calls are what an engine controls; settles, a test driver may choose.
+SettledBy(trace, n) ==
+  LET settles == {i \in 1..n : trace[i].kind = "settle"} IN
+  [path \in {trace[i].path : i \in settles} |->
+     trace[CHOOSE i \in settles : trace[i].path = path].outcome]
+
+CalledSerially(fx, trace) ==
+  fx.operationType # "mutation" \/
+    \A n \in DOMAIN trace :
+      (trace[n].kind = "call" /\ Len(trace[n].path) = 1) =>
+        EarlierRootsComplete(fx, SettledBy(trace, n - 1), trace[n].path[1])
+
 ====

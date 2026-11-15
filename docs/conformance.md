@@ -1,0 +1,156 @@
+# Checking your GraphQL implementation
+
+`Reference.tla` is an executable statement of what the spec allows a response to be. It doesn't predict one answer. Given what each resolver produced, it says whether a response is one of the responses the spec allows. That matters because execution has many correct answers:
+
+- resolvers settle in any order;
+- a response can go out before abandoned resolvers finish;
+- errors under an already-nulled position may or may not be reported;
+- a mutation may stop after its `data` is nulled.
+
+A golden-file test suite would have to pick one of these. The reference accepts all of them and nothing else.
+
+The kit in [`kit/`](../kit) runs your implementation through an *adapter* and checks every response with tla-ts. graphql-js 16 and 17 are checked this way in CI, through [`adapters/graphql-js/adapter.mjs`](../adapters/graphql-js/adapter.mjs), about 150 lines.
+
+```shell
+npx graphql-tla run execution --adapter "java -jar my-adapter.jar"
+npx graphql-tla run execution --adapter "node adapters/graphql-js/adapter.mjs --graphql 17" --strict
+npx graphql-tla check execution cases.jsonl
+```
+
+`run` drives the adapter, then checks. `check` reads cases you recorded yourself, in the [case format](#case-format), for implementations where a driven adapter is awkward.
+
+## What your adapter does
+
+The adapter is a process that reads and writes newline-delimited JSON on stdin and stdout. Anything on stderr is passed through. For each `execute`, it builds the schema, parses the document, and executes it with **one resolver installed on every field**. That resolver:
+
+1. tells the kit it was called (`call`);
+2. returns something that completes later (a promise, future, task or channel);
+3. completes it however the kit says (`settle`).
+
+### Messages
+
+The adapter starts by announcing itself:
+
+```json
+{"type":"hello","protocol":1,"name":"my-graphql 2.3","capabilities":["idle","deferred-items","mutation","subscription"]}
+```
+
+The kit, for each execution:
+
+```json
+{"type":"execute","id":7,"fixture":"unions","schema":"type Query { … }","document":"query { … }","operationType":"query","variables":{},"errorPropagation":true}
+{"type":"settle","id":7,"call":3,"outcome":{"kind":"object","type":"User"}}
+{"type":"end","id":7}
+```
+
+The adapter:
+
+```json
+{"type":"call","id":7,"call":3,"path":["search","0"],"returnType":"SearchResult!","after":2}
+{"type":"response","id":7,"response":{"data":{"search":[{"__typename":"User","name":null}]},"errors":[{"message":"…","path":["search",0,"name"]}]}}
+{"type":"idle","id":7}
+{"type":"error","id":7,"message":"the adapter couldn't build the schema: …"}
+```
+
+Field by field:
+
+- **`call`:** numbers calls within an execution. Each `settle` names one.
+- **`path`:** the response path, with list indices as strings or numbers. This is only instrumentation. Paths in the response's errors must follow §7.1.4: integers for list indices.
+- **`returnType`:** the field's type in SDL syntax, or the item type for a list item. The kit checks it against the fixture.
+- **`after`:** optional but recommended. The number of `settle`s for this execution the adapter had applied when the resolver was called. Increment the count before completing the future. The kit uses it to place each call in the order the engine saw things, which is what makes `calledSerially` conclusive. A stamp can only be late, never early, so it's sound on any threading model.
+- **`response`:** the response the client would get, serialized as JSON.
+- **`end`:** the kit is done with the execution. The adapter can drop it, and anything still pending can be abandoned.
+- **`errorPropagation: false`:** execute without error propagation. graphql-js 17 does this with `@experimental_disableErrorPropagation`. The document doesn't carry the directive, so add it, or use your implementation's own switch.
+
+### Outcomes
+
+The resolver returns this for each outcome:
+
+| `outcome` | The resolver returns |
+| --- | --- |
+| `{"kind":"leaf"}` | The canonical value for the named type: Int `1`, Float `1.5`, Boolean `true`, an enum's first value, anything else `"v"`. At a list position (a wrong shape), the number `1`. |
+| `{"kind":"object","type":"User"}` | An object whose runtime type is `User`. For an abstract type, your type resolution must pick `User`. |
+| `{"kind":"list","length":2}` | A list of `length` items. With `deferred-items`, each item is itself pending and is reported with its own `call`. |
+| `{"kind":"null"}` | null |
+| `{"kind":"error"}` | An error, by throwing, rejecting or returning an error value |
+
+The kit checks leaf values in the response against the same table, because the reference abstracts them away. Results of the wrong shape are only sent to adapters with `invalid-results`:
+
+- a leaf for a list type;
+- an object for an Int, Float or Boolean. Not for String or ID, which §3.5 lets a service coerce from other values "where reasonable";
+- a runtime type that isn't one of an abstract type's possible types.
+
+### Capabilities
+
+| Capability | Meaning |
+| --- | --- |
+| `idle` | After each `execute` and `settle`, the adapter lets the engine run until it is blocked on the kit, then sends `idle`. That makes runs deterministic, which the exhaustive runs need. Without it, the kit waits `--grace` ms of silence instead and only does random runs. |
+| `deferred-items` | A list's items settle one by one. Without it, a list `settle` carries `items`, the outcome of each item (never `error`), and the adapter returns them inline. |
+| `invalid-results` | The adapter can return results of the wrong shape. Typed implementations usually can't. |
+| `mutation`, `subscription` | It runs those operation types. A subscription's source stream yields one event, and the response is the result for that event. In graphql-js, the root field's resolver runs on the event (`{}`) and is the root `call`. In engines where the stream's item is the root field's value, the source stream's request for its event is the root `call`, and the settled outcome is the event. |
+| `error-propagation-off` | It can execute with `errorPropagation: false`. |
+
+Fixtures that need a capability the adapter doesn't have are skipped, and the report says so.
+
+### Engines that run resolvers synchronously
+
+If your engine calls a resolver and blocks until it returns, the resolver can read the `settle` from stdin itself. Only one call is pending at a time, so every run is the FIFO schedule, and the protocol still works. Without `idle`, set `--grace` above your engine's worst pause between finishing one resolver and calling the next.
+
+## What is checked
+
+For each case, the kit evaluates `Cases!Failures` in [`kit/execution/Cases.tla`](../kit/execution/Cases.tla). That is each clause of `Reference!Clauses`, plus `Reference!CalledSerially` for mutations:
+
+| Clause | The response breaks it when |
+| --- | --- |
+| `complete` | it was sent while a resolver it depends on was still pending |
+| `dataMatches` | `data` isn't the completed value, up to key order |
+| `keyOrder` | keys aren't in collected field order. This is a SHOULD (§7.2.2); it only fails with `--strict` |
+| `errorsWereRaised` | an error's path isn't where an execution error was raised |
+| `errorPathsUnique` | two errors share a path (§6.4.4) |
+| `errorsInsideNulls` | an error isn't inside a null in `data` |
+| `nullsExplained` | a null caused by an error comes without any error from its cause |
+| `calledSerially` | a mutation's root field was called before the previous one completed (§6.3.4) |
+| `serialErrorsKept` | a mutation leaves out an error raised under an earlier root field, which no earlier error had nulled, even if a later root field then nulled `data`. §6.3.4 completes each root field before the next, so those errors can't have been cancelled (§6.3.3). For a query, any such gap can be blamed on a legal schedule, so only `nullsExplained` applies |
+
+Before that, the kit rejects malformed cases. It works out each position's type from the fixture, never from the adapter. A case is malformed if:
+
+- the response has entries other than `data`, `errors` and `extensions`, or no `data`;
+- an `extensions` entry isn't a map;
+- an error has no `message` or `path`, or malformed `locations`;
+- an error path has a string where §7.1.4 wants an integer list index, or names a position the operation doesn't select;
+- `errors` is an empty list;
+- a leaf isn't the canonical value for its position's type;
+- a resolver is called twice, called at a position the operation doesn't select, or reported with the wrong type;
+- a resolver settles twice, or settles without having been called.
+
+Extra entries in an error are reported as a SHOULD (§7.1.2).
+
+Failures are grouped by fixture and clause, and each group is shown by its shortest case: its trace, the response, and the data the reference expected.
+
+Every run also checks the checker. [`kit/execution/controls.json`](../kit/execution/controls.json) holds known-good cases recorded from graphql-js, and 17 broken variants of them: an error dropped, an earlier mutation root field's error dropped once `data` was nulled, a key reordered, a mutation field called early, a response sent while a resolver it needs is pending, a list index written as a string, a resolver called twice, and so on. Each base must pass and each control must be caught by the clause it names, so a green run can't be vacuous. The corpus doesn't depend on your cases. `node scripts/generate-controls.mjs` regenerates it.
+
+## Case format
+
+One JSON object per line. `run --out FILE` writes them, and `check` reads them.
+
+```json
+{"v":1,"fixture":"unions","implementation":"my-graphql 2.3",
+ "trace":[{"call":["search"],"type":"[SearchResult!]"},
+          {"settle":["search"],"outcome":{"kind":"list","length":1}},
+          {"call":["search","0"],"type":"SearchResult!"},
+          {"settle":["search","0"],"outcome":{"kind":"object","type":"User"}},
+          {"call":["search","0","name"],"type":"String"},
+          {"settle":["search","0","name"],"outcome":{"kind":"error"}}],
+ "response":{"data":{"search":[{"__typename":"User","name":null}]},"errors":[{"message":"…","path":["search",0,"name"]}]}}
+```
+
+- **`trace`:** the calls and settles up to the moment the response was produced, in order. The outcomes the reference uses are the settles in it.
+- **`after`** on a call: the adapter's stamp, if it sent one.
+- **`v`:** the format version. The kit refuses versions it doesn't know.
+
+## Limits
+
+- **Fixtures:** the fixtures in [`fixtures/`](../fixtures) are small, and their ids won't change. A pass means no fixture, outcome combination or schedule tried found a response the spec forbids. It doesn't prove the implementation correct.
+- **Without `idle`:** the kit may record a settle the engine never looked at before it responded. The response clauses stay sound, because `Valid` stays true as more resolvers settle after a response (`ExecutionConformance.tla` checks this as `ResponseStaysValid`). With `idle`, the kit replays a few runs before it starts and fails if they differ, since exhaustive runs depend on determinism.
+- **Without `after` stamps:** `calledSerially` uses the order messages arrived in. It can catch a non-serial engine but can't prove a serial one, and the report says so.
+- **Not covered by the kit yet:** `@defer`/`@stream`, subscription streams beyond one event, validation, coercion and parsing. Those references are checked against graphql-js only, by the differential scripts.
