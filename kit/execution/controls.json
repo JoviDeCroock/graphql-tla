@@ -595,7 +595,132 @@
   },
   {
    "v": 1,
-   "fixture": "noPropagation",
+   "fixture": "fragments",
+   "trace": [
+    {
+     "call": [
+      "node"
+     ],
+     "type": "Node",
+     "after": 0
+    },
+    {
+     "settle": [
+      "node"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "Bot"
+     }
+    },
+    {
+     "call": [
+      "node",
+      "id"
+     ],
+     "type": "ID!",
+     "after": 1
+    },
+    {
+     "call": [
+      "node",
+      "nodeId"
+     ],
+     "type": "ID!",
+     "after": 1
+    },
+    {
+     "settle": [
+      "node",
+      "nodeId"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "response": {
+    "errors": [
+     {
+      "message": "Cannot return null for non-nullable field Bot.id.",
+      "locations": [
+       {
+        "line": 12,
+        "column": 7
+       }
+      ],
+      "path": [
+       "node",
+       "nodeId"
+      ]
+     }
+    ],
+    "data": {
+     "node": null
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "leaves",
+   "trace": [
+    {
+     "call": [
+      "count"
+     ],
+     "type": "Int",
+     "after": 0
+    },
+    {
+     "call": [
+      "ratio"
+     ],
+     "type": "Float",
+     "after": 0
+    },
+    {
+     "call": [
+      "color"
+     ],
+     "type": "Color",
+     "after": 0
+    },
+    {
+     "settle": [
+      "count"
+     ],
+     "outcome": {
+      "kind": "leaf"
+     }
+    },
+    {
+     "settle": [
+      "ratio"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "color"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "response": {
+    "data": {
+     "count": 1,
+     "ratio": null,
+     "color": null
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "nullPropagation",
    "trace": [
     {
      "call": [
@@ -1591,6 +1716,233 @@
    }
   },
   {
+   "name": "writes an error path as a string instead of a list",
+   "clause": "malformed",
+   "check": "responsePosition",
+   "base": 0,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "error"
+      }
+     }
+    ],
+    "response": {
+     "errors": [
+      {
+       "message": "resolver at node failed",
+       "locations": [
+        {
+         "line": 2,
+         "column": 3
+        }
+       ],
+       "path": "node"
+      }
+     ],
+     "data": {
+      "node": null
+     }
+    }
+   }
+  },
+  {
+   "name": "reports an error under the field name instead of its alias",
+   "clause": "malformed",
+   "check": "responsePosition",
+   "base": 10,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "Bot"
+      }
+     },
+     {
+      "call": [
+       "node",
+       "id"
+      ],
+      "type": "ID!",
+      "after": 1
+     },
+     {
+      "call": [
+       "node",
+       "nodeId"
+      ],
+      "type": "ID!",
+      "after": 1
+     },
+     {
+      "settle": [
+       "node",
+       "nodeId"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "errors": [
+      {
+       "message": "Cannot return null for non-nullable field Bot.id.",
+       "locations": [
+        {
+         "line": 12,
+         "column": 7
+        }
+       ],
+       "path": [
+        "node",
+        "id"
+       ]
+      }
+     ],
+     "data": {
+      "node": null
+     }
+    }
+   }
+  },
+  {
+   "name": "writes a location with line 0",
+   "clause": "warning",
+   "check": "errorLocations",
+   "base": 0,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "error"
+      }
+     }
+    ],
+    "response": {
+     "errors": [
+      {
+       "message": "resolver at node failed",
+       "locations": [
+        {
+         "line": 0,
+         "column": 1
+        }
+       ],
+       "path": [
+        "node"
+       ]
+      }
+     ],
+     "data": {
+      "node": null
+     }
+    }
+   }
+  },
+  {
+   "name": "writes an Int as a string",
+   "clause": "warning",
+   "check": "leafEncoding",
+   "base": 11,
+   "case": {
+    "v": 1,
+    "fixture": "leaves",
+    "trace": [
+     {
+      "call": [
+       "count"
+      ],
+      "type": "Int",
+      "after": 0
+     },
+     {
+      "call": [
+       "ratio"
+      ],
+      "type": "Float",
+      "after": 0
+     },
+     {
+      "call": [
+       "color"
+      ],
+      "type": "Color",
+      "after": 0
+     },
+     {
+      "settle": [
+       "count"
+      ],
+      "outcome": {
+       "kind": "leaf"
+      }
+     },
+     {
+      "settle": [
+       "ratio"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "color"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "data": {
+      "count": "1",
+      "ratio": null,
+      "color": null
+     }
+    }
+   }
+  },
+  {
    "name": "adds an entry to the response",
    "clause": "malformed",
    "check": "additionalEntries",
@@ -1655,10 +2007,10 @@
    "name": "returns a leaf other than the canonical value",
    "clause": "malformed",
    "check": "leafValues",
-   "base": 10,
+   "base": 12,
    "case": {
     "v": 1,
-    "fixture": "noPropagation",
+    "fixture": "nullPropagation",
     "trace": [
      {
       "call": [
@@ -1741,8 +2093,8 @@
   {
    "name": "truncates a fraction returned for an Int instead of raising an error",
    "clause": "malformed",
-   "check": "resultCoercion",
-   "base": 11,
+   "check": "intFraction",
+   "base": 13,
    "case": {
     "v": 1,
     "fixture": "leaves",
@@ -1803,10 +2155,74 @@
    }
   },
   {
-   "name": "produces no response after a resolver returned a value its type can't represent",
+   "name": "returns a name that isn't one of the enum's values instead of raising an error",
    "clause": "malformed",
    "check": "resultCoercion",
-   "base": 12,
+   "base": 14,
+   "case": {
+    "v": 1,
+    "fixture": "leaves",
+    "trace": [
+     {
+      "call": [
+       "count"
+      ],
+      "type": "Int",
+      "after": 0
+     },
+     {
+      "call": [
+       "ratio"
+      ],
+      "type": "Float",
+      "after": 0
+     },
+     {
+      "call": [
+       "color"
+      ],
+      "type": "Color",
+      "after": 0
+     },
+     {
+      "settle": [
+       "count"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "ratio"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "color"
+      ],
+      "outcome": {
+       "kind": "uncoercible"
+      }
+     }
+    ],
+    "response": {
+     "data": {
+      "count": null,
+      "ratio": null,
+      "color": "BLUE"
+     }
+    }
+   }
+  },
+  {
+   "name": "produces no response after a resolver returned a non-finite Float or an unknown enum value",
+   "clause": "malformed",
+   "check": "resultCoercion",
+   "base": 14,
    "case": {
     "v": 1,
     "fixture": "leaves",
@@ -1892,7 +2308,7 @@
    "name": "calls a field that @include(if: false) leaves out",
    "clause": "malformed",
    "check": "callsSelected",
-   "base": 13,
+   "base": 15,
    "case": {
     "v": 1,
     "fixture": "fragments",
@@ -1981,7 +2397,7 @@
    "name": "calls a field before its parent has a value",
    "clause": "malformed",
    "check": "callsReachable",
-   "base": 13,
+   "base": 15,
    "case": {
     "v": 1,
     "fixture": "fragments",

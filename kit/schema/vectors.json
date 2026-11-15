@@ -691,6 +691,8 @@
       ],
       "family": "names",
       "rule": "ARG_NAMES_UNIQUE",
+      "edition": "draft",
+      "editionNote": "new in the draft: argument name uniqueness",
       "pair": "argNamesUnique.1.valid",
       "sdl": "type Query { f(x: Int, x: Int): Int }",
       "verdict": [
@@ -708,6 +710,8 @@
       ],
       "family": "names",
       "rule": "ARG_NAMES_UNIQUE",
+      "edition": "draft",
+      "editionNote": "new in the draft: argument name uniqueness",
       "pair": "argNamesUnique.1.invalid",
       "sdl": "type Query { f(x: Int, y: Int): Int }",
       "verdict": [],
@@ -723,6 +727,8 @@
       ],
       "family": "names",
       "rule": "ARG_NAMES_UNIQUE",
+      "edition": "draft",
+      "editionNote": "new in the draft: argument name uniqueness",
       "pair": "argNamesUnique.2.valid",
       "sdl": "directive @d(x: Int, x: Int) on FIELD type Query { a: Int }",
       "verdict": [
@@ -740,6 +746,8 @@
       ],
       "family": "names",
       "rule": "ARG_NAMES_UNIQUE",
+      "edition": "draft",
+      "editionNote": "new in the draft: argument name uniqueness",
       "pair": "argNamesUnique.2.invalid",
       "sdl": "directive @d(x: Int, y: Int) on FIELD type Query { a: Int }",
       "verdict": [],
@@ -1308,6 +1316,42 @@
       }
     },
     {
+      "id": "argDefaultCompatible.10.invalid",
+      "spec": [
+        "3.6"
+      ],
+      "family": "defaults",
+      "rule": "ARG_DEFAULT_COMPATIBLE",
+      "origin": "§3.5.2: a value not representable by finite IEEE 754 must raise a request error",
+      "edition": "draft",
+      "editionNote": "new in the draft: default value validation",
+      "pair": "argDefaultCompatible.10.valid",
+      "sdl": "type Query { f(x: Float = 1e400): Int }",
+      "verdict": [
+        "ARG_DEFAULT_COMPATIBLE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "argDefaultCompatible.10.valid",
+      "spec": [
+        "3.6"
+      ],
+      "family": "defaults",
+      "rule": "ARG_DEFAULT_COMPATIBLE",
+      "origin": "§3.5.2: a value not representable by finite IEEE 754 must raise a request error",
+      "edition": "draft",
+      "editionNote": "new in the draft: default value validation",
+      "pair": "argDefaultCompatible.10.invalid",
+      "sdl": "type Query { f(x: Float = 1.5): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
       "id": "implementsUnique.1.invalid",
       "spec": [
         "3.6",
@@ -1607,7 +1651,7 @@
       "family": "implementation",
       "rule": "IMPL_EXTRA_ARG_OPTIONAL",
       "pair": "implExtraArgOptional.1.invalid",
-      "sdl": "interface I { f: Int } type Query implements I { f(b: Int! = 1): Int }",
+      "sdl": "interface I { f: Int } type Query implements I { f(b: Int): Int }",
       "verdict": [],
       "expected": {
         "valid": true
@@ -2578,6 +2622,7 @@
       ],
       "family": "directive",
       "rule": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+      "unspecified": "§3.13 rule 3 forbids a directive definition to contain the use of a directive that leads back to it. This definition uses no directive: it reaches itself only through its own argument's type. The prose, \"While defining a directive, it must not reference itself directly or indirectly\", forbids it, and TypeSystem.tla follows the prose, but the formal rule doesn't.",
       "pair": "directiveReferencesItselfIndirectly.1.valid",
       "sdl": "directive @d(a: In) on INPUT_FIELD_DEFINITION input In { f: Int @d } type Query { a(x: In): Int }",
       "verdict": [
@@ -2638,6 +2683,7 @@
       ],
       "family": "directive",
       "rule": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+      "unspecified": "§3.13 rule 3 forbids a directive definition to contain the use of a directive that leads back to it. This definition uses no directive: it reaches itself only through its own argument's type. The prose, \"While defining a directive, it must not reference itself directly or indirectly\", forbids it, and TypeSystem.tla follows the prose, but the formal rule doesn't.",
       "pair": "directiveReferencesItselfIndirectly.3.valid",
       "sdl": "directive @d(c: Color) on ENUM_VALUE enum Color { RED @d BLUE } type Query { a: Color }",
       "verdict": [

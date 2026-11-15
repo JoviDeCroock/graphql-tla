@@ -25,10 +25,10 @@ If the adapter itself fails, it answers `{"type":"error","id":12,"message":"…"
 
 - **Where they live.** `kit/<area>/vectors.json` holds `{ "source": "...", "vectors": [...] }`. Each vector is `{ "id", "spec": ["5.5.2.3"], "family", ...request fields, "expected": ... }`. Areas whose vectors share schemas keep them once at the top level: `coerce` has one `schema`, and `validate` has a `schemas` map that each vector names.
 - **Who decides `expected`.** Only the TLA+ reference, evaluated by tla-ts, never graphql-js. `scripts/generate-vectors-<area>.mjs` writes the file, and `--check` regenerates it and fails if it differs. `npm run check:vectors` runs every `--check`.
-- **Editions.** A vector that relies on grammar or rules only in the draft, not in the October 2021 edition (OneOf input objects, for example), carries `"edition": "draft"`. It is still graded, and findings say how many of their vectors are draft-only, so an implementation of October 2021 can tell those apart.
-- **Unspecified inputs.** Where the spec's formal algorithm and its prose disagree, the vector is marked `unspecified` and isn't graded.
+- **Editions.** A vector that relies on grammar or rules only in the draft, not in the October 2021 edition (OneOf input objects, for example), carries `"edition": "draft"`. It is still graded (except under `introspect`'s October 2021 profile, which skips it), and findings say how many of their vectors are draft-only, so an implementation of October 2021 can tell those apart.
+- **Unspecified inputs.** Where the spec's formal algorithm and its prose disagree, or the spec leaves a term undefined (§5.3.2's "identical sets of arguments"), the vector is marked `unspecified` and isn't graded. `validate` and `schema` have such vectors; the report's provenance counts them.
 - **What they're built from.** The documents and schemas come from the differential scripts' families and the spec's own examples.
-- **Minimal pairs.** Where a reference reports which rule or production a verdict rests on, vectors come in pairs. An invalid input breaks one rule (in `validate`, two in 19 documented cases, which count against both), and a valid sibling differs from it by one small edit. That gives a per-rule verdict without asking the adapter which rule it applied:
+- **Minimal pairs.** Where a reference reports which rule or production a verdict rests on, vectors come in pairs. An invalid input breaks one rule (in `validate`, two in 21 documented cases, which count against both), and a valid sibling differs from it by one small edit. That gives a per-rule verdict without asking the adapter which rule it applied:
   - a rule is **not enforced** when an implementation accepts an input that breaks it. That is conclusive, and it is what fails the rule's check.
   - a rejected valid sibling fails a separate check, such as `validate`'s `acceptsValid`. The paired rule is only a hint, since the kit doesn't read error messages; a finding calls it likely over-strict only when several independent siblings point at it.
   - a rule that can't be broken alone (every input that breaks it breaks a broader rule too) is reported as `subsumed`, never `pass`.
@@ -42,11 +42,13 @@ Each area exports `run({ adapter, strict, option, flag, log })` from `kit/<area>
 ```js
 {
   format: 1, area, implementation, capabilities,
-  provenance: { kit, date, strict, vectors },        // kit/report.mjs provenance()
+  provenance: { kit, date, strict, vectors, graded?, skipped? },  // kit/report.mjs provenance()
+  profile?, profileNote?,                              // introspect: which edition's query was answered
+  draftOnly?,                                          // how many failing vectors rely on the draft
   checkerSelfTest: "passed (n negative controls)",
   cases: { submitted, distinct, malformed },
   adapterProblems: 0,
-  checks: [{ id, title, level, spec: [section(...)], status, cases, failing, oct2021?, basis?, note? }],
+  checks: [{ id, title, level, spec: [section(...)], status, cases, failing, oct2021?, edition?, basis?, note? }],
   findings: [{ checks: [id], summary, cases, fixtures: { family: n }, fixture, problem?,
                example: { input: "<the vector, briefly>", response: <the answer>, expected: "<the reference's answer>" } }],
   fixtures: [],

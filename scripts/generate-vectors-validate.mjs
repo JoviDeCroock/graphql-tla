@@ -27,9 +27,19 @@
 //
 //   requires     ["custom-scalar-literals"]: the document gives a literal to
 //                a custom scalar, which the service defines (§3.5.6)
-//   unspecified  Fragment Spread Is Possible where the formal text and the
-//                prose disagree; not graded
-//   edition      "draft": the vector relies on a rule only the draft has
+//   unspecified  the spec doesn't settle the verdict: Fragment Spread Is
+//                Possible and All Variable Usages Are Allowed (OneOf) where
+//                the formal text and the prose disagree, and Field Selection
+//                Merging where readings of "identical sets of arguments"
+//                disagree; not graded
+//   edition      "draft": the vector relies on a rule only the draft has,
+//                or on its nested-list coercion, or its schema needs a OneOf
+//                Input Object
+//
+// The differential and examples schemas declare a OneOf Input Object, which
+// an implementation of October 2021 can't build. The vectors file has each
+// both without it (the name) and with it (<name>OneOf); only vectors tagged
+// draft use the second.
 //
 // graphql-js is used only to parse and print documents, to turn an SDL
 // schema into TLA+ data, to check that the generated SDL builds a valid
@@ -816,7 +826,16 @@ const obj = (f) => (Array.isArray(f) || f === undefined ? {} : f);
 // The reference's verdicts: for each document, the rules it breaks and the
 // subjects each reports.
 
-const evaluate = async (groups) => {
+// Every rule's violations, as a function from the rules a document breaks.
+const ALL_RULES = `LET Full == WithIntrospection(Schema)
+      violations == [r \\in Rules |-> CheckRule(r, Full, Docs[i])]
+  IN [r \\in {x \\in Rules : violations[x] # {}} |-> violations[r]]`;
+const asViolations = (violations) =>
+  Object.fromEntries(Object.entries(obj(violations)).map(([rule, subjects]) => [rule, [...subjects].sort()]));
+
+// Evaluates `expression` (by default every rule) on each document; it may
+// use Schema and Docs[i].
+const evaluate = async (groups, expression = ALL_RULES, read = asViolations) => {
   const shards = [];
   for (const group of groups) {
     for (let i = 0; i < group.docs.length; i += SHARD_SIZE) {
@@ -830,8 +849,7 @@ const evaluate = async (groups) => {
 Docs == ${seq(shard.docs)}
 
 ASSUME \\A i \\in DOMAIN Docs :
-  LET violations == [r \\in Rules |-> Check(r, Schema, Docs[i])]
-  IN PrintT(<<"doc", i, [r \\in {x \\in Rules : violations[x] # {}} |-> violations[r]]>>)
+  PrintT(<<"doc", i, ${expression}>>)
 ASSUME PrintT(<<"done", Len(Docs)>>)`,
     ),
   );
@@ -839,10 +857,8 @@ ASSUME PrintT(<<"done", Len(Docs)>>)`,
   shards.forEach((shard, k) => {
     const lines = printed(outputs[k], "doc");
     if (lines.length !== shard.docs.length) throw new Error(`read ${lines.length} verdicts from a shard of ${shard.docs.length} documents`);
-    for (const [index, violations] of lines) {
-      results[groups.indexOf(shard.group)][shard.start + index - 1] = Object.fromEntries(
-        Object.entries(obj(violations)).map(([rule, subjects]) => [rule, [...subjects].sort()]),
-      );
+    for (const [index, value] of lines) {
+      results[groups.indexOf(shard.group)][shard.start + index - 1] = read(value);
     }
   });
   for (const r of results) if (r.some((x) => x === undefined)) throw new Error("a document has no verdict");
@@ -1239,6 +1255,15 @@ const EXTRA = {
     `query Q { user @include(if: $v) { id } }`,
     `query Q { echo(filter: {limit: $v}) }`,
     `query Q { echo(list: [$v]) }`,
+    // Introspection: __schema and __type are defined on the query root only
+    // (§4.2). The fields selected under them are in both editions.
+    `{ __schema { queryType { name } types { name kind } directives { name locations args { name type { kind name ofType { name } } } } } __type(name: "Post") { name fields { name type { kind name } } } }`,
+    `{ __schema { queryType { name } types { name kind } directives { name locations args { name type { kind name ofType { name } } } } } __type { name fields { name type { kind name } } } }`,
+    `{ __schema { queryType { name } } }`,
+    `{ post { __schema { queryType { name } } } }`,
+    `{ __type(name: "Post") { name } }`,
+    `subscription { __type(name: "Post") { name } }`,
+    `subscription { __schema { queryType { name } } }`,
   ],
   scalars: [
     `query Q($v: Dog) { json(value: {a: $v}) }`,
@@ -1253,19 +1278,75 @@ const EXTRA = {
   ],
 };
 
+// The schemas the reference evaluates every document against.
 const SCHEMAS = {
   differential: `${SDL.trim()}\n`,
   scalars: SCALARS_SDL,
   examples: schemaSdl(spec.schemas.examples),
   hello: schemaSdl(spec.schemas.hello),
 };
-const built = {};
-for (const [name, sdl] of Object.entries(SCHEMAS)) {
-  built[name] = buildSchema(sdl);
-  const errors = validateSchema(built[name]);
-  if (errors.length) throw new Error(`schema ${name} isn't valid: ${errors.map((e) => e.message).join("; ")}`);
+
+// OneOf Input Objects are new in the draft, so an implementation of the
+// October 2021 edition can't build a schema that declares one. The
+// differential and examples schemas are also written without theirs, and a
+// vector is asked against that version unless the reference's verdict
+// changes there. The version with the OneOf Input Object (`<name>OneOf`) is
+// left to vectors tagged draft.
+const replaceOnce = (text, from, to) => {
+  if (text.split(from).length !== 2) throw new Error(`expected "${from}" once in the schema`);
+  return text.replace(from, to);
+};
+const withoutOneOfRecord = (S) => {
+  const removed = new Set(Object.entries(S.types).filter(([, t]) => t.kind === "input" && t.oneOf).map(([n]) => n));
+  const types = {};
+  for (const [name, t] of Object.entries(S.types)) {
+    if (removed.has(name)) continue;
+    if (Object.values(obj(t.inputFields)).some((f) => removed.has(f.type.name))) throw new Error(`${name} has a OneOf input field`);
+    // A field loses an optional argument of a removed type, and is
+    // removed with a required one.
+    const fields = {};
+    for (const [f, d] of Object.entries(obj(t.fields))) {
+      const args = Object.entries(obj(d.args));
+      if (args.some(([, a]) => removed.has(a.type.name) && a.type.wrappers[0] === "nonNull" && !a.hasDefault)) continue;
+      fields[f] = { ...d, args: Object.fromEntries(args.filter(([, a]) => !removed.has(a.type.name))) };
+    }
+    if ((t.kind === "object" || t.kind === "interface") && Object.keys(fields).length === 0) continue;
+    types[name] = { ...t, fields };
+  }
+  const roots = Object.fromEntries(Object.entries(S.roots).map(([r, n]) => [r, n && types[n] ? n : ""]));
+  return { ...S, types, roots };
+};
+const ONE_OF = { differential: "differentialOneOf", examples: "examplesOneOf" };
+const WITHOUT_ONE_OF = {
+  differential: replaceOnce(replaceOnce(SCHEMAS.differential, ", pick: Pick", ""), "input Pick @oneOf { id: ID name: String }\n", ""),
+  examples: schemaSdl(withoutOneOfRecord(spec.schemas.examples)),
+};
+for (const [name, sdl] of Object.entries(WITHOUT_ONE_OF)) {
+  if (/@oneOf/.test(sdl)) throw new Error(`the ${name} schema still has a OneOf Input Object`);
 }
+// What the vectors file names each schema: the evaluated schema, or for a
+// vector asked against the version without OneOf, that version.
+const OUTPUT_SCHEMAS = {
+  differential: WITHOUT_ONE_OF.differential,
+  differentialOneOf: SCHEMAS.differential,
+  scalars: SCHEMAS.scalars,
+  examples: WITHOUT_ONE_OF.examples,
+  examplesOneOf: SCHEMAS.examples,
+  hello: SCHEMAS.hello,
+};
+const buildAll = (sdls) => {
+  const out = {};
+  for (const [name, sdl] of Object.entries(sdls)) {
+    out[name] = buildSchema(sdl);
+    const errors = validateSchema(out[name]);
+    if (errors.length) throw new Error(`schema ${name} isn't valid: ${errors.map((e) => e.message).join("; ")}`);
+  }
+  return out;
+};
+const built = buildAll(SCHEMAS);
 const schemaTla = Object.fromEntries(Object.entries(built).map(([name, s]) => [name, schemaToTla(graphql16, s)]));
+const builtWithoutOneOf = buildAll(WITHOUT_ONE_OF);
+const schemaTlaWithoutOneOf = Object.fromEntries(Object.entries(builtWithoutOneOf).map(([name, s]) => [name, schemaToTla(graphql16, s)]));
 
 // Every candidate document, once per schema.
 const docs = [];
@@ -1368,9 +1449,22 @@ for (const e of examples) {
 // an unknown or missing input field, so no document breaks §5.6.2 or
 // §5.6.4 alone. Their vectors break §5.6.1 too.
 const ALSO = { InputObjectFieldNames: ["ValuesOfCorrectType"], InputObjectRequiredFields: ["ValuesOfCorrectType"] };
+// Single Root Field forbids an introspection field at a subscription's
+// root. __schema and __type are defined only on the query root, and the
+// root types must all be different (§3.3.1), so a subscription that selects
+// one breaks Field Selections too. Such a document is filed under Single
+// Root Field, and counts against both.
+const metaFieldAtSubscriptionRoot = (i) => {
+  const v = docs[i].violations;
+  const b = broken(i);
+  if (b.length !== 2 || !v.SingleRootField || !v.FieldSelections) return false;
+  const root = built[docs[i].schema].getSubscriptionType()?.name;
+  return v.FieldSelections.every((s) => s === `${root}.__schema` || s === `${root}.__type`);
+};
 const ruleOf = (i) => {
   const b = broken(i);
   if (b.length === 1) return b[0];
+  if (metaFieldAtSubscriptionRoot(i)) return "SingleRootField";
   return b.find((r) => ALSO[r] && b.length === 1 + ALSO[r].length && ALSO[r].every((x) => b.includes(x)));
 };
 
@@ -1547,7 +1641,7 @@ for (const rule of ORDER) {
 
 const {
   TypeInfo, visit, visitWithTypeInfo, getNamedType, getNullableType, isListType, isScalarType, isSpecifiedScalarType,
-  isInputObjectType, isInterfaceType, isAbstractType,
+  isInputObjectType, isInterfaceType, isAbstractType, valueFromAST,
 } = graphql16;
 const LITERAL_KINDS = new Set(["IntValue", "FloatValue", "StringValue", "BooleanValue", "EnumValue", "ListValue", "ObjectValue"]);
 
@@ -1637,6 +1731,123 @@ for (const v of vectors) {
   }
 }
 
+const unspecify = (v, why) => {
+  v.unspecified = v.unspecified ? `${v.unspecified}; ${why}` : why;
+};
+const astOf = (v) => parse(v.document, { noLocation: true });
+// Evaluates `expression` on each vector's document (or docOf's rewrite of
+// it), against its schema as tlaOf gives it. A Map from vector to result.
+const evaluateVectors = async (list, { docOf = astOf, expression, read, tlaOf = (s) => schemaTla[s] }) => {
+  const groups = Object.keys(SCHEMAS)
+    .map((schema) => ({ schema, list: list.filter((v) => v.schema === schema) }))
+    .filter((g) => g.list.length);
+  const results = await evaluate(
+    groups.map((g) => ({ schemaTla: tlaOf(g.schema), docs: g.list.map((v) => documentToTla(docOf(v))) })),
+    expression,
+    read,
+  );
+  const out = new Map();
+  groups.forEach((g, k) => g.list.forEach((v, n) => out.set(v, results[k][n])));
+  return out;
+};
+const asList = (s) => [...s];
+// A vector's verdict is unsettled when another reading of the spec would
+// change the set of rules it breaks: a valid vector would become invalid,
+// an invalid one valid, or an invalid one would break a second rule.
+
+// All Variable Usages Are Allowed where the formal text and the prose
+// disagree: the prose says "Variables used for OneOf Input Object fields
+// must be non-nullable", and the formal text allows a nullable variable
+// with a non-null default value there. Validation.tla's OneOfProseOnly
+// gives the usages only the prose rejects.
+const oneOfProse = await evaluateVectors(vectors.filter((v) => inspected.get(v).oneOf), {
+  expression: "OneOfProseOnly(WithIntrospection(Schema), Docs[i])",
+  read: asList,
+});
+for (const [v, variables] of oneOfProse) {
+  if (variables.length > 0 && !v.violations?.AllVariableUsagesAreAllowed) {
+    unspecify(
+      v,
+      "§5.8.5's formal text lets a nullable variable with a non-null default value into a OneOf Input Object field; its prose says such variables must be non-nullable",
+    );
+  }
+}
+
+// Field Selection Merging asks for "identical sets of arguments" (§5.3.2)
+// without defining identical. The reference compares literal values. Two
+// other readings are evaluated here, by rewriting each field's arguments
+// into strings that compare the way the reading does, and evaluating the
+// rule again:
+//   text     each argument's literal as written (a block string differs
+//            from a quoted one; input object fields in another order
+//            differ)
+//   coerced  the coerced argument values, defaults included (1 and 1.0
+//            are the same Float; an omitted argument equals its default)
+// Arguments always compare as a set, and a variable is equal only to
+// itself. Only documents with two fields of one response name, one of
+// them with arguments or argument defaults, can tell the readings apart.
+const VARIABLE_VALUES = new Proxy({}, { get: (_, name) => (typeof name === "string" ? { $variable: name } : undefined) });
+const stable = (value) =>
+  JSON.stringify(value, (_, x) =>
+    x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, x[k]])) : x);
+const stringArgument = (name, text) => ({ kind: "Argument", name: { kind: "Name", value: name }, value: { kind: "StringValue", value: text } });
+const argumentsAs = (reading, node, def) => {
+  const given = node.arguments ?? [];
+  if (reading === "text" || !def) return given.map((a) => stringArgument(a.name.value, `?${print(a.value)}`));
+  const out = [];
+  for (const d of def.args) {
+    const a = given.find((x) => x.name.value === d.name);
+    if (a) {
+      const value = valueFromAST(a.value, d.type, VARIABLE_VALUES);
+      out.push(stringArgument(d.name, value === undefined ? `?${print(a.value)}` : `=${stable(value)}`));
+    } else if (d.defaultValue !== undefined) out.push(stringArgument(d.name, `=${stable(d.defaultValue)}`));
+  }
+  for (const a of given) if (!def.args.some((d) => d.name === a.name.value)) out.push(stringArgument(a.name.value, `?${print(a.value)}`));
+  return out;
+};
+const rewriteArguments = (v, reading) => {
+  const info = new TypeInfo(built[v.schema]);
+  return visit(
+    astOf(v),
+    visitWithTypeInfo(info, { Field: { leave: (node) => ({ ...node, arguments: argumentsAs(reading, node, info.getFieldDef()) }) } }),
+  );
+};
+const mayDependOnArgumentIdentity = (v) => {
+  const info = new TypeInfo(built[v.schema]);
+  const keys = new Map();
+  visit(
+    astOf(v),
+    visitWithTypeInfo(info, {
+      Field(node) {
+        const key = node.alias?.value ?? node.name.value;
+        const withArguments = (node.arguments?.length ?? 0) > 0 || (info.getFieldDef()?.args ?? []).some((a) => a.defaultValue !== undefined);
+        const k = keys.get(key) ?? { count: 0, withArguments: false };
+        keys.set(key, { count: k.count + 1, withArguments: k.withArguments || withArguments });
+      },
+    }),
+  );
+  return [...keys.values()].some((k) => k.count > 1 && k.withArguments);
+};
+const identityCandidates = vectors.filter(mayDependOnArgumentIdentity);
+const READINGS = { text: "their text", coerced: "their coerced values" };
+const mergingUnder = {};
+for (const reading of Object.keys(READINGS)) {
+  mergingUnder[reading] = await evaluateVectors(identityCandidates, {
+    docOf: (v) => rewriteArguments(v, reading),
+    expression: 'Check("FieldSelectionMerging", Schema, Docs[i])',
+    read: asList,
+  });
+}
+for (const v of identityCandidates) {
+  const breaks = Boolean(v.violations?.FieldSelectionMerging);
+  const others = Object.keys(READINGS).filter((r) => mergingUnder[r].get(v).length > 0 !== breaks);
+  if (others.length === 0) continue;
+  unspecify(
+    v,
+    `§5.3.2 doesn't define "identical sets of arguments": compared by literal value, as the reference does, the arguments of two fields here ${breaks ? "differ" : "are identical"}, but compared by ${others.map((r) => READINGS[r]).join(" or by ")} they ${breaks ? "are identical" : "differ"}`,
+  );
+}
+
 // Vectors that rely on the draft: an invalid vector that breaks Operation
 // Type Existence (new in the draft), that breaks Single Root Field with
 // @skip or @include at the root, or that breaks a rule only because an
@@ -1657,21 +1868,59 @@ oneOfGroups.forEach((g, k) =>
     if (Object.keys(v.violations).some((r) => !(r in oneOfVerdicts[k][n]))) restsOnOneOf.add(v);
   }),
 );
+
+// Nested lists. The draft coerces a list item that isn't a list, where the
+// item type is a list, as a list of one: `[1]` for `[[Int]]` is `[[1]]`.
+// October 2021's table says "Error: Incorrect item value" for `[1, 2, 3]`
+// (§3.11), so there such a literal breaks §5.6.1. A valid vector with one
+// relies on the draft, and so does an invalid one that doesn't already
+// break §5.6.1, since it breaks a second rule under October 2021.
+const nestedListItem = (v) => {
+  const info = new TypeInfo(built[v.schema]);
+  let found = false;
+  visit(
+    astOf(v),
+    visitWithTypeInfo(info, {
+      ListValue(node) {
+        const list = info.getParentInputType() && getNullableType(info.getParentInputType());
+        if (!list || !isListType(list) || !isListType(getNullableType(list.ofType))) return;
+        if (node.values.some((x) => !["ListValue", "NullValue", "Variable"].includes(x.kind))) found = true;
+      },
+    }),
+  );
+  return found;
+};
+
+// The vectors whose verdict changes against the schema without its OneOf
+// Input Object. They keep the schema that has it, and rely on the draft.
+const splitCandidates = vectors.filter((v) => ONE_OF[v.schema]);
+const withoutOneOfVerdicts = await evaluateVectors(splitCandidates, { tlaOf: (s) => schemaTlaWithoutOneOf[s] });
+const sameViolations = (a, b) => stable(a) === stable(b);
+const needsOneOfSchema = new Set(splitCandidates.filter((v) => !sameViolations(withoutOneOfVerdicts.get(v), v.violations ?? {})));
+
 for (const v of vectors) {
   const why = [];
   if (v.violations?.OperationTypeExistence) why.push("Operation Type Existence is new in the draft");
   if (v.violations?.SingleRootField && skipAtSubscriptionRoot(v)) why.push("only the draft forbids @skip and @include at a subscription's root");
   if (restsOnOneOf.has(v)) why.push("OneOf Input Objects are new in the draft");
   if (v.expected.valid && inspected.get(v).oneOf) why.push("it uses a OneOf Input Object, new in the draft");
+  if (needsOneOfSchema.has(v) && why.every((w) => !w.includes("OneOf"))) why.push("its schema needs a OneOf Input Object, new in the draft");
+  if (nestedListItem(v) && (v.expected.valid || !v.violations.ValuesOfCorrectType)) {
+    why.push("only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)");
+  }
   if (why.length) {
     v.edition = "draft";
     v.editionNote = why.join("; ");
   }
 }
+for (const v of vectors) {
+  if (needsOneOfSchema.has(v)) v.schema = ONE_OF[v.schema];
+  if (v.schema.endsWith("OneOf") && v.edition !== "draft") throw new Error(`${v.id} uses a schema with a OneOf Input Object but isn't tagged draft`);
+}
 
 const output = {
   source: "specs/Validation.tla, evaluated with tla-ts by scripts/generate-vectors-validate.mjs",
-  schemas: SCHEMAS,
+  schemas: OUTPUT_SCHEMAS,
   rules: Object.fromEntries(ORDER.map((r) => [r, SECTION[r]])),
   specExamplesLeftOut: left,
   vectors,
@@ -1683,7 +1932,7 @@ for (const rule of ORDER) {
 }
 log(`  ${vectors.length} vectors (${vectors.filter((v) => !v.expected.valid).length} invalid, ${vectors.filter((v) => v.expected.valid).length} valid); ${left.length} spec examples left out`);
 log(
-  `  ${vectors.filter((v) => v.unspecified).length} unspecified, ${vectors.filter((v) => v.requires).length} need ${SCALAR_LITERALS}, ${vectors.filter((v) => v.edition === "draft").length} rely on the draft, ${vectors.filter((v) => Object.keys(v.violations ?? {}).length > 1).length} break two rules`,
+  `  ${vectors.filter((v) => v.unspecified).length} unspecified, ${vectors.filter((v) => v.requires).length} need ${SCALAR_LITERALS}, ${vectors.filter((v) => v.edition === "draft").length} rely on the draft, ${vectors.filter((v) => Object.keys(v.violations ?? {}).length > 1).length} break two rules, ${vectors.filter((v) => v.schema.endsWith("OneOf")).length} use a schema with a OneOf Input Object`,
 );
 
 const text = `${JSON.stringify(output, null, 1)}\n`;

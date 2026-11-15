@@ -1,8 +1,10 @@
-# With @experimental_disableErrorPropagation (graphql-js 17), an execution
-# error nulls the position where it happened, even a Non-Null one, and
-# nothing propagates (the onError / semantic nullability proposal).
+# Outside the spec: with graphql-js 17's experimental
+# @experimental_disableErrorPropagation, an execution error nulls the
+# position where it happened, even a Non-Null one, and nothing propagates
+# (the onError / semantic nullability proposal). Neither edition of the
+# spec has this mode, so the fixture cites no section, and the kit reports
+# its failures under the informational disabledPropagation check.
 # maxListLength: 0
-# spec: 6.4.4
 
 type Query {
   version: String!

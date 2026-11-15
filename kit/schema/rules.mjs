@@ -8,6 +8,7 @@
 // `edition: "draft"`.
 
 export const DRAFT = {
+  ARG_NAMES_UNIQUE: "argument name uniqueness",
   REQUIRED_ARG_NOT_DEPRECATED: "deprecated arguments",
   ARG_DEFAULT_COMPATIBLE: "default value validation",
   IMPL_DEPRECATION: "deprecation of implementing fields",

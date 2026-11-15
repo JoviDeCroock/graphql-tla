@@ -16,6 +16,10 @@
 // features in `editionNote`: @oneOf, @deprecated on an argument or input
 // field, and directives on a directive definition are draft syntax.
 //
+// A vector whose verdict rests on a reading of the spec that its formal
+// text doesn't settle gets `unspecified`, with the reason (UNSPECIFIED
+// below). The kit doesn't grade it.
+//
 // Usage: node scripts/generate-vectors-schema.mjs [--check]
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -140,6 +144,13 @@ const PAIRS = [
     "input Pick @oneOf { a: Int b: String } type Query { f(p: Pick = {a: 2}): Int }",
     "§3.10.1's coercion table: the member field must be non-null",
   ],
+  [
+    "defaults",
+    "ARG_DEFAULT_COMPATIBLE",
+    "type Query { f(x: Float = 1e400): Int }",
+    "type Query { f(x: Float = 1.5): Int }",
+    "§3.5.2: a value not representable by finite IEEE 754 must raise a request error",
+  ],
   // IsValidImplementation
   ["implementation", "IMPLEMENTS_UNIQUE", "interface I { a: Int } type Query implements I & I { a: Int }", "interface I { a: Int } type Query implements I { a: Int }"],
   ["implementation", "IMPLEMENTS_INTERFACES", "type O { a: Int } type Query implements O { a: Int }", "interface O { a: Int } type Query implements O { a: Int }"],
@@ -161,7 +172,7 @@ const PAIRS = [
   ["implementation", "IMPL_ARG_PROVIDED", "interface I { f(a: Int): Int } type Query implements I { f: Int }", "interface I { f(a: Int): Int } type Query implements I { f(a: Int): Int }"],
   ["implementation", "IMPL_ARG_INVARIANT", "interface I { f(a: Int): Int } type Query implements I { f(a: Int!): Int }", "interface I { f(a: Int): Int } type Query implements I { f(a: Int): Int }"],
   ["implementation", "IMPL_ARG_INVARIANT", "interface I { f(a: [Int!]): Int } type Query implements I { f(a: [Int]): Int }", "interface I { f(a: [Int!]): Int } type Query implements I { f(a: [Int!]): Int }"],
-  ["implementation", "IMPL_EXTRA_ARG_OPTIONAL", "interface I { f: Int } type Query implements I { f(b: Int!): Int }", "interface I { f: Int } type Query implements I { f(b: Int! = 1): Int }"],
+  ["implementation", "IMPL_EXTRA_ARG_OPTIONAL", "interface I { f: Int } type Query implements I { f(b: Int!): Int }", "interface I { f: Int } type Query implements I { f(b: Int): Int }"],
   ["implementation", "IMPL_FIELD_COVARIANT", "interface I { f: [Int] } type Query implements I { f: Int }", "interface I { f: [Int] } type Query implements I { f: [Int!]! }"],
   ["implementation", "IMPL_FIELD_COVARIANT", "interface I { f: Int! } type Query implements I { f: Int }", "interface I { f: Int } type Query implements I { f: Int! }"],
   [
@@ -261,6 +272,16 @@ const PAIRS = [
   ],
 ];
 
+// Invalid schemas whose verdict depends on a reading the spec's formal
+// text doesn't settle, and why. Their valid siblings are valid under every
+// reading, and are still graded.
+const SELF_REFERENCE_THROUGH_ARGUMENT =
+  "§3.13 rule 3 forbids a directive definition to contain the use of a directive that leads back to it. This definition uses no directive: it reaches itself only through its own argument's type. The prose, \"While defining a directive, it must not reference itself directly or indirectly\", forbids it, and TypeSystem.tla follows the prose, but the formal rule doesn't.";
+const UNSPECIFIED = {
+  "directive @d(a: In) on INPUT_FIELD_DEFINITION input In { f: Int @d } type Query { a(x: In): Int }": SELF_REFERENCE_THROUGH_ARGUMENT,
+  "directive @d(c: Color) on ENUM_VALUE enum Color { RED @d BLUE } type Query { a: Color }": SELF_REFERENCE_THROUGH_ARGUMENT,
+};
+
 const SHARD = 60;
 
 // The draft-only syntax an SDL document uses.
@@ -317,11 +338,14 @@ ${moduleFooter}`;
     count.set(rule, n);
     const base = `${r.id}.${n}`;
     const common = { spec: r.spec, family, rule, ...(origin ? { origin } : {}) };
+    const unspecified = UNSPECIFIED[invalid] ? { unspecified: UNSPECIFIED[invalid] } : {};
     vectors.push(
-      { id: `${base}.invalid`, ...common, ...editionOf(r, invalid), pair: `${base}.valid`, sdl: invalid, verdict: bad, expected: { valid: false } },
+      { id: `${base}.invalid`, ...common, ...editionOf(r, invalid), ...unspecified, pair: `${base}.valid`, sdl: invalid, verdict: bad, expected: { valid: false } },
       { id: `${base}.valid`, ...common, ...editionOf(r, valid), pair: `${base}.invalid`, sdl: valid, verdict: good, expected: { valid: true } },
     );
   });
+  const unused = Object.keys(UNSPECIFIED).filter((sdl) => !PAIRS.some(([, , invalid]) => invalid === sdl));
+  for (const sdl of unused) problems.push(`UNSPECIFIED names a schema no pair has:\n  ${sdl}`);
   if (problems.length > 0) throw new Error(problems.join("\n"));
   const untested = RULES.filter((r) => !count.has(r.rule) && !UNWRITABLE[r.rule]).map((r) => r.rule);
   if (untested.length > 0) throw new Error(`no pair breaks ${untested.join(", ")}`);
@@ -345,6 +369,9 @@ if (process.argv.includes("--check")) {
   console.log("✓ kit/schema/vectors.json matches TypeSystem.tla");
 } else {
   writeFileSync(out, text);
-  const n = JSON.parse(text).vectors.length;
-  console.log(`wrote ${n} vectors (${n / 2} minimal pairs) to kit/schema/vectors.json`);
+  const { vectors } = JSON.parse(text);
+  const n = vectors.length;
+  const unspecified = vectors.filter((v) => v.unspecified).length;
+  const draft = vectors.filter((v) => v.edition === "draft").length;
+  console.log(`wrote ${n} vectors (${n / 2} minimal pairs) to kit/schema/vectors.json: ${unspecified} unspecified, ${draft} draft only`);
 }

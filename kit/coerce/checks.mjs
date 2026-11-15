@@ -115,11 +115,17 @@ export const CHECKS = [
 ];
 
 // What the spec leaves to the implementation (specs/Coercion.tla's
-// policy switches). An answer that needs only MAYs passes; one that needs a
-// SHOULD left undone fails that SHOULD's check.
+// policy switches). An answer that needs only MAYs, or readings of what the
+// spec doesn't say, passes; one that needs a SHOULD left undone fails that
+// SHOULD's check.
 export const POLICIES = {
   enumFromString: { level: "MAY" },
   inputFieldDefaults: { level: "SHOULD", check: "inputFieldDefaults" },
+  // A list item that is a variable with no runtime value: the spec doesn't
+  // say what it coerces to. The default reading is null; these are the
+  // others.
+  missingListItemError: { level: "unspecified" },
+  missingListItemDropped: { level: "unspecified" },
 };
 
 export const CHECK_IDS = new Set(CHECKS.map((c) => c.id));

@@ -182,13 +182,35 @@ AsNumber(n) == [n EXCEPT !.kind = "number"]
 (*   inputFieldDefaults  §3.10: an omitted input field's default value     *)
 (*                       "should be used" (a SHOULD; without it, the field *)
 (*                       has no entry, or is an error if Non-Null)         *)
+(*   missingListItem     what a list item that is a variable with no       *)
+(*                       runtime value coerces to, which the spec doesn't  *)
+(*                       say (see CoerceItems): "null", "error" or "drop"  *)
 (*                                                                         *)
-(* DefaultPolicy follows every SHOULD and takes the MAY. A schema without  *)
-(* a policy field uses it.                                                 *)
+(* One more switch isn't a choice the spec leaves open but an edition:     *)
+(*                                                                         *)
+(*   coerceDefaults      the draft coerces a default value (CoerceVariable-*)
+(*                       Values, CoerceArgumentValues, §3.10). October     *)
+(*                       2021 adds "the value defaultValue" as it is, and  *)
+(*                       says an input field's "default value should be    *)
+(*                       used". FALSE gives October 2021's answer.         *)
+(*                                                                         *)
+(* DefaultPolicy follows every SHOULD, takes the MAY, and follows the      *)
+(* draft. A schema without a policy field uses it, and a policy without a  *)
+(* switch takes that switch's default.                                     *)
 
-DefaultPolicy == [enumFromString |-> TRUE, inputFieldDefaults |-> TRUE]
+DefaultPolicy == [enumFromString |-> TRUE, inputFieldDefaults |-> TRUE, missingListItem |-> "null", coerceDefaults |-> TRUE]
 PolicyOf(S) == IF "policy" \in DOMAIN S THEN S.policy ELSE DefaultPolicy
 WithPolicy(S, policy) == [types |-> S.types, fields |-> S.fields, policy |-> policy]
+Switch(S, name) == IF name \in DOMAIN PolicyOf(S) THEN PolicyOf(S)[name] ELSE DefaultPolicy[name]
+
+\* A default value as October 2021 adds it: the literal, uncoerced, with its
+\* numbers as numbers.
+RECURSIVE Uncoerced(_)
+Uncoerced(v) ==
+  CASE v.kind \in {"int", "float"} -> AsNumber(v)
+    [] v.kind = "list" -> ListV([i \in DOMAIN v.items |-> Uncoerced(v.items[i])])
+    [] v.kind = "object" -> ObjV({Entry(e.key, Uncoerced(e.value)) : e \in v.entries})
+    [] OTHER -> v
 
 -----------------------------------------------------------------------------
 (* Results *)
@@ -327,16 +349,19 @@ CoerceInput(S, type, v, source, vars) ==
 
 CoerceItems(S, itemType, items, i, source, vars, acc) ==
   IF i > Len(items) THEN Ok(ListV(acc))
+  \* The spec doesn't say what a list item that is a variable with no
+  \* runtime value coerces to. By default this treats it like null, since a
+  \* list has no notion of an omitted item: an error for a Non-Null item
+  \* type (§3.12), otherwise null, as graphql-js 16 and 17 do. The other
+  \* readings: the item can't be coerced ("error"), or it is left out, as
+  \* §3.10 leaves out an input field whose variable has no runtime value
+  \* ("drop").
+  ELSE IF IsMissingVariable(items[i], vars) /\ Switch(S, "missingListItem") = "drop"
+  THEN CoerceItems(S, itemType, items, i + 1, source, vars, acc)
   ELSE
     LET item ==
           IF IsMissingVariable(items[i], vars)
-          THEN
-            \* The spec doesn't say what a list item that is a variable with
-            \* no runtime value coerces to. A list has no notion of an
-            \* omitted item, so this treats it like null: an error for a
-            \* Non-Null item type (§3.12), otherwise null. graphql-js 16 and
-            \* 17 do the same.
-            IF IsNonNull(itemType) THEN Fail ELSE Ok(NullV)
+          THEN IF IsNonNull(itemType) \/ Switch(S, "missingListItem") = "error" THEN Fail ELSE Ok(NullV)
           ELSE CoerceInput(S, itemType, items[i], source, vars)
     IN IF item.ok
        THEN CoerceItems(S, itemType, items, i + 1, source, vars, Append(acc, item.value))
@@ -368,7 +393,9 @@ CoerceFields(S, fields, entries, i, source, vars, acc) ==
             \* map." Using the default is a SHOULD, so
             \* policy.inputFieldDefaults decides.
             IF field.hasDefault /\ PolicyOf(S).inputFieldDefaults
-            THEN AddTo(acc, field.name, CoerceInput(S, field.type, field.default, "literal", {}))
+            THEN (IF Switch(S, "coerceDefaults")
+                  THEN AddTo(acc, field.name, CoerceInput(S, field.type, field.default, "literal", {}))
+                  ELSE Ok(ObjV(acc \cup {Entry(field.name, Uncoerced(field.default))})))
             ELSE IF IsNonNull(field.type) THEN Fail
             ELSE Ok(ObjV(acc))
           ELSE
@@ -408,7 +435,9 @@ CoerceVariablesFrom(S, definitions, request, i, acc) ==
             \* null): Let coercedDefaultValue be the result of coercing
             \* defaultValue according to the input coercion rules of
             \* variableType."
-            AddTo(acc, variableName, CoerceInput(S, variableType, definition.default, "literal", {}))
+            IF Switch(S, "coerceDefaults")
+            THEN AddTo(acc, variableName, CoerceInput(S, variableType, definition.default, "literal", {}))
+            ELSE Ok(ObjV(acc \cup {Entry(variableName, Uncoerced(definition.default))}))
           ELSE IF IsNonNull(variableType) /\ (~hasValue \/ value.kind = "null")
           THEN
             \* "Otherwise if variableType is a Non-Nullable type, and either
@@ -461,7 +490,9 @@ CoerceArgumentsFrom(S, definitions, argumentValues, vars, i, acc) ==
             \* null): Let coercedDefaultValue be the result of coercing
             \* defaultValue according to the input coercion rules of
             \* argumentType."
-            AddTo(acc, argumentName, CoerceInput(S, argumentType, definition.default, "literal", {}))
+            IF Switch(S, "coerceDefaults")
+            THEN AddTo(acc, argumentName, CoerceInput(S, argumentType, definition.default, "literal", {}))
+            ELSE Ok(ObjV(acc \cup {Entry(argumentName, Uncoerced(definition.default))}))
           ELSE IF IsNonNull(argumentType) /\ (~hasValue \/ value.kind = "null")
           THEN
             \* "Otherwise if argumentType is a Non-Nullable type, and either
@@ -729,7 +760,11 @@ VariableCases == <<
   \* A value that can't be coerced is a request error, not a field error.
   Case(UseX(X(IntT, FALSE, NullV), "int", {Entry("x", Str("5"))}), RequestError),
   \* Even for a variable no field uses.
-  Case(Respond(ExampleSchema, Op(<<Arg("unused", IntT)>>, "int", {}), {Entry("unused", Bool(TRUE))}), RequestError)
+  Case(Respond(ExampleSchema, Op(<<Arg("unused", IntT)>>, "int", {}), {Entry("unused", Bool(TRUE))}), RequestError),
+  \* October 2021 uses the default as it is: [Int] = 1 gives 1.
+  Case(Respond(WithPolicy(ExampleSchema, [DefaultPolicy EXCEPT !.coerceDefaults = FALSE]),
+               Op(X(ListOf(IntT), TRUE, I(1)), "ints", {Entry("v", VarV("x"))}), {}),
+       Resolved({Entry("v", N(1))}))
 >>
 
 \* §6.4.1
@@ -751,6 +786,16 @@ ArgumentCases == <<
   \* Variables inside a list literal.
   Case(Respond(ExampleSchema, Op(X(IntT, FALSE, NullV), "ints", {Entry("v", ListV(<<I(1), VarV("x")>>))}), {Entry("x", J(2))}),
        Resolved({Entry("v", ListV(<<N(1), N(2)>>))})),
+  \* One with no runtime value: null by default, or under the other readings
+  \* an error, or left out.
+  Case(Respond(ExampleSchema, Op(X(IntT, FALSE, NullV), "ints", {Entry("v", ListV(<<I(1), VarV("x")>>))}), {}),
+       Resolved({Entry("v", ListV(<<N(1), NullV>>))})),
+  Case(Respond(WithPolicy(ExampleSchema, [DefaultPolicy EXCEPT !.missingListItem = "error"]),
+               Op(X(IntT, FALSE, NullV), "ints", {Entry("v", ListV(<<I(1), VarV("x")>>))}), {}),
+       FieldError),
+  Case(Respond(WithPolicy(ExampleSchema, [DefaultPolicy EXCEPT !.missingListItem = "drop"]),
+               Op(X(IntT, FALSE, NullV), "ints", {Entry("v", ListV(<<I(1), VarV("x")>>))}), {}),
+       Resolved({Entry("v", ListV(<<N(1)>>))})),
   \* A literal that can't be coerced is an execution error.
   Case(Respond(ExampleSchema, Op(<<>>, "int", {Entry("v", Str("1"))}), {}), FieldError)
 >>

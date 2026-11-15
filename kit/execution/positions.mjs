@@ -19,7 +19,7 @@ export const positions = (fixture, trace) => {
   );
   const runtime = new Map();
   for (const event of trace) {
-    if (event.settle && event.outcome?.kind === "object") runtime.set(key(event.settle.map(String)), event.outcome.type);
+    if (Array.isArray(event.settle) && event.outcome?.kind === "object") runtime.set(key(event.settle.map(String)), event.outcome.type);
   }
   const rootType =
     fixture.operationType === "query"
@@ -68,16 +68,20 @@ export const positions = (fixture, trace) => {
       }),
     );
 
-  // { type, kinds } for a path, or null if the operation doesn't select it.
-  // kinds[i] is "field" or "index"; __typename has type String!.
+  // { type, kinds, names } for a path, or null if the operation doesn't
+  // select it. kinds[i] is "field" or "index"; names[i] is the field's name
+  // where the segment is a response name (an alias, say), and the segment
+  // itself otherwise. __typename has type String!.
   return (path) => {
     let objectType = rootType;
     let sets = [operation.selectionSet];
     let type = null;
     const kinds = [];
+    const names = [];
     for (let i = 0; i < path.length; i++) {
       if (type && graphql.isListType(nullable(type))) {
         kinds.push("index");
+        names.push(String(path[i]));
         type = nullable(type).ofType;
         continue;
       }
@@ -91,6 +95,7 @@ export const positions = (fixture, trace) => {
       if (nodes.length === 0) return null;
       const name = nodes[0].name.value;
       kinds.push("field");
+      names.push(name);
       if (name === "__typename") {
         type = new graphql.GraphQLNonNull(graphql.GraphQLString);
         sets = [];
@@ -101,6 +106,6 @@ export const positions = (fixture, trace) => {
       type = field.type;
       sets = nodes.map((n) => n.selectionSet).filter(Boolean);
     }
-    return { type, kinds };
+    return { type, kinds, names };
   };
 };

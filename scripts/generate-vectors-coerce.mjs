@@ -10,9 +10,11 @@
 //                      policy (every SHOULD followed, JSON strings taken as
 //                      enum values): the expected answer. Under the other
 //                      policies, the answers the spec also permits
-//                      (`alternatives`). With the variables read as a
-//                      binary64 JSON parser reads them, the `binary64`
-//                      answer, where it differs;
+//                      (`alternatives`). With default values used as
+//                      October 2021 uses them, uncoerced: where that answer
+//                      differs, the vector relies on the draft (`edition`).
+//                      With the variables read as a binary64 JSON parser
+//                      reads them, the `binary64` answer, where it differs;
 //   Coercion!GetOperation    which root field the selected operation runs;
 //   Validation!IsValid whether the document is valid. A document that is
 //                      invalid by Validation.tla is `valid: false`. One that
@@ -581,6 +583,9 @@ ASSUME \\A i \\in DOMAIN Cases :
               Answer(WithPolicy(Schema, Policy(FALSE, TRUE)), c, c.request),
               Answer(WithPolicy(Schema, Policy(TRUE, FALSE)), c, c.request),
               Answer(WithPolicy(Schema, Policy(FALSE, FALSE)), c, c.request),
+              Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.missingListItem = "error"]), c, c.request),
+              Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.missingListItem = "drop"]), c, c.request),
+              Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.coerceDefaults = FALSE]), c, c.request),
               IF c.has64 THEN Answer(Schema, c, c.request64) ELSE <<"", "">>,
               \\A j \\in DOMAIN c.doc : LiteralsInRange(c.doc[j])>>)
 ASSUME PrintT(<<"done", Len(Cases)>>)
@@ -652,13 +657,24 @@ const canonical = (v) =>
       : Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonical(v[k])]));
 
 // The policies Coercion.tla is also evaluated under, after the default:
-// the switches each one turns off (specs/Coercion.tla, "What the spec
-// leaves to the implementation"). A MAY-only policy comes first, so an
-// answer it explains is recorded as needing only the MAY.
-const POLICY_RUNS = [["enumFromString"], ["inputFieldDefaults"], ["enumFromString", "inputFieldDefaults"]];
+// the switches each one turns off or sets (specs/Coercion.tla, "What the
+// spec leaves to the implementation"), as kit/coerce/checks.mjs's POLICIES
+// name them. A MAY-only policy comes first, so an answer it explains is
+// recorded as needing only the MAY. The last two are the other readings of
+// a list item that is a variable with no runtime value.
+const POLICY_RUNS = [
+  ["enumFromString"],
+  ["inputFieldDefaults"],
+  ["enumFromString", "inputFieldDefaults"],
+  ["missingListItemError"],
+  ["missingListItemDropped"],
+];
 const ANSWER = String.raw`<<\s*"(\w*)",\s*"((?:[^"\\]|\\.)*)"\s*>>`;
+// The field, then the answers: the default policy's, POLICY_RUNS', October
+// 2021's defaults and the binary64 one; then whether the literals coerce.
+const ANSWERS = 1 + POLICY_RUNS.length + 2;
 const VECTOR = new RegExp(
-  String.raw`<<\s*"vector",\s*(\d+),\s*"(\w*)",\s*${ANSWER},\s*${ANSWER},\s*${ANSWER},\s*${ANSWER},\s*${ANSWER},\s*(TRUE|FALSE)\s*>>`,
+  String.raw`<<\s*"vector",\s*(\d+),\s*"(\w*)",\s*${Array(ANSWERS).fill(ANSWER).join(String.raw`,\s*`)},\s*(TRUE|FALSE)\s*>>`,
   "g",
 );
 const OUTCOMES = { requestError: "request-error", fieldError: "field-error", resolved: "value" };
@@ -717,9 +733,11 @@ const generate = async () => {
         for (const m of flat.matchAll(VECTOR)) {
           const r = results[start + Number(m[1]) - 1];
           r.field = m[2];
-          r.answers = [0, 1, 2, 3].map((j) => answerOf(m[3 + 2 * j], m[4 + 2 * j], m[2]));
-          r.binary64 = m[11] ? answerOf(m[11], m[12], m[2]) : undefined;
-          r.inRange = m[13] === "TRUE";
+          const at = (j) => (m[3 + 2 * j] ? answerOf(m[3 + 2 * j], m[4 + 2 * j], m[2]) : undefined);
+          r.answers = Array.from({ length: 1 + POLICY_RUNS.length }, (_, j) => at(j));
+          r.oct2021 = at(ANSWERS - 2);
+          r.binary64 = at(ANSWERS - 1);
+          r.inRange = m[3 + 2 * ANSWERS] === "TRUE";
           n++;
         }
         if (n !== chunk.length) throw new Error(`read ${n} outcomes from Coerce${k}, which has ${chunk.length} cases`);
@@ -754,6 +772,16 @@ const generate = async () => {
       alternatives.push({ ...a, policy });
     });
     const binary64 = r.binary64 && answerKey(r.binary64) !== answerKey(expected) ? r.binary64 : undefined;
+    // October 2021's CoerceVariableValues and CoerceArgumentValues add a
+    // default value as it is, and its §3.10 uses an input field's default
+    // without coercing it. Where that changes the answer, the vector relies
+    // on the draft.
+    const draftDefault =
+      answerKey(r.oct2021) === answerKey(expected)
+        ? undefined
+        : r.oct2021.outcome === "value"
+          ? `the arguments ${JSON.stringify(r.oct2021.arguments)}`
+          : `a ${r.oct2021.outcome.replace("-", " ")}`;
     const check = o.check === "id" ? (expected.outcome === "value" ? "idCoerced" : "id") : o.check;
     if (!CHECK_IDS.has(check)) throw new Error(`unknown check ${check}`);
     // Sections: the check's, plus the algorithm that raises the expected
@@ -777,6 +805,7 @@ const generate = async () => {
       expected,
       alternatives,
       binary64,
+      draftDefault,
     };
   });
 
@@ -817,6 +846,9 @@ const generate = async () => {
     expected: v.expected,
     ...(v.alternatives.length ? { alternatives: v.alternatives } : {}),
     ...(v.binary64 ? { binary64: v.binary64 } : {}),
+    ...(v.draftDefault
+      ? { edition: "draft", editionNote: `only the draft coerces a default value; October 2021 uses it as it is, which gives ${v.draftDefault}` }
+      : {}),
   }));
 
   // The argument and input field declarations, as type text, so the kit

@@ -67,15 +67,100 @@ IsLeaf(S, name) == Kind(S, name) \in {"scalar", "enum"}
 IsInputType(S, type) == Kind(S, type.name) \in {"scalar", "enum", "input"}
 
 \* The meta-field __typename is "implicitly defined" on every Object,
-\* Interface and Union type (§4.4); __schema and __type on the query root.
+\* Interface and Union type (§4.4); __schema and __type on the query root:
+\* "accessible from the type of the root of a query operation" (§4.2).
 IntrospectionFields == {"__typename", "__schema", "__type"}
-TypenameDefinition == [type |-> [name |-> "String", wrappers |-> <<"nonNull">>], args |-> <<>>]
+MetaRef(name, wrappers) == [name |-> name, wrappers |-> wrappers]
+TypenameDefinition == [type |-> MetaRef("String", <<"nonNull">>), args |-> <<>>]
+\* "__schema: __Schema!" and "__type(name: String!): __Type".
+SchemaMetaFields ==
+  ("__schema" :> [type |-> MetaRef("__Schema", <<"nonNull">>), args |-> <<>>])
+    @@ ("__type" :> [type |-> MetaRef("__Type", <<>>),
+                     args |-> "name" :> [type |-> MetaRef("String", <<"nonNull">>), hasDefault |-> FALSE]])
+IsSchemaMetaField(S, typeName, fieldName) ==
+  fieldName \in DOMAIN SchemaMetaFields /\ typeName = S.roots.query /\ typeName # ""
+
+\* The types those meta-fields return: the draft's "Schema Introspection
+\* Schema" (§4.2), which "is itself represented as a GraphQL schema". Like
+\* the meta-fields, they are implicit: a schema record lists only its own
+\* types, and Check adds these, with the String and Boolean scalars they
+\* use. (A schema's own types can't start with "__", §3.3.)
+MetaArgs(names) == [n \in names |-> [type |-> MetaRef("Boolean", <<"nonNull">>), hasDefault |-> TRUE]]
+MetaOut(name, wrappers) == [type |-> MetaRef(name, wrappers), args |-> <<>>]
+\* "(includeDeprecated: Boolean! = false)"
+MetaOutDeprecated(name, wrappers) == [type |-> MetaRef(name, wrappers), args |-> MetaArgs({"includeDeprecated"})]
+MetaDef(kind, fields, values) ==
+  [kind |-> kind, fields |-> fields, possibleTypes |-> {}, inputFields |-> <<>>, enumValues |-> values, oneOf |-> FALSE]
+NNListNN == <<"nonNull", "list", "nonNull">>
+MetaTypes ==
+  ("__Schema" :> MetaDef("object",
+     ("description" :> MetaOut("String", <<>>))
+       @@ ("types" :> MetaOut("__Type", NNListNN))
+       @@ ("queryType" :> MetaOut("__Type", <<"nonNull">>))
+       @@ ("mutationType" :> MetaOut("__Type", <<>>))
+       @@ ("subscriptionType" :> MetaOut("__Type", <<>>))
+       @@ ("directives" :> MetaOutDeprecated("__Directive", NNListNN)), {}))
+  @@ ("__Type" :> MetaDef("object",
+     ("kind" :> MetaOut("__TypeKind", <<"nonNull">>))
+       @@ ("name" :> MetaOut("String", <<>>))
+       @@ ("description" :> MetaOut("String", <<>>))
+       @@ ("specifiedByURL" :> MetaOut("String", <<>>))
+       @@ ("fields" :> MetaOutDeprecated("__Field", <<"list", "nonNull">>))
+       @@ ("interfaces" :> MetaOut("__Type", <<"list", "nonNull">>))
+       @@ ("possibleTypes" :> MetaOut("__Type", <<"list", "nonNull">>))
+       @@ ("enumValues" :> MetaOutDeprecated("__EnumValue", <<"list", "nonNull">>))
+       @@ ("inputFields" :> MetaOutDeprecated("__InputValue", <<"list", "nonNull">>))
+       @@ ("ofType" :> MetaOut("__Type", <<>>))
+       @@ ("isOneOf" :> MetaOut("Boolean", <<>>)), {}))
+  @@ ("__TypeKind" :> MetaDef("enum", <<>>,
+     {"SCALAR", "OBJECT", "INTERFACE", "UNION", "ENUM", "INPUT_OBJECT", "LIST", "NON_NULL"}))
+  @@ ("__Field" :> MetaDef("object",
+     ("name" :> MetaOut("String", <<"nonNull">>))
+       @@ ("description" :> MetaOut("String", <<>>))
+       @@ ("args" :> MetaOutDeprecated("__InputValue", NNListNN))
+       @@ ("type" :> MetaOut("__Type", <<"nonNull">>))
+       @@ ("isDeprecated" :> MetaOut("Boolean", <<"nonNull">>))
+       @@ ("deprecationReason" :> MetaOut("String", <<>>)), {}))
+  @@ ("__InputValue" :> MetaDef("object",
+     ("name" :> MetaOut("String", <<"nonNull">>))
+       @@ ("description" :> MetaOut("String", <<>>))
+       @@ ("type" :> MetaOut("__Type", <<"nonNull">>))
+       @@ ("defaultValue" :> MetaOut("String", <<>>))
+       @@ ("isDeprecated" :> MetaOut("Boolean", <<"nonNull">>))
+       @@ ("deprecationReason" :> MetaOut("String", <<>>)), {}))
+  @@ ("__EnumValue" :> MetaDef("object",
+     ("name" :> MetaOut("String", <<"nonNull">>))
+       @@ ("description" :> MetaOut("String", <<>>))
+       @@ ("isDeprecated" :> MetaOut("Boolean", <<"nonNull">>))
+       @@ ("deprecationReason" :> MetaOut("String", <<>>)), {}))
+  @@ ("__Directive" :> MetaDef("object",
+     ("name" :> MetaOut("String", <<"nonNull">>))
+       @@ ("description" :> MetaOut("String", <<>>))
+       @@ ("isRepeatable" :> MetaOut("Boolean", <<"nonNull">>))
+       @@ ("locations" :> MetaOut("__DirectiveLocation", NNListNN))
+       @@ ("args" :> MetaOutDeprecated("__InputValue", NNListNN))
+       @@ ("isDeprecated" :> MetaOut("Boolean", <<"nonNull">>))
+       @@ ("deprecationReason" :> MetaOut("String", <<>>)), {}))
+  @@ ("__DirectiveLocation" :> MetaDef("enum", <<>>,
+     {"QUERY", "MUTATION", "SUBSCRIPTION", "FIELD", "FRAGMENT_DEFINITION", "FRAGMENT_SPREAD",
+      "INLINE_FRAGMENT", "VARIABLE_DEFINITION", "SCHEMA", "SCALAR", "OBJECT", "FIELD_DEFINITION",
+      "ARGUMENT_DEFINITION", "INTERFACE", "UNION", "ENUM", "ENUM_VALUE", "INPUT_OBJECT",
+      "INPUT_FIELD_DEFINITION", "DIRECTIVE_DEFINITION"}))
+  @@ ("String" :> MetaDef("scalar", <<>>, {}))
+  @@ ("Boolean" :> MetaDef("scalar", <<>>, {}))
+
+\* The schema with the introspection types added; its own types come first
+\* (f @@ g takes f's value where both are defined).
+WithIntrospection(S) == [types |-> S.types @@ MetaTypes, directives |-> S.directives, roots |-> S.roots]
 
 HasField(S, typeName, fieldName) ==
   \/ fieldName = "__typename" /\ IsComposite(S, typeName)
+  \/ IsSchemaMetaField(S, typeName, fieldName)
   \/ IsDefined(S, typeName) /\ fieldName \in DOMAIN S.types[typeName].fields
 FieldDefinition(S, typeName, fieldName) ==
-  IF fieldName = "__typename" THEN TypenameDefinition ELSE S.types[typeName].fields[fieldName]
+  IF fieldName = "__typename" THEN TypenameDefinition
+  ELSE IF IsSchemaMetaField(S, typeName, fieldName) THEN SchemaMetaFields[fieldName]
+  ELSE S.types[typeName].fields[fieldName]
 \* The return type of a field selection, NoType when the field isn't defined.
 FieldType(S, typeName, fieldName) ==
   IF HasField(S, typeName, fieldName) THEN FieldDefinition(S, typeName, fieldName).type ELSE NoType
@@ -407,7 +492,12 @@ MergeFuel == 6
 \* An argument's value as "identical sets of arguments" compares it: the
 \* value, not its syntax, and with an input object's fields as a set, since
 \* "Input object literal values are unordered lists of keyed input values"
-\* (§2.9.8).
+\* (§2.9.8). The spec doesn't define "identical", so this is one reading of
+\* three: the literal's text, its value (this one: a block string equals the
+\* quoted string, but 1 differs from 1.0), or the coerced argument values
+\* (where 1 equals 1.0 for a Float, and an omitted argument equals its
+\* default). scripts/generate-vectors-validate.mjs leaves the vectors where
+\* the readings disagree ungraded.
 RECURSIVE ValueOf(_)
 ValueOf(value) ==
   [kind |-> value.kind, value |-> value.value,
@@ -804,6 +894,23 @@ AllVariableUsagesAreAllowed(S, D) ==
                      /\ ~IsVariableUsageAllowed(VariableDefinition(op, x.value.value), x)}}
          : o \in OperationIndices(D)}
 
+\* Where §5.8.5's prose and its formal text disagree. The prose says
+\* "Variables used for OneOf Input Object fields must be non-nullable." The
+\* formal text lets a nullable variable into a OneOf field when "a default
+\* value exists for variableDefinition and is not the value null". These are
+\* the variables of usages only the prose rejects. The rule above follows
+\* the formal text; scripts/generate-vectors-validate.mjs leaves the vectors
+\* this decides ungraded.
+OneOfProseOnly(S, D) ==
+  UNION {LET op == D[o] IN
+         {u.value.value
+          : u \in {x \in OperationUsages(S, D, op) :
+                     /\ x.oneOf
+                     /\ x.value.value \in VariableNames(op)
+                     /\ ~IsNonNull(VariableDefinition(op, x.value.value).type)
+                     /\ IsVariableUsageAllowed(VariableDefinition(op, x.value.value), x)}}
+         : o \in OperationIndices(D)}
+
 -----------------------------------------------------------------------------
 (* Every rule, by name *)
 
@@ -841,7 +948,7 @@ Sections ==
 
 Rules == DOMAIN Sections
 
-Check(rule, S, D) ==
+CheckRule(rule, S, D) ==
   CASE rule = "ExecutableDefinitions" -> ExecutableDefinitions(S, D)
     [] rule = "OperationTypeExistence" -> OperationTypeExistence(S, D)
     [] rule = "OperationNameUniqueness" -> OperationNameUniqueness(S, D)
@@ -873,8 +980,12 @@ Check(rule, S, D) ==
     [] rule = "AllVariablesUsed" -> AllVariablesUsed(S, D)
     [] rule = "AllVariableUsagesAreAllowed" -> AllVariableUsagesAreAllowed(S, D)
 
+\* The rule's violations against the schema with its implicit introspection
+\* types.
+Check(rule, S, D) == CheckRule(rule, WithIntrospection(S), D)
+
 \* A document is valid when it violates no rule.
-IsValid(S, D) == \A rule \in Rules : Check(rule, S, D) = {}
+IsValid(S, D) == LET Full == WithIntrospection(S) IN \A rule \in Rules : CheckRule(rule, Full, D) = {}
 
 -----------------------------------------------------------------------------
 (* Test vectors: the spec's examples *)

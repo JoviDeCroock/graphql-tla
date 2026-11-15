@@ -42,7 +42,8 @@ const link = (s) => `[§${s.number}](${s.url})`;
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 const header = (cols) => [`| ${cols.join(" | ")} |`, `| ${cols.map((_, i) => (i === 0 ? "---" : ":---:")).join(" | ")} |`];
-const anchor = (finding, i) => `finding-${i + 1}`;
+// A finding's anchor on its implementation's page: numbered within its area.
+const anchor = (area, i) => `${area}-finding-${i + 1}`;
 const fixtureList = (f) =>
   Object.entries(f.fixtures)
     .sort((a, b) => b[1] - a[1])
@@ -54,7 +55,10 @@ const fixtureList = (f) =>
 // not exercised.
 const cell = (check) => {
   if (!check) return "n/a";
-  if (check.status === "fail") return `${check.level === "MUST" || check.level === "ADAPTER" ? "✗" : "!"} ${check.failing}/${check.cases}`;
+  if (check.status === "fail") {
+    if (check.level === "INFO") return `i ${check.failing}/${check.cases}`;
+    return `${check.level === "MUST" || check.level === "ADAPTER" ? "✗" : "!"} ${check.failing}/${check.cases}`;
+  }
   if (check.status === "pass") return `✓ ${check.cases}`;
   if (check.status === "inconclusive") return `~ ${check.cases}`;
   if (check.status === "subsumed") return "⊂";
@@ -67,6 +71,7 @@ const levelText = (c) => (c.oct2021 ? `${c.level} (Oct 2021: ${c.oct2021})` : c.
 const legend = [
   "- **✓ N:** every one of the N cases it applied to satisfied it.",
   "- **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.",
+  "- **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.",
   "- **~:** inconclusive (see the implementation's page).",
   "- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).",
   "- **–:** never exercised: the adapter lacks the capability, or no case reached it.",
@@ -124,10 +129,11 @@ const matrix = () => {
 
   lines.push("", "## Findings", "", "Each finding is one kind of failure: the set of clauses a case broke, or a malformed case's first problem, which is the root cause when one fault shows up several ways. A case counts toward one finding only.", "");
   for (const key of keys) {
-    const findings = reports.filter((r) => r.key === key).flatMap((r) => r.findings);
+    const own = reports.filter((r) => r.key === key);
+    const findings = own.flatMap((r) => r.findings.map((f, i) => ({ f, i, area: r.area, informational: f.checks.length > 0 && f.checks.every((id) => r.checks.find((c) => c.id === id)?.level === "INFO") })));
     lines.push(`- **[${nameOf(key)}](${key}.md):** ${findings.length === 0 ? "none" : ""}`);
-    findings.forEach((f, i) => {
-      lines.push(`  - [${f.checks.map((c) => `\`${c}\``).join(", ") || "malformed result"}](${key}.md#${anchor(f, i)})${f.summary ? `: ${f.summary}` : ""} (${plural(f.cases, "case")}, ${fixtureList(f)})`);
+    findings.forEach(({ f, i, area, informational }) => {
+      lines.push(`  - ${informational ? "(informational) " : ""}[${f.checks.map((c) => `\`${c}\``).join(", ") || "malformed result"}](${key}.md#${anchor(area, i)})${f.summary ? `: ${f.summary}` : ""} (${plural(f.cases, "case")}, ${fixtureList(f)})`);
     });
   }
   lines.push("");
@@ -150,7 +156,8 @@ const matrix = () => {
         const own = reportFor(k, area)?.fixtures.find((x) => x.id === f.id);
         if (!own) return " ";
         if (own.status === "skipped") return `– ${own.reason}`;
-        return own.status === "pass" ? `✓ ${own.cases}` : `✗ ${own.failing}/${own.cases}`;
+        if (own.status === "pass") return own.informational ? `i ${own.informational}/${own.cases}` : `✓ ${own.cases}`;
+        return `✗ ${own.failing}/${own.cases}`;
       });
       lines.push(`| [\`${f.id}\`](../fixtures/${f.id}.graphql) | ${f.spec.map(link).join(" ")} | ${cells.join(" | ")} |`);
     }
@@ -194,6 +201,14 @@ const page = (key) => {
     lines.push(`## ${cap(r.area)}`, "");
     lines.push(`- **Capabilities:** ${r.capabilities.join(", ") || "none"}`);
     lines.push(`- **Cases:** ${r.cases.submitted} submitted, ${r.cases.distinct} distinct, ${r.cases.malformed} malformed`);
+    if (r.cases.skipped) lines.push(`- **Skipped:** ${r.cases.skipped}`);
+    const p0 = r.provenance;
+    if (p0.vectors !== undefined && p0.graded !== undefined) {
+      const why = Object.entries(p0.skipped ?? {}).map(([reason, n]) => `${n} ${reason}`).join(", ");
+      lines.push(`- **Vectors:** ${p0.graded} of ${p0.vectors} graded${why ? ` (not graded: ${why})` : ""}`);
+    }
+    if (r.profile) lines.push(`- **Profile:** ${r.profile === "draft" ? "the draft's introspection types" : `the ${r.profile} edition's introspection types`}${r.profileNote ? `. ${r.profileNote}` : ""}`);
+    if (r.draftOnly) lines.push(`- **Draft only:** ${typeof r.draftOnly === "object" ? `${r.draftOnly.failing ?? 0} of the failing vectors (of ${r.draftOnly.vectors} draft-only vectors)` : r.draftOnly} rely on grammar or rules only in the draft`);
     lines.push(`- **Adapter problems:** ${r.adapterProblems || "none"}`);
     lines.push(`- **Checker self-test:** ${r.checkerSelfTest}`);
     const p = r.provenance;
@@ -206,7 +221,7 @@ const page = (key) => {
     r.findings.forEach((f, i) => {
       const checks = f.checks.map((id) => r.checks.find((c) => c.id === id));
       lines.push(
-        `<a id="${anchor(f, i)}"></a>`,
+        `<a id="${anchor(r.area, i)}"></a>`,
         "",
         `#### ${i + 1}. ${checks.map((c) => `\`${c.id}\``).join(", ") || "malformed result"}${f.summary ? `: ${f.summary}` : ""}`,
         "",
@@ -242,10 +257,10 @@ const page = (key) => {
       lines.push(`| ${c.title} (\`${c.id}\`)${c.note ? `. ${c.note}` : ""} | ${level} | ${c.spec.map(link).join(" ") || "—"} | ${cell(c)} |`);
     }
     const based = r.checks.filter((c) => c.basis);
-    if (based.length) lines.push("", ...based.map((c) => `- **\`${c.id}\`** is implied rather than stated: ${c.basis}`));
+    if (based.length) lines.push("", ...based.map((c) => `- **Basis for \`${c.id}\`:** ${c.basis}`));
     if (r.fixtures.length) lines.push("", "### Fixtures", "", ...header(["Fixture", "Result", "Note"]));
     for (const f of r.fixtures) {
-      const result = f.status === "skipped" ? "–" : f.status === "pass" ? `✓ ${f.cases}` : `✗ ${f.failing}/${f.cases}`;
+      const result = f.status === "skipped" ? "–" : f.status === "pass" ? (f.informational ? `i ${f.informational}/${f.cases}` : `✓ ${f.cases}`) : `✗ ${f.failing}/${f.cases}`;
       lines.push(`| [\`${f.id}\`](../fixtures/${f.id}.graphql) | ${result} | ${f.reason ?? f.note ?? ""} |`);
     }
     lines.push("");

@@ -211,6 +211,10 @@ export const isOver = () =>
 
 // §6.2.3.1: a subscribe resolver that raises is a request error: `{ errors }`
 // with no `data`, and no event is ever executed.
+// Draft only. The draft says CreateSourceEventStream "occurs before
+// operation execution begins, and thus an error raised here will be a
+// request error". October 2021 runs CreateSourceEventStream inside
+// Subscribe and has no such note. graphql-js behaves as the draft says.
 export const creationFailureIsRequestError = () =>
   !resolverRaised || (subscribeResult === "requestError" && delivered.length === 0);
 
@@ -242,6 +246,11 @@ export const sourceErrorIsRethrown = () =>
 
 // After the client unsubscribes, the only response it can still receive is
 // for the event that was already in flight.
+// This is graphql-js's behaviour, not the spec's. The draft says: "When
+// {responseStream} is cancelled: Cancel {sourceStream}. Complete
+// {responseStream} normally." It doesn't allow an in-flight event's result
+// to be delivered after the cancel. October 2021 says only "Cancel
+// {responseStream}".
 export const nothingNewAfterUnsubscribe = () =>
   !returnRequested || delivered.every((k) => k <= pulledAtUnsubscribe);
 

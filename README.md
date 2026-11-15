@@ -75,10 +75,10 @@ The kit has six areas. Each checks one part of the spec against its TLA+ referen
 | --- | --- | --- | --- |
 | [`execution`](docs/conformance.md) | §6, §7 | `Reference.tla` | drives your resolvers through every outcome and schedule, and checks each response against every response the spec allows |
 | [`parse`](docs/kit/parse.md) | §2 | `Lexer.tla`, `Parser.tla` | accept or reject about 2,000 source texts, mostly in minimal pairs |
-| [`validate`](docs/kit/validate.md) | §5 | `Validation.tla` | about 3,000 documents, each breaking exactly one rule or none, so each rule gets its own verdict |
-| [`coerce`](docs/kit/coerce.md) | §3.5, §3.9–3.12, §6.1.2, §6.4.1 | `Coercion.tla` | about 2,000 operations with variables: a request error, a field error, or the coerced arguments |
-| [`schema`](docs/kit/schema.md) | §3 | `TypeSystem.tla` | 83 minimal pairs of SDL schemas, one per type-system rule |
-| [`introspect`](docs/kit/introspect.md) | §4 | `Introspection.tla` | introspection results for 11 schemas, with the variation the spec allows |
+| [`validate`](docs/kit/validate.md) | §5 | `Validation.tla` | about 3,000 documents, each breaking one rule (two in 21 documented cases) or none, so each rule gets its own verdict |
+| [`coerce`](docs/kit/coerce.md) | §3.5, §3.9–3.12, §6.1, §6.4.1 | `Coercion.tla` | about 2,000 operations with variables, and operation selection: a request error, a field error, or the coerced arguments |
+| [`schema`](docs/kit/schema.md) | §3 | `TypeSystem.tla` | 84 minimal pairs of SDL schemas, one or more per type-system rule |
+| [`introspect`](docs/kit/introspect.md) | §4 | `Introspection.tla` | 38 introspection queries over 12 schemas, with the variation the spec allows, answered under the draft or the October 2021 profile |
 
 Outside execution, every expected answer comes from evaluating the reference with tla-ts, never from graphql-js. [`docs/kit-areas.md`](docs/kit-areas.md) describes how those areas work.
 
@@ -95,7 +95,7 @@ An adapter is a small program that speaks newline-delimited JSON. It builds the 
 | [`graphql-go`](adapters/graphql-go) | graphql-go 0.8.1 | With thunks, a Non-Null error inside a thunk nulls all of `data` and drops the other errors (§6.4.4), and mutation root fields aren't serial (§6.3.4). In any mode, uncoercible leaves become null with no error, or truncate (§3.5.1); a non-finite Float leaves the client without a response; and keys come out sorted (§7.2.2, a SHOULD). |
 | [`async-graphql`](adapters/async-graphql) | async-graphql 7.0.17, dynamic schemas | Its dynamic schema API breaks four rules: resolver errors have no `path`; errors don't stop at the nearest nullable field; an explicit null isn't treated as null; merged fields run their resolver twice. |
 
-The kit checks the checker too. Every run evaluates a shipped corpus of 25 negative controls, and each must be caught by the clause or check it names.
+The kit checks the checker too. Every run evaluates a shipped corpus of 30 negative controls, and each must be caught by the clause or check it names.
 
 **[The conformance sheet](conformance/README.md)** shows what each implementation was checked against and what it breaks, by spec section and by check, with the shortest failing case for each failure. Every cell is a count from a kit report (`--report`); `npm run conformance` regenerates it.
 
@@ -212,7 +212,7 @@ Every resolver settles in its own step. Each `@defer` may be honored or inlined,
 
 ## Mutants
 
-A property that no bug can break proves nothing. Each `specs/*.mutants.mjs` lists realistic bugs, 166 in all over 94 properties. For example:
+A property that no bug can break proves nothing. Each `specs/*.mutants.mjs` lists realistic bugs, 188 in all over 100 properties. For example:
 
 - nulling a failing Non-Null field instead of its parent;
 - filtering errors against the final null set, which drops a mutation's earlier errors;

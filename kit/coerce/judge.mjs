@@ -146,13 +146,14 @@ export const planFor = (vector, capabilities) => {
     };
   }
   const alternatives = vector.alternatives ?? [];
-  const mayOnly = (a) => a.policy.every((p) => POLICIES[p].level === "MAY");
+  // An answer passes unless it needs a SHOULD left undone.
+  const permitted = (a) => a.policy.every((p) => !POLICIES[p].check);
   const deviations = alternatives
-    .filter((a) => !mayOnly(a))
+    .filter((a) => !permitted(a))
     .map((a) => ({ answer: a, check: POLICIES[a.policy.find((p) => POLICIES[p].check)].check }));
   return {
     check: vector.check,
-    accept: [vector.expected, ...alternatives.filter(mayOnly)],
+    accept: [vector.expected, ...alternatives.filter(permitted)],
     deviations,
     exercises: [
       ...new Set([

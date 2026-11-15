@@ -13,11 +13,16 @@ const withoutErrors = (response, keep) => {
   return errors.length > 0 ? { ...rest, errors } : rest;
 };
 const firstValueKey = (data) => data && Object.entries(data).find(([, v]) => v !== null)?.[0];
+const samePath = (a, b) => JSON.stringify(a.map(String)) === JSON.stringify(b.map(String));
+// The type the trace's call at a path reports.
+const callType = (c, path) => c.trace.find((e) => e.call && samePath(e.call, path))?.type;
+const withError = (response, error, broken) => ({ ...response, errors: response.errors.map((e) => (e === error ? broken : e)) });
 
-// Each control: a name, what must catch it (a clause, or "malformed" with
-// the check in kit/execution/checks.mjs it must break), and
-// `make(case, fixture)`, which returns broken variants of a case (any of
-// which may be used) or [] if the case doesn't fit.
+// Each control: a name, what must catch it (a clause; "malformed" with the
+// check in kit/execution/checks.mjs it must break; or "warning" with the
+// SHOULD check a well-formed case must break), and `make(case, fixture)`,
+// which returns broken variants of a case (any of which may be used) or []
+// if the case doesn't fit.
 export const CONTROLS = [
   {
     name: "drops the only error",
@@ -124,8 +129,37 @@ export const CONTROLS = [
     make: (c) => {
       const error = c.response.errors?.find((e) => e.path.some((s) => typeof s === "number"));
       if (!error) return [];
-      const broken = { ...error, path: error.path.map(String) };
-      return [{ response: { ...c.response, errors: c.response.errors.map((e) => (e === error ? broken : e)) } }];
+      return [{ response: withError(c.response, error, { ...error, path: error.path.map(String) }) }];
+    },
+  },
+  {
+    name: "writes an error path as a string instead of a list",
+    clause: "malformed",
+    check: "responsePosition",
+    make: (c) => (c.response.errors?.length ? [{ response: withError(c.response, c.response.errors[0], { ...c.response.errors[0], path: c.response.errors[0].path.join(".") }) }] : []),
+  },
+  {
+    name: "reports an error under the field name instead of its alias",
+    clause: "malformed",
+    check: "responsePosition",
+    make: (c) => {
+      const error = c.fixture === "fragments" && c.response.errors?.find((e) => e.path.at(-1) === "nodeId");
+      return error ? [{ response: withError(c.response, error, { ...error, path: [...error.path.slice(0, -1), "id"] }) }] : [];
+    },
+  },
+  {
+    name: "writes a location with line 0",
+    clause: "warning",
+    check: "errorLocations",
+    make: (c) => (c.response.errors?.length ? [{ response: withError(c.response, c.response.errors[0], { ...c.response.errors[0], locations: [{ line: 0, column: 1 }] }) }] : []),
+  },
+  {
+    name: "writes an Int as a string",
+    clause: "warning",
+    check: "leafEncoding",
+    make: (c) => {
+      const text = JSON.stringify(c.response);
+      return /"count":1\b/.test(text) ? [{ response: JSON.parse(text.replace(/"count":1\b/, '"count":"1"')) }] : [];
     },
   },
   {
@@ -164,7 +198,7 @@ export const CONTROLS = [
   {
     name: "truncates a fraction returned for an Int instead of raising an error",
     clause: "malformed",
-    check: "resultCoercion",
+    check: "intFraction",
     make: (c) => {
       const settle = c.trace.find((e) => e.settle?.length === 1 && e.settle[0] === "count" && e.outcome.kind === "uncoercible");
       if (!settle || c.response.data?.count !== null) return [];
@@ -174,11 +208,23 @@ export const CONTROLS = [
     },
   },
   {
-    name: "produces no response after a resolver returned a value its type can't represent",
+    name: "returns a name that isn't one of the enum's values instead of raising an error",
     clause: "malformed",
     check: "resultCoercion",
     make: (c) => {
-      if (!c.trace.some((e) => e.settle && e.outcome.kind === "uncoercible")) return [];
+      const settle = c.trace.find((e) => e.settle?.length === 1 && e.settle[0] === "color" && e.outcome.kind === "uncoercible");
+      if (!settle || c.response.data?.color !== null) return [];
+      const errors = (c.response.errors ?? []).filter((e) => JSON.stringify(e.path) !== JSON.stringify(["color"]));
+      const { errors: _, ...rest } = c.response;
+      return [{ response: { ...rest, data: { ...c.response.data, color: "BLUE" }, ...(errors.length ? { errors } : {}) } }];
+    },
+  },
+  {
+    name: "produces no response after a resolver returned a non-finite Float or an unknown enum value",
+    clause: "malformed",
+    check: "resultCoercion",
+    make: (c) => {
+      if (!c.trace.some((e) => e.settle && e.outcome.kind === "uncoercible" && !/^Int!?$/.test(callType(c, e.settle) ?? ""))) return [];
       // response: undefined drops the base's response when the variant is
       // merged into it, and when it's written to controls.json.
       return [{ response: undefined, noResponse: "can't serialize Infinity" }];

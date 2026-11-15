@@ -82,9 +82,25 @@ const mutants = [
   },
   {
     name: "an Int literal isn't coerced to Float",
-    find: 'IF v.kind \\in {"int", "float"} THEN Ok(Value("float"',
-    replace: 'IF v.kind = "float" THEN Ok(Value("float"',
+    find: 'IF v.kind \\in {"int", "float"} /\\ IsFiniteNumber(v)',
+    replace: 'IF v.kind = "float" /\\ IsFiniteNumber(v)',
     property: "DefaultValuesCoerce",
+  },
+  {
+    name: "a Float literal too large for a double is accepted",
+    find: 'IF v.kind \\in {"int", "float"} /\\ IsFiniteNumber(v)',
+    replace: 'IF v.kind \\in {"int", "float"}',
+    property: "DefaultValuesCoerce",
+    differential: false,
+    why: "graphql-js accepts `= 1e400` for a Float, and the differential's schemas don't write one",
+  },
+  {
+    name: "every level of list nesting spends fuel, so a deeply nested default doesn't coerce",
+    find: "       THEN CoerceItems(S, OfType(type), v.items, 1, <<>>, fill, fuel)",
+    replace: "       THEN IF fuel = 0 THEN Fail ELSE CoerceItems(S, OfType(type), v.items, 1, <<>>, fill, fuel - 1)",
+    property: "DefaultValuesCoerce",
+    differential: false,
+    why: "the differential's default values are never nested deeper than a few levels",
   },
   {
     name: "an enum accepts a string literal of one of its values",

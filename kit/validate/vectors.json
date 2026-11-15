@@ -1,9 +1,11 @@
 {
  "source": "specs/Validation.tla, evaluated with tla-ts by scripts/generate-vectors-validate.mjs",
  "schemas": {
-  "differential": "schema { query: Query subscription: Subscription }\n\ndirective @tag(name: String) repeatable on QUERY | SUBSCRIPTION | FIELD | FRAGMENT_DEFINITION | FRAGMENT_SPREAD | INLINE_FRAGMENT\ndirective @once on QUERY | FIELD | VARIABLE_DEFINITION\n\ntype Query {\n  node(id: ID!): Node\n  user(id: ID): User\n  post: Post\n  resource: Resource\n  search(term: String = \"\", filter: Filter): [Result!]\n  matrix(rows: [[Int]]): [[Int!]]\n  echo(int: Int, float: Float, opt: Int! = 1, list: [Int!], nums: [Int!] = [1], filter: Filter, pick: Pick, role: Role): String\n}\n\ntype Subscription {\n  postAdded: Post\n  userJoined(room: ID!): User\n}\n\ninterface Node { id: ID! }\ninterface Resource implements Node { id: ID! url: String }\n\ntype User implements Node {\n  id: ID!\n  name: String\n  score: Int\n  role: Role\n  avatar(size: Int!): String\n  friends(first: Int = 10): [User]\n  posts: [Post!]!\n}\n\ntype Post implements Node {\n  id: ID!\n  name: String!\n  score: Float\n  author: User\n  tags: [[String!]]\n}\n\nunion Result = User | Post\nenum Role { ADMIN GUEST }\ninput Filter { role: Role limit: Int! offset: Int! = 0 tags: [String!] }\ninput Pick @oneOf { id: ID name: String }\n",
+  "differential": "schema { query: Query subscription: Subscription }\n\ndirective @tag(name: String) repeatable on QUERY | SUBSCRIPTION | FIELD | FRAGMENT_DEFINITION | FRAGMENT_SPREAD | INLINE_FRAGMENT\ndirective @once on QUERY | FIELD | VARIABLE_DEFINITION\n\ntype Query {\n  node(id: ID!): Node\n  user(id: ID): User\n  post: Post\n  resource: Resource\n  search(term: String = \"\", filter: Filter): [Result!]\n  matrix(rows: [[Int]]): [[Int!]]\n  echo(int: Int, float: Float, opt: Int! = 1, list: [Int!], nums: [Int!] = [1], filter: Filter, role: Role): String\n}\n\ntype Subscription {\n  postAdded: Post\n  userJoined(room: ID!): User\n}\n\ninterface Node { id: ID! }\ninterface Resource implements Node { id: ID! url: String }\n\ntype User implements Node {\n  id: ID!\n  name: String\n  score: Int\n  role: Role\n  avatar(size: Int!): String\n  friends(first: Int = 10): [User]\n  posts: [Post!]!\n}\n\ntype Post implements Node {\n  id: ID!\n  name: String!\n  score: Float\n  author: User\n  tags: [[String!]]\n}\n\nunion Result = User | Post\nenum Role { ADMIN GUEST }\ninput Filter { role: Role limit: Int! offset: Int! = 0 tags: [String!] }\n",
+  "differentialOneOf": "schema { query: Query subscription: Subscription }\n\ndirective @tag(name: String) repeatable on QUERY | SUBSCRIPTION | FIELD | FRAGMENT_DEFINITION | FRAGMENT_SPREAD | INLINE_FRAGMENT\ndirective @once on QUERY | FIELD | VARIABLE_DEFINITION\n\ntype Query {\n  node(id: ID!): Node\n  user(id: ID): User\n  post: Post\n  resource: Resource\n  search(term: String = \"\", filter: Filter): [Result!]\n  matrix(rows: [[Int]]): [[Int!]]\n  echo(int: Int, float: Float, opt: Int! = 1, list: [Int!], nums: [Int!] = [1], filter: Filter, pick: Pick, role: Role): String\n}\n\ntype Subscription {\n  postAdded: Post\n  userJoined(room: ID!): User\n}\n\ninterface Node { id: ID! }\ninterface Resource implements Node { id: ID! url: String }\n\ntype User implements Node {\n  id: ID!\n  name: String\n  score: Int\n  role: Role\n  avatar(size: Int!): String\n  friends(first: Int = 10): [User]\n  posts: [Post!]!\n}\n\ntype Post implements Node {\n  id: ID!\n  name: String!\n  score: Float\n  author: User\n  tags: [[String!]]\n}\n\nunion Result = User | Post\nenum Role { ADMIN GUEST }\ninput Filter { role: Role limit: Int! offset: Int! = 0 tags: [String!] }\ninput Pick @oneOf { id: ID name: String }\n",
   "scalars": "type Query {\n  json(value: Json): String\n  dog: Dog\n}\n\nscalar Json\n\ntype Dog {\n  id: ID\n  name: String\n  age: Int\n  weight: Float\n  good: Boolean\n}\n\ninput DogInput {\n  name: String\n}\n",
-  "examples": "schema { query: Query mutation: Mutation subscription: Subscription }\n\ntype Alien implements Sentient {\n  homePlanet: String\n  name: String!\n}\n\ntype Arguments {\n  booleanArgField(booleanArg: Boolean): Boolean\n  booleanListArgField(booleanListArg: [Boolean]!): [Boolean]\n  floatArgField(floatArg: Float): Float\n  intArgField(intArg: Int): Int\n  multipleRequirements(x: Int!, y: Int!): Int!\n  nonNullBooleanArgField(nonNullBooleanArg: Boolean!): Boolean!\n  optionalNonNullBooleanArgField(optionalBooleanArg: Boolean! = false): Boolean!\n}\n\ntype Cat implements Pet {\n  doesKnowCommand(catCommand: CatCommand!): Boolean!\n  meowVolume: Int\n  name: String!\n  nickname: String\n}\n\nenum CatCommand { JUMP }\n\ninput CatInput {\n  meowVolume: Int\n  name: String!\n  nickname: String\n}\n\nunion CatOrDog = Cat | Dog\n\ntype Dog implements Pet {\n  barkVolume: Int\n  doesKnowCommand(dogCommand: DogCommand!): Boolean!\n  isHouseTrained(atOtherHomes: Boolean): Boolean!\n  name: String!\n  nickname: String\n  owner: Human\n}\n\nenum DogCommand { DOWN HEEL SIT }\n\ninput DogInput {\n  barkVolume: Int\n  name: String!\n  nickname: String\n}\n\nunion DogOrHuman = Dog | Human\n\ninput FindDogInput {\n  name: String\n  owner: String\n}\n\ntype Human implements Sentient {\n  name: String!\n  pets: [Pet!]\n}\n\nunion HumanOrAlien = Alien | Human\n\ntype Message {\n  body: String\n  sender: String\n}\n\ntype Mutation {\n  addPet(pet: PetInput!): Pet\n  addPets(pets: [PetInput!]!): [Pet]\n}\n\ninterface Node {\n  id: ID!\n}\n\ninterface Pet {\n  name: String!\n}\n\ninput PetInput @oneOf {\n  cat: CatInput\n  dog: DogInput\n}\n\ntype Query {\n  arguments: Arguments\n  booleanList(booleanListArg: [Boolean!]): Boolean\n  catOrDog: CatOrDog\n  dog: Dog\n  findDog(searchBy: FindDogInput): Dog\n  human: Human\n  pet: Pet\n}\n\ninterface Resource {\n  id: ID!\n  url: String\n}\n\ninterface Sentient {\n  name: String!\n}\n\ntype Subscription {\n  disallowedSecondRootField: Boolean\n  newMessage: Message\n}\n",
+  "examples": "schema { query: Query subscription: Subscription }\n\ntype Alien implements Sentient {\n  homePlanet: String\n  name: String!\n}\n\ntype Arguments {\n  booleanArgField(booleanArg: Boolean): Boolean\n  booleanListArgField(booleanListArg: [Boolean]!): [Boolean]\n  floatArgField(floatArg: Float): Float\n  intArgField(intArg: Int): Int\n  multipleRequirements(x: Int!, y: Int!): Int!\n  nonNullBooleanArgField(nonNullBooleanArg: Boolean!): Boolean!\n  optionalNonNullBooleanArgField(optionalBooleanArg: Boolean! = false): Boolean!\n}\n\ntype Cat implements Pet {\n  doesKnowCommand(catCommand: CatCommand!): Boolean!\n  meowVolume: Int\n  name: String!\n  nickname: String\n}\n\nenum CatCommand { JUMP }\n\ninput CatInput {\n  meowVolume: Int\n  name: String!\n  nickname: String\n}\n\nunion CatOrDog = Cat | Dog\n\ntype Dog implements Pet {\n  barkVolume: Int\n  doesKnowCommand(dogCommand: DogCommand!): Boolean!\n  isHouseTrained(atOtherHomes: Boolean): Boolean!\n  name: String!\n  nickname: String\n  owner: Human\n}\n\nenum DogCommand { DOWN HEEL SIT }\n\ninput DogInput {\n  barkVolume: Int\n  name: String!\n  nickname: String\n}\n\nunion DogOrHuman = Dog | Human\n\ninput FindDogInput {\n  name: String\n  owner: String\n}\n\ntype Human implements Sentient {\n  name: String!\n  pets: [Pet!]\n}\n\nunion HumanOrAlien = Alien | Human\n\ntype Message {\n  body: String\n  sender: String\n}\n\ninterface Node {\n  id: ID!\n}\n\ninterface Pet {\n  name: String!\n}\n\ntype Query {\n  arguments: Arguments\n  booleanList(booleanListArg: [Boolean!]): Boolean\n  catOrDog: CatOrDog\n  dog: Dog\n  findDog(searchBy: FindDogInput): Dog\n  human: Human\n  pet: Pet\n}\n\ninterface Resource {\n  id: ID!\n  url: String\n}\n\ninterface Sentient {\n  name: String!\n}\n\ntype Subscription {\n  disallowedSecondRootField: Boolean\n  newMessage: Message\n}\n",
+  "examplesOneOf": "schema { query: Query mutation: Mutation subscription: Subscription }\n\ntype Alien implements Sentient {\n  homePlanet: String\n  name: String!\n}\n\ntype Arguments {\n  booleanArgField(booleanArg: Boolean): Boolean\n  booleanListArgField(booleanListArg: [Boolean]!): [Boolean]\n  floatArgField(floatArg: Float): Float\n  intArgField(intArg: Int): Int\n  multipleRequirements(x: Int!, y: Int!): Int!\n  nonNullBooleanArgField(nonNullBooleanArg: Boolean!): Boolean!\n  optionalNonNullBooleanArgField(optionalBooleanArg: Boolean! = false): Boolean!\n}\n\ntype Cat implements Pet {\n  doesKnowCommand(catCommand: CatCommand!): Boolean!\n  meowVolume: Int\n  name: String!\n  nickname: String\n}\n\nenum CatCommand { JUMP }\n\ninput CatInput {\n  meowVolume: Int\n  name: String!\n  nickname: String\n}\n\nunion CatOrDog = Cat | Dog\n\ntype Dog implements Pet {\n  barkVolume: Int\n  doesKnowCommand(dogCommand: DogCommand!): Boolean!\n  isHouseTrained(atOtherHomes: Boolean): Boolean!\n  name: String!\n  nickname: String\n  owner: Human\n}\n\nenum DogCommand { DOWN HEEL SIT }\n\ninput DogInput {\n  barkVolume: Int\n  name: String!\n  nickname: String\n}\n\nunion DogOrHuman = Dog | Human\n\ninput FindDogInput {\n  name: String\n  owner: String\n}\n\ntype Human implements Sentient {\n  name: String!\n  pets: [Pet!]\n}\n\nunion HumanOrAlien = Alien | Human\n\ntype Message {\n  body: String\n  sender: String\n}\n\ntype Mutation {\n  addPet(pet: PetInput!): Pet\n  addPets(pets: [PetInput!]!): [Pet]\n}\n\ninterface Node {\n  id: ID!\n}\n\ninterface Pet {\n  name: String!\n}\n\ninput PetInput @oneOf {\n  cat: CatInput\n  dog: DogInput\n}\n\ntype Query {\n  arguments: Arguments\n  booleanList(booleanListArg: [Boolean!]): Boolean\n  catOrDog: CatOrDog\n  dog: Dog\n  findDog(searchBy: FindDogInput): Dog\n  human: Human\n  pet: Pet\n}\n\ninterface Resource {\n  id: ID!\n  url: String\n}\n\ninterface Sentient {\n  name: String!\n}\n\ntype Subscription {\n  disallowedSecondRootField: Boolean\n  newMessage: Message\n}\n",
   "hello": "schema { query: Query }\n\ntype Query {\n  hello: String\n}\n"
  },
  "rules": {
@@ -3271,6 +3273,80 @@
    }
   },
   {
+   "id": "SingleRootField-53",
+   "spec": [
+    "5.2.4.1"
+   ],
+   "family": "extra",
+   "rule": "SingleRootField",
+   "schema": "differential",
+   "document": "subscription {\n  __type(name: \"Post\") {\n    name\n  }\n}",
+   "expected": {
+    "valid": false
+   },
+   "violations": {
+    "SingleRootField": [
+     ""
+    ],
+    "FieldSelections": [
+     "Subscription.__type"
+    ]
+   },
+   "siblings": [
+    "SingleRootField-valid-40"
+   ]
+  },
+  {
+   "id": "SingleRootField-valid-40",
+   "spec": [
+    "5.2.4.1"
+   ],
+   "family": "extra",
+   "rule": "SingleRootField",
+   "schema": "differential",
+   "document": "{\n  __type(name: \"Post\") {\n    name\n  }\n}",
+   "expected": {
+    "valid": true
+   }
+  },
+  {
+   "id": "SingleRootField-54",
+   "spec": [
+    "5.2.4.1"
+   ],
+   "family": "extra",
+   "rule": "SingleRootField",
+   "schema": "differential",
+   "document": "subscription {\n  __schema {\n    queryType {\n      name\n    }\n  }\n}",
+   "expected": {
+    "valid": false
+   },
+   "violations": {
+    "SingleRootField": [
+     ""
+    ],
+    "FieldSelections": [
+     "Subscription.__schema"
+    ]
+   },
+   "siblings": [
+    "SingleRootField-valid-41"
+   ]
+  },
+  {
+   "id": "SingleRootField-valid-41",
+   "spec": [
+    "5.2.4.1"
+   ],
+   "family": "extra",
+   "rule": "SingleRootField",
+   "schema": "differential",
+   "document": "{\n  __schema {\n    queryType {\n      name\n    }\n  }\n}",
+   "expected": {
+    "valid": true
+   }
+  },
+  {
    "id": "SingleRootField-spec-1",
    "spec": [
     "5.2.4.1"
@@ -4009,6 +4085,27 @@
    "expected": {
     "valid": true
    }
+  },
+  {
+   "id": "FieldSelections-19",
+   "spec": [
+    "5.3.1"
+   ],
+   "family": "extra",
+   "rule": "FieldSelections",
+   "schema": "differential",
+   "document": "{\n  post {\n    __schema {\n      queryType {\n        name\n      }\n    }\n  }\n}",
+   "expected": {
+    "valid": false
+   },
+   "violations": {
+    "FieldSelections": [
+     "Post.__schema"
+    ]
+   },
+   "siblings": [
+    "SingleRootField-valid-41"
+   ]
   },
   {
    "id": "FieldSelections-spec-1",
@@ -4756,7 +4853,8 @@
    "document": "{\n  a: search(term: \"x\") {\n    __typename\n  }\n  a: search(term: \"\"\"x\"\"\") {\n    __typename\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "unspecified": "§5.3.2 doesn't define \"identical sets of arguments\": compared by literal value, as the reference does, the arguments of two fields here are identical, but compared by their text they differ"
   },
   {
    "id": "FieldSelectionMerging-valid-12",
@@ -7030,7 +7128,8 @@
    },
    "siblings": [
     "FieldSelectionMerging-valid-48"
-   ]
+   ],
+   "unspecified": "§5.3.2 doesn't define \"identical sets of arguments\": compared by literal value, as the reference does, the arguments of two fields here differ, but compared by their coerced values they are identical"
   },
   {
    "id": "FieldSelectionMerging-valid-48",
@@ -7064,7 +7163,8 @@
    },
    "siblings": [
     "FieldSelectionMerging-valid-49"
-   ]
+   ],
+   "unspecified": "§5.3.2 doesn't define \"identical sets of arguments\": compared by literal value, as the reference does, the arguments of two fields here differ, but compared by their coerced values they are identical"
   },
   {
    "id": "FieldSelectionMerging-valid-49",
@@ -7098,7 +7198,8 @@
    },
    "siblings": [
     "FieldSelectionMerging-valid-50"
-   ]
+   ],
+   "unspecified": "§5.3.2 doesn't define \"identical sets of arguments\": compared by literal value, as the reference does, the arguments of two fields here differ, but compared by their coerced values they are identical"
   },
   {
    "id": "FieldSelectionMerging-valid-50",
@@ -7132,7 +7233,8 @@
    },
    "siblings": [
     "FieldSelectionMerging-valid-51"
-   ]
+   ],
+   "unspecified": "§5.3.2 doesn't define \"identical sets of arguments\": compared by literal value, as the reference does, the arguments of two fields here differ, but compared by their coerced values they are identical"
   },
   {
    "id": "FieldSelectionMerging-valid-51",
@@ -25274,7 +25376,9 @@
    },
    "siblings": [
     "FieldSelectionMerging-valid-545"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)"
   },
   {
    "id": "FieldSelectionMerging-valid-545",
@@ -27600,6 +27704,40 @@
    "rule": "RequiredArguments",
    "schema": "differential",
    "document": "{\n  search(term: \"s\") {\n    __typename\n  }\n  user(id: \"1\") {\n    name\n  }\n}",
+   "expected": {
+    "valid": true
+   }
+  },
+  {
+   "id": "RequiredArguments-10",
+   "spec": [
+    "5.4.3"
+   ],
+   "family": "extra",
+   "rule": "RequiredArguments",
+   "schema": "differential",
+   "document": "{\n  __schema {\n    queryType {\n      name\n    }\n    types {\n      name\n      kind\n    }\n    directives {\n      name\n      locations\n      args {\n        name\n        type {\n          kind\n          name\n          ofType {\n            name\n          }\n        }\n      }\n    }\n  }\n  __type {\n    name\n    fields {\n      name\n      type {\n        kind\n        name\n      }\n    }\n  }\n}",
+   "expected": {
+    "valid": false
+   },
+   "violations": {
+    "RequiredArguments": [
+     "__type(name)"
+    ]
+   },
+   "siblings": [
+    "RequiredArguments-valid-7"
+   ]
+  },
+  {
+   "id": "RequiredArguments-valid-7",
+   "spec": [
+    "5.4.3"
+   ],
+   "family": "extra",
+   "rule": "RequiredArguments",
+   "schema": "differential",
+   "document": "{\n  __schema {\n    queryType {\n      name\n    }\n    types {\n      name\n      kind\n    }\n    directives {\n      name\n      locations\n      args {\n        name\n        type {\n          kind\n          name\n          ofType {\n            name\n          }\n        }\n      }\n    }\n  }\n  __type(name: \"Post\") {\n    name\n    fields {\n      name\n      type {\n        kind\n        name\n      }\n    }\n  }\n}",
    "expected": {
     "valid": true
    }
@@ -30616,7 +30754,9 @@
    },
    "siblings": [
     "FragmentsMustBeUsed-valid-17"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)"
   },
   {
    "id": "FragmentsMustBeUsed-valid-17",
@@ -30629,7 +30769,9 @@
    "document": "{\n  b: matrix(rows: [1])\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)"
   },
   {
    "id": "FragmentsMustBeUsed-74",
@@ -33702,7 +33844,7 @@
    ],
    "family": "variables",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: ID! = null) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -33714,7 +33856,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-6"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-valid-6",
@@ -33723,7 +33867,7 @@
    ],
    "family": "variables",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: ID! = \"1\") {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": true
@@ -34058,7 +34202,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: 1)\n}",
    "expected": {
     "valid": false
@@ -34074,7 +34218,9 @@
     "ValuesOfCorrectType-valid-18",
     "ValuesOfCorrectType-valid-19",
     "ValuesOfCorrectType-valid-20"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-valid-17",
@@ -34122,7 +34268,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: null)\n}",
    "expected": {
     "valid": true
@@ -34521,7 +34667,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: \"s\")\n}",
    "expected": {
     "valid": false
@@ -34533,7 +34679,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-20"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-31",
@@ -34542,7 +34690,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: 1.5)\n}",
    "expected": {
     "valid": false
@@ -34554,7 +34702,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-24"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-32",
@@ -34563,7 +34713,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: [1])\n}",
    "expected": {
     "valid": false
@@ -34575,7 +34725,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-25"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-33",
@@ -34794,7 +34946,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: true)\n}",
    "expected": {
     "valid": false
@@ -34806,7 +34958,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-20"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-44",
@@ -34983,7 +35137,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: ADMIN)\n}",
    "expected": {
     "valid": false
@@ -34995,7 +35149,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-20"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-53",
@@ -35004,7 +35160,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: BOGUS)\n}",
    "expected": {
     "valid": false
@@ -35016,7 +35172,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-20"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-54",
@@ -35199,7 +35357,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: {id: 1})\n}",
    "expected": {
     "valid": true
@@ -35408,7 +35566,9 @@
    "document": "{\n  matrix(rows: [1])\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)"
   },
   {
    "id": "ValuesOfCorrectType-70",
@@ -35459,7 +35619,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: {id: \"1\"})\n}",
    "expected": {
     "valid": true
@@ -35655,7 +35815,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: {name: \"x\"})\n}",
    "expected": {
     "valid": true
@@ -35712,7 +35872,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: {id: null})\n}",
    "expected": {
     "valid": false
@@ -36661,7 +36821,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: {})\n}",
    "expected": {
     "valid": false
@@ -36865,7 +37025,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: [\"s\"])\n}",
    "expected": {
     "valid": false
@@ -36877,7 +37037,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-25"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-132",
@@ -36886,7 +37048,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: [[1]])\n}",
    "expected": {
     "valid": false
@@ -36898,7 +37060,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-44"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-133",
@@ -37037,7 +37201,9 @@
    "document": "{\n  matrix(rows: [1, null])\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)"
   },
   {
    "id": "ValuesOfCorrectType-139",
@@ -37130,7 +37296,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: [1, null])\n}",
    "expected": {
     "valid": false
@@ -37142,7 +37308,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-25"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-144",
@@ -38012,7 +38180,7 @@
    ],
    "family": "values",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: {id: \"1\", name: \"x\"})\n}",
    "expected": {
     "valid": false
@@ -39405,7 +39573,7 @@
    ],
    "family": "random",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q0($v2: Int! = true) {\n  echo(int: 1, opt: $v2, list: 1, pick: {id: \"1\"})\n}",
    "expected": {
     "valid": false
@@ -39417,7 +39585,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-48"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-valid-48",
@@ -39426,7 +39596,7 @@
    ],
    "family": "random",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q0($v2: Int!) {\n  echo(int: 1, opt: $v2, list: 1, pick: {id: \"1\"})\n}",
    "expected": {
     "valid": true
@@ -39577,7 +39747,7 @@
    ],
    "family": "random",
    "rule": "ValuesOfCorrectType",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  a: echo(pick: \"s\")\n}",
    "expected": {
     "valid": false
@@ -39589,7 +39759,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-53"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-valid-53",
@@ -39799,7 +39971,7 @@
    ],
    "family": "spec",
    "rule": "ValuesOfCorrectType",
-   "schema": "examples",
+   "schema": "examplesOneOf",
    "document": "mutation addPet($pet: PetInput! = {cat: {name: \"Brontie\"}}) {\n  addPet(pet: $pet) {\n    name\n  }\n}",
    "expected": {
     "valid": true
@@ -39856,7 +40028,7 @@
    ],
    "family": "spec",
    "rule": "ValuesOfCorrectType",
-   "schema": "examples",
+   "schema": "examplesOneOf",
    "document": "mutation oneOfWithNoFields {\n  addPet(pet: {}) {\n    name\n  }\n}",
    "expected": {
     "valid": false
@@ -39877,7 +40049,7 @@
    ],
    "family": "values",
    "rule": "InputObjectFieldNames",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: {limit: 1})\n}",
    "expected": {
     "valid": false
@@ -39892,7 +40064,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-31"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "InputObjectFieldNames-2",
@@ -39901,7 +40075,7 @@
    ],
    "family": "values",
    "rule": "InputObjectFieldNames",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: {offset: 1})\n}",
    "expected": {
     "valid": false
@@ -39916,7 +40090,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-31"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "InputObjectFieldNames-3",
@@ -39925,7 +40101,7 @@
    ],
    "family": "values",
    "rule": "InputObjectFieldNames",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: {limit: 1, tags: \"a\"})\n}",
    "expected": {
     "valid": false
@@ -39941,7 +40117,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-40"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "InputObjectFieldNames-4",
@@ -39950,7 +40128,7 @@
    ],
    "family": "values",
    "rule": "InputObjectFieldNames",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: {limit: 1, role: ADMIN})\n}",
    "expected": {
     "valid": false
@@ -39966,7 +40144,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-41"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "InputObjectFieldNames-5",
@@ -39975,7 +40155,7 @@
    ],
    "family": "values",
    "rule": "InputObjectFieldNames",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: {limit: null})\n}",
    "expected": {
     "valid": false
@@ -39990,7 +40170,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-31"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "InputObjectFieldNames-6",
@@ -40023,7 +40205,7 @@
    ],
    "family": "values",
    "rule": "InputObjectFieldNames",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: {limit: 1, role: \"ADMIN\"})\n}",
    "expected": {
     "valid": false
@@ -40039,7 +40221,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-41"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "InputObjectFieldNames-8",
@@ -40072,7 +40256,7 @@
    ],
    "family": "values",
    "rule": "InputObjectFieldNames",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: {limit: 1, bogus: 1})\n}",
    "expected": {
     "valid": false
@@ -40088,7 +40272,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-40"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "InputObjectFieldNames-10",
@@ -40097,7 +40283,7 @@
    ],
    "family": "values",
    "rule": "InputObjectFieldNames",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "{\n  echo(pick: {limit: 1, tags: [\"a\", null]})\n}",
    "expected": {
     "valid": false
@@ -40113,7 +40299,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-40"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "InputObjectFieldNames-spec-1",
@@ -40479,7 +40667,7 @@
    ],
    "family": "spec",
    "rule": "InputObjectRequiredFields",
-   "schema": "examples",
+   "schema": "examplesOneOf",
    "document": "mutation addCat {\n  addPet(pet: {cat: {name: \"Brontie\"}}) {\n    name\n  }\n}",
    "expected": {
     "valid": true
@@ -40495,7 +40683,7 @@
    ],
    "family": "spec",
    "rule": "InputObjectRequiredFields",
-   "schema": "examples",
+   "schema": "examplesOneOf",
    "document": "mutation addCat {\n  addPet(pet: {cat: {nickname: \"B\"}}) {\n    name\n  }\n}",
    "expected": {
     "valid": false
@@ -40508,7 +40696,9 @@
      "CatInput.name"
     ]
    },
-   "example": "addCat"
+   "example": "addCat",
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "InputObjectRequiredFields-spec-3",
@@ -40517,7 +40707,7 @@
    ],
    "family": "spec",
    "rule": "InputObjectRequiredFields",
-   "schema": "examples",
+   "schema": "examplesOneOf",
    "document": "mutation addCat {\n  addPet(pet: {cat: {name: null}}) {\n    name\n  }\n}",
    "expected": {
     "valid": false
@@ -40530,7 +40720,9 @@
      "CatInput.name"
     ]
    },
-   "example": "addCat"
+   "example": "addCat",
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "DirectivesAreDefined-1",
@@ -41154,7 +41346,9 @@
    },
    "siblings": [
     "DirectivesAreDefined-valid-15"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)"
   },
   {
    "id": "DirectivesAreDefined-valid-15",
@@ -41167,7 +41361,9 @@
    "document": "query Q0 {\n  ...F0\n}\n\nfragment F0 on Query {\n  matrix(rows: [1])\n  node(id: \"1\") {\n    ...F1\n  }\n}\n\nfragment F1 on Node {\n  b: id\n  id\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)"
   },
   {
    "id": "DirectivesAreDefined-22",
@@ -42670,7 +42866,7 @@
    ],
    "family": "random",
    "rule": "AllVariableUsesDefined",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q0 {\n  ...F2\n}\n\nfragment F2 on Query {\n  a: echo(float: 1.5, opt: 1, list: [$v0], nums: $v2, pick: $v1) @include(if: $v0)\n  search(term: \"s\") {\n    __typename\n  }\n}",
    "expected": {
     "valid": false
@@ -42684,7 +42880,9 @@
    },
    "siblings": [
     "AllVariableUsesDefined-valid-5"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsesDefined-valid-5",
@@ -43366,7 +43564,7 @@
    ],
    "family": "random",
    "rule": "AllVariablesUsed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q0($unused: Int) {\n  echo(opt: 1, pick: {id: \"1\"}, role: ADMIN)\n}\n\nquery Q1($v2: Float) {\n  a: echo(int: 1, float: $v2, opt: 1, nums: 1)\n  b: __typename\n}",
    "expected": {
     "valid": false
@@ -43378,7 +43576,9 @@
    },
    "siblings": [
     "AllVariablesUsed-valid-8"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariablesUsed-valid-8",
@@ -43387,7 +43587,7 @@
    ],
    "family": "random",
    "rule": "AllVariablesUsed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q0 {\n  echo(opt: 1, pick: {id: \"1\"}, role: ADMIN)\n}\n\nquery Q1($v2: Float) {\n  a: echo(int: 1, float: $v2, opt: 1, nums: 1)\n  b: __typename\n}",
    "expected": {
     "valid": true
@@ -43596,7 +43796,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: ID) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -43608,7 +43808,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-valid-4",
@@ -43617,7 +43819,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": true
@@ -43674,7 +43876,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Int) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -43686,7 +43888,9 @@
    },
    "siblings": [
     "VariableUniqueness-valid-1"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-9",
@@ -43695,7 +43899,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  echo(int: $v)\n}",
    "expected": {
     "valid": false
@@ -43707,7 +43911,9 @@
    },
    "siblings": [
     "VariableUniqueness-valid-1"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-10",
@@ -43716,7 +43922,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  echo(opt: $v)\n}",
    "expected": {
     "valid": false
@@ -43728,7 +43934,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-1"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-11",
@@ -43813,7 +44021,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Int!) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -43825,7 +44033,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-2"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-15",
@@ -43869,7 +44079,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  echo(list: $v)\n}",
    "expected": {
     "valid": false
@@ -43881,7 +44091,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-17",
@@ -43890,7 +44102,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  echo(nums: $v)\n}",
    "expected": {
     "valid": false
@@ -43902,7 +44114,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-18",
@@ -44321,7 +44535,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Filter) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -44333,7 +44547,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-36",
@@ -44363,7 +44579,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  echo(filter: $v)\n}",
    "expected": {
     "valid": false
@@ -44375,7 +44591,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-38",
@@ -44384,7 +44602,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: String) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -44396,7 +44614,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-39",
@@ -44405,7 +44625,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int!]) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -44417,7 +44637,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-9"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-40",
@@ -44468,7 +44690,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Boolean) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -44480,7 +44702,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-43",
@@ -44558,7 +44782,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Int = 1) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -44570,7 +44794,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-11"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-46",
@@ -44681,7 +44907,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: ID) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -44704,7 +44930,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: ID!) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": true
@@ -44796,7 +45022,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Int! = 1) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -44808,7 +45034,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-1"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-54",
@@ -44901,7 +45129,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: ID = null) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -44913,7 +45141,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-valid-18",
@@ -44922,7 +45152,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": true
@@ -45076,7 +45306,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Int = null) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -45088,7 +45318,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-13"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-66",
@@ -45118,7 +45350,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Int!) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -45130,7 +45362,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-68",
@@ -45139,7 +45373,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  echo(int: $v)\n}",
    "expected": {
     "valid": false
@@ -45151,7 +45385,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-13"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-69",
@@ -45160,7 +45396,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  echo(opt: $v)\n}",
    "expected": {
     "valid": false
@@ -45172,7 +45408,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-14"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-70",
@@ -45181,7 +45419,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  matrix(rows: [[$v]])\n}",
    "expected": {
     "valid": false
@@ -45193,7 +45431,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-17"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-71",
@@ -45236,7 +45476,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  echo(list: $v)\n}",
    "expected": {
     "valid": false
@@ -45248,7 +45488,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-73",
@@ -45257,7 +45499,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  echo(nums: $v)\n}",
    "expected": {
     "valid": false
@@ -45269,7 +45511,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-74",
@@ -45604,7 +45848,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int!] = [1]) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -45616,7 +45860,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-21"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-88",
@@ -45862,7 +46108,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Filter = null) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -45874,7 +46120,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-99",
@@ -45931,7 +46179,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  echo(filter: $v)\n}",
    "expected": {
     "valid": false
@@ -45943,7 +46191,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-101",
@@ -45952,7 +46202,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: String = null) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -45964,7 +46214,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-102",
@@ -45973,7 +46225,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int!] = null) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -45985,7 +46237,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-25"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-103",
@@ -45994,7 +46248,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Boolean = null) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -46006,7 +46260,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-104",
@@ -46015,7 +46271,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Boolean!) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -46027,7 +46283,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-105",
@@ -46154,7 +46412,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: ID = null) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -46177,11 +46435,12 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: ID = \"1\") {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": true
    },
+   "unspecified": "§5.8.5's formal text lets a nullable variable with a non-null default value into a OneOf Input Object field; its prose says such variables must be non-nullable",
    "edition": "draft",
    "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
@@ -46315,7 +46574,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  echo(int: $v)\n}",
    "expected": {
     "valid": false
@@ -46327,7 +46586,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-valid-34",
@@ -46336,7 +46597,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": true
@@ -46351,7 +46612,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  echo(opt: $v)\n}",
    "expected": {
     "valid": false
@@ -46363,7 +46624,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-117",
@@ -46372,7 +46635,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  user(id: $v) {\n    id\n  }\n}",
    "expected": {
     "valid": false
@@ -46384,7 +46647,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-28"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-118",
@@ -46456,7 +46721,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  echo(list: $v)\n}",
    "expected": {
     "valid": false
@@ -46468,7 +46733,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-122",
@@ -46477,7 +46744,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  echo(nums: $v)\n}",
    "expected": {
     "valid": false
@@ -46489,7 +46756,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-123",
@@ -46519,7 +46788,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  matrix(rows: [[$v]])\n}",
    "expected": {
     "valid": false
@@ -46531,7 +46800,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-31"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-125",
@@ -46637,7 +46908,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  echo(filter: $v)\n}",
    "expected": {
     "valid": false
@@ -46649,7 +46920,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-130",
@@ -46784,7 +47057,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Filter = {limit: 1}) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -46796,7 +47069,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-35"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-137",
@@ -47047,7 +47322,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  user(id: $v) {\n    id\n  }\n}",
    "expected": {
     "valid": false
@@ -47059,7 +47334,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-11"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-147",
@@ -47241,7 +47518,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  echo(filter: {limit: 1, offset: $v})\n}",
    "expected": {
     "valid": false
@@ -47253,7 +47530,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-40"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-155",
@@ -47448,7 +47727,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  echo(filter: {limit: 1, offset: $v})\n}",
    "expected": {
     "valid": false
@@ -47460,7 +47739,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-44"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-163",
@@ -47671,7 +47952,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: ID!) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -47683,7 +47964,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-2"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-173",
@@ -47860,7 +48143,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int]) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -47872,7 +48155,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-9"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-182",
@@ -47902,7 +48187,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  echo(list: [$v])\n}",
    "expected": {
     "valid": false
@@ -47914,7 +48199,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-7"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-184",
@@ -47923,7 +48210,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  echo(nums: [$v])\n}",
    "expected": {
     "valid": false
@@ -47935,7 +48222,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-8"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-185",
@@ -47944,7 +48233,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  matrix(rows: $v)\n}",
    "expected": {
     "valid": false
@@ -47956,7 +48245,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-186",
@@ -48370,7 +48661,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [[Int]]) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -48382,7 +48673,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-46"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-205",
@@ -48433,7 +48726,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Boolean!) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -48445,7 +48738,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-2"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-208",
@@ -48517,7 +48812,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: ID = \"1\") {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -48529,7 +48824,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-212",
@@ -48902,7 +49199,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Int) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -48914,7 +49211,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-229",
@@ -48923,7 +49222,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  echo(list: [1, $v])\n}",
    "expected": {
     "valid": false
@@ -48935,7 +49234,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-15"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-230",
@@ -49070,7 +49371,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -49082,7 +49383,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-237",
@@ -49378,7 +49681,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int] = [1]) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -49390,7 +49693,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-21"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-251",
@@ -49525,7 +49830,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Filter) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -49537,7 +49842,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-258",
@@ -49588,7 +49895,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: String = \"s\") {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -49600,7 +49907,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-261",
@@ -49609,7 +49918,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: String) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -49621,7 +49930,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-262",
@@ -49651,7 +49962,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int] = null) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -49663,7 +49974,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-25"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-264",
@@ -49777,7 +50090,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Boolean) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -49789,7 +50102,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-270",
@@ -49840,7 +50155,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Int = 1) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -49852,7 +50167,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-273",
@@ -49861,7 +50178,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  echo(list: [$v])\n}",
    "expected": {
     "valid": false
@@ -49873,7 +50190,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-23"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-274",
@@ -49882,7 +50201,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  echo(nums: [$v])\n}",
    "expected": {
     "valid": false
@@ -49894,7 +50213,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-24"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-275",
@@ -49903,7 +50224,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  matrix(rows: $v)\n}",
    "expected": {
     "valid": false
@@ -49915,7 +50236,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-276",
@@ -50160,7 +50483,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Boolean = true) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -50172,7 +50495,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-287",
@@ -50307,7 +50632,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Int! = 1) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -50319,7 +50644,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-6"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-294",
@@ -50746,7 +51073,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [[Int]] = null) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -50758,7 +51085,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-52"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-313",
@@ -50851,7 +51180,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  echo(filter: {limit: $v})\n}",
    "expected": {
     "valid": false
@@ -50863,7 +51192,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-29"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-318",
@@ -50872,7 +51203,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  node(id: $v) {\n    id\n  }\n}",
    "expected": {
     "valid": false
@@ -50884,7 +51215,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-28"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-319",
@@ -51054,7 +51387,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [[Int]] = [[1]]) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -51066,7 +51399,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-55"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-327",
@@ -51180,7 +51515,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Int = null) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -51192,7 +51527,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-333",
@@ -51201,7 +51538,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  echo(list: [1, $v])\n}",
    "expected": {
     "valid": false
@@ -51213,7 +51550,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-32"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-334",
@@ -51348,7 +51687,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -51360,7 +51699,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-341",
@@ -51634,7 +51975,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  matrix(rows: $v)\n}",
    "expected": {
     "valid": false
@@ -51646,7 +51987,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-354",
@@ -51655,7 +51998,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: String = \"s\") {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -51667,7 +52010,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-355",
@@ -51844,7 +52189,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Filter = null) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -51856,7 +52201,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-364",
@@ -51970,7 +52317,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: String = null) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -51982,7 +52329,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-370",
@@ -52033,7 +52382,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Boolean = null) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -52045,7 +52394,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-373",
@@ -52054,7 +52405,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Boolean = true) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -52066,7 +52417,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-374",
@@ -52180,7 +52533,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Boolean! = true) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -52192,7 +52545,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-6"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-380",
@@ -52264,7 +52619,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  user @skip(if: $v) {\n    id\n  }\n}",
    "expected": {
     "valid": false
@@ -52276,7 +52631,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-37"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-384",
@@ -52285,7 +52642,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  user {\n    avatar(size: $v)\n  }\n}",
    "expected": {
     "valid": false
@@ -52297,7 +52654,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-38"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-385",
@@ -52306,7 +52665,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  echo(filter: {limit: $v})\n}",
    "expected": {
     "valid": false
@@ -52318,7 +52677,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-39"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-386",
@@ -52327,7 +52688,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  node(id: $v) {\n    id\n  }\n}",
    "expected": {
     "valid": false
@@ -52339,7 +52700,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-36"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-387",
@@ -53041,7 +53404,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  user @skip(if: $v) {\n    id\n  }\n}",
    "expected": {
     "valid": false
@@ -53053,7 +53416,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-43"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-421",
@@ -53062,7 +53427,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  user {\n    avatar(size: $v)\n  }\n}",
    "expected": {
     "valid": false
@@ -53074,7 +53439,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-42"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-422",
@@ -53474,7 +53841,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  echo(filter: {limit: 1, tags: [$v]})\n}",
    "expected": {
     "valid": false
@@ -53486,7 +53853,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-45"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-441",
@@ -53705,7 +54074,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int]!) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -53717,7 +54086,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-2"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-452",
@@ -53789,7 +54160,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  matrix(rows: [$v])\n}",
    "expected": {
     "valid": false
@@ -53801,7 +54172,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-17"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-456",
@@ -53915,7 +54288,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: ID! = \"1\") {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -53927,7 +54300,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-1"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-462",
@@ -54104,7 +54479,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int]) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -54116,7 +54491,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-471",
@@ -54209,7 +54586,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int!]) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -54221,7 +54598,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-476",
@@ -54230,7 +54609,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int]! = [1]) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -54242,7 +54621,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-21"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-477",
@@ -54251,7 +54632,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int]!) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -54263,7 +54644,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-478",
@@ -54398,7 +54781,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Boolean! = true) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": false
@@ -54410,7 +54793,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-1"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-485",
@@ -54419,7 +54804,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = null) {\n  matrix(rows: [$v])\n}",
    "expected": {
     "valid": false
@@ -54431,7 +54816,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-47"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-486",
@@ -54818,7 +55205,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  echo(list: [$v])\n}",
    "expected": {
     "valid": false
@@ -54830,7 +55217,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-505",
@@ -54839,7 +55228,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  echo(nums: [$v])\n}",
    "expected": {
     "valid": false
@@ -54851,7 +55240,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-506",
@@ -55133,7 +55524,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick) {\n  echo(filter: {limit: 1, tags: [$v]})\n}",
    "expected": {
     "valid": false
@@ -55145,7 +55536,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-45"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-520",
@@ -55658,7 +56051,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int] = null) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -55670,7 +56063,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-545",
@@ -55721,7 +56116,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int!] = null) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -55733,7 +56128,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-6"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-548",
@@ -55742,7 +56139,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  matrix(rows: [$v])\n}",
    "expected": {
     "valid": false
@@ -55754,7 +56151,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-549",
@@ -55784,7 +56183,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  echo(list: [1, $v])\n}",
    "expected": {
     "valid": false
@@ -55796,7 +56195,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-551",
@@ -55826,7 +56227,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -55838,7 +56239,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-553",
@@ -56330,7 +56733,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [[Int]]) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -56342,7 +56745,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-577",
@@ -56351,7 +56756,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int!] = [1]) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -56363,7 +56768,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-21"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-578",
@@ -56519,7 +56926,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Filter = {limit: 1}) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -56531,7 +56938,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-35"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-586",
@@ -56666,7 +57075,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  echo(filter: {limit: $v})\n}",
    "expected": {
     "valid": false
@@ -56678,7 +57087,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-593",
@@ -56687,7 +57098,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  node(id: $v) {\n    id\n  }\n}",
    "expected": {
     "valid": false
@@ -56699,7 +57110,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-594",
@@ -56708,7 +57121,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  user(id: $v) {\n    id\n  }\n}",
    "expected": {
     "valid": false
@@ -56720,7 +57133,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-595",
@@ -56834,7 +57249,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  user {\n    avatar(size: $v)\n  }\n}",
    "expected": {
     "valid": false
@@ -56846,7 +57261,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-601",
@@ -56918,7 +57335,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int] = [1]) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -56930,7 +57347,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-21"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-605",
@@ -56939,7 +57358,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [Int]! = [1]) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -56951,7 +57370,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-6"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-606",
@@ -56960,7 +57381,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [[Int]] = null) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -56972,7 +57393,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-607",
@@ -56981,7 +57404,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: [[Int]] = [[1]]) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": false
@@ -56993,7 +57416,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-55"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-608",
@@ -57002,7 +57427,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  matrix(rows: [[$v]])\n}",
    "expected": {
     "valid": false
@@ -57014,7 +57439,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-50"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-609",
@@ -57233,7 +57660,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  user @skip(if: $v) {\n    id\n  }\n}",
    "expected": {
     "valid": false
@@ -57245,7 +57672,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-620",
@@ -57317,7 +57746,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  echo(filter: {limit: 1, offset: $v})\n}",
    "expected": {
     "valid": false
@@ -57329,7 +57758,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-58"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-624",
@@ -57338,7 +57769,7 @@
    ],
    "family": "variables",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "differential",
+   "schema": "differentialOneOf",
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  echo(filter: {limit: 1, tags: [$v]})\n}",
    "expected": {
     "valid": false
@@ -57350,7 +57781,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-45"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-625",
@@ -57628,7 +58061,7 @@
    ],
    "family": "spec",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "examples",
+   "schema": "examplesOneOf",
    "document": "mutation addCat($cat: CatInput!) {\n  addPet(pet: {cat: $cat}) {\n    name\n  }\n}",
    "expected": {
     "valid": true
@@ -57644,7 +58077,7 @@
    ],
    "family": "spec",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "examples",
+   "schema": "examplesOneOf",
    "document": "mutation addCatWithDefault($cat: CatInput! = {name: \"Brontie\"}) {\n  addPet(pet: {cat: $cat}) {\n    name\n  }\n}",
    "expected": {
     "valid": true
@@ -57660,7 +58093,7 @@
    ],
    "family": "spec",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "examples",
+   "schema": "examplesOneOf",
    "document": "mutation addNullableCat($cat: CatInput) {\n  addPet(pet: {cat: $cat}) {\n    name\n  }\n}",
    "expected": {
     "valid": false
@@ -57681,7 +58114,7 @@
    ],
    "family": "spec",
    "rule": "AllVariableUsagesAreAllowed",
-   "schema": "examples",
+   "schema": "examplesOneOf",
    "document": "mutation listOfOneOfWithNullableVariable($dog: DogInput) {\n  addPets(pets: [{dog: $dog}]) {\n    name\n  }\n}",
    "expected": {
     "valid": false

@@ -8,6 +8,15 @@
 // doesn't), and asked twice: with includeDeprecated: true on every list,
 // and with every list's default. graphql-js only parses the SDL.
 //
+// A schema October 2021 can't express (Introspection!IsOct2021Schema is
+// false: a OneOf input object, or a deprecated argument, input field or
+// directive) carries "edition": "draft". Every other vector also has
+// query2021, the October 2021 profile's query (kit/introspect/query.mjs),
+// and the script checks that its expected response is the draft's without
+// the draft-only fields, with Introspection!Oct2021Builtins as the
+// built-ins. A schema that applies @specifiedBy or @oneOf, which a service
+// needn't provide, lists them in `needs` (Introspection!OptionalDirectivesUsed).
+//
 // Each schema also has a lookup vector, which asks __type(name:) for a few
 // of its types (LOOKUPS) and for UNKNOWN, a name no schema has. Its
 // expected response is Introspection!TypeByName for each name: the type's
@@ -24,8 +33,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { QUERY, QUERY_DEFAULTS, lookupQuery } from "../kit/introspect/query.mjs";
-import { responseOf, typeJson } from "../kit/introspect/data.mjs";
+import { lookupQuery, schemaQuery } from "../kit/introspect/query.mjs";
+import { directiveFor, responseOf, typeFor, typeJson } from "../kit/introspect/data.mjs";
 import { chunked, evaluateModule, moduleFooter, pool, schemaData, tla } from "../kit/schema/tla.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
@@ -43,10 +52,10 @@ const SCHEMAS = [
 type M { m(p: Pick!): Boolean }
 type A { a: Int } type B { b: Int } union U = B | A
 enum E { X "Why" Y @deprecated }
-input In { a: Int = 1, b: Int, e: E = Y, old: String @deprecated }
-input Pick @oneOf { id: ID, name: String }
-scalar Date @specifiedBy(url: "https://example.com/date")
-"Tags a field" directive @tag(v: String @deprecated, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY`,
+input In { a: Int = 1, b: Int, e: E = Y, old: String }
+input Pick { id: ID, name: String }
+scalar Date
+"Tags a field" directive @tag(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY`,
   ],
   [
     "interfaces",
@@ -66,10 +75,15 @@ type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I 
   ],
   [
     "deprecation",
-    ["4.2.3", "4.2.4", "4.2.5", "3.13.3"],
-    `type Query { a: Int @deprecated, b(x: Int @deprecated(reason: "Use y"), y: Int): Int, c: E, d(i: In): Int, old: Old }
+    ["4.2.3", "4.2.5", "3.13.3"],
+    `type Query { a: Int @deprecated, b(y: Int): Int @deprecated(reason: "Use c"), c: E, old: Old }
 type Old { x: Int @deprecated(reason: "All of it") }
-enum E { A B @deprecated(reason: "Gone") }
+enum E { A B @deprecated(reason: "Gone") }`,
+  ],
+  [
+    "inputDeprecation",
+    ["4.2.3", "4.2.4", "3.13.3"],
+    `type Query { b(x: Int @deprecated(reason: "Use y"), y: Int): Int, d(i: In): Int }
 input In { p: Int @deprecated, q: Int }`,
   ],
   [
@@ -118,7 +132,8 @@ const LOOKUPS = {
   rich: ["Q", "E", "In", "Pick", "Date", "U"],
   interfaces: ["Node", "Resource", "Image"],
   defaults: ["Query", "I"],
-  deprecation: ["Query", "Old", "E", "In"],
+  deprecation: ["Query", "Old", "E"],
+  inputDeprecation: ["Query", "In"],
   directiveDeprecation: ["Query", "__Directive"],
   roots: ["Q", "S", "Mutation", "Float"],
   builtinScalars: ["In", "ID", "Float", "Int"],
@@ -129,8 +144,8 @@ const LOOKUPS = {
 const UNKNOWN = "Unknown";
 
 // Lookup vectors select every list with includeDeprecated: true, and the
-// deprecation schema's also with the default.
-const LOOKUP_DEFAULTS = new Set(["deprecation"]);
+// deprecation schemas' also with the default.
+const LOOKUP_DEFAULTS = new Set(["deprecation", "inputDeprecation"]);
 
 const lookupsOf = (family) => [...LOOKUPS[family], UNKNOWN].map((name, i) => ({ alias: `t${i}`, name }));
 
@@ -145,50 +160,105 @@ EXTENDS Introspection
 S == ${tla(d)}
 
 ASSUME PrintT(<<"valid", Verdict(S), OtherDefaultsAreCompatible(S)>>)
+ASSUME PrintT(<<"edition", IsOct2021Schema(S), OptionalDirectivesUsed(S)>>)
 ASSUME PrintT(<<"typename", RootTypeName(S, "query")>>)
-ASSUME PrintT(<<"result", SchemaResult(S, SpecBuiltins, TRUE)>>)
-ASSUME PrintT(<<"result", SchemaResult(S, SpecBuiltins, FALSE)>>)
 Names == ${tla(lookupsOf(SCHEMAS[i][0]).map((l) => l.name))}
-ASSUME PrintT(<<"lookup", [k \\in DOMAIN Names |-> TypeByName(S, SpecBuiltins, TRUE, Names[k])]>>)
-ASSUME PrintT(<<"lookup", [k \\in DOMAIN Names |-> TypeByName(S, SpecBuiltins, FALSE, Names[k])]>>)
+${["SpecBuiltins", "Oct2021Builtins"]
+  .map(
+    (B) => `ASSUME PrintT(<<"result", SchemaResult(S, ${B}, TRUE)>>)
+ASSUME PrintT(<<"result", SchemaResult(S, ${B}, FALSE)>>)
+ASSUME PrintT(<<"lookup", [k \\in DOMAIN Names |-> TypeByName(S, ${B}, TRUE, Names[k])]>>)
+ASSUME PrintT(<<"lookup", [k \\in DOMAIN Names |-> TypeByName(S, ${B}, FALSE, Names[k])]>>)`,
+  )
+  .join("\n")}
 ${moduleFooter}`;
       const values = await evaluateModule("IntrospectVectors", module);
-      const [valid, typename, inc, defaults, lookupInc, lookupDefaults] = values.filter((v) => v[0] !== "done");
+      const [valid, edition, typename, ...rest] = values.filter((v) => v[0] !== "done");
       if (valid[1].length > 0 || valid[2] !== true) {
         throw new Error(`${SCHEMAS[i][0]}: the reference says the schema is invalid (${JSON.stringify(valid[1])}, defaults coerce: ${valid[2]})`);
       }
-      return { typename: typename[1][0], inc: inc[1], defaults: defaults[1], lookupInc: lookupInc[1], lookupDefaults: lookupDefaults[1] };
+      const results = (k) => ({ inc: rest[k][1], defaults: rest[k + 1][1], lookupInc: rest[k + 2][1], lookupDefaults: rest[k + 3][1] });
+      return { oct2021: edition[1], needs: [...edition[2]].sort(), typename: typename[1][0], draft: results(0), edition2021: results(4) };
     },
   );
 
-  let builtins;
+  // The built-ins are the same for every schema; they're written once per
+  // profile, in that profile's shape.
+  const builtins = {};
+  const keep = (profile, b, family) => {
+    const shaped = { types: b.types.map((t) => typeFor(profile, t)), directives: b.directives.map((d) => directiveFor(profile, d)) };
+    if (builtins[profile] === undefined) builtins[profile] = shaped;
+    else if (JSON.stringify(builtins[profile]) !== JSON.stringify(shaped)) throw new Error(`${family}: the ${profile} built-ins differ from the first schema's`);
+  };
+  const same = (family, what, a, b) => {
+    if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${family}: ${what} under October 2021 isn't the draft's without the draft-only fields`);
+  };
+  const meta = (r) => ({ ...(r.oct2021 ? {} : { edition: "draft" }), ...(r.needs.length ? { needs: r.needs } : {}) });
   const vectors = [];
   SCHEMAS.forEach(([family, spec, sdl], i) => {
-    for (const [variant, includeDeprecated, query] of [
-      ["inc", true, QUERY],
-      ["defaults", false, QUERY_DEFAULTS],
+    const r = results[i];
+    for (const [variant, includeDeprecated] of [
+      ["inc", true],
+      ["defaults", false],
     ]) {
-      const { response, builtins: b } = responseOf(results[i][variant], results[i].typename);
-      // The built-ins are the same for every schema; they're written once.
-      if (builtins === undefined) builtins = b;
-      else if (JSON.stringify(builtins) !== JSON.stringify(b)) throw new Error(`${family}: the built-ins differ from the first schema's`);
-      vectors.push({ id: `${family}.${variant}`, spec, family, includeDeprecated, sdl, query, expected: { response } });
+      const { response, builtins: b } = responseOf(r.draft[variant], r.typename);
+      keep("draft", b, family);
+      let query2021;
+      if (r.oct2021) {
+        const old = responseOf(r.edition2021[variant], r.typename);
+        keep("oct2021", old.builtins, family);
+        const s = response.data.__schema;
+        const t = old.response.data.__schema;
+        same(family, "the document's types", s.types.map((x) => typeFor("oct2021", x)), t.types.map((x) => typeFor("oct2021", x)));
+        same(family, "the document's directives", s.directives.map((x) => directiveFor("oct2021", x)), t.directives.map((x) => directiveFor("oct2021", x)));
+        same(family, "the rest of __schema", { ...s, types: 0, directives: 0 }, { ...t, types: 0, directives: 0 });
+        query2021 = schemaQuery("oct2021", includeDeprecated);
+      }
+      vectors.push({
+        id: `${family}.${variant}`,
+        spec,
+        family,
+        ...meta(r),
+        includeDeprecated,
+        sdl,
+        query: schemaQuery("draft", includeDeprecated),
+        ...(query2021 ? { query2021 } : {}),
+        expected: { response },
+      });
     }
   });
   SCHEMAS.forEach(([family, , sdl], i) => {
+    const r = results[i];
     const lookups = lookupsOf(family);
-    const variants = [["lookup", true, results[i].lookupInc]];
-    if (LOOKUP_DEFAULTS.has(family)) variants.push(["lookup.defaults", false, results[i].lookupDefaults]);
-    for (const [variant, includeDeprecated, found] of variants) {
-      const data = Object.fromEntries(lookups.map((l, k) => [l.alias, found[k].length ? typeJson(found[k][0]) : null]));
+    const variants = [["lookup", true, "lookupInc"]];
+    if (LOOKUP_DEFAULTS.has(family)) variants.push(["lookup.defaults", false, "lookupDefaults"]);
+    for (const [variant, includeDeprecated, key] of variants) {
+      const typesOf = (found) => Object.fromEntries(lookups.map((l, k) => [l.alias, found[k].length ? typeJson(found[k][0]) : null]));
+      const data = typesOf(r.draft[key]);
       if (data[lookups.at(-1).alias] !== null) throw new Error(`${family}: the reference finds a type named ${UNKNOWN}`);
-      const query = lookupQuery(lookups, includeDeprecated);
-      vectors.push({ id: `${family}.${variant}`, spec: ["4.2"], family, includeDeprecated, sdl, query, lookups, expected: { response: { data } } });
+      let query2021;
+      if (r.oct2021) {
+        const old = typesOf(r.edition2021[key]);
+        same(family, "a lookup", Object.values(data).map((t) => typeFor("oct2021", t)), Object.values(old).map((t) => typeFor("oct2021", t)));
+        query2021 = lookupQuery("oct2021", lookups, includeDeprecated);
+      }
+      vectors.push({
+        id: `${family}.${variant}`,
+        spec: ["4.2"],
+        family,
+        ...meta(r),
+        includeDeprecated,
+        sdl,
+        query: lookupQuery("draft", lookups, includeDeprecated),
+        ...(query2021 ? { query2021 } : {}),
+        lookups,
+        expected: { response: { data } },
+      });
     }
   });
   return {
     source:
-      "Generated by scripts/generate-vectors-introspect.mjs from specs/Introspection.tla: each expected response is Introspection!SchemaResult with the spec's built-ins, or for a lookup vector Introspection!TypeByName for each name, evaluated by tla-ts. `builtins` holds the introspection types and built-in directives every __schema response also has; built-in descriptions the spec leaves open are null. Don't edit.",
+      "Generated by scripts/generate-vectors-introspect.mjs from specs/Introspection.tla: each expected response is Introspection!SchemaResult with the spec's built-ins, or for a lookup vector Introspection!TypeByName for each name, evaluated by tla-ts. `builtins` holds the introspection types and built-in directives every __schema response also has, for the draft and for October 2021 (Introspection!Oct2021Builtins), each in its profile's shape; built-in descriptions the spec leaves open are null. Under the October 2021 profile, a vector's expected response is its `expected` without the draft-only fields. Don't edit.",
     builtins,
     vectors,
   };
@@ -209,5 +279,8 @@ if (process.argv.includes("--check")) {
   writeFileSync(out, text);
   const all = JSON.parse(text).vectors;
   const lookups = all.filter((v) => v.lookups).length;
-  console.log(`wrote ${all.length} vectors (${SCHEMAS.length} schemas: ${all.length - lookups} __schema, ${lookups} __type lookups) to kit/introspect/vectors.json`);
+  const draft = all.filter((v) => v.edition === "draft").length;
+  console.log(
+    `wrote ${all.length} vectors (${SCHEMAS.length} schemas: ${all.length - lookups} __schema, ${lookups} __type lookups; ${draft} draft only) to kit/introspect/vectors.json`,
+  );
 }

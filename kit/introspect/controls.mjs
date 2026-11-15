@@ -1,12 +1,13 @@
 // The introspect area's self-test: responses built from the reference's
-// expected ones, which the checker must judge as stated. Each vector's own
-// expected response must pass, another vector's must fail, and each
-// response broken on purpose must fail the check it targets. A few
-// changes the spec allows must pass, so that the checker isn't stricter
-// than the spec either.
+// expected ones, which the checker must judge as stated, under both
+// profiles. Each vector's own expected response must pass, another
+// vector's must fail, and each response broken on purpose must fail the
+// check it targets ("only": that check and no other). A few changes the
+// spec allows must pass, so that the checker isn't stricter than the spec
+// either.
 
 import { fullResponse } from "./data.mjs";
-import { TYPE_REF_DEPTH } from "./query.mjs";
+import { PROFILES, TYPE_REF_DEPTH } from "./query.mjs";
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -26,12 +27,17 @@ const scalarType = (name) => ({
   enumValues: null,
   possibleTypes: null,
 });
+const wrapperOf = (d, name) => d.wrappers.fields.find((f) => f.name === name).type;
+const rejected = () => ({ errors: [{ message: "Unknown directive" }] });
 const serviceDirective = (args) => ({ name: "extra", description: null, isRepeatable: false, locations: ["FIELD"], args, isDeprecated: false, deprecationReason: null });
 const dropDirectives = (...names) => (s) => (s.directives = s.directives.filter((d) => !names.includes(d.name)));
 
-// [vector id, name, the check it must fail ("pass": none), change]. change
-// gets the response's __schema (for a __schema vector), its data, and the
-// response.
+// [vector id, name, the check it must fail ("pass": none), change,
+// options]. change gets the response's __schema (for a __schema vector),
+// its data, and the response; `rejected` answers with errors instead.
+// Options: only (no other check may fail), profile (default "draft"), and
+// provided (for a lookup: the built-in directives the service returned for
+// the schema's __schema).
 const BROKEN = [
   ["rich.inc", "reorders an object's fields", "order", (s) => type(s, "Q").fields.reverse()],
   ["rich.inc", "drops an enum value", "enumValues", (s) => type(s, "E").enumValues.shift()],
@@ -74,8 +80,8 @@ const BROKEN = [
   ],
   ["rich.inc", "drops a built-in scalar it references", "builtinScalars", (s) => s.types.splice(s.types.findIndex((t) => t.name === "Int"), 1)],
   ["rich.inc", "adds a built-in scalar nothing references", "builtinScalars", (s) => s.types.push({ ...clone(type(s, "Int")), name: "Float" })],
-  ["rich.inc", "drops isOneOf", "isOneOf", (s) => (type(s, "Pick").isOneOf = false)],
-  ["rich.inc", "drops specifiedByURL", "specifiedByURL", (s) => (type(s, "Date").specifiedByURL = null)],
+  ["oneOf.inc", "drops isOneOf", "isOneOf", (s) => (type(s, "Pick").isOneOf = false)],
+  ["scalars.inc", "drops specifiedByURL", "specifiedByURL", (s) => (type(s, "Date").specifiedByURL = null)],
   ["rich.inc", "changes a built-in directive's locations", "builtinDefinitions", (s) => directive(s, "skip").locations.pop()],
   ["rich.inc", "changes an introspection field's type", "builtinDefinitions", (s) => (field(s, "__Type", "fields").type = field(s, "__Type", "fields").type.ofType)],
   ["minimal.inc", "names the wrong type in the root's __typename", "typename", (s, d) => (d.__typename = "Mutation")],
@@ -84,8 +90,35 @@ const BROKEN = [
   ["minimal.inc", "doesn't provide @skip", "builtinDirectives", dropDirectives("skip")],
   ["rich.inc", "doesn't provide @deprecated, in a schema that deprecates something", "deprecation", dropDirectives("deprecated")],
   ["deprecation.defaults", "doesn't provide @deprecated, in a schema that only deprecates", "deprecation", dropDirectives("deprecated")],
-  ["scalars.inc", "doesn't provide @specifiedBy, in a schema with a custom scalar", "builtinDirectives", dropDirectives("specifiedBy")],
-  ["oneOf.inc", "doesn't provide @oneOf, in a schema with a OneOf input object", "builtinDirectives", dropDirectives("oneOf")],
+  ["rich.inc", "doesn't provide @specifiedBy, in a schema with a custom scalar without a URL", "builtinDirectives", dropDirectives("specifiedBy"), { only: true }],
+  // A directive the result shows is provided must be returned (§3.13).
+  ["scalars.inc", "doesn't return @specifiedBy, though Date has a URL", "specifiedByURL", dropDirectives("specifiedBy")],
+  ["oneOf.inc", "doesn't return @oneOf, though Pick is OneOf", "isOneOf", dropDirectives("oneOf")],
+  // One that doesn't provide @specifiedBy or @oneOf can't represent them.
+  [
+    "scalars.inc",
+    "doesn't provide @specifiedBy, and so reports no URL",
+    "builtinDirectives",
+    (s) => {
+      dropDirectives("specifiedBy")(s);
+      type(s, "Date").specifiedByURL = null;
+    },
+    { only: true },
+  ],
+  [
+    "oneOf.inc",
+    "doesn't provide @oneOf, and so reports Pick as a plain input object",
+    "builtinDirectives",
+    (s) => {
+      dropDirectives("oneOf")(s);
+      type(s, "Pick").isOneOf = false;
+    },
+    { only: true },
+  ],
+  ["scalars.lookup", "doesn't provide @specifiedBy, and so reports no URL, for __type(name:)", "pass", (s, d) => (d.t0.specifiedByURL = null), { provided: ["skip", "include", "deprecated", "oneOf"] }],
+  ["scalars.inc", "rejects a schema that applies @specifiedBy", "builtinDirectives", rejected, { only: true }],
+  ["oneOf.inc", "rejects a schema that applies @oneOf", "builtinDirectives", rejected, { only: true }],
+  ["rich.inc", "rejects a schema that needs no optional directive", "executes", rejected],
   ["minimal.inc", "doesn't provide @deprecated, @specifiedBy or @oneOf, in a schema with no use for them", "pass", dropDirectives("deprecated", "specifiedBy", "oneOf")],
   ["deprecation.inc", "doesn't provide @specifiedBy or @oneOf, in a schema without custom scalars or OneOf inputs", "pass", dropDirectives("specifiedBy", "oneOf")],
   ["rich.inc", "leaves out the mutation root type", "roots", (s) => (s.mutationType = null)],
@@ -203,6 +236,38 @@ const BROKEN = [
   ["minimal.lookup", "reorders __TypeKind's enum values", "pass", (s, d) => d.t3.enumValues.reverse()],
   ["rich.lookup", "leaves out a selected ofType", "executes", (s, d) => delete d.t0.fields[0].args[0].type.ofType],
   ["rich.lookup", "answers errors: []", "envelope", (s, d, r) => (r.errors = [])],
+  // §4.2.2: a List or Non-Null type's other fields are null
+  ["minimal.inc", "gives a Non-Null type a description", "typeKinds", (s, d) => (wrapperOf(d, "types").description = "x"), { only: true }],
+  ["minimal.inc", "gives a List type fields: []", "typeKinds", (s, d) => (wrapperOf(d, "types").ofType.fields = []), { only: true }],
+  ["minimal.inc", "gives a Non-Null type isOneOf: false", "typeKinds", (s, d) => (wrapperOf(d, "queryType").isOneOf = false), { only: true }],
+  ["minimal.inc", "leaves out a wrapper's selected interfaces", "executes", (s, d) => delete wrapperOf(d, "types").interfaces],
+  // The October 2021 profile
+  ...[
+    [
+      "minimal.inc",
+      "gives @deprecated the draft's locations",
+      "builtinDefinitions",
+      (s) => directive(s, "deprecated").locations.push("ARGUMENT_DEFINITION", "INPUT_FIELD_DEFINITION", "DIRECTIVE_DEFINITION"),
+    ],
+    ["minimal.inc", "gives @deprecated(reason:) the draft's String!", "builtinDefinitions", (s) => (directive(s, "deprecated").args[0].type = nonNull(named("String")))],
+    ["minimal.inc", "gives __Type.fields(includeDeprecated:) the draft's Boolean!", "builtinDefinitions", (s) => (field(s, "__Type", "fields").args[0].type = nonNull(named("Boolean")))],
+    [
+      "minimal.inc",
+      "lists the draft's __Type.isOneOf among __Type's fields",
+      "builtinDefinitions",
+      (s) => type(s, "__Type").fields.push({ name: "isOneOf", description: null, args: [], type: named("Boolean"), isDeprecated: false, deprecationReason: null }),
+    ],
+    ["minimal.inc", "has DIRECTIVE_DEFINITION among __DirectiveLocation's values", "builtinDefinitions", (s) => type(s, "__DirectiveLocation").enumValues.push({ name: "DIRECTIVE_DEFINITION", description: null, isDeprecated: false, deprecationReason: null })],
+    ["minimal.inc", "answers isOneOf, which the October 2021 query doesn't select", "executes", (s) => (type(s, "Query").isOneOf = null)],
+    ["minimal.inc", "provides @oneOf as a directive of its own", "pass", (s) => s.directives.push({ name: "oneOf", description: null, isRepeatable: false, locations: ["INPUT_OBJECT"], args: [] })],
+    ["order.inc", "reorders an object's fields, which October 2021 doesn't grade", "pass", (s) => type(s, "Query").fields.reverse()],
+    ["scalars.inc", "doesn't return @specifiedBy, though Date has a URL", "specifiedByURL", dropDirectives("specifiedBy")],
+    ["rich.inc", "reports a deprecated field as not deprecated", "deprecation", (s) => Object.assign(field(s, "Q", "old"), { isDeprecated: false, deprecationReason: null })],
+    ["rich.inc", "drops an input field", "inputFields", (s) => type(s, "In").inputFields.splice(1, 1)],
+    ["minimal.inc", "gives a List type a specifiedByURL", "typeKinds", (s, d) => (wrapperOf(d, "types").ofType.specifiedByURL = "u"), { only: true }],
+    ["rich.lookup", "answers null for a type the schema has", "typeByName", (s, d) => (d.t1 = null)],
+    ["deprecation.lookup.defaults", "returns a deprecated value when includeDeprecated is false", "deprecation", (s, d) => d.t2.enumValues.push({ name: "B", description: null, isDeprecated: true, deprecationReason: "Gone" })],
+  ].map(([id, name, check, change, options = {}]) => [id, `October 2021: ${name}`, check, change, { ...options, profile: "oct2021" }]),
 ];
 
 // The innermost type ref the query selects, at the TypeRef fragment's depth.
@@ -234,23 +299,27 @@ function directive(s, name) {
 export const CONTROLS = (vectors, builtins) => {
   const byId = new Map(vectors.map((v) => [v.id, v]));
   const controls = [];
-  const expectedOf = (v) => (v.lookups ? v.expected.response : fullResponse(v, builtins));
-  vectors.forEach((v, i) => {
-    const own = expectedOf(v);
-    controls.push({ name: "its own expected response", vector: v, response: own, check: "pass" });
-    const other = expectedOf(vectors[(i + 1) % vectors.length]);
-    if (JSON.stringify(other) !== JSON.stringify(own)) controls.push({ name: "another vector's expected response", vector: v, response: other, check: "any" });
-  });
-  for (const [id, name, check, change] of BROKEN) {
+  for (const profile of PROFILES) {
+    const asked = profile === "draft" ? vectors : vectors.filter((v) => v.query2021);
+    asked.forEach((v, i) => {
+      const own = fullResponse(v, builtins, profile);
+      controls.push({ name: "its own expected response", vector: v, profile, response: own, check: "pass" });
+      const other = fullResponse(asked[(i + 1) % asked.length], builtins, profile);
+      if (JSON.stringify(other) !== JSON.stringify(own)) controls.push({ name: "another vector's expected response", vector: v, profile, response: other, check: "any" });
+    });
+  }
+  for (const [id, name, check, change, { only = false, profile = "draft", provided } = {}] of BROKEN) {
     const v = byId.get(id);
     if (!v) throw new Error(`no vector ${id} for a control`);
-    const response = clone(expectedOf(v));
-    change(response.data.__schema, response.data, response);
-    controls.push({ name, vector: v, response, check });
+    let response = clone(fullResponse(v, builtins, profile));
+    if (change === rejected) response = rejected();
+    else change(response.data.__schema, response.data, response);
+    controls.push({ name, vector: v, profile, response, check, only, ...(provided ? { provided: new Set(provided) } : {}) });
   }
   controls.push({
     name: "answers with errors",
     vector: vectors[0],
+    profile: "draft",
     response: { errors: [{ message: "Cannot query field" }] },
     check: "executes",
   });

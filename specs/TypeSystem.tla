@@ -88,6 +88,15 @@ UnknownType(name) ==
 
 \* The type a name refers to: the first definition with that name, else a
 \* built-in scalar.
+\*
+\* A name of an introspection type, such as __Schema, refers to nothing
+\* here, so `type Query { s: __Schema }` breaks FIELD_OUTPUT_TYPE. The spec
+\* doesn't settle whether user SDL may refer to one. §3.3 counts them as
+\* built-in types and §3.4.2 makes every Object and Enum type an output
+\* type, which suggests it may. §4's Reserved Names says "any Name within a
+\* GraphQL type system must not start with two underscores", which, read
+\* literally, forbids the reference. No vector refers to one
+\* (docs/kit/schema.md, Limits).
 TypeNamed(S, name) ==
   LET defs == {i \in DOMAIN S.types : S.types[i].name = name} IN
   IF defs # {} THEN S.types[CHOOSE i \in defs : \A j \in defs : i <= j]
@@ -127,7 +136,10 @@ IsDeprecated(element) == element.deprecated # <<>>
 (* ... should be used"); when FALSE, such a field counts as satisfied and  *)
 (* its own default isn't coerced, so that a bad input field default is     *)
 (* charged to the input field and not to every value that omits it. fuel  *)
-(* bounds the depth, because a default value cycle never ends.             *)
+(* bounds how many input field defaults are expanded one inside another,   *)
+(* because a default value cycle never ends. Everything else recurses on   *)
+(* the literal or the type, which are finite, so no depth of nesting runs  *)
+(* out of fuel, and with fill FALSE fuel is never spent.                   *)
 (***************************************************************************)
 
 Value(kind, text, items, fields) ==
@@ -143,13 +155,20 @@ HasEntry(v, name) == \E i \in DOMAIN v.fields : v.fields[i].name = name
 Entry(v, name) ==
   v.fields[CHOOSE i \in DOMAIN v.fields : v.fields[i].name = name]
 
+\* A number literal too large for a double is canonicalised to "Infinity"
+\* (kit/schema/tla.mjs).
+IsFiniteNumber(v) == v.text \notin {"Infinity", "-Infinity", "NaN"}
+
 CoerceScalar(name, v) ==
   CASE name = "Int" ->
          \* "Int input value ... must raise a request error for float input"
          IF v.kind = "int" THEN Ok(Value("int", v.text, <<>>, <<>>)) ELSE Fail
     [] name = "Float" ->
-         \* "Integer input values ... should be coerced to Float"
-         IF v.kind \in {"int", "float"} THEN Ok(Value("float", v.text, <<>>, <<>>)) ELSE Fail
+         \* "Integer input values are coerced to Float". "If the input value
+         \* otherwise represents a value not representable by finite IEEE 754
+         \* (e.g. NaN, Infinity, ...), a request error must be raised."
+         IF v.kind \in {"int", "float"} /\ IsFiniteNumber(v)
+         THEN Ok(Value("float", v.text, <<>>, <<>>)) ELSE Fail
     [] name = "String" -> IF v.kind = "string" THEN Ok(v) ELSE Fail
     [] name = "Boolean" -> IF v.kind = "boolean" THEN Ok(v) ELSE Fail
     [] name = "ID" ->
@@ -165,17 +184,16 @@ RECURSIVE CoerceLiteral(_, _, _, _, _), CoerceItems(_, _, _, _, _, _, _),
           CoerceFields(_, _, _, _, _, _, _, _)
 
 CoerceLiteral(S, type, v, fill, fuel) ==
-  IF fuel = 0 THEN Fail
-  ELSE IF v.kind = "null"
+  IF v.kind = "null"
   THEN IF IsNonNull(type) THEN Fail ELSE Ok(NullValue)
   ELSE IF IsNonNull(type) THEN CoerceLiteral(S, OfType(type), v, fill, fuel)
   ELSE IF IsList(type)
   THEN IF v.kind = "list"
-       THEN CoerceItems(S, OfType(type), v.items, 1, <<>>, fill, fuel - 1)
+       THEN CoerceItems(S, OfType(type), v.items, 1, <<>>, fill, fuel)
        ELSE \* "If the value passed as an input to a list type is not a list
             \* and not the null value, then the result of input coercion is a
             \* list of size one"
-            LET item == CoerceLiteral(S, OfType(type), v, fill, fuel - 1) IN
+            LET item == CoerceLiteral(S, OfType(type), v, fill, fuel) IN
             IF item.ok THEN Ok(Value("list", "", <<item.value>>, <<>>)) ELSE Fail
   ELSE
     LET def == TypeNamed(S, type.name) IN
@@ -195,7 +213,7 @@ CoerceLiteral(S, type, v, fill, fuel) ==
            \* and that entry must not be null"
            ELSE IF def.oneOf /\ (Len(v.fields) # 1 \/ v.fields[1].value.kind = "null")
            THEN Fail
-           ELSE CoerceFields(S, def, v, 1, <<>>, fill, fuel - 1, {})
+           ELSE CoerceFields(S, def, v, 1, <<>>, fill, fuel, {})
       [] OTHER -> Fail
 
 CoerceItems(S, itemType, items, i, acc, fill, fuel) ==
@@ -218,7 +236,8 @@ CoerceFields(S, def, v, i, acc, fill, fuel, seen) ==
             IF c.ok THEN next(Append(acc, [name |-> field.name, value |-> c.value])) ELSE Fail
        ELSE IF field.default # <<>>
        THEN IF ~fill THEN next(acc)
-            ELSE LET c == CoerceLiteral(S, field.type, field.default[1], fill, fuel) IN
+            ELSE IF fuel = 0 THEN Fail
+            ELSE LET c == CoerceLiteral(S, field.type, field.default[1], fill, fuel - 1) IN
                  IF c.ok THEN next(Append(acc, [name |-> field.name, value |-> c.value])) ELSE Fail
        \* "If no default value is provided and the input object field's type
        \* is non-null, an error should be raised."
@@ -227,6 +246,11 @@ CoerceFields(S, def, v, i, acc, fill, fuel, seen) ==
 
 \* "If the argument has a default value it must be compatible with
 \* argumentType as per the coercion rules for that type."
+\*
+\* fill is FALSE: an input field the default leaves out isn't given its own
+\* default. §3.10 says that default "should be used", a SHOULD, so with
+\* `input I { x: Int = "a" }` the default `{}` of an argument of type I is
+\* compatible here, though following the SHOULD makes it incompatible.
 DefaultValueIsCompatible(S, inputValue) ==
   inputValue.default = <<>>
   \/ CoerceLiteral(S, inputValue.type, inputValue.default[1], FALSE, Fuel).ok
@@ -654,6 +678,14 @@ DoesNotUseItself(D) == D.name \notin D.directives
 \* "A Directive definition must not contain the use of a Directive which
 \* references itself indirectly by referencing a Type or Directive which
 \* transitively includes a reference to this Directive."
+\*
+\* The search starts from the directive's argument types as well as the
+\* directives used inside it. That follows the prose, "While defining a
+\* directive, it must not reference itself directly or indirectly". The
+\* formal rule only speaks of the directives the definition uses, so it
+\* doesn't forbid `directive @d(a: In)` with `input In { f: Int @d }`, which
+\* uses no directive. The kit marks the vectors that depend on this reading
+\* `unspecified` (docs/kit/schema.md).
 DoesNotReferenceItselfIndirectly(S, D) ==
   LET direct == References(S, <<"directive", D.name>>) \ {<<"directive", D.name>>} IN
   <<"directive", D.name>> \notin Reachable(S, direct, direct)

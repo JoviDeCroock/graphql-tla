@@ -108,11 +108,27 @@ Types == <<Colors, Point, Pick, Filled>>
 Coerce(type, v) == CoerceLiteral(With(Types), type, v, TRUE, Fuel)
 WithDefault(type, v) == Schema(<<Obj("Query", <<>>, <<FA("f", <<ArgD("x", type, v)>>, R("Int"))>>)>> \o Types)
 
+\* n lists around a type, n one-item lists around a value, and an input
+\* object value nested n deep: input Deep { d: Deep v: Int }.
+RECURSIVE Lists(_, _), Nested(_, _), DeepValue(_)
+Lists(n, type) == IF n = 0 THEN type ELSE L(Lists(n - 1, type))
+Nested(n, v) == IF n = 0 THEN v ELSE LV(<<Nested(n - 1, v)>>)
+DeepValue(n) == IF n = 0 THEN OV(<<E("v", I("1"))>>) ELSE OV(<<E("d", DeepValue(n - 1))>>)
+Deep == Input("Deep", <<Arg("d", R("Deep")), Arg("v", R("Int"))>>)
+WithDeepDefault(v) ==
+  Schema(<<Obj("Query", <<>>, <<FA("f", <<ArgD("x", R("Deep"), v)>>, R("Int"))>>), Deep>>)
+
 DefaultValuesCoerce == ~done =>
   /\ Is(WithDefault(R("Int"), I("1")), {})
   /\ Is(WithDefault(R("Int"), V("string", "1")), {"ARG_DEFAULT_COMPATIBLE"})
   /\ Is(WithDefault(R("Int"), V("float", "1.5")), {"ARG_DEFAULT_COMPATIBLE"})
   /\ Is(WithDefault(R("Float"), I("1")), {})
+  \* "not representable by finite IEEE 754": 1e400 and -1e400 arrive as
+  \* "Infinity" and "-Infinity".
+  /\ Is(WithDefault(R("Float"), V("float", "1.5")), {})
+  /\ Is(WithDefault(R("Float"), V("float", "Infinity")), {"ARG_DEFAULT_COMPATIBLE"})
+  /\ Is(WithDefault(R("Float"), V("float", "-Infinity")), {"ARG_DEFAULT_COMPATIBLE"})
+  /\ Is(WithDefault(R("Float"), I("Infinity")), {"ARG_DEFAULT_COMPATIBLE"})
   /\ Is(WithDefault(R("ID"), I("4")), {})
   /\ Is(WithDefault(NN(R("Int")), V("null", "")), {"ARG_DEFAULT_COMPATIBLE"})
   \* "[Int] ... 1 ... [1]": a single value is coerced to a list of one.
@@ -122,6 +138,13 @@ DefaultValuesCoerce == ~done =>
   /\ Coerce(L(L(R("Int"))), LV(<<I("1"), I("2")>>)).value
        = LV(<<LV(<<V("int", "1")>>), LV(<<V("int", "2")>>)>>)
   /\ Is(WithDefault(L(NN(R("Int"))), LV(<<I("1"), V("null", "")>>)), {"ARG_DEFAULT_COMPATIBLE"})
+  \* "this may apply recursively for nested lists", to any depth.
+  /\ Is(WithDefault(Lists(12, R("Int")), I("1")), {})
+  /\ Is(WithDefault(Lists(12, R("Int")), Nested(12, I("1"))), {})
+  /\ Is(WithDefault(Lists(12, R("Int")), Nested(12, V("string", "s"))), {"ARG_DEFAULT_COMPATIBLE"})
+  /\ Coerce(Lists(12, R("Int")), I("1")).value = Nested(12, V("int", "1"))
+  /\ Is(WithDeepDefault(DeepValue(12)), {})
+  /\ Is(WithDeepDefault(OV(<<E("d", DeepValue(12)), E("x", I("1"))>>)), {"ARG_DEFAULT_COMPATIBLE"})
   \* "GraphQL string literals must not be accepted as an enum input"
   /\ Is(WithDefault(R("Color"), V("enum", "RED")), {})
   /\ Is(WithDefault(R("Color"), V("string", "RED")), {"ARG_DEFAULT_COMPATIBLE"})
@@ -307,7 +330,9 @@ DirectiveRulesHold == ~done =>
   \* directive @invalidExample(arg: String @invalidExample) on ARGUMENT_DEFINITION
   /\ Is(WithDirectives(With(<<>>), <<Dir("invalidExample", <<Arg("arg", R("String"))>>, {"invalidExample"})>>),
         {"DIRECTIVE_USES_ITSELF"})
-  \* Through an input object: directive @d(a: In), input In { f: Int @d }
+  \* Through an input object: directive @d(a: In), input In { f: Int @d }.
+  \* This follows the prose; the formal rule doesn't settle it (see
+  \* DoesNotReferenceItselfIndirectly).
   /\ Is(WithDirectives(With(<<Using(Input("In", <<Arg("f", R("Int"))>>), {"d"})>>),
                        <<Dir("d", <<Arg("a", R("In"))>>, {})>>),
         {"DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY"})

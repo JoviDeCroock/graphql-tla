@@ -10,6 +10,9 @@
 // reports that as an error, crashes. An adapter that turns every exception
 // into `valid: false` hides its crashes as rejections, which pass on
 // invalid schemas and look over-strict on valid ones.
+//
+// Vectors marked `unspecified` rest on a reading the spec's formal text
+// doesn't settle. They aren't sent to the adapter or graded.
 
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -21,6 +24,13 @@ import { RULE, RULES, UNWRITABLE } from "./rules.mjs";
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
 
 export const loadVectors = () => JSON.parse(readFileSync(join(root, "kit/schema/vectors.json"), "utf8")).vectors;
+
+// The vectors an adapter is graded on, and how many are left out and why.
+export const gradedVectors = (vectors) => {
+  const graded = vectors.filter((v) => !v.unspecified);
+  const skipped = vectors.length > graded.length ? { unspecified: vectors.length - graded.length } : {};
+  return { graded, skipped };
+};
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
@@ -64,6 +74,7 @@ const SUMMARY = {
 const selfTest = (vectors) => {
   const problems = [];
   let controls = 0;
+  if (vectors.some((v) => v.unspecified)) problems.push("an unspecified vector is graded");
   vectors.forEach((v, i) => {
     controls++;
     if (judge(v, { valid: !v.expected.valid }) === "pass") problems.push(`a flipped verdict for ${v.id} passed`);
@@ -86,7 +97,7 @@ const selfTest = (vectors) => {
   return { problems, controls };
 };
 
-export const buildReport = ({ vectors, answers, strict, implementation, capabilities, selfTestText }) => {
+export const buildReport = ({ vectors, answers, strict, implementation, capabilities, selfTestText, total = vectors.length, skipped = {} }) => {
   const stats = new Map(RULES.map((r) => [r.rule, { cases: 0, failing: 0 }]));
   const findings = new Map();
   let malformed = 0;
@@ -152,7 +163,7 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
     area: "schema",
     implementation,
     capabilities: [...capabilities].sort(),
-    provenance: provenance({ strict, vectors: vectors.length }),
+    provenance: provenance({ strict, vectors: total, graded: vectors.length, skipped }),
     checkerSelfTest: selfTestText,
     cases: { submitted: vectors.length, distinct: vectors.length, malformed },
     adapterProblems: malformed,
@@ -180,7 +191,8 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
 };
 
 export const run = async ({ adapter, strict, log = console.log }) => {
-  const vectors = loadVectors();
+  const all = loadVectors();
+  const { graded: vectors, skipped } = gradedVectors(all);
   const answers = [];
   for (const v of vectors) answers.push(await answer(adapter, v.sdl));
 
@@ -194,12 +206,15 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     implementation: adapter.name,
     capabilities: adapter.capabilities,
     selfTestText,
+    total: all.length,
+    skipped,
   });
 
   const failingChecks = report.checks.filter((c) => c.status === "fail");
   const passed = vectors.length - report.findings.reduce((n, f) => n + f.cases, 0);
   const crashes = answers.filter((a) => a instanceof Crash).length;
-  log(`${passed === vectors.length ? "✓" : "✗"} ${passed} of ${vectors.length} schemas judged as TypeSystem.tla judges them${crashes ? ` (${crashes} crashed)` : ""}`);
+  const notGraded = skipped.unspecified ? `; ${skipped.unspecified} unspecified not graded` : "";
+  log(`${passed === vectors.length ? "✓" : "✗"} ${passed} of ${vectors.length} schemas judged as TypeSystem.tla judges them${crashes ? ` (${crashes} crashed)` : ""}${notGraded}`);
   const draft = (f) => (f.draftOnly ? `, ${f.draftOnly === f.cases ? "all" : f.draftOnly} draft only` : "");
   for (const f of report.findings) log(`  ✗ ${f.summary} (${plural(f.cases, "schema")}${draft(f)}, e.g. ${f.fixture}: ${f.example.input})`);
   const tested = report.checks.filter((c) => c.status !== "untested").length;

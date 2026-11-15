@@ -38,8 +38,15 @@
 (*     source position: their lists are compared by name, and the built-in *)
 (*     directives may come anywhere among the directives.                  *)
 (*   - Built-in directives: a service may leave out any but the ones       *)
-(*     §3.13 says it must provide (RequiredDirectiveNames). The result is  *)
-(*     compared with SchemaResult for the built-ins it did return.         *)
+(*     §3.13 says it must provide (RequiredDirectiveNames): @deprecated    *)
+(*     for a schema that deprecates something, and any the result shows    *)
+(*     it provides. The result is compared with SchemaResult for the       *)
+(*     built-ins it did return, and without @specifiedBy or @oneOf a       *)
+(*     scalar has no URL and no input object is OneOf (AsProvided).        *)
+(*   - B may be SpecBuiltins (the draft) or Oct2021Builtins (the October   *)
+(*     2021 edition).                                                      *)
+(*   - A wrapper type's fields other than kind and ofType are null         *)
+(*     (WrapperMatches).                                                   *)
 (*   - An interface's `possibleTypes` and a directive's `locations` have   *)
 (*     no source order, and are compared as sets.                          *)
 (*   - The spec gives no descriptions for built-in definitions, so their   *)
@@ -170,6 +177,109 @@ BuiltinDirectives == <<
 \* a variant of these to state where an implementation departs from them.
 SpecBuiltins == [types |-> IntrospectionTypes, directives |-> BuiltinDirectives]
 
+-----------------------------------------------------------------------------
+(* The October 2021 edition's built-in definitions *)
+
+\* October 2021, §4.2: "fields(includeDeprecated: Boolean = false)" and
+\* "enumValues(includeDeprecated: Boolean = false)". No other field takes
+\* includeDeprecated.
+Oct2021IncludeDeprecatedArg ==
+  BuiltinInputValue("includeDeprecated", Named("Boolean"),
+                    Some(Value("boolean", "false", <<>>, <<>>)))
+
+\* October 2021's schema introspection schema. Against the draft's:
+\* __Type has no isOneOf and inputFields takes no argument, __InputValue
+\* has no isDeprecated or deprecationReason, __Directive has no
+\* isDeprecated or deprecationReason, __Field.args, __Directive.args and
+\* __Schema.directives take no argument, and __DirectiveLocation has no
+\* DIRECTIVE_DEFINITION.
+Oct2021IntrospectionTypes == <<
+  BuiltinObject("__Schema", <<
+    BuiltinField("description", <<>>, Named("String")),
+    BuiltinField("types", <<>>, NNListOfNN("__Type")),
+    BuiltinField("queryType", <<>>, NN("__Type")),
+    BuiltinField("mutationType", <<>>, Named("__Type")),
+    BuiltinField("subscriptionType", <<>>, Named("__Type")),
+    BuiltinField("directives", <<>>, NNListOfNN("__Directive"))>>),
+  BuiltinObject("__Type", <<
+    BuiltinField("kind", <<>>, NN("__TypeKind")),
+    BuiltinField("name", <<>>, Named("String")),
+    BuiltinField("description", <<>>, Named("String")),
+    BuiltinField("fields", <<Oct2021IncludeDeprecatedArg>>, ListOfNN("__Field")),
+    BuiltinField("interfaces", <<>>, ListOfNN("__Type")),
+    BuiltinField("possibleTypes", <<>>, ListOfNN("__Type")),
+    BuiltinField("enumValues", <<Oct2021IncludeDeprecatedArg>>, ListOfNN("__EnumValue")),
+    BuiltinField("inputFields", <<>>, ListOfNN("__InputValue")),
+    BuiltinField("ofType", <<>>, Named("__Type")),
+    BuiltinField("specifiedByURL", <<>>, Named("String"))>>),
+  BuiltinEnum("__TypeKind", <<"SCALAR", "OBJECT", "INTERFACE", "UNION", "ENUM",
+                              "INPUT_OBJECT", "LIST", "NON_NULL">>),
+  BuiltinObject("__Field", <<
+    BuiltinField("name", <<>>, NN("String")),
+    BuiltinField("description", <<>>, Named("String")),
+    BuiltinField("args", <<>>, NNListOfNN("__InputValue")),
+    BuiltinField("type", <<>>, NN("__Type")),
+    BuiltinField("isDeprecated", <<>>, NN("Boolean")),
+    BuiltinField("deprecationReason", <<>>, Named("String"))>>),
+  BuiltinObject("__InputValue", <<
+    BuiltinField("name", <<>>, NN("String")),
+    BuiltinField("description", <<>>, Named("String")),
+    BuiltinField("type", <<>>, NN("__Type")),
+    BuiltinField("defaultValue", <<>>, Named("String"))>>),
+  BuiltinObject("__EnumValue", <<
+    BuiltinField("name", <<>>, NN("String")),
+    BuiltinField("description", <<>>, Named("String")),
+    BuiltinField("isDeprecated", <<>>, NN("Boolean")),
+    BuiltinField("deprecationReason", <<>>, Named("String"))>>),
+  BuiltinObject("__Directive", <<
+    BuiltinField("name", <<>>, NN("String")),
+    BuiltinField("description", <<>>, Named("String")),
+    BuiltinField("locations", <<>>, NNListOfNN("__DirectiveLocation")),
+    BuiltinField("args", <<>>, NNListOfNN("__InputValue")),
+    BuiltinField("isRepeatable", <<>>, NN("Boolean"))>>),
+  BuiltinEnum("__DirectiveLocation", <<
+    "QUERY", "MUTATION", "SUBSCRIPTION", "FIELD", "FRAGMENT_DEFINITION",
+    "FRAGMENT_SPREAD", "INLINE_FRAGMENT", "VARIABLE_DEFINITION", "SCHEMA",
+    "SCALAR", "OBJECT", "FIELD_DEFINITION", "ARGUMENT_DEFINITION", "INTERFACE",
+    "UNION", "ENUM", "ENUM_VALUE", "INPUT_OBJECT", "INPUT_FIELD_DEFINITION">>)
+>>
+
+\* October 2021, §3.13: @skip, @include and @specifiedBy as in the draft,
+\* "directive @deprecated(reason: String = "No longer supported") on
+\* FIELD_DEFINITION | ENUM_VALUE", and no @oneOf.
+Oct2021Directives == <<
+  BuiltinDirectives[1],
+  BuiltinDirectives[2],
+  BuiltinDirective("deprecated",
+                   <<BuiltinInputValue("reason", Named("String"),
+                       Some(Value("string", "No longer supported", <<>>, <<>>)))>>,
+                   <<"FIELD_DEFINITION", "ENUM_VALUE">>),
+  BuiltinDirectives[4]
+>>
+
+\* B for a service that implements the October 2021 edition.
+Oct2021Builtins == [types |-> Oct2021IntrospectionTypes, directives |-> Oct2021Directives]
+
+\* Whether October 2021 can express S: no OneOf input object, and nothing
+\* deprecates an argument, an input field or a directive, which its
+\* @deprecated locations don't allow. For such a schema, the fields only
+\* the draft's introspection types have are fixed: isOneOf is false for
+\* every input object, and no input value or directive is deprecated.
+IsOct2021Schema(S) ==
+  /\ \A T \in Range(S.types) :
+       /\ ~(T.kind = "INPUT_OBJECT" /\ T.oneOf)
+       /\ \A k \in DOMAIN T.inputFields : ~IsDeprecated(T.inputFields[k])
+       /\ \A k \in DOMAIN T.fields : \A j \in DOMAIN T.fields[k].args : ~IsDeprecated(T.fields[k].args[j])
+  /\ \A D \in Range(S.directives) :
+       ~IsDeprecated(D) /\ \A j \in DOMAIN D.args : ~IsDeprecated(D.args[j])
+
+\* The built-in directives S applies that a service needn't provide:
+\* @specifiedBy on a custom scalar and @oneOf on an input object (§3.13
+\* says "should provide" for both).
+OptionalDirectivesUsed(S) ==
+  (IF \E T \in Range(S.types) : T.kind = "SCALAR" /\ T.specifiedBy # <<>> THEN {"specifiedBy"} ELSE {})
+  \cup (IF \E T \in Range(S.types) : T.kind = "INPUT_OBJECT" /\ T.oneOf THEN {"oneOf"} ELSE {})
+
 BuiltinDirectiveNames(B) == Range(NamesOf(B.directives))
 IsBuiltinTypeName(name) == name \in BuiltinScalarNames \cup IntrospectionTypeNames
 IsBuiltinDirectiveName(name) == name \in BuiltinDirectiveNames(SpecBuiltins)
@@ -186,11 +296,24 @@ Deprecates(S) ==
   \/ \E D \in Range(S.directives) :
        IsDeprecated(D) \/ \E j \in DOMAIN D.args : IsDeprecated(D.args[j])
 
-\* §3.13: "GraphQL implementations that support the type system definition
-\* language must provide the @deprecated directive if representing
-\* deprecated portions of the schema." Every schema here comes from the
-\* type system definition language. No other built-in directive is a MUST.
-RequiredDirectiveNames(S) == IF Deprecates(S) THEN {"deprecated"} ELSE {}
+\* The built-in directives a __schema result shows the service provides: a
+\* specifiedByURL comes from @specifiedBy, and a true isOneOf from @oneOf.
+ShownDirectiveNames(actual) ==
+  (IF \E t \in Range(actual.types) : t.specifiedByURL # None THEN {"specifiedBy"} ELSE {})
+  \cup (IF \E t \in Range(actual.types) : t.isOneOf = Some(TRUE) THEN {"oneOf"} ELSE {})
+
+\* The built-in directives a service must return in `directives`, given S
+\* and its result `actual`. §3.13: "GraphQL implementations that support
+\* the type system definition language must provide the @deprecated
+\* directive if representing deprecated portions of the schema." Every
+\* schema here comes from the type system definition language. And "When
+\* introspecting a GraphQL service all provided directives, including any
+\* built-in directive, must be included in the set of returned
+\* directives" (§4.2.1: "directives must return the set of all directives
+\* available within this schema including all built-in directives"), so
+\* a directive the result shows is provided must be returned too.
+RequiredDirectiveNames(S, actual) ==
+  (IF Deprecates(S) THEN {"deprecated"} ELSE {}) \cup ShownDirectiveNames(actual)
 
 \* The built-in directives a service should provide for S: "GraphQL
 \* implementations should provide the @skip and @include directives", and
@@ -469,6 +592,23 @@ DirectiveMatches(FS, e, a) ==
   /\ e.isDeprecated = a.isDeprecated
   /\ e.deprecationReason = a.deprecationReason
 
+\* §4.2.2 List and Non-Null: "kind must return __TypeKind.LIST" (or
+\* NON_NULL), "ofType must return a type of any kind", and "All other
+\* fields must return null." w is a wrapper __Type as a service returned
+\* it, with every field but ofType; a list field holds the names of its
+\* items.
+WrapperMatches(w) ==
+  /\ w.kind \in {"LIST", "NON_NULL"}
+  /\ w.name = None
+  /\ w.description = None
+  /\ w.specifiedByURL = None
+  /\ w.isOneOf = None
+  /\ w.fields = None
+  /\ w.interfaces = None
+  /\ w.possibleTypes = None
+  /\ w.enumValues = None
+  /\ w.inputFields = None
+
 \* Whether a service's __type(name:) result `actual` (an optional __Type)
 \* is right.
 TypeByNameMatches(S, B, inc, name, actual) ==
@@ -491,6 +631,16 @@ TypesWithout(seq, names, i, acc) ==
 Providing(B, names) ==
   [B EXCEPT !.directives = Without(@, BuiltinDirectiveNames(B) \ names, 1, <<>>)]
 
+\* S as a service that provides only the built-in directives `names` sees
+\* it: without @specifiedBy, a scalar has no specifiedByURL, and without
+\* @oneOf, no input object is OneOf. A service needn't provide either
+\* (RecommendedDirectiveNames), and one that doesn't can't represent them.
+AsProvidedType(T, names) ==
+  [T EXCEPT !.specifiedBy = IF "specifiedBy" \in names THEN T.specifiedBy ELSE <<>>,
+            !.oneOf = "oneOf" \in names /\ T.oneOf]
+AsProvided(S, names) ==
+  [S EXCEPT !.types = [i \in DOMAIN S.types |-> AsProvidedType(S.types[i], names)]]
+
 \* What is wrong with a service's __schema result `actual` for S, B and
 \* includeDeprecated: the names of the parts that don't match. actual has
 \* the shape of SchemaResult, plus builtinTypeNames and
@@ -501,8 +651,9 @@ Providing(B, names) ==
 \* actual.directives hold only the document's own types and directives, so
 \* that a differential needn't repeat the built-ins for every schema; the
 \* built-ins are then compared by name only.
-Mismatches(S, B, inc, full, actual) ==
-  LET P == Providing(B, actual.builtinDirectiveNames)
+Mismatches(S0, B, inc, full, actual) ==
+  LET S == AsProvided(S0, actual.builtinDirectiveNames)
+      P == Providing(B, actual.builtinDirectiveNames)
       FS == Full(S, P)
       expected == SchemaResult(S, P, inc)
       builtinTypes == {n \in TypeNames(S, P) : IsBuiltinTypeName(n)}
@@ -530,7 +681,7 @@ Mismatches(S, B, inc, full, actual) ==
                  u.name[1] \in actualTypeNames /\ ~TypeMatches(FS, u, ByName(actual.types, u.name))}}
   \* directives: the same set of names, each once; the document's in order
   \cup Check(actual.builtinDirectiveNames = builtinDirectives, "builtin directive names")
-  \cup Check(RequiredDirectiveNames(S) \subseteq actual.builtinDirectiveNames, "required directives")
+  \cup Check(RequiredDirectiveNames(S, actual) \subseteq actual.builtinDirectiveNames, "required directives")
   \cup Check(/\ Len(actual.directives) = Len(expectedDirectives)
              /\ Range(NamesOf(actual.directives)) = directiveNames, "directive names")
   \cup {"directive " \o d.name :

@@ -33,6 +33,10 @@
 // The tags are this script's attribution of one edit. The reference only
 // says accepted or rejected.
 //
+// A vector whose verdict differs under the October 2021 edition gets
+// `edition: "draft"`, with the reason in `editionNote` (see "Editions"
+// below).
+//
 // Usage: node scripts/generate-vectors-parse.mjs [--check]
 //   --check  regenerates the vectors and fails if kit/parse/vectors.json
 //            differs.
@@ -630,6 +634,102 @@ const lexicalSection = (source, verdict) => {
 };
 
 // ---------------------------------------------------------------------------
+// Editions
+//
+// Where the October 2021 edition's grammar of executable documents differs
+// from the draft's:
+//
+//   - SourceCharacter is U+0009, U+000A, U+000D and U+0020–U+FFFF. That
+//     leaves out the other control characters and every code point above
+//     U+FFFF, but lets in surrogates, which aren't Unicode scalar values.
+//   - EscapedUnicode is four hex digits: no `\u{…}`, and no rule about
+//     surrogates ("Return the code point {value}").
+//   - SelectionSet is { Selection+ }, and operations, fragments and variable
+//     definitions take no Description.
+//
+// asOctober splits a source into comments, block strings and strings the
+// way both editions do, and returns a draft source that October 2021 reads
+// the same way: each fixed-width escape of a surrogate, and each raw
+// surrogate in a comment or string, is replaced by one the draft accepts.
+// It also says whether a string holds a `\u{` escape, and whether a code
+// point is outside October 2021's SourceCharacter.
+
+const isSurrogate = (c) => c >= 0xd800 && c <= 0xdfff;
+const isOctoberSourceCharacter = (c) => c === 0x9 || c === 0xa || c === 0xd || (c >= 0x20 && c <= 0xffff);
+
+const asOctober = (source) => {
+  const cs = Array.from(source);
+  const at = (k) => cs[k] ?? "";
+  const plain = (c) => (isSurrogate(c.codePointAt(0)) ? "a" : c);
+  let out = "";
+  let variableWidth = false;
+  let i = 0;
+  while (i < cs.length) {
+    if (cs[i] === "#") {
+      out += cs[i++];
+      while (i < cs.length && cs[i] !== "\n" && cs[i] !== "\r") out += plain(cs[i++]);
+    } else if (cs[i] === '"' && at(i + 1) === '"' && at(i + 2) === '"') {
+      out += '"""';
+      i += 3;
+      while (i < cs.length) {
+        if (cs[i] === "\\" && at(i + 1) === '"' && at(i + 2) === '"' && at(i + 3) === '"') {
+          out += '\\"""';
+          i += 4;
+        } else if (cs[i] === '"' && at(i + 1) === '"' && at(i + 2) === '"') {
+          out += '"""';
+          i += 3;
+          break;
+        } else out += plain(cs[i++]);
+      }
+    } else if (cs[i] === '"') {
+      out += cs[i++];
+      while (i < cs.length && cs[i] !== "\n" && cs[i] !== "\r") {
+        if (cs[i] === '"') {
+          out += cs[i++];
+          break;
+        }
+        if (cs[i] === "\\" && at(i + 1) === "u") {
+          const hex = cs.slice(i + 2, i + 6).join("");
+          if (at(i + 2) === "{") variableWidth = true;
+          if (/^[0-9A-Fa-f]{4}$/.test(hex) && isSurrogate(parseInt(hex, 16))) {
+            out += "\\u0041";
+            i += 6;
+          } else {
+            out += "\\u";
+            i += 2;
+          }
+        } else if (cs[i] === "\\") {
+          out += cs[i++];
+          if (i < cs.length) out += plain(cs[i++]);
+        } else out += plain(cs[i++]);
+      }
+    } else out += cs[i++];
+  }
+  const outside = Array.from(out).some((c) => !isOctoberSourceCharacter(c.codePointAt(0)));
+  return { source: out, variableWidth, outside };
+};
+
+// Whether October 2021 accepts a source, and if the draft's verdict differs,
+// why. verdictOf gives the reference's verdict on a draft source.
+const octoberEdition = (source, verdictOf) => {
+  const draft = verdictOf(source).ok;
+  const october = asOctober(source);
+  const v = verdictOf(october.source);
+  const rejects = [
+    ...(v.newer.includes("2.5") ? ["October 2021 has no empty selection sets"] : []),
+    ...(v.newer.includes("2.2") ? ["October 2021 has no descriptions on operations, fragments or variable definitions"] : []),
+    ...(october.variableWidth ? ["October 2021 has no variable-width unicode escapes"] : []),
+    ...(october.outside ? ["October 2021's SourceCharacter has no control characters other than tab, LF and CR, and nothing above U+FFFF"] : []),
+  ];
+  const ok = v.ok && rejects.length === 0;
+  if (ok === draft) return {};
+  const note = draft
+    ? rejects.join("; ")
+    : "October 2021 accepts a fixed-width escape of any 16-bit value, and a surrogate in a string or comment, as the draft doesn't";
+  return { edition: "draft", editionNote: note };
+};
+
+// ---------------------------------------------------------------------------
 // Choosing vectors
 
 // Picks items ({ key, section, size }) round-robin across sections, and
@@ -811,6 +911,12 @@ const build = async () => {
     if (newer.length > 0 && !newer.includes(v.spec[0])) v.spec = [...newer, ...v.spec.filter((s) => !newer.includes(s))];
     v.spec.forEach(section);
   }
+
+  // Editions: the draft sources October 2021 reads like the vectors, where
+  // they differ from the vectors themselves.
+  const octoberSources = [...new Set(list.map((v) => asOctober(v.source).source))].filter((s) => !verdicts.has(s));
+  if (octoberSources.length > 0) for (const [s, v] of await evaluate(octoberSources)) verdicts.set(s, v);
+  for (const v of list) Object.assign(v, octoberEdition(v.source, (s) => verdicts.get(s)));
   return list;
 };
 
@@ -827,6 +933,8 @@ const out = serialize(vectors);
 const accepted = vectors.filter((v) => v.expected.ok).length;
 const paired = vectors.filter((v) => v.sibling).length;
 console.log(`  ${vectors.length} vectors: ${accepted} accepted, ${vectors.length - accepted} rejected, ${paired} in minimal pairs`);
+const draftOnly = vectors.filter((v) => v.edition === "draft");
+console.log(`  draft only: ${draftOnly.length} (${draftOnly.filter((v) => v.expected.ok).length} accepted, ${draftOnly.filter((v) => !v.expected.ok).length} rejected)`);
 const bySection = new Map();
 for (const v of vectors) bySection.set(v.spec[0], (bySection.get(v.spec[0]) ?? 0) + 1);
 console.log(`  by section: ${[...bySection].sort((a, b) => byNumber(a[0], b[0])).map(([s, n]) => `${s} ${n}`).join(", ")}`);

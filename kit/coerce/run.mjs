@@ -12,6 +12,9 @@ import { classify, contextFor, describeAccepted, judge, malformed, planFor, same
 
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+// A vector whose answer only the draft gives (October 2021 doesn't coerce
+// default values).
+const isDraft = (vector) => vector.edition === "draft";
 const isMap = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 
 export const loadVectors = () => JSON.parse(readFileSync(join(root, "kit/coerce/vectors.json"), "utf8"));
@@ -168,12 +171,13 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     stats.get(failure.check).failing++;
     const key = `${failure.kind}\u0000${failure.check}`;
     const input = `${vector.document}  variables: ${vector.variables}${vector.operationName !== undefined ? `  operationName: ${vector.operationName}` : ""}`;
-    const f = findings.get(key) ?? { checks: [failure.check], summary: summary(failure), cases: 0, fixtures: {} };
+    const f = findings.get(key) ?? { checks: [failure.check], summary: summary(failure), cases: 0, draftOnly: 0, fixtures: {} };
     f.cases++;
+    if (isDraft(vector)) f.draftOnly++;
     f.fixtures[vector.family] = (f.fixtures[vector.family] ?? 0) + 1;
     if (!f.example || input.length < f.example.input.length) {
       f.fixture = vector.family;
-      f.example = { vector: vector.id, input, response: result, outcome: got, expected: describeAccepted(plan) };
+      f.example = { vector: vector.id, input: `${isDraft(vector) ? "[draft] " : ""}${input}`, response: result, outcome: got, expected: describeAccepted(plan) };
     }
     findings.set(key, f);
   }
@@ -191,7 +195,8 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     if (fatal(f)) ok = false;
     const lv = level.get(f.checks[0]);
     const note = fatal(f) ? "" : lv === "SHOULD" ? ": a SHOULD, fails with --strict" : ": informational";
-    log(`${fatal(f) ? "✗" : "!"} ${f.summary} [${f.checks[0]}] (${plural(f.cases, "vector")})${note}`);
+    const draft = f.draftOnly > 0 ? `; ${f.draftOnly === f.cases ? "all" : `${f.draftOnly} of ${f.cases}`} rely on the draft` : "";
+    log(`${fatal(f) ? "✗" : "!"} ${f.summary} [${f.checks[0]}] (${plural(f.cases, "vector")}${draft})${note}`);
     log(`    e.g.:     ${f.example.input}`);
     log(`    got:      ${JSON.stringify(f.example.outcome)}`);
     log(`    expected: ${f.example.expected.length > 160 ? `${f.example.expected.slice(0, 160)}…` : f.example.expected}`);
@@ -199,6 +204,11 @@ export const run = async ({ adapter, strict, log = console.log }) => {
   const failing = sorted.reduce((n, f) => n + f.cases, 0);
   const wellFormed = outcomes.length - malformedResults.length;
   log(`${failing === 0 && ok ? "✓" : "✗"} ${wellFormed - failing} of ${wellFormed} results match the reference`);
+  const draftOnly = {
+    vectors: graded.filter((g) => isDraft(g.vector)).length,
+    failing: outcomes.filter((o) => !o.problem && o.failure && isDraft(o.vector)).length,
+  };
+  if (failing > 0) log(`  ${draftOnly.failing} of the ${failing} failing vectors rely on the draft (of ${draftOnly.vectors} draft-only vectors run)`);
 
   const test = selfTest(graded, inputs, capabilities);
   if (Array.isArray(test)) {
@@ -216,6 +226,7 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     checkerSelfTest: Array.isArray(test) ? "failed" : `passed (${test} negative controls)`,
     cases: { submitted: graded.length, distinct: graded.length, malformed: malformedResults.length },
     adapterProblems: malformedResults.length,
+    draftOnly,
     checks: CHECKS.map((check) => {
       const s = stats.get(check.id);
       return {

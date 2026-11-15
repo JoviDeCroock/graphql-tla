@@ -7,6 +7,10 @@
 // minimal pair, the section of the one edit between the two sources. A
 // wrong answer counts against that section's check, and toward one finding:
 // "accepts what §X rejects" or "rejects what §X accepts".
+//
+// A vector whose verdict differs under the October 2021 edition carries
+// `edition: "draft"`. Findings count their draft-only vectors, and so does
+// the report.
 
 import { readFileSync } from "node:fs";
 import { ask } from "../areas.mjs";
@@ -76,15 +80,16 @@ export const judge = (vectors, answers) => {
   const failed = [];
   const malformed = [];
   const found = (key, vector, finding) => {
-    const f = findings.get(key) ?? { ...finding, cases: 0, fixtures: {} };
+    const f = findings.get(key) ?? { ...finding, cases: 0, fixtures: {}, draftOnly: 0 };
     f.cases++;
     f.fixtures[vector.family] = (f.fixtures[vector.family] ?? 0) + 1;
+    if (vector.edition === "draft" && key !== "malformed") f.draftOnly++;
     if (!f.shortest || shorter(vector.source, f.shortest) < 0) {
       const sibling = byId.get(vector.sibling);
       f.shortest = vector.source;
       f.fixture = vector.family;
       f.example = {
-        input: quote(vector.source),
+        input: `${vector.edition === "draft" ? "[draft] " : ""}${quote(vector.source)}`,
         response: finding.response,
         expected: JSON.stringify(vector.expected),
         ...(sibling ? { sibling: `${quote(sibling.source)}, which the reference ${sibling.expected.ok ? "accepts" : "rejects"}` } : {}),
@@ -116,6 +121,11 @@ export const judge = (vectors, answers) => {
       response: answer,
     });
   });
+  // A finding whose vectors are all draft only is tagged as such.
+  for (const f of findings.values()) {
+    if (f.draftOnly === f.cases) f.edition = "draft";
+    if (f.draftOnly === 0) delete f.draftOnly;
+  }
   return {
     failed,
     malformed,
@@ -155,8 +165,9 @@ export const run = async ({ adapter, strict, log }) => {
   const result = judge(vectors, answers);
   const test = selfTest(vectors);
 
+  const draft = (f) => (f.draftOnly ? ` (${f.draftOnly === f.cases ? "all" : f.draftOnly} draft only)` : "");
   for (const f of result.findings) {
-    log(`✗ ${f.summary}: ${plural(f.cases, "vector")}, such as ${f.example.input} (answered ${JSON.stringify(f.example.response)})`);
+    log(`✗ ${f.summary}: ${plural(f.cases, "vector")}${draft(f)}, such as ${f.example.input} (answered ${JSON.stringify(f.example.response)})`);
   }
   const agree = vectors.length - result.failed.length - result.malformed.length;
   log(`${agree === vectors.length ? "✓" : "✗"} ${agree} of ${vectors.length} vectors agree with the reference (${((Date.now() - started) / 1000).toFixed(1)}s)`);
@@ -184,6 +195,10 @@ export const run = async ({ adapter, strict, log }) => {
     checkerSelfTest: test.problems.length === 0 ? `passed (${test.controls} negative controls)` : "failed",
     cases: { submitted: vectors.length, distinct: new Set(vectors.map((v) => v.source)).size, malformed: result.malformed.length },
     adapterProblems: result.malformed.length,
+    draftOnly: {
+      vectors: vectors.filter((v) => v.edition === "draft").length,
+      failing: result.failed.filter((i) => vectors[i].edition === "draft").length,
+    },
     checks,
     findings: result.findings,
     fixtures: [],

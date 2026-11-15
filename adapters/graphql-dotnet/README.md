@@ -89,7 +89,7 @@ From the full run the conformance sheet uses (`--strict`, `--random 1500` for ex
 | parse | 1876 of 1983 vectors agree. 6 checks fail. |
 | validate | 2926 of 3087 vectors agree. 6 rule checks and `acceptsValid` fail. |
 | schema | 135 of 166 schemas agree, 3 of them crashes. 18 of 44 rules fail. |
-| introspect | 0 of 34 results: graphql-dotnet rejects the kit's query. |
+| introspect | 0 of 38 results: graphql-dotnet rejects both the draft and the October 2021 query. |
 
 `--inline-items` and `--no-idle` (grace-based, random runs only) find nothing more in execution.
 
@@ -135,4 +135,4 @@ All 31 verdicts were reproduced with plain `Schema.For` and `Initialize` in a st
 
 ### Introspect: the kit's query is rejected
 
-graphql-dotnet 8.8.5 doesn't have the draft's `__Type.specifiedByURL`, `__Directive.isDeprecated` and `deprecationReason`, `__Schema.directives(includeDeprecated:)`, `__Directive.isRepeatable`, or `includeDeprecated` on `args` and `inputFields` with `__InputValue.isDeprecated`. So validation rejects the whole query, and only `executes` is graded (34 of 34 fail). `isRepeatable` and input-value deprecation are behind `Schema.Features.RepeatableDirectives` and `DeprecationOfInputValues` (`ExperimentalFeatures.cs`, off by default). Turning them on wouldn't help, since `specifiedByURL` and directive deprecation don't exist at all. The adapter keeps the defaults.
+graphql-dotnet 8.8.5 doesn't have the draft's `__Type.specifiedByURL`, `__Directive.isDeprecated` and `deprecationReason`, `__Schema.directives(includeDeprecated:)`, `__Directive.isRepeatable`, or `includeDeprecated` on `args` and `inputFields` with `__InputValue.isDeprecated`. So validation rejects the whole query. The kit then tries its October 2021 query, which leaves out the draft-only fields, but graphql-dotnet rejects that too: `specifiedByURL` and `isRepeatable` are both in the October 2021 edition's introspection types. So only `executes` is graded, and every vector fails it. `isRepeatable` and input-value deprecation are behind `Schema.Features.RepeatableDirectives` and `DeprecationOfInputValues` (`ExperimentalFeatures.cs`, off by default). Turning them on wouldn't help, since `specifiedByURL` and directive deprecation don't exist at all. The adapter keeps the defaults.

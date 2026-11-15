@@ -33,7 +33,7 @@ Parse it with your implementation's default options, the way it parses a request
 Two cases need care:
 
 - **Type system definitions.** If your parser also reads the type system language, answer `false` when the document holds anything other than operations and fragments. The graphql-js adapter parses, then checks that every definition is executable.
-- **Lone surrogates.** A few sources hold an unpaired surrogate, such as `"\ud800"` in the JSON. It is never a SourceCharacter, so the reference always rejects these. If your runtime's strings can't hold one, answer `false` rather than fail.
+- **Lone surrogates.** A few sources hold an unpaired surrogate, such as `"\ud800"` in the JSON. It is never a SourceCharacter in the draft, so the reference always rejects these. If your runtime's strings can't hold one, answer `false` rather than fail. October 2021 counts a surrogate as a SourceCharacter, so the vectors with one inside a string are draft only (see Editions).
 
 Any other fields in the result are ignored.
 
@@ -46,7 +46,7 @@ Each vector cites the sections it exercises. The first is the one its verdict re
 - **accepts what §X rejects:** the implementation accepted a source that, by the reference, breaks a rule of §X;
 - **rejects what §X accepts:** it rejected a source that §X allows.
 
-A check is `pass` when some vector cites its section and none of the vectors resting on it got a wrong answer. Every run also checks the checker: it must flag every verdict flipped, flag exactly the vectors whose answer differs when each one gets the next vector's answer, count results without `ok` as malformed, and flag none of the reference's own answers.
+A check is `pass` when some vector cites its section and none of the vectors resting on it got a wrong answer. Findings count their draft-only vectors (`draftOnly`) and mark their example `[draft]`; a finding with nothing else carries `"edition": "draft"`. The report's `draftOnly` gives how many vectors are draft only and how many of those failed. Every run also checks the checker: it must flag every verdict flipped, flag exactly the vectors whose answer differs when each one gets the next vector's answer, count results without `ok` as malformed, and flag none of the reference's own answers.
 
 ## The vectors
 
@@ -68,6 +68,15 @@ The reference only says accepted or rejected, so the sections are the generator'
 
 An accepted document with an empty selection set, or with a description on an operation, fragment or variable, rests on §2.5 or §2.2 first, whatever edit it was chosen for. The draft added both after the October 2021 edition. An implementation that rejects such a document most likely lacks that grammar, and the finding then says so instead of blaming an unrelated section.
 
+**Editions.** A vector whose verdict is different under the October 2021 edition carries `"edition": "draft"`, with the reason in `editionNote`. It is graded like any other, but an implementation of October 2021 can fail it and still follow its edition. October 2021's grammar of executable documents differs in four ways:
+
+- `SelectionSet : { Selection+ }`, so no empty selection sets (8 accepted vectors);
+- no `Description` on an operation, fragment or variable definition (73 accepted vectors);
+- `EscapedUnicode :: /[0-9A-Fa-f]{4}/`, so no `\u{…}` escapes (6 accepted vectors). Its value is "the code point {value}", with no rule about surrogates, so a fixed-width escape of a lone surrogate is valid there. The draft rejects one (9 rejected vectors, such as `{a(x: "\uD83D")}`);
+- `SourceCharacter` is U+0009, U+000A, U+000D and U+0020–U+FFFF. That leaves out the other control characters, such as a vertical tab in a comment (4 accepted vectors), and code points above U+FFFF (2 accepted vectors with a raw U+1F600 in a string). It lets in surrogates, so a raw lone surrogate in a string is valid there (3 rejected vectors). Read as UTF-16 code units, "U+0020–U+FFFF" would allow U+1F600 as a surrogate pair. The kit takes the literal reading, which only adds 2 vectors to the draft-only count.
+
+The generator finds these from the reference: it rewrites each source into one that October 2021 reads the same way under the draft's rules (a surrogate escape becomes `\u0041`, a raw surrogate in a string or comment becomes `a`), evaluates that with `ParseExecutable`, and then applies the draft-only grammar above. In all, 105 vectors are draft only: 93 accepted and 12 rejected.
+
 The vectors catch every bug in `specs/lexer.mutants.mjs` and `specs/parser.mutants.mjs` that changes whether a source is accepted.
 
 ## Limits
@@ -75,10 +84,12 @@ The vectors catch every bug in `specs/lexer.mutants.mjs` and `specs/parser.mutan
 - **Accepted or rejected, nothing more.** The area doesn't compare parse trees, token values or error positions. An implementation that decodes `\b` wrongly, dedents a block string wrongly, drops a list item or reads `true` as an enum value passes. The differential checks those for graphql-js only.
 - **Thin sections.** §2.10.3 Boolean Value, §2.10.5 Null Value, §2.10.6 Enum Value, §2.1.4 Insignificant Commas and §2.1.6 Ignored Tokens have only a few vectors resting on them. A parser can hardly reject these by mistake without also failing other vectors, so they are tested by accepted sources only.
 - **Short sources.** The alphabets stop at a few atoms and the random documents at 24 tokens. Limits on length or nesting depth aren't tested.
+- **Descriptions don't change behaviour.** §2.2 says descriptions in executable documents "MUST NOT affect the execution, validation, or response of a GraphQL document." The area only checks that they parse, and no other area compares a document with descriptions against the same document without them: the `validate` vectors have no description on an operation, fragment or variable.
+- **Printing strings.** §2.10.4 says that "When producing a {StringValue}, implementations should use escape sequences to represent non-printable control characters", and that a supplementary character, if escaped, "should only use a variable-width unicode escape sequence". The area never asks an implementation to print a document, so these SHOULDs aren't checked.
 
 ## graphql-js
 
-graphql-js 17 fails one check and graphql-js 16 two. The differential reports both as known discrepancies:
+graphql-js 17 fails one check and graphql-js 16 two. The differential reports both as known discrepancies. Every vector they fail is draft only:
 
 - graphql-js 16 and 17 reject a variable-width escape with more than eight hex digits, such as `"\u{000000041}"`. EscapedUnicode :: `{` HexDigit+ `}` has no limit, so this is "rejects what §2.10.4 String Value accepts".
 - graphql-js 16 also rejects an empty selection set, such as `{}`, which the draft allows since graphql-spec#1227: "rejects what §2.5 Selection Sets accepts".

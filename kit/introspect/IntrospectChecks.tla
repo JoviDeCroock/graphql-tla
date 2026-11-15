@@ -12,9 +12,16 @@
 (*   - Built-in directives: Introspection!Mismatches compares the result   *)
 (*     with SchemaResult for the built-in directives the service returned, *)
 (*     and requires only RequiredDirectiveNames (@deprecated, for a schema *)
-(*     that deprecates something). A missing directive of                  *)
+(*     that deprecates something, and @specifiedBy or @oneOf when the      *)
+(*     result shows them in use). A missing directive of                   *)
 (*     RecommendedDirectiveNames is a builtinDirectives problem, a SHOULD, *)
 (*     which Matches doesn't see.                                          *)
+(*   - The profile (c.profile) picks the built-ins: SpecBuiltins for the   *)
+(*     draft, Oct2021Builtins for October 2021. A draft answer with        *)
+(*     problems is also compared with Oct2021Builtins, so that the kit can *)
+(*     tell which problems with built-ins match October 2021.              *)
+(*   - Wrapper types (actual.wrappers) must pass WrapperMatches: a         *)
+(*     "wrapper" problem otherwise.                                        *)
 (*   - B also has any other directive the service provides ("GraphQL       *)
 (*     services and client tooling may provide any additional custom       *)
 (*     directive"), as the service describes it, and the types its         *)
@@ -140,21 +147,23 @@ DirectiveProblems(FS, D, e, a) ==
   \cup InputValuesProblems(FS, ~IsBuiltinDirectiveName(D.name), "arguments", w, "(", ":)", D.args, e.args, a.args)
   \cup DeprecationProblems(w, e, a)
 
-\* The built-ins a service may provide: the spec's introspection types and
-\* built-in directives, its own directives (`extras`), and the types their
-\* arguments reach that the document doesn't define (`extraTypes`).
+\* The built-ins a service may provide: the edition's introspection types
+\* and built-in directives (E), its own directives (`extras`), and the
+\* types their arguments reach that the document doesn't define
+\* (`extraTypes`).
 \* Introspection!Providing keeps the built-in directives it returned.
-ServiceBuiltins(extras, extraTypes) ==
-  [types |-> IntrospectionTypes \o extraTypes,
-   directives |-> BuiltinDirectives \o extras]
+ServiceBuiltins(E, extras, extraTypes) ==
+  [types |-> E.types \o extraTypes,
+   directives |-> E.directives \o extras]
 
 InputKinds == {"SCALAR", "ENUM", "INPUT_OBJECT"}
 
 \* What is wrong with `actual`, a full __schema result (built-ins included)
 \* plus `typename`, the root's __typename. extraTypes are the service's
 \* types that B also has.
-Problems(S, B, extraTypes, inc, actual) ==
-  LET P0 == Providing(B, actual.builtinDirectiveNames)
+Problems(S0, B, extraTypes, inc, actual) ==
+  LET S == AsProvided(S0, actual.builtinDirectiveNames)
+      P0 == Providing(B, actual.builtinDirectiveNames)
       FS == Full(S, P0)
       expected == SchemaResult(S, P0, inc)
       en == TypeNames(S, P0)
@@ -165,7 +174,7 @@ Problems(S, B, extraTypes, inc, actual) ==
       builtinNames == BuiltinDirectiveNames(B)
       membership == MembershipProblems("directives", "", ed, ad, DeprecatedNames(FS.directives))
       returned == NameSet(ad)
-      required == RequiredDirectiveNames(S)
+      required == RequiredDirectiveNames(S, actual)
       badTypes == {T.name : T \in {U \in Range(extraTypes) : U.kind \notin InputKinds}}
   IN
   (IF DescriptionMatches(expected.description, actual.description) THEN {} ELSE {P("description", "schema")})
@@ -184,13 +193,18 @@ Problems(S, B, extraTypes, inc, actual) ==
   \cup (IF membership # {} THEN {}
         ELSE OrderProblems("directives", Without(ed, builtinNames, 1, <<>>), Without(ad, builtinNames, 1, <<>>)))
   \cup {P("requiredDirective", "@" \o d) : d \in required \ returned}
-  \cup {P("builtinDirectives", "@" \o d) : d \in RecommendedDirectiveNames(S) \ (returned \cup required)}
+  \cup {P("builtinDirectives", "@" \o d) : d \in RecommendedDirectiveNames(S0) \ (returned \cup required)}
   \cup UNION {DirectiveProblems(FS, DirectiveNamed(FS, d), ByName(ed, d), ByName(ad, d)) : d \in Common(ed, ad)}
+  \cup {P("wrapper", w.where) : w \in {x \in Range(actual.wrappers) : ~WrapperMatches(x)}}
 
 \* What is wrong with a sequence of __type(name:) results, each
-\* [name, result] with result an optional __Type.
-LookupProblems(S, B, inc, lookups) ==
-  LET FS == Full(S, B) IN
+\* [name, result] with result an optional __Type. `provided` names the
+\* built-in directives the service returned for the same schema's
+\* __schema, which lookups don't show.
+LookupProblems(S0, B, inc, lookups, provided) ==
+  LET S == AsProvided(S0, provided)
+      FS == Full(S, B)
+  IN
   UNION {LET l == lookups[i]
              e == TypeByName(S, B, inc, l.name)
          IN IF e = None /\ l.result = None THEN {}
@@ -199,11 +213,26 @@ LookupProblems(S, B, inc, lookups) ==
             ELSE TypeProblems(FS, TypeNamed(FS, l.name), e[1], l.result[1]) :
          i \in DOMAIN lookups}
 
-\* The reference's verdict on a case, and the problems behind it.
-CaseResult(S, c) ==
+EditionBuiltins(profile) == IF profile = "oct2021" THEN Oct2021Builtins ELSE SpecBuiltins
+
+\* The problems with a case for the edition's built-ins E.
+CaseProblems(S, c, E) ==
   IF c.kind = "lookup"
-  THEN <<LookupProblems(S, SpecBuiltins, c.inc, c.actual),
-         \A i \in DOMAIN c.actual : TypeByNameMatches(S, SpecBuiltins, c.inc, c.actual[i].name, c.actual[i].result)>>
-  ELSE LET B == ServiceBuiltins(c.extras, c.extraTypes) IN
-       <<Problems(S, B, c.extraTypes, c.inc, c.actual), Matches(S, B, c.inc, TRUE, c.actual)>>
+  THEN LookupProblems(S, E, c.inc, c.actual, c.provided)
+  ELSE Problems(S, ServiceBuiltins(E, c.extras, c.extraTypes), c.extraTypes, c.inc, c.actual)
+
+\* The reference's verdict on a case, the problems behind it, and for a
+\* draft answer with problems, its problems against October 2021's
+\* built-ins.
+CaseResult(S, c) ==
+  LET E == EditionBuiltins(c.profile)
+      problems == CaseProblems(S, c, E)
+      matches ==
+        IF c.kind = "lookup"
+        THEN \A i \in DOMAIN c.actual :
+               TypeByNameMatches(AsProvided(S, c.provided), E, c.inc, c.actual[i].name, c.actual[i].result)
+        ELSE /\ Matches(S, ServiceBuiltins(E, c.extras, c.extraTypes), c.inc, TRUE, c.actual)
+             /\ \A i \in DOMAIN c.actual.wrappers : WrapperMatches(c.actual.wrappers[i])
+  IN <<problems, matches,
+       IF c.profile = "draft" /\ problems # {} THEN CaseProblems(S, c, Oct2021Builtins) ELSE {}>>
 ====

@@ -43,7 +43,8 @@ const typeRefOf = (node) => {
 };
 
 // A constant literal as TypeSystem's value. Numbers are canonicalised, so
-// that 1.0 and 1 are the same value.
+// that 1.0 and 1 are the same value. A number too large for a double, such
+// as 1e400, becomes "Infinity", which TypeSystem's Float coercion rejects.
 export const valueOf = (node) => {
   const v = (kind, text = "", items = [], fields = []) => ({ kind, text, items, fields });
   switch (node.kind) {
@@ -92,6 +93,9 @@ const appliedIn = (node, out = new Set()) => {
   return out;
 };
 
+// A document with more than one schema definition keeps the last one:
+// "a document must include at most one schema definition" (§3.3) isn't
+// modelled, and no vector has two.
 export const schemaData = (sdl) => {
   const doc = graphql.parse(sdl);
   const inputValue = (node) => ({

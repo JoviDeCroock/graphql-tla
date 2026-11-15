@@ -61,7 +61,7 @@ Any other fields are ignored, but appear in the report's examples. The kit class
 
 ## What is checked
 
-Each vector's `expected` answer is `Coercion!ExecuteRequest` for the request. Where the spec permits more than one answer, the vector also lists the others. A result passes when its outcome, field and arguments match an answer that passes. Numbers are compared as numbers and keys in any order.
+Each vector's `expected` answer is `Coercion!ExecuteRequest` for the request. Where the spec permits more than one answer, or doesn't say which, the vector also lists the others. A result passes when its outcome, field and arguments match an answer that passes. Numbers are compared as numbers and keys in any order.
 
 Each vector belongs to one check, by the outermost type its value meets. That is how the spec's own tables file their examples: §3.11 lists `[1, "b", true]` under List, and §3.10 lists `{ a: "abc", b: "123" }` under Input Objects. A vector whose expected request error comes from CoerceVariableValues also exercises `variables`, and one that expects a field error also exercises `arguments`. Getting the kind of error wrong counts against those two.
 
@@ -81,7 +81,7 @@ Each check has the level of the sentence it grades. Where a section mixes MUST a
 | `inputObject` | §3.10 | MUST | An object with only defined fields, required fields (a MUST by §3.12), and variables in fields |
 | `inputFieldDefaults` | §3.10 | SHOULD | An omitted input field gets its default value. A result that is right except for leaving such defaults out fails this check, not `inputObject`. |
 | `oneOf` | §3.10.1 | MUST | Always untested: `Coercion.tla` doesn't model OneOf input objects |
-| `list` | §3.11 | MUST | Each item coerced, a single value wrapped in a list (recursively), variables as items |
+| `list` | §3.11 | MUST | Each item coerced, a single value wrapped in a list (recursively), variables as items. For an item that is a variable with no runtime value, the spec doesn't say what happens, so null, a field error and the item left out all pass (see [Readings](#readings)). |
 | `nonNull` | §3.12 | MUST | The literal null for a Non-Null argument |
 | `variables` | §6.1.2 | MUST | Variable defaults (including null), missing and null values, a Non-Null variable, and a value that can't be coerced as a request error, even for an unused variable |
 | `arguments` | §6.4.1 | MUST | Argument defaults, a missing variable falling back to the default, an explicit null not replaced by the default, a null variable for a Non-Null argument, and a literal that can't be coerced as a field error |
@@ -116,7 +116,8 @@ The run fails on any failing MUST check, a failing SHOULD check with `--strict`,
 [`kit/coerce/vectors.json`](../../kit/coerce/vectors.json) holds the schema, the declarations of every argument and input field (`inputs`), and 2036 vectors. [`scripts/generate-vectors-coerce.mjs`](../../scripts/generate-vectors-coerce.mjs) writes it. `--check` regenerates it and fails if it differs. graphql-js only parses the SDL and documents there. Every answer comes from the references:
 
 - **`expected`:** `Coercion!ExecuteRequest` under the reference's default policy, which follows every SHOULD and takes JSON strings as enum values. `field` is the root field `Coercion!GetOperation` selected.
-- **`alternatives`:** the other answers the spec permits, from `ExecuteRequest` under the other policies. `policy` names the switches each needs: `enumFromString` (a MAY, so the answer passes) or `inputFieldDefaults` (a SHOULD, so the answer fails `inputFieldDefaults`).
+- **`alternatives`:** the other answers the spec permits, from `ExecuteRequest` under the other policies. `policy` names the switches each needs: `enumFromString` (a MAY, so the answer passes), `inputFieldDefaults` (a SHOULD, so the answer fails `inputFieldDefaults`), or `missingListItemError` and `missingListItemDropped` (readings of what the spec doesn't say, so the answer passes; see [Readings](#readings)).
+- **`edition`** and **`editionNote`:** `"draft"` where October 2021's text gives another answer, and that answer (see [Editions](#editions)).
 - **`binary64`:** the answer when the variables are read as a binary64 JSON parser reads them, where that differs from `expected`.
 - **`valid`:** `Validation!IsValid` for the document, and Coercion's scalar coercion for every Int and Float literal. §5.6.1 asks for literals to be "coercible", but `Validation.tla` checks literals by kind only.
 - **`requires`:** `unvalidated` for the 26 documents that are invalid only because a literal doesn't coerce, such as `{ int(v: 2147483648) }`: whether a validator must catch them rests on Int's SHOULD and the reference's reading of Float's precision, so they aren't graded under `invalidNotExecuted`. `absent-vs-null` for vectors on the same field whose arguments differ only in a null entry versus an absent one, such as `{ int }` versus `{ int(v: null) }`.
@@ -139,7 +140,24 @@ The operations are the same as [`scripts/differential-coercion.mjs`](../../scrip
 | `spec-example` | 16 | §3.10's table of examples, with its `ExampleInputObject` |
 | `operation` | 22 | documents with no operation, one, or several (named, anonymous plus named, a query and a mutation), with `operationName` absent, matching or naming no operation, and variables only the unselected operation declares |
 
-1235 vectors are valid. 775 are invalid by `Validation.tla`, and 26 more only by a literal. 82 need `absent-vs-null`. 63 have alternatives: 7 a MAY-only one, and 59 one without input field defaults. 3 have a `binary64` answer. Expected outcomes: 453 values, 791 field errors, 792 request errors.
+1235 vectors are valid. 775 are invalid by `Validation.tla`, and 26 more only by a literal. 82 need `absent-vs-null`. 67 have alternatives: 7 a MAY-only one, 59 one without input field defaults, and 4 the other readings of a variable item with no runtime value. 3 have a `binary64` answer. 25 are draft-only. Expected outcomes: 453 values, 791 field errors, 792 request errors.
+
+### Readings
+
+A list item can be a variable: `query($x: Int) { ints(v: [1, $x]) }`. When the request gives `$x` no value and it has no default, §3.11 and §6.4.1 don't say what the item coerces to. §3.10 does say what happens for an input object field in the same spot: no runtime value and no default means no entry. A list has no entries to leave out. `Coercion.tla` reads the item as null by default, as graphql-js does, which is also what §5.8.5 implies by letting a nullable variable into a nullable item position. Its `missingListItem` switch gives the other two readings: the item can't be coerced (a field error), or the item is left out, by analogy with §3.10. All three are defensible from the text, so all three pass. Four vectors have such an item:
+
+| Vector | Request | Expected | Also passes |
+| --- | --- | --- | --- |
+| `coerce-1940` | `query($x: Int) { ints(v: [1, $x]) }` with `{}` | `[1, null]` | a field error; `[1]` |
+| `coerce-1943` | `query($x: Int) { intsNN(v: [1, $x]) }` with `{}` (invalid by §5.8.5) | a field error | `[1]` |
+| `coerce-1951` | `query($x: Int) { matrix(v: [$x, [$x]]) }` with `{}` | `[null, [null]]` | a field error; `[[]]` |
+| `coerce-1973` | `query($p: Point) { points(v: [$p]) }` with `{}` (invalid by §5.8.5) | a field error | `[]` |
+
+### Editions
+
+The draft coerces default values. Its CoerceVariableValues and CoerceArgumentValues say "Let {coercedDefaultValue} be the result of coercing {defaultValue} according to the input coercion rules", and its §3.10 uses "the result of coercing the default value" of an input field. October 2021 says "Add an entry to {coercedValues} named {variableName} with the value {defaultValue}" (and the same for arguments), and that an input field's "default value should be used". So under October 2021 `[Int] = 1` gives `1`, not `[1]`, and `ID = 9` gives `9`, not `"9"`. An implementation that coerces defaults anyway gets the draft's answer.
+
+`Coercion.tla` follows the draft. Its `coerceDefaults` switch gives October 2021's answer, which uses each default as written. The generator evaluates every vector both ways, and tags the 25 whose answers differ `"edition": "draft"`; `editionNote` gives October 2021's answer. They come from `[Int] = 1`, `[[Int]] = 1`, `ID = 9`, `Point` defaults that leave out `y` (which has its own default, 0), and `Shape`'s `tags: [String!] = "shape"`. Enum and `Float = 2` defaults give the same answer either way. Draft-only vectors are graded like any other. Findings count them (`draftOnly`) and mark their example `[draft]`, and the report's `draftOnly` gives how many were run and how many failed.
 
 ### Big numbers
 
@@ -169,6 +187,7 @@ The big JSON numbers pass `jsonNumbers`, and the ID `1e21` passes as `"1e+21"`, 
 ## Limits
 
 - **OneOf:** `Coercion.tla` doesn't model OneOf input objects (§3.10.1), so the `oneOf` check is always untested.
+- **Editions:** only default values are compared with October 2021 (see [Editions](#editions)). The schema uses no draft-only feature.
 - **Fractional floats:** the reference keeps a fractional Float as its decimal rather than rounding it to a double. That is exact for decimals of at most 15 significant digits, and the vectors only use those.
 - **Fixed schema:** one schema, root fields only, no custom scalars, and no directives. Root field names are unique across Query and Mutation, so the field a resolver ran at says which root type ran.
 - **What isn't compared:** error messages and locations, how many errors a request error has, and whether a request error's errors carry a path.

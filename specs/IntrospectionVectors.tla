@@ -208,12 +208,9 @@ BuiltinsFollowTheSpec == ~done =>
   \* __typename is a meta-field, not a field of any type.
   /\ \A t \in Range(Result(TRUE).types) :
        t.fields # None => "__typename" \notin Range(Names(t.fields[1]))
-  \* §3.13: @deprecated is a MUST for a schema that deprecates something.
-  \* @skip and @include are SHOULDs, and @specifiedBy and @oneOf SHOULDs for
-  \* a schema with a custom scalar or a OneOf input object.
-  /\ RequiredDirectiveNames(S) = {"deprecated"}
+  \* §3.13: @skip and @include are SHOULDs, and @specifiedBy and @oneOf
+  \* SHOULDs for a schema with a custom scalar or a OneOf input object.
   /\ RecommendedDirectiveNames(S) = {"skip", "include", "specifiedBy", "oneOf"}
-  /\ RequiredDirectiveNames(Plain) = {}
   /\ RecommendedDirectiveNames(Plain) = {"skip", "include"}
 
 -----------------------------------------------------------------------------
@@ -234,11 +231,11 @@ WithG(e, default) ==
   EditType(e, "Query", LAMBDA t :
     [t EXCEPT !.fields[1][3].args[1].defaultValue = <<default>>])
 Judge(e) == Mismatches(S, B, FALSE, TRUE, Actual(e))
-\* A service's result without one of the built-in directives.
-JudgeWithout(name) ==
-  Mismatches(S, B, FALSE, TRUE,
-             [Actual(Result(FALSE)) EXCEPT !.directives = Without(@, {name}, 1, <<>>),
-                                           !.builtinDirectiveNames = @ \ {name}])
+\* A service's result e, without one of the built-in directives.
+Leaving(e, name) ==
+  [Actual(e) EXCEPT !.directives = Without(@, {name}, 1, <<>>),
+                    !.builtinDirectiveNames = @ \ {name}]
+JudgeWithout(name) == Mismatches(S, B, FALSE, TRUE, Leaving(Result(FALSE), name))
 
 ResultsAreJudged == ~done =>
   /\ Judge(Result(FALSE)) = {}
@@ -270,6 +267,121 @@ ResultsAreJudged == ~done =>
   \* A service may leave out a built-in directive, but not @deprecated when
   \* the schema deprecates something.
   /\ JudgeWithout("skip") = {}
-  /\ JudgeWithout("oneOf") = {}
   /\ JudgeWithout("deprecated") = {"required directives"}
+
+-----------------------------------------------------------------------------
+(* §3.13: "all provided directives, including any built-in directive, must *)
+(* be included in the set of returned directives"                         *)
+
+NoURL(e) == EditType(e, "Date", LAMBDA t : [t EXCEPT !.specifiedByURL = None])
+NotOneOf(e) == EditType(e, "In", LAMBDA t : [t EXCEPT !.isOneOf = Some(FALSE)])
+
+ProvidedDirectivesAreRequired == ~done =>
+  \* Date's specifiedByURL shows @specifiedBy is provided, and In's isOneOf
+  \* that @oneOf is.
+  /\ RequiredDirectiveNames(S, Actual(Result(FALSE))) = {"deprecated", "specifiedBy", "oneOf"}
+  /\ RequiredDirectiveNames(S, Actual(NoURL(NotOneOf(Result(FALSE))))) = {"deprecated"}
+  /\ RequiredDirectiveNames(Plain, Actual(SchemaResult(Plain, B, FALSE))) = {}
+  \* So leaving either out of directives breaks a MUST.
+  /\ JudgeWithout("specifiedBy") = {"required directives", "type Date"}
+  /\ JudgeWithout("oneOf") = {"required directives", "type In"}
+  \* A service that provides neither needn't: Date has no URL, and In isn't
+  \* OneOf. That leaves only §3.13's SHOULDs.
+  /\ Mismatches(S, B, FALSE, TRUE, Leaving(NoURL(Result(FALSE)), "specifiedBy")) = {}
+  /\ Mismatches(S, B, FALSE, TRUE, Leaving(NotOneOf(Result(FALSE)), "oneOf")) = {}
+  \* One that provides them must represent them.
+  /\ Judge(NoURL(Result(FALSE))) = {"type Date"}
+  /\ Judge(NotOneOf(Result(FALSE))) = {"type In"}
+
+-----------------------------------------------------------------------------
+(* §4.2.2 List and Non-Null: "All other fields must return null."         *)
+
+NullWrapper(kind) ==
+  [kind |-> kind, name |-> None, description |-> None, specifiedByURL |-> None,
+   isOneOf |-> None, fields |-> None, interfaces |-> None, possibleTypes |-> None,
+   enumValues |-> None, inputFields |-> None]
+
+WrappersHaveOnlyKindAndOfType == ~done =>
+  /\ WrapperMatches(NullWrapper("LIST"))
+  /\ WrapperMatches(NullWrapper("NON_NULL"))
+  /\ ~WrapperMatches(NullWrapper("OBJECT"))
+  /\ ~WrapperMatches([NullWrapper("LIST") EXCEPT !.name = Some("Int")])
+  /\ ~WrapperMatches([NullWrapper("NON_NULL") EXCEPT !.description = Some("x")])
+  /\ ~WrapperMatches([NullWrapper("LIST") EXCEPT !.specifiedByURL = Some("u")])
+  /\ ~WrapperMatches([NullWrapper("LIST") EXCEPT !.isOneOf = Some(FALSE)])
+  /\ ~WrapperMatches([NullWrapper("NON_NULL") EXCEPT !.fields = Some(<<>>)])
+  /\ ~WrapperMatches([NullWrapper("LIST") EXCEPT !.interfaces = Some(<<>>)])
+  /\ ~WrapperMatches([NullWrapper("LIST") EXCEPT !.possibleTypes = Some(<<>>)])
+  /\ ~WrapperMatches([NullWrapper("LIST") EXCEPT !.enumValues = Some(<<>>)])
+  /\ ~WrapperMatches([NullWrapper("LIST") EXCEPT !.inputFields = Some(<<>>)])
+
+-----------------------------------------------------------------------------
+(* The October 2021 edition *)
+
+B21 == Oct2021Builtins
+\* S without what October 2021 can't express: the deprecated argument y,
+\* input field q and directive argument s, and In's @oneOf.
+S21 == [S EXCEPT !.types[1].fields[3].args[2].deprecated = <<>>,
+                 !.types[9].inputFields[2].deprecated = <<>>,
+                 !.types[9].oneOf = FALSE,
+                 !.directives[1].args[2].deprecated = <<>>]
+R21(inc) == SchemaResult(S21, B21, inc)
+TypeOf21(name) == ByName(R21(FALSE).types, Some(name))
+Actual21(e) ==
+  [description |-> e.description, queryType |-> e.queryType,
+   mutationType |-> e.mutationType, subscriptionType |-> e.subscriptionType,
+   types |-> e.types, directives |-> e.directives,
+   builtinTypeNames |-> {n \in TypeNames(S21, B21) : IsBuiltinTypeName(n)},
+   builtinDirectiveNames |-> BuiltinDirectiveNames(B21)]
+InputValuesOf(t) ==
+  (IF t.inputFields = None THEN {} ELSE Range(t.inputFields[1]))
+  \cup (IF t.fields = None THEN {} ELSE UNION {Range(f.args) : f \in Range(t.fields[1])})
+
+\* October 2021's §4.2 and §3.13.
+Oct2021BuiltinsFollowTheEdition == ~done =>
+  /\ Names(R21(FALSE).directives) = <<"d", "skip", "include", "deprecated", "specifiedBy">>
+  /\ LET dep == ByName(R21(FALSE).directives, "deprecated") IN
+     /\ Range(dep.locations) = {"FIELD_DEFINITION", "ENUM_VALUE"}
+     /\ dep.args[1].type = <<Ref1("SCALAR", "String")>>
+     /\ dep.args[1].defaultValue = Some(Value("string", "No longer supported", <<>>, <<>>))
+  /\ Len(TypeOf21("__DirectiveLocation").enumValues[1]) = 19
+  /\ "DIRECTIVE_DEFINITION" \notin Range(Names(TypeOf21("__DirectiveLocation").enumValues[1]))
+  /\ Names(TypeOf21("__Type").fields[1])
+       = <<"kind", "name", "description", "fields", "interfaces", "possibleTypes",
+           "enumValues", "inputFields", "ofType", "specifiedByURL">>
+  /\ Names(TypeOf21("__InputValue").fields[1]) = <<"name", "description", "type", "defaultValue">>
+  /\ Names(TypeOf21("__Directive").fields[1]) = <<"name", "description", "locations", "args", "isRepeatable">>
+  \* "includeDeprecated: Boolean = false" on __Type.fields and enumValues,
+  \* and no argument anywhere else.
+  /\ \A t \in {"__Type", "__Field", "__Directive", "__Schema"} :
+       \A f \in Range(TypeOf21(t).fields[1]) :
+         IF t = "__Type" /\ f.name \in {"fields", "enumValues"}
+         THEN /\ Names(f.args) = <<"includeDeprecated">>
+              /\ f.args[1].type = <<Ref1("SCALAR", "Boolean")>>
+         ELSE f.args = <<>>
+
+\* What the kit's October 2021 profile relies on.
+Oct2021ProfileIsSound == ~done =>
+  /\ IsValidSchema(S21)
+  /\ IsOct2021Schema(S21)
+  \* Each draft-only feature on its own puts a schema out of reach.
+  /\ ~IsOct2021Schema([S21 EXCEPT !.types[9].oneOf = TRUE])
+  /\ ~IsOct2021Schema([S21 EXCEPT !.types[9].inputFields[2].deprecated = <<"x">>])
+  /\ ~IsOct2021Schema([S21 EXCEPT !.types[1].fields[3].args[2].deprecated = <<"x">>])
+  /\ ~IsOct2021Schema([S21 EXCEPT !.directives[1].args[2].deprecated = <<"x">>])
+  /\ ~IsOct2021Schema([S21 EXCEPT !.directives[1].deprecated = <<"x">>])
+  \* For such a schema the fields only the draft has are fixed, so a query
+  \* that doesn't select them loses nothing.
+  /\ \A inc \in BOOLEAN :
+       LET r == SchemaResult(S21, B21, inc) IN
+       /\ \A t \in Range(r.types) : t.isOneOf = IF t.kind = "INPUT_OBJECT" THEN Some(FALSE) ELSE None
+       /\ \A t \in Range(r.types) : \A v \in InputValuesOf(t) : ~v.isDeprecated /\ v.deprecationReason = None
+       /\ \A d \in Range(r.directives) :
+            /\ ~d.isDeprecated /\ d.deprecationReason = None
+            /\ \A j \in DOMAIN d.args : ~d.args[j].isDeprecated /\ d.args[j].deprecationReason = None
+  \* An October 2021 result matches October 2021's definitions, and not the
+  \* draft's.
+  /\ Mismatches(S21, B21, FALSE, TRUE, Actual21(R21(FALSE))) = {}
+  /\ Mismatches(S21, B21, TRUE, TRUE, Actual21(R21(TRUE))) = {}
+  /\ Mismatches(S21, B, FALSE, TRUE, Actual21(R21(FALSE))) # {}
 ====

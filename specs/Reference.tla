@@ -48,7 +48,9 @@ RootType(fx) ==
 
 \* Whether execution errors propagate (§6.4.4). graphql-js 17's
 \* @experimental_disableErrorPropagation turns this off: an error nulls the
-\* position where it happened, Non-Null or not.
+\* position where it happened, Non-Null or not. That mode is outside the
+\* spec: neither edition has execution without propagation. The kit grades
+\* it under an informational check, never against §6.4.4.
 Propagates(fx, type) == fx.errorPropagation /\ IsNonNull(type)
 
 -----------------------------------------------------------------------------
@@ -288,13 +290,15 @@ RootsBefore(fx, O, i) ==
   [path \in {p \in DOMAIN O : p[1] \in keys} |-> O[path]]
 
 \* §6.4.4: an execution error "must be added to the errors list". For a
-\* query that only bites through nullsExplained: §6.3.3 lets siblings that
-\* "have not yet executed or have not yet yielded a value" be cancelled, so
-\* an error missing from a nulled subtree can always be blamed on some
-\* schedule. A mutation has no such schedule: §6.3.4 completes each root
-\* field before the next one starts, so by the time root field i runs,
-\* every error raised under earlier root fields has been raised and can't
-\* be cancelled. Each must be reported unless an earlier error had already
+\* query that only bites through nullsExplained. Of several errors that
+\* could have nulled a position, the one the engine completed first must be
+\* reported, and the rest were raised inside a null and may be dropped. But
+\* the engine completes sibling fields in whatever order it chooses
+\* (§6.3.4), even after their resolvers have all returned, so any of them
+\* may have come first. A mutation has no such freedom: §6.3.4 completes
+\* each root field before the next one starts, so by the time root field i
+\* runs, every error raised under earlier root fields has been raised and
+\* can't be cancelled. Each must be reported unless an earlier error had already
 \* nulled its position (graphql-spec#1184), even if root field i then
 \* nulls data. That exemption can't swallow every cause of a null: each
 \* null the earlier root fields produced still needs an error from its
@@ -342,7 +346,12 @@ SameJson(a, b) ==
 \*                      never accompanies a value it didn't null.
 \*   nullsExplained     every null that an error caused is reported: at
 \*                      least one error from the raised paths whose
-\*                      propagation reached it is in errors.
+\*                      propagation reached it is in errors. Not
+\*                      necessarily the one that nulled it: which cause
+\*                      the engine handled first depends on the order it
+\*                      completed sibling fields in, which the outcomes
+\*                      don't record (docs/conformance.md, "How strict
+\*                      nullsExplained is").
 \*   serialErrorsKept   a mutation reports every error its earlier root
 \*                      fields raised (SerialErrorsKept above).
 \*
