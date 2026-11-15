@@ -19,9 +19,9 @@ export default [
   },
   {
     name: "a Non-Null root error escapes ExecuteSubscriptionEvent, so the mapper closes the source and rethrows",
-    find: "  delivered.push(k);\n};",
+    find: "  if (!returnRequested) delivered.push(k);\n};",
     replace:
-      '  if (response[k] === "dataNull") {\n    sourceReturned = true;\n    rethrown = true;\n    closed = "error";\n  } else {\n    delivered.push(k);\n  }\n};',
+      '  if (response[k] === "dataNull") {\n    sourceReturned = true;\n    rethrown = true;\n    closed = "error";\n  } else if (!returnRequested) {\n    delivered.push(k);\n  }\n};',
     property: "closesOnlyForCause",
   },
   {
@@ -31,16 +31,28 @@ export default [
     property: "sourceErrorIsRethrown",
   },
   {
-    name: "keeps pulling buffered events after return(), from a source whose return() keeps its buffer",
-    find: 'export const pullEvent = () => {\n  if (closed !== "open" || returnRequested) return;',
-    replace: 'export const pullEvent = () => {\n  if (closed !== "open") return;',
+    name: "delivers the response of an event in flight when the client unsubscribed, before return() completes (graphql-js 17)",
+    find: "if (!returnRequested) delivered.push(k);",
+    replace: 'if (closed === "open") delivered.push(k);',
     property: "nothingNewAfterUnsubscribe",
   },
   {
     name: "return() resolves at once while an event is in flight, whose response then arrives (graphql-js 16)",
-    find: "if (executing.size > 0) return; // generator.return() waits for the in-flight next()",
-    replace: "",
+    find: "if (!returnRequested) delivered.push(k);",
+    replace: "delivered.push(k);",
     property: "nothingAfterClose",
+  },
+  {
+    name: "a source error that arrived before the client unsubscribed still ends the cancelled stream with that error",
+    find: 'if (closed !== "open" || rethrown || returnRequested) return;',
+    replace: 'if (closed !== "open" || rethrown) return;',
+    property: "cancelCompletesNormally",
+  },
+  {
+    name: "nothing makes return() complete the cancelled response stream, like a mapper that completes it only on the client's next pull",
+    find: "/** @fair */\nexport const finishReturn",
+    replace: "export const finishReturn",
+    property: "completesOnceCancelled",
   },
   {
     name: "completes as soon as the source reports done, dropping events still buffered",

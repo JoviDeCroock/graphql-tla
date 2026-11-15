@@ -1,0 +1,23 @@
+# Result coercion of a custom scalar and of ID (§3.5, §3.5.5, §6.4.3). With
+# `custom-scalar-results`, the kit sends a value the custom scalar Money's
+# result coercion rejects, which must raise an execution error ("either by
+# coercing the value or producing an execution error"). With
+# `scalar-results`, it sends the integer 4 for an ID, which "must always
+# serialize as a String". The leaves fixture has the built-in Int, Float and
+# enum cases; these two are a fixture of their own to keep the executor
+# model (specs/execution.ts) small.
+# maxListLength: 0
+# invalidResults: true
+# spec: 3.5, 3.5.5, 6.4.3
+
+scalar Money
+
+type Query {
+  price: Money
+  id: ID
+}
+
+query {
+  price
+  id
+}

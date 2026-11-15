@@ -7,6 +7,11 @@ import { stringifyLine } from "./ndjson.mjs";
 
 export const PROTOCOL = 1;
 
+// The line each message was read from, for checks that need the text
+// rather than the parsed value (duplicate keys: kit/ndjson.mjs).
+const lines = new WeakMap();
+export const rawLine = (message) => lines.get(message);
+
 export class Adapter {
   constructor(command) {
     this.command = command;
@@ -22,6 +27,7 @@ export class Adapter {
       } catch {
         message = { type: "invalid", line };
       }
+      if (message !== null && typeof message === "object") lines.set(message, line);
       this.queue.push(message);
       this.wake();
     });

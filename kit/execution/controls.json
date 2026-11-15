@@ -3,14 +3,15 @@
  "bases": [
   {
    "v": 1,
-   "fixture": "fragments",
+   "fixture": "abstract",
    "trace": [
     {
      "call": [
       "node"
      ],
      "type": "Node",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
@@ -21,6 +22,7 @@
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "errors": [
      {
@@ -43,25 +45,57 @@
   },
   {
    "v": 1,
-   "fixture": "lists",
+   "fixture": "abstract",
    "trace": [
     {
      "call": [
-      "posts"
+      "node"
      ],
-     "type": "[Post!]",
-     "after": 0
-    },
-    {
-     "call": [
-      "tags"
-     ],
-     "type": "[String]!",
-     "after": 0
+     "type": "Node",
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
-      "posts"
+      "node"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "Bot",
+      "token": "o:node"
+     }
+    }
+   ],
+   "initialValue": "root",
+   "response": {
+    "data": {
+     "node": {}
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "aliases",
+   "trace": [
+    {
+     "call": [
+      "second"
+     ],
+     "type": "Item",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "call": [
+      "first"
+     ],
+     "type": "Item",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "settle": [
+      "second"
      ],
      "outcome": {
       "kind": "null"
@@ -69,18 +103,18 @@
     },
     {
      "settle": [
-      "tags"
+      "first"
      ],
      "outcome": {
-      "kind": "list",
-      "length": 0
+      "kind": "null"
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "data": {
-     "posts": null,
-     "tags": []
+     "second": null,
+     "first": null
     }
    }
   },
@@ -93,14 +127,16 @@
       "posts"
      ],
      "type": "[Post!]",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "call": [
       "tags"
      ],
      "type": "[String]!",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
@@ -154,6 +190,7 @@
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "data": {
      "posts": null,
@@ -166,87 +203,71 @@
   },
   {
    "v": 1,
-   "fixture": "unions",
+   "fixture": "abstract",
    "trace": [
     {
      "call": [
-      "search"
+      "node"
      ],
-     "type": "[SearchResult!]",
-     "after": 0
-    },
-    {
-     "call": [
-      "matrix"
-     ],
-     "type": "[[Int!]]!",
-     "after": 0
+     "type": "Node",
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
-      "search"
-     ],
-     "outcome": {
-      "kind": "list",
-      "length": 1
-     }
-    },
-    {
-     "call": [
-      "search",
-      "0"
-     ],
-     "type": "SearchResult!",
-     "after": 1
-    },
-    {
-     "settle": [
-      "matrix"
-     ],
-     "outcome": {
-      "kind": "list",
-      "length": 0
-     }
-    },
-    {
-     "settle": [
-      "search",
-      "0"
+      "node"
      ],
      "outcome": {
       "kind": "object",
-      "type": "Post"
+      "type": "User",
+      "token": "o:node"
      }
     },
     {
      "call": [
-      "search",
-      "0",
-      "title"
+      "node",
+      "friend"
      ],
-     "type": "String!",
-     "after": 3
+     "type": "Node",
+     "after": 1,
+     "parent": "o:node"
+    },
+    {
+     "call": [
+      "node",
+      "latest"
+     ],
+     "type": "SearchResult",
+     "after": 1,
+     "parent": "o:node"
     },
     {
      "settle": [
-      "search",
-      "0",
-      "title"
+      "node",
+      "friend"
      ],
      "outcome": {
-      "kind": "leaf"
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "node",
+      "latest"
+     ],
+     "outcome": {
+      "kind": "null"
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "data": {
-     "search": [
-      {
-       "__typename": "Post",
-       "title": "v"
-      }
-     ],
-     "matrix": []
+     "node": {
+      "__typename": "User",
+      "friend": null,
+      "latest": null
+     }
     }
    }
   },
@@ -259,7 +280,8 @@
       "postLiked"
      ],
      "type": "Post!",
-     "after": 0
+     "after": 0,
+     "parent": "event-1"
     },
     {
      "settle": [
@@ -270,6 +292,8 @@
      }
     }
    ],
+   "initialValue": "root",
+   "event": "event-1",
    "response": {
     "errors": [
      {
@@ -297,7 +321,8 @@
       "first"
      ],
      "type": "Payload",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
@@ -312,7 +337,8 @@
       "second"
      ],
      "type": "Payload!",
-     "after": 1
+     "after": 1,
+     "parent": "root"
     },
     {
      "settle": [
@@ -323,6 +349,7 @@
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "errors": [
      {
@@ -362,7 +389,8 @@
       "first"
      ],
      "type": "Payload",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
@@ -370,7 +398,8 @@
      ],
      "outcome": {
       "kind": "object",
-      "type": "Payload"
+      "type": "Payload",
+      "token": "o:first"
      }
     },
     {
@@ -379,7 +408,8 @@
       "likes"
      ],
      "type": "Int!",
-     "after": 1
+     "after": 1,
+     "parent": "o:first"
     },
     {
      "settle": [
@@ -395,7 +425,8 @@
       "second"
      ],
      "type": "Payload!",
-     "after": 2
+     "after": 2,
+     "parent": "root"
     },
     {
      "settle": [
@@ -406,6 +437,7 @@
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "errors": [
      {
@@ -439,14 +471,15 @@
   },
   {
    "v": 1,
-   "fixture": "fragments",
+   "fixture": "abstract",
    "trace": [
     {
      "call": [
       "node"
      ],
      "type": "Node",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
@@ -457,6 +490,7 @@
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "data": {
      "node": null
@@ -472,7 +506,8 @@
       "first"
      ],
      "type": "Payload",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
@@ -487,7 +522,8 @@
       "second"
      ],
      "type": "Payload!",
-     "after": 1
+     "after": 1,
+     "parent": "root"
     },
     {
      "settle": [
@@ -498,6 +534,7 @@
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "errors": [
      {
@@ -525,14 +562,16 @@
       "posts"
      ],
      "type": "[Post!]",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "call": [
       "tags"
      ],
      "type": "[String]!",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
@@ -569,6 +608,7 @@
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "errors": [
      {
@@ -602,7 +642,8 @@
       "node"
      ],
      "type": "Node",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
@@ -610,7 +651,8 @@
      ],
      "outcome": {
       "kind": "object",
-      "type": "Bot"
+      "type": "Bot",
+      "token": "o:node"
      }
     },
     {
@@ -619,7 +661,8 @@
       "id"
      ],
      "type": "ID!",
-     "after": 1
+     "after": 1,
+     "parent": "o:node"
     },
     {
      "call": [
@@ -627,7 +670,8 @@
       "nodeId"
      ],
      "type": "ID!",
-     "after": 1
+     "after": 1,
+     "parent": "o:node"
     },
     {
      "settle": [
@@ -639,6 +683,7 @@
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "errors": [
      {
@@ -669,7 +714,8 @@
       "node"
      ],
      "type": "Node",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
@@ -677,7 +723,8 @@
      ],
      "outcome": {
       "kind": "object",
-      "type": "Bot"
+      "type": "Bot",
+      "token": "o:node"
      }
     },
     {
@@ -686,7 +733,8 @@
       "id"
      ],
      "type": "ID!",
-     "after": 1
+     "after": 1,
+     "parent": "o:node"
     },
     {
      "call": [
@@ -694,7 +742,8 @@
       "nodeId"
      ],
      "type": "ID!",
-     "after": 1
+     "after": 1,
+     "parent": "o:node"
     },
     {
      "settle": [
@@ -706,6 +755,7 @@
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "errors": [
      {
@@ -736,21 +786,24 @@
       "count"
      ],
      "type": "Int",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "call": [
       "ratio"
      ],
      "type": "Float",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "call": [
       "color"
      ],
      "type": "Color",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
@@ -777,6 +830,7 @@
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "data": {
      "count": 1,
@@ -787,43 +841,55 @@
   },
   {
    "v": 1,
-   "fixture": "nullPropagation",
+   "fixture": "directives_dropped",
+   "trace": [],
+   "initialValue": "root",
+   "response": {
+    "data": {}
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "merging",
    "trace": [
     {
      "call": [
-      "version"
+      "a"
      ],
-     "type": "String!",
-     "after": 0
+     "type": "A",
+     "after": 0,
+     "parent": "root"
     },
     {
      "call": [
-      "user"
+      "b"
      ],
-     "type": "User",
-     "after": 0
+     "type": "String",
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
-      "version"
-     ],
-     "outcome": {
-      "kind": "leaf"
-     }
-    },
-    {
-     "settle": [
-      "user"
+      "a"
      ],
      "outcome": {
       "kind": "null"
      }
+    },
+    {
+     "settle": [
+      "b"
+     ],
+     "outcome": {
+      "kind": "leaf"
+     }
     }
    ],
+   "initialValue": "root",
    "response": {
     "data": {
-     "version": "v",
-     "user": null
+     "a": null,
+     "b": "v"
     }
    }
   },
@@ -836,21 +902,24 @@
       "count"
      ],
      "type": "Int",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "call": [
       "ratio"
      ],
      "type": "Float",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "call": [
       "color"
      ],
      "type": "Color",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
@@ -877,6 +946,7 @@
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "errors": [
      {
@@ -908,21 +978,24 @@
       "count"
      ],
      "type": "Int",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "call": [
       "ratio"
      ],
      "type": "Float",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "call": [
       "color"
      ],
      "type": "Color",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
@@ -949,6 +1022,7 @@
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "errors": [
      {
@@ -980,21 +1054,24 @@
       "count"
      ],
      "type": "Int",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "call": [
       "ratio"
      ],
      "type": "Float",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "call": [
       "color"
      ],
      "type": "Color",
-     "after": 0
+     "after": 0,
+     "parent": "root"
     },
     {
      "settle": [
@@ -1021,6 +1098,7 @@
      }
     }
    ],
+   "initialValue": "root",
    "response": {
     "errors": [
      {
@@ -1042,6 +1120,912 @@
      "color": null
     }
    }
+  },
+  {
+   "v": 1,
+   "fixture": "scalars",
+   "trace": [
+    {
+     "call": [
+      "price"
+     ],
+     "type": "Money",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "call": [
+      "id"
+     ],
+     "type": "ID",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "settle": [
+      "price"
+     ],
+     "outcome": {
+      "kind": "uncoercible"
+     }
+    },
+    {
+     "settle": [
+      "id"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "initialValue": "root",
+   "response": {
+    "errors": [
+     {
+      "message": "Money cannot represent this value",
+      "locations": [
+       {
+        "line": 2,
+        "column": 3
+       }
+      ],
+      "path": [
+       "price"
+      ]
+     }
+    ],
+    "data": {
+     "price": null,
+     "id": null
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "merging",
+   "trace": [
+    {
+     "call": [
+      "a"
+     ],
+     "type": "A",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "call": [
+      "b"
+     ],
+     "type": "String",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "settle": [
+      "a"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "A",
+      "token": "o:a"
+     }
+    },
+    {
+     "call": [
+      "a",
+      "subfield1"
+     ],
+     "type": "String",
+     "after": 1,
+     "parent": "o:a"
+    },
+    {
+     "call": [
+      "a",
+      "subfield2"
+     ],
+     "type": "Int!",
+     "after": 1,
+     "parent": "o:a"
+    },
+    {
+     "settle": [
+      "b"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "a",
+      "subfield1"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "a",
+      "subfield2"
+     ],
+     "outcome": {
+      "kind": "leaf"
+     }
+    }
+   ],
+   "initialValue": "root",
+   "response": {
+    "data": {
+     "a": {
+      "subfield1": null,
+      "subfield2": 1
+     },
+     "b": null
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "abstract",
+   "trace": [
+    {
+     "call": [
+      "node"
+     ],
+     "type": "Node",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "settle": [
+      "node"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "User",
+      "token": "o:node"
+     }
+    },
+    {
+     "call": [
+      "node",
+      "friend"
+     ],
+     "type": "Node",
+     "after": 1,
+     "parent": "o:node"
+    },
+    {
+     "call": [
+      "node",
+      "latest"
+     ],
+     "type": "SearchResult",
+     "after": 1,
+     "parent": "o:node"
+    },
+    {
+     "settle": [
+      "node",
+      "friend"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "node",
+      "latest"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "Post",
+      "token": "o:node.latest"
+     }
+    },
+    {
+     "call": [
+      "node",
+      "latest",
+      "title"
+     ],
+     "type": "String",
+     "after": 3,
+     "parent": "o:node.latest"
+    },
+    {
+     "settle": [
+      "node",
+      "latest",
+      "title"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "initialValue": "root",
+   "response": {
+    "data": {
+     "node": {
+      "__typename": "User",
+      "friend": null,
+      "latest": {
+       "title": null
+      }
+     }
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "directives_skipped",
+   "trace": [
+    {
+     "call": [
+      "b"
+     ],
+     "type": "Int",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "settle": [
+      "b"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "initialValue": "root",
+   "response": {
+    "data": {
+     "b": null
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "directives_excluded",
+   "trace": [
+    {
+     "call": [
+      "a"
+     ],
+     "type": "Int",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "settle": [
+      "a"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "initialValue": "root",
+   "response": {
+    "data": {
+     "a": null
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "aliases",
+   "trace": [
+    {
+     "call": [
+      "second"
+     ],
+     "type": "Item",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "call": [
+      "first"
+     ],
+     "type": "Item",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "settle": [
+      "second"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "Item",
+      "token": "o:second"
+     }
+    },
+    {
+     "call": [
+      "second",
+      "list"
+     ],
+     "type": "[Item!]",
+     "after": 1,
+     "parent": "o:second"
+    },
+    {
+     "settle": [
+      "first"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "second",
+      "list"
+     ],
+     "outcome": {
+      "kind": "list",
+      "length": 1
+     }
+    },
+    {
+     "call": [
+      "second",
+      "list",
+      "0"
+     ],
+     "type": "Item!",
+     "after": 3
+    },
+    {
+     "settle": [
+      "second",
+      "list",
+      "0"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "Item",
+      "token": "o:second.list.0"
+     }
+    },
+    {
+     "call": [
+      "second",
+      "list",
+      "0",
+      "key"
+     ],
+     "type": "ID!",
+     "after": 4,
+     "parent": "o:second.list.0"
+    },
+    {
+     "settle": [
+      "second",
+      "list",
+      "0",
+      "key"
+     ],
+     "outcome": {
+      "kind": "leaf"
+     }
+    }
+   ],
+   "initialValue": "root",
+   "response": {
+    "data": {
+     "second": {
+      "list": [
+       {
+        "key": "v"
+       }
+      ]
+     },
+     "first": null
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "aliases",
+   "trace": [
+    {
+     "call": [
+      "second"
+     ],
+     "type": "Item",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "call": [
+      "first"
+     ],
+     "type": "Item",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "settle": [
+      "second"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "Item",
+      "token": "o:second"
+     }
+    },
+    {
+     "call": [
+      "second",
+      "list"
+     ],
+     "type": "[Item!]",
+     "after": 1,
+     "parent": "o:second"
+    },
+    {
+     "settle": [
+      "first"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "second",
+      "list"
+     ],
+     "outcome": {
+      "kind": "list",
+      "length": 1
+     }
+    },
+    {
+     "call": [
+      "second",
+      "list",
+      "0"
+     ],
+     "type": "Item!",
+     "after": 3
+    },
+    {
+     "settle": [
+      "second",
+      "list",
+      "0"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "Item",
+      "token": "o:second.list.0"
+     }
+    },
+    {
+     "call": [
+      "second",
+      "list",
+      "0",
+      "key"
+     ],
+     "type": "ID!",
+     "after": 4,
+     "parent": "o:second.list.0"
+    },
+    {
+     "settle": [
+      "second",
+      "list",
+      "0",
+      "key"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "initialValue": "root",
+   "response": {
+    "errors": [
+     {
+      "message": "Cannot return null for non-nullable field Item.id.",
+      "locations": [
+       {
+        "line": 4,
+        "column": 7
+       }
+      ],
+      "path": [
+       "second",
+       "list",
+       0,
+       "key"
+      ]
+     }
+    ],
+    "data": {
+     "second": {
+      "list": null
+     },
+     "first": null
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "aliases",
+   "trace": [
+    {
+     "call": [
+      "second"
+     ],
+     "type": "Item",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "call": [
+      "first"
+     ],
+     "type": "Item",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "settle": [
+      "second"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "Item",
+      "token": "o:second"
+     }
+    },
+    {
+     "call": [
+      "second",
+      "list"
+     ],
+     "type": "[Item!]",
+     "after": 1,
+     "parent": "o:second"
+    },
+    {
+     "settle": [
+      "first"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "Item",
+      "token": "o:first"
+     }
+    },
+    {
+     "call": [
+      "first",
+      "name"
+     ],
+     "type": "String",
+     "after": 2,
+     "parent": "o:first"
+    },
+    {
+     "call": [
+      "first",
+      "old"
+     ],
+     "type": "String",
+     "after": 2,
+     "parent": "o:first"
+    },
+    {
+     "settle": [
+      "second",
+      "list"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "first",
+      "name"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "first",
+      "old"
+     ],
+     "outcome": {
+      "kind": "leaf"
+     }
+    }
+   ],
+   "initialValue": "root",
+   "response": {
+    "data": {
+     "second": {
+      "list": null
+     },
+     "first": {
+      "name": null,
+      "old": "v"
+     }
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "ordering",
+   "trace": [
+    {
+     "call": [
+      "bar"
+     ],
+     "type": "Int",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "call": [
+      "foo"
+     ],
+     "type": "Int",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "call": [
+      "baz"
+     ],
+     "type": "Int",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "call": [
+      "qux"
+     ],
+     "type": "Int",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "settle": [
+      "bar"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "foo"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "baz"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "qux"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "initialValue": "root",
+   "response": {
+    "data": {
+     "bar": null,
+     "foo": null,
+     "baz": null,
+     "qux": null
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "mutationRoot",
+   "trace": [
+    {
+     "call": [
+      "a"
+     ],
+     "type": "Payload",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "settle": [
+      "a"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "call": [
+      "b"
+     ],
+     "type": "Payload",
+     "after": 1,
+     "parent": "root"
+    },
+    {
+     "settle": [
+      "b"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "call": [
+      "likeAll"
+     ],
+     "type": "[Int!]",
+     "after": 2,
+     "parent": "root"
+    },
+    {
+     "settle": [
+      "likeAll"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "initialValue": "root",
+   "response": {
+    "data": {
+     "a": null,
+     "b": null,
+     "__typename": "Mutation",
+     "root": "Mutation",
+     "likeAll": null
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "subscriptionAlias",
+   "trace": [
+    {
+     "call": [
+      "liked"
+     ],
+     "type": "Post",
+     "after": 0,
+     "parent": "event-1"
+    },
+    {
+     "settle": [
+      "liked"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "Post",
+      "token": "o:liked"
+     }
+    },
+    {
+     "call": [
+      "liked",
+      "likes"
+     ],
+     "type": "Int!",
+     "after": 1,
+     "parent": "o:liked"
+    },
+    {
+     "call": [
+      "liked",
+      "title"
+     ],
+     "type": "String",
+     "after": 1,
+     "parent": "o:liked"
+    },
+    {
+     "settle": [
+      "liked",
+      "likes"
+     ],
+     "outcome": {
+      "kind": "leaf"
+     }
+    },
+    {
+     "settle": [
+      "liked",
+      "title"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "initialValue": "root",
+   "event": "event-1",
+   "response": {
+    "data": {
+     "liked": {
+      "likes": 1,
+      "title": null,
+      "__typename": "Post"
+     }
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "lists",
+   "trace": [
+    {
+     "call": [
+      "posts"
+     ],
+     "type": "[Post!]",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "call": [
+      "tags"
+     ],
+     "type": "[String]!",
+     "after": 0,
+     "parent": "root"
+    },
+    {
+     "settle": [
+      "posts"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "tags"
+     ],
+     "outcome": {
+      "kind": "list",
+      "length": 0
+     }
+    }
+   ],
+   "initialValue": "root",
+   "response": {
+    "data": {
+     "posts": null,
+     "tags": []
+    }
+   }
   }
  ],
  "controls": [
@@ -1051,14 +2035,15 @@
    "base": 0,
    "case": {
     "v": 1,
-    "fixture": "fragments",
+    "fixture": "abstract",
     "trace": [
      {
       "call": [
        "node"
       ],
       "type": "Node",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -1069,6 +2054,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
       "node": null
@@ -1082,14 +2068,15 @@
    "base": 0,
    "case": {
     "v": 1,
-    "fixture": "fragments",
+    "fixture": "abstract",
     "trace": [
      {
       "call": [
        "node"
       ],
       "type": "Node",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -1100,6 +2087,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "errors": [
       {
@@ -1139,44 +2127,31 @@
    "base": 1,
    "case": {
     "v": 1,
-    "fixture": "lists",
+    "fixture": "abstract",
     "trace": [
      {
       "call": [
-       "posts"
+       "node"
       ],
-      "type": "[Post!]",
-      "after": 0
-     },
-     {
-      "call": [
-       "tags"
-      ],
-      "type": "[String]!",
-      "after": 0
+      "type": "Node",
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
-       "posts"
+       "node"
       ],
       "outcome": {
-       "kind": "null"
-      }
-     },
-     {
-      "settle": [
-       "tags"
-      ],
-      "outcome": {
-       "kind": "list",
-       "length": 0
+       "kind": "object",
+       "type": "Bot",
+       "token": "o:node"
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
-      "posts": null,
-      "tags": null
+      "node": null
      }
     }
    }
@@ -1184,28 +2159,30 @@
   {
    "name": "reorders response keys",
    "clause": "keyOrder",
-   "base": 1,
+   "base": 2,
    "case": {
     "v": 1,
-    "fixture": "lists",
+    "fixture": "aliases",
     "trace": [
      {
       "call": [
-       "posts"
+       "second"
       ],
-      "type": "[Post!]",
-      "after": 0
+      "type": "Item",
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
-       "tags"
+       "first"
       ],
-      "type": "[String]!",
-      "after": 0
+      "type": "Item",
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
-       "posts"
+       "second"
       ],
       "outcome": {
        "kind": "null"
@@ -1213,18 +2190,18 @@
      },
      {
       "settle": [
-       "tags"
+       "first"
       ],
       "outcome": {
-       "kind": "list",
-       "length": 0
+       "kind": "null"
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
-      "tags": [],
-      "posts": null
+      "first": null,
+      "second": null
      }
     }
    }
@@ -1232,7 +2209,7 @@
   {
    "name": "drops a list item",
    "clause": "dataMatches",
-   "base": 2,
+   "base": 3,
    "case": {
     "v": 1,
     "fixture": "lists",
@@ -1242,14 +2219,16 @@
        "posts"
       ],
       "type": "[Post!]",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "tags"
       ],
       "type": "[String]!",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -1303,6 +2282,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
       "posts": null,
@@ -1316,90 +2296,74 @@
   {
    "name": "answers __typename with the wrong type",
    "clause": "dataMatches",
-   "base": 3,
+   "base": 4,
    "case": {
     "v": 1,
-    "fixture": "unions",
+    "fixture": "abstract",
     "trace": [
      {
       "call": [
-       "search"
+       "node"
       ],
-      "type": "[SearchResult!]",
-      "after": 0
-     },
-     {
-      "call": [
-       "matrix"
-      ],
-      "type": "[[Int!]]!",
-      "after": 0
+      "type": "Node",
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
-       "search"
-      ],
-      "outcome": {
-       "kind": "list",
-       "length": 1
-      }
-     },
-     {
-      "call": [
-       "search",
-       "0"
-      ],
-      "type": "SearchResult!",
-      "after": 1
-     },
-     {
-      "settle": [
-       "matrix"
-      ],
-      "outcome": {
-       "kind": "list",
-       "length": 0
-      }
-     },
-     {
-      "settle": [
-       "search",
-       "0"
+       "node"
       ],
       "outcome": {
        "kind": "object",
-       "type": "Post"
+       "type": "User",
+       "token": "o:node"
       }
      },
      {
       "call": [
-       "search",
-       "0",
-       "title"
+       "node",
+       "friend"
       ],
-      "type": "String!",
-      "after": 3
+      "type": "Node",
+      "after": 1,
+      "parent": "o:node"
+     },
+     {
+      "call": [
+       "node",
+       "latest"
+      ],
+      "type": "SearchResult",
+      "after": 1,
+      "parent": "o:node"
      },
      {
       "settle": [
-       "search",
-       "0",
-       "title"
+       "node",
+       "friend"
       ],
       "outcome": {
-       "kind": "leaf"
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "node",
+       "latest"
+      ],
+      "outcome": {
+       "kind": "null"
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
-      "search": [
-       {
-        "__typename": "Query",
-        "title": "v"
-       }
-      ],
-      "matrix": []
+      "node": {
+       "__typename": "Query",
+       "friend": null,
+       "latest": null
+      }
      }
     }
    }
@@ -1410,50 +2374,37 @@
    "base": 1,
    "case": {
     "v": 1,
-    "fixture": "lists",
+    "fixture": "abstract",
     "trace": [
      {
       "call": [
-       "posts"
+       "node"
       ],
-      "type": "[Post!]",
-      "after": 0
-     },
-     {
-      "call": [
-       "tags"
-      ],
-      "type": "[String]!",
-      "after": 0
+      "type": "Node",
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
-       "posts"
+       "node"
       ],
       "outcome": {
-       "kind": "null"
-      }
-     },
-     {
-      "settle": [
-       "tags"
-      ],
-      "outcome": {
-       "kind": "list",
-       "length": 0
+       "kind": "object",
+       "type": "Bot",
+       "token": "o:node"
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
-      "posts": null,
-      "tags": []
+      "node": {}
      },
      "errors": [
       {
        "message": "x",
        "path": [
-        "tags"
+        "node"
        ]
       }
      ]
@@ -1463,7 +2414,7 @@
   {
    "name": "drops every error from a null data",
    "clause": "nullsExplained",
-   "base": 4,
+   "base": 5,
    "case": {
     "v": 1,
     "fixture": "subscription",
@@ -1473,7 +2424,8 @@
        "postLiked"
       ],
       "type": "Post!",
-      "after": 0
+      "after": 0,
+      "parent": "event-1"
      },
      {
       "settle": [
@@ -1484,6 +2436,8 @@
       }
      }
     ],
+    "initialValue": "root",
+    "event": "event-1",
     "response": {
      "data": null
     }
@@ -1492,7 +2446,7 @@
   {
    "name": "drops an earlier root field's error once a mutation nulls data",
    "clause": "serialErrorsKept",
-   "base": 5,
+   "base": 6,
    "case": {
     "v": 1,
     "fixture": "mutation",
@@ -1502,7 +2456,8 @@
        "first"
       ],
       "type": "Payload",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -1517,7 +2472,8 @@
        "second"
       ],
       "type": "Payload!",
-      "after": 1
+      "after": 1,
+      "parent": "root"
      },
      {
       "settle": [
@@ -1528,6 +2484,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": null,
      "errors": [
@@ -1550,7 +2507,7 @@
   {
    "name": "drops the error that nulled an earlier mutation root field",
    "clause": "serialErrorsKept",
-   "base": 6,
+   "base": 7,
    "case": {
     "v": 1,
     "fixture": "mutation",
@@ -1560,7 +2517,8 @@
        "first"
       ],
       "type": "Payload",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -1568,7 +2526,8 @@
       ],
       "outcome": {
        "kind": "object",
-       "type": "Payload"
+       "type": "Payload",
+       "token": "o:first"
       }
      },
      {
@@ -1577,7 +2536,8 @@
        "likes"
       ],
       "type": "Int!",
-      "after": 1
+      "after": 1,
+      "parent": "o:first"
      },
      {
       "settle": [
@@ -1593,7 +2553,8 @@
        "second"
       ],
       "type": "Payload!",
-      "after": 2
+      "after": 2,
+      "parent": "root"
      },
      {
       "settle": [
@@ -1604,6 +2565,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": null,
      "errors": [
@@ -1626,19 +2588,21 @@
   {
    "name": "nulls data while no pending root field can null it",
    "clause": "dataMatches",
-   "base": 7,
+   "base": 8,
    "case": {
     "v": 1,
-    "fixture": "fragments",
+    "fixture": "abstract",
     "trace": [
      {
       "call": [
        "node"
       ],
       "type": "Node",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": null
     }
@@ -1647,19 +2611,21 @@
   {
    "name": "responds while a resolver it needs is pending",
    "clause": "complete",
-   "base": 7,
+   "base": 8,
    "case": {
     "v": 1,
-    "fixture": "fragments",
+    "fixture": "abstract",
     "trace": [
      {
       "call": [
        "node"
       ],
       "type": "Node",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
       "node": null
@@ -1670,7 +2636,7 @@
   {
    "name": "calls a mutation's root fields at once",
    "clause": "calledSerially",
-   "base": 8,
+   "base": 9,
    "case": {
     "v": 1,
     "fixture": "mutation",
@@ -1680,14 +2646,16 @@
        "first"
       ],
       "type": "Payload",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "second"
       ],
       "type": "Payload!",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -1706,6 +2674,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "errors": [
       {
@@ -1729,7 +2698,7 @@
    "name": "writes a list index in an error path as a string",
    "clause": "malformed",
    "check": "responsePosition",
-   "base": 9,
+   "base": 10,
    "case": {
     "v": 1,
     "fixture": "lists",
@@ -1739,14 +2708,16 @@
        "posts"
       ],
       "type": "[Post!]",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "tags"
       ],
       "type": "[String]!",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -1783,6 +2754,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "errors": [
       {
@@ -1812,7 +2784,7 @@
    "name": "leaves the list indices out of an error path",
    "clause": "malformed",
    "check": "responsePosition",
-   "base": 9,
+   "base": 10,
    "case": {
     "v": 1,
     "fixture": "lists",
@@ -1822,14 +2794,16 @@
        "posts"
       ],
       "type": "[Post!]",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "tags"
       ],
       "type": "[String]!",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -1866,6 +2840,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "errors": [
       {
@@ -1894,7 +2869,7 @@
    "name": "reports an error at the nullable position it propagated to",
    "clause": "malformed",
    "check": "errorPathFull",
-   "base": 10,
+   "base": 11,
    "case": {
     "v": 1,
     "fixture": "fragments",
@@ -1904,7 +2879,8 @@
        "node"
       ],
       "type": "Node",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -1912,7 +2888,8 @@
       ],
       "outcome": {
        "kind": "object",
-       "type": "Bot"
+       "type": "Bot",
+       "token": "o:node"
       }
      },
      {
@@ -1921,7 +2898,8 @@
        "id"
       ],
       "type": "ID!",
-      "after": 1
+      "after": 1,
+      "parent": "o:node"
      },
      {
       "call": [
@@ -1929,7 +2907,8 @@
        "nodeId"
       ],
       "type": "ID!",
-      "after": 1
+      "after": 1,
+      "parent": "o:node"
      },
      {
       "settle": [
@@ -1941,6 +2920,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "errors": [
       {
@@ -1969,14 +2949,15 @@
    "base": 0,
    "case": {
     "v": 1,
-    "fixture": "fragments",
+    "fixture": "abstract",
     "trace": [
      {
       "call": [
        "node"
       ],
       "type": "Node",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -1987,6 +2968,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "errors": [
       {
@@ -2010,7 +2992,7 @@
    "name": "reports an error under the field name instead of its alias",
    "clause": "malformed",
    "check": "responsePosition",
-   "base": 11,
+   "base": 12,
    "case": {
     "v": 1,
     "fixture": "fragments",
@@ -2020,7 +3002,8 @@
        "node"
       ],
       "type": "Node",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -2028,7 +3011,8 @@
       ],
       "outcome": {
        "kind": "object",
-       "type": "Bot"
+       "type": "Bot",
+       "token": "o:node"
       }
      },
      {
@@ -2037,7 +3021,8 @@
        "id"
       ],
       "type": "ID!",
-      "after": 1
+      "after": 1,
+      "parent": "o:node"
      },
      {
       "call": [
@@ -2045,7 +3030,8 @@
        "nodeId"
       ],
       "type": "ID!",
-      "after": 1
+      "after": 1,
+      "parent": "o:node"
      },
      {
       "settle": [
@@ -2057,6 +3043,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "errors": [
       {
@@ -2086,14 +3073,15 @@
    "base": 0,
    "case": {
     "v": 1,
-    "fixture": "fragments",
+    "fixture": "abstract",
     "trace": [
      {
       "call": [
        "node"
       ],
       "type": "Node",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -2104,6 +3092,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "errors": [
       {
@@ -2129,7 +3118,7 @@
    "name": "writes an Int as a string",
    "clause": "warning",
    "check": "leafEncoding",
-   "base": 12,
+   "base": 13,
    "case": {
     "v": 1,
     "fixture": "leaves",
@@ -2139,21 +3128,24 @@
        "count"
       ],
       "type": "Int",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "ratio"
       ],
       "type": "Float",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "color"
       ],
       "type": "Color",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -2180,6 +3172,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
       "count": "1",
@@ -2193,31 +3186,14 @@
    "name": "adds an entry to the response",
    "clause": "malformed",
    "check": "additionalEntries",
-   "base": 7,
+   "base": 14,
    "case": {
     "v": 1,
-    "fixture": "fragments",
-    "trace": [
-     {
-      "call": [
-       "node"
-      ],
-      "type": "Node",
-      "after": 0
-     },
-     {
-      "settle": [
-       "node"
-      ],
-      "outcome": {
-       "kind": "null"
-      }
-     }
-    ],
+    "fixture": "directives_dropped",
+    "trace": [],
+    "initialValue": "root",
     "response": {
-     "data": {
-      "node": null
-     },
+     "data": {},
      "status": "ok"
     }
    }
@@ -2226,27 +3202,12 @@
    "name": "leaves out data",
    "clause": "malformed",
    "check": "dataPresent",
-   "base": 7,
+   "base": 14,
    "case": {
     "v": 1,
-    "fixture": "fragments",
-    "trace": [
-     {
-      "call": [
-       "node"
-      ],
-      "type": "Node",
-      "after": 0
-     },
-     {
-      "settle": [
-       "node"
-      ],
-      "outcome": {
-       "kind": "null"
-      }
-     }
-    ],
+    "fixture": "directives_dropped",
+    "trace": [],
+    "initialValue": "root",
     "response": {}
    }
   },
@@ -2254,46 +3215,49 @@
    "name": "returns a leaf other than the canonical value",
    "clause": "malformed",
    "check": "leafValues",
-   "base": 13,
+   "base": 15,
    "case": {
     "v": 1,
-    "fixture": "nullPropagation",
+    "fixture": "merging",
     "trace": [
      {
       "call": [
-       "version"
+       "a"
       ],
-      "type": "String!",
-      "after": 0
+      "type": "A",
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
-       "user"
+       "b"
       ],
-      "type": "User",
-      "after": 0
+      "type": "String",
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
-       "version"
-      ],
-      "outcome": {
-       "kind": "leaf"
-      }
-     },
-     {
-      "settle": [
-       "user"
+       "a"
       ],
       "outcome": {
        "kind": "null"
       }
+     },
+     {
+      "settle": [
+       "b"
+      ],
+      "outcome": {
+       "kind": "leaf"
+      }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
-      "version": "w",
-      "user": null
+      "a": null,
+      "b": "w"
      }
     }
    }
@@ -2302,17 +3266,18 @@
    "name": "calls a resolver twice",
    "clause": "malformed",
    "check": "callsOnce",
-   "base": 7,
+   "base": 8,
    "case": {
     "v": 1,
-    "fixture": "fragments",
+    "fixture": "abstract",
     "trace": [
      {
       "call": [
        "node"
       ],
       "type": "Node",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -2327,9 +3292,11 @@
        "node"
       ],
       "type": "Node",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
       "node": null
@@ -2341,7 +3308,7 @@
    "name": "calls a mutation root field twice",
    "clause": "malformed",
    "check": "mutationFieldsOnce",
-   "base": 8,
+   "base": 9,
    "case": {
     "v": 1,
     "fixture": "mutation",
@@ -2351,7 +3318,8 @@
        "first"
       ],
       "type": "Payload",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -2366,7 +3334,8 @@
        "second"
       ],
       "type": "Payload!",
-      "after": 1
+      "after": 1,
+      "parent": "root"
      },
      {
       "settle": [
@@ -2381,9 +3350,11 @@
        "first"
       ],
       "type": "Payload",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      }
     ],
+    "initialValue": "root",
     "response": {
      "errors": [
       {
@@ -2407,7 +3378,7 @@
    "name": "truncates a fraction returned for an Int instead of raising an error",
    "clause": "malformed",
    "check": "intFraction",
-   "base": 14,
+   "base": 16,
    "case": {
     "v": 1,
     "fixture": "leaves",
@@ -2417,21 +3388,24 @@
        "count"
       ],
       "type": "Int",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "ratio"
       ],
       "type": "Float",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "color"
       ],
       "type": "Color",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -2458,6 +3432,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
       "count": 1,
@@ -2471,7 +3446,7 @@
    "name": "returns a name that isn't one of the enum's values instead of raising an error",
    "clause": "malformed",
    "check": "resultCoercion",
-   "base": 15,
+   "base": 17,
    "case": {
     "v": 1,
     "fixture": "leaves",
@@ -2481,21 +3456,24 @@
        "count"
       ],
       "type": "Int",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "ratio"
       ],
       "type": "Float",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "color"
       ],
       "type": "Color",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -2522,6 +3500,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
       "count": null,
@@ -2535,7 +3514,7 @@
    "name": "returns null without an error for a non-finite Float",
    "clause": "malformed",
    "check": "coercionErrorReported",
-   "base": 16,
+   "base": 18,
    "case": {
     "v": 1,
     "fixture": "leaves",
@@ -2545,21 +3524,24 @@
        "count"
       ],
       "type": "Int",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "ratio"
       ],
       "type": "Float",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "color"
       ],
       "type": "Color",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -2586,6 +3568,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
       "count": null,
@@ -2599,57 +3582,45 @@
    "name": "produces no response after a resolver returned a non-finite Float or an unknown enum value",
    "clause": "malformed",
    "check": "resultCoercion",
-   "base": 15,
+   "base": 19,
    "case": {
     "v": 1,
-    "fixture": "leaves",
+    "fixture": "scalars",
     "trace": [
      {
       "call": [
-       "count"
+       "price"
       ],
-      "type": "Int",
-      "after": 0
+      "type": "Money",
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
-       "ratio"
+       "id"
       ],
-      "type": "Float",
-      "after": 0
-     },
-     {
-      "call": [
-       "color"
-      ],
-      "type": "Color",
-      "after": 0
+      "type": "ID",
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
-       "count"
-      ],
-      "outcome": {
-       "kind": "null"
-      }
-     },
-     {
-      "settle": [
-       "ratio"
-      ],
-      "outcome": {
-       "kind": "null"
-      }
-     },
-     {
-      "settle": [
-       "color"
+       "price"
       ],
       "outcome": {
        "kind": "uncoercible"
       }
+     },
+     {
+      "settle": [
+       "id"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
      }
     ],
+    "initialValue": "root",
     "noResponse": "can't serialize Infinity"
    }
   },
@@ -2657,7 +3628,7 @@
    "name": "reports a Float for an Int call, then produces no response after an uncoercible value",
    "clause": "malformed",
    "check": "protocol",
-   "base": 14,
+   "base": 16,
    "case": {
     "v": 1,
     "fixture": "leaves",
@@ -2667,21 +3638,24 @@
        "count"
       ],
       "type": "Float",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "ratio"
       ],
       "type": "Float",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "color"
       ],
       "type": "Color",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -2708,6 +3682,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "noResponse": "can't serialize the value"
    }
   },
@@ -2715,27 +3690,12 @@
    "name": "produces no response",
    "clause": "malformed",
    "check": "responds",
-   "base": 7,
+   "base": 14,
    "case": {
     "v": 1,
-    "fixture": "fragments",
-    "trace": [
-     {
-      "call": [
-       "node"
-      ],
-      "type": "Node",
-      "after": 0
-     },
-     {
-      "settle": [
-       "node"
-      ],
-      "outcome": {
-       "kind": "null"
-      }
-     }
-    ],
+    "fixture": "directives_dropped",
+    "trace": [],
+    "initialValue": "root",
     "noResponse": "the server failed"
    }
   },
@@ -2743,7 +3703,7 @@
    "name": "calls a field that @include(if: false) leaves out",
    "clause": "malformed",
    "check": "callsSelected",
-   "base": 10,
+   "base": 11,
    "case": {
     "v": 1,
     "fixture": "fragments",
@@ -2753,7 +3713,8 @@
        "node"
       ],
       "type": "Node",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -2761,7 +3722,8 @@
       ],
       "outcome": {
        "kind": "object",
-       "type": "Bot"
+       "type": "Bot",
+       "token": "o:node"
       }
      },
      {
@@ -2786,7 +3748,8 @@
        "id"
       ],
       "type": "ID!",
-      "after": 1
+      "after": 1,
+      "parent": "o:node"
      },
      {
       "call": [
@@ -2794,7 +3757,8 @@
        "nodeId"
       ],
       "type": "ID!",
-      "after": 1
+      "after": 1,
+      "parent": "o:node"
      },
      {
       "settle": [
@@ -2806,6 +3770,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "errors": [
       {
@@ -2829,10 +3794,1093 @@
    }
   },
   {
+   "name": "drops a subfield that a merged selection set adds",
+   "clause": "dataMatches",
+   "base": 20,
+   "case": {
+    "v": 1,
+    "fixture": "merging",
+    "trace": [
+     {
+      "call": [
+       "a"
+      ],
+      "type": "A",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "call": [
+       "b"
+      ],
+      "type": "String",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "a"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "A",
+       "token": "o:a"
+      }
+     },
+     {
+      "call": [
+       "a",
+       "subfield1"
+      ],
+      "type": "String",
+      "after": 1,
+      "parent": "o:a"
+     },
+     {
+      "call": [
+       "a",
+       "subfield2"
+      ],
+      "type": "Int!",
+      "after": 1,
+      "parent": "o:a"
+     },
+     {
+      "settle": [
+       "b"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "a",
+       "subfield1"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "a",
+       "subfield2"
+      ],
+      "outcome": {
+       "kind": "leaf"
+      }
+     }
+    ],
+    "initialValue": "root",
+    "response": {
+     "data": {
+      "a": {
+       "subfield1": null
+      },
+      "b": null
+     }
+    }
+   }
+  },
+  {
+   "name": "applies a fragment on a union to an object type that isn't a member",
+   "clause": "malformed",
+   "check": "dataShape",
+   "base": 1,
+   "case": {
+    "v": 1,
+    "fixture": "abstract",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "Bot",
+       "token": "o:node"
+      }
+     }
+    ],
+    "initialValue": "root",
+    "response": {
+     "data": {
+      "node": {
+       "__typename": "Bot"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "applies a fragment on an interface to an object type that doesn't implement it",
+   "clause": "malformed",
+   "check": "callsSelected",
+   "base": 21,
+   "case": {
+    "v": 1,
+    "fixture": "abstract",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "User",
+       "token": "o:node"
+      }
+     },
+     {
+      "call": [
+       "node",
+       "friend"
+      ],
+      "type": "Node",
+      "after": 1,
+      "parent": "o:node"
+     },
+     {
+      "call": [
+       "node",
+       "latest"
+      ],
+      "type": "SearchResult",
+      "after": 1,
+      "parent": "o:node"
+     },
+     {
+      "settle": [
+       "node",
+       "friend"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "node",
+       "latest"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "Post",
+       "token": "o:node.latest"
+      }
+     },
+     {
+      "call": [
+       "node",
+       "latest",
+       "id"
+      ],
+      "type": "ID!"
+     },
+     {
+      "settle": [
+       "node",
+       "latest",
+       "id"
+      ],
+      "outcome": {
+       "kind": "leaf"
+      }
+     },
+     {
+      "call": [
+       "node",
+       "latest",
+       "title"
+      ],
+      "type": "String",
+      "after": 3,
+      "parent": "o:node.latest"
+     },
+     {
+      "settle": [
+       "node",
+       "latest",
+       "title"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "initialValue": "root",
+    "response": {
+     "data": {
+      "node": {
+       "__typename": "User",
+       "friend": null,
+       "latest": {
+        "title": null
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "executes a field whose @skip(if: $s) is true",
+   "clause": "malformed",
+   "check": "dataShape",
+   "base": 22,
+   "case": {
+    "v": 1,
+    "fixture": "directives_skipped",
+    "trace": [
+     {
+      "call": [
+       "b"
+      ],
+      "type": "Int",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "b"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "initialValue": "root",
+    "response": {
+     "data": {
+      "a": 1,
+      "b": null
+     }
+    }
+   }
+  },
+  {
+   "name": "executes a field whose @skip is false though its @include is false",
+   "clause": "malformed",
+   "check": "dataShape",
+   "base": 23,
+   "case": {
+    "v": 1,
+    "fixture": "directives_excluded",
+    "trace": [
+     {
+      "call": [
+       "a"
+      ],
+      "type": "Int",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "a"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "initialValue": "root",
+    "response": {
+     "data": {
+      "a": null,
+      "c": 1
+     }
+    }
+   }
+  },
+  {
+   "name": "answers data null when @skip and @include leave out every root field",
+   "clause": "dataMatches",
+   "base": 14,
+   "case": {
+    "v": 1,
+    "fixture": "directives_dropped",
+    "trace": [],
+    "initialValue": "root",
+    "response": {
+     "data": null
+    }
+   }
+  },
+  {
+   "name": "keys an aliased list by its field name",
+   "clause": "malformed",
+   "check": "dataShape",
+   "base": 24,
+   "case": {
+    "v": 1,
+    "fixture": "aliases",
+    "trace": [
+     {
+      "call": [
+       "second"
+      ],
+      "type": "Item",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "call": [
+       "first"
+      ],
+      "type": "Item",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "second"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "Item",
+       "token": "o:second"
+      }
+     },
+     {
+      "call": [
+       "second",
+       "list"
+      ],
+      "type": "[Item!]",
+      "after": 1,
+      "parent": "o:second"
+     },
+     {
+      "settle": [
+       "first"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "second",
+       "list"
+      ],
+      "outcome": {
+       "kind": "list",
+       "length": 1
+      }
+     },
+     {
+      "call": [
+       "second",
+       "list",
+       "0"
+      ],
+      "type": "Item!",
+      "after": 3
+     },
+     {
+      "settle": [
+       "second",
+       "list",
+       "0"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "Item",
+       "token": "o:second.list.0"
+      }
+     },
+     {
+      "call": [
+       "second",
+       "list",
+       "0",
+       "key"
+      ],
+      "type": "ID!",
+      "after": 4,
+      "parent": "o:second.list.0"
+     },
+     {
+      "settle": [
+       "second",
+       "list",
+       "0",
+       "key"
+      ],
+      "outcome": {
+       "kind": "leaf"
+      }
+     }
+    ],
+    "initialValue": "root",
+    "response": {
+     "data": {
+      "second": {
+       "items": [
+        {
+         "key": "v"
+        }
+       ]
+      },
+      "first": null
+     }
+    }
+   }
+  },
+  {
+   "name": "reports an error inside an aliased list under the field names",
+   "clause": "malformed",
+   "check": "responsePosition",
+   "base": 25,
+   "case": {
+    "v": 1,
+    "fixture": "aliases",
+    "trace": [
+     {
+      "call": [
+       "second"
+      ],
+      "type": "Item",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "call": [
+       "first"
+      ],
+      "type": "Item",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "second"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "Item",
+       "token": "o:second"
+      }
+     },
+     {
+      "call": [
+       "second",
+       "list"
+      ],
+      "type": "[Item!]",
+      "after": 1,
+      "parent": "o:second"
+     },
+     {
+      "settle": [
+       "first"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "second",
+       "list"
+      ],
+      "outcome": {
+       "kind": "list",
+       "length": 1
+      }
+     },
+     {
+      "call": [
+       "second",
+       "list",
+       "0"
+      ],
+      "type": "Item!",
+      "after": 3
+     },
+     {
+      "settle": [
+       "second",
+       "list",
+       "0"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "Item",
+       "token": "o:second.list.0"
+      }
+     },
+     {
+      "call": [
+       "second",
+       "list",
+       "0",
+       "key"
+      ],
+      "type": "ID!",
+      "after": 4,
+      "parent": "o:second.list.0"
+     },
+     {
+      "settle": [
+       "second",
+       "list",
+       "0",
+       "key"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "initialValue": "root",
+    "response": {
+     "errors": [
+      {
+       "message": "Cannot return null for non-nullable field Item.id.",
+       "locations": [
+        {
+         "line": 4,
+         "column": 7
+        }
+       ],
+       "path": [
+        "first",
+        "items",
+        0,
+        "id"
+       ]
+      }
+     ],
+     "data": {
+      "second": {
+       "list": null
+      },
+      "first": null
+     }
+    }
+   }
+  },
+  {
+   "name": "executes the field an alias names instead of the field it selects",
+   "clause": "malformed",
+   "check": "dataShape",
+   "base": 26,
+   "case": {
+    "v": 1,
+    "fixture": "aliases",
+    "trace": [
+     {
+      "call": [
+       "second"
+      ],
+      "type": "Item",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "call": [
+       "first"
+      ],
+      "type": "Item",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "second"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "Item",
+       "token": "o:second"
+      }
+     },
+     {
+      "call": [
+       "second",
+       "list"
+      ],
+      "type": "[Item!]",
+      "after": 1,
+      "parent": "o:second"
+     },
+     {
+      "settle": [
+       "first"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "Item",
+       "token": "o:first"
+      }
+     },
+     {
+      "call": [
+       "first",
+       "name"
+      ],
+      "type": "String",
+      "after": 2,
+      "parent": "o:first"
+     },
+     {
+      "call": [
+       "first",
+       "old"
+      ],
+      "type": "String",
+      "after": 2,
+      "parent": "o:first"
+     },
+     {
+      "settle": [
+       "second",
+       "list"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "first",
+       "name"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "first",
+       "old"
+      ],
+      "outcome": {
+       "kind": "leaf"
+      }
+     }
+    ],
+    "initialValue": "root",
+    "response": {
+     "data": {
+      "second": {
+       "name": null,
+       "old": "v"
+      },
+      "first": {
+       "list": null
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "orders a field by a selection that @skip left out",
+   "clause": "keyOrder",
+   "base": 27,
+   "case": {
+    "v": 1,
+    "fixture": "ordering",
+    "trace": [
+     {
+      "call": [
+       "bar"
+      ],
+      "type": "Int",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "call": [
+       "foo"
+      ],
+      "type": "Int",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "call": [
+       "baz"
+      ],
+      "type": "Int",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "call": [
+       "qux"
+      ],
+      "type": "Int",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "bar"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "foo"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "baz"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "qux"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "initialValue": "root",
+    "response": {
+     "data": {
+      "foo": null,
+      "bar": null,
+      "baz": null,
+      "qux": null
+     }
+    }
+   }
+  },
+  {
+   "name": "answers an aliased __typename with another type's name",
+   "clause": "dataMatches",
+   "base": 28,
+   "case": {
+    "v": 1,
+    "fixture": "mutationRoot",
+    "trace": [
+     {
+      "call": [
+       "a"
+      ],
+      "type": "Payload",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "a"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "call": [
+       "b"
+      ],
+      "type": "Payload",
+      "after": 1,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "b"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "call": [
+       "likeAll"
+      ],
+      "type": "[Int!]",
+      "after": 2,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "likeAll"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "initialValue": "root",
+    "response": {
+     "data": {
+      "a": null,
+      "b": null,
+      "__typename": "Mutation",
+      "root": "Query",
+      "likeAll": null
+     }
+    }
+   }
+  },
+  {
+   "name": "executes a mutation root field that @skip leaves out",
+   "clause": "malformed",
+   "check": "mutationFieldsOnce",
+   "base": 28,
+   "case": {
+    "v": 1,
+    "fixture": "mutationRoot",
+    "trace": [
+     {
+      "call": [
+       "a"
+      ],
+      "type": "Payload",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "a"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "call": [
+       "b"
+      ],
+      "type": "Payload",
+      "after": 1,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "b"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "call": [
+       "likeAll"
+      ],
+      "type": "[Int!]",
+      "after": 2,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "likeAll"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "call": [
+       "unlike"
+      ],
+      "type": "Payload"
+     }
+    ],
+    "initialValue": "root",
+    "response": {
+     "data": {
+      "a": null,
+      "b": null,
+      "__typename": "Mutation",
+      "root": "Mutation",
+      "likeAll": null
+     }
+    }
+   }
+  },
+  {
+   "name": "executes a mutation root field again for a fragment that selects it",
+   "clause": "malformed",
+   "check": "mutationFieldsOnce",
+   "base": 28,
+   "case": {
+    "v": 1,
+    "fixture": "mutationRoot",
+    "trace": [
+     {
+      "call": [
+       "a"
+      ],
+      "type": "Payload",
+      "after": 0,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "a"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "call": [
+       "b"
+      ],
+      "type": "Payload",
+      "after": 1,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "b"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "call": [
+       "likeAll"
+      ],
+      "type": "[Int!]",
+      "after": 2,
+      "parent": "root"
+     },
+     {
+      "settle": [
+       "likeAll"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "call": [
+       "a"
+      ],
+      "type": "Payload",
+      "after": 0,
+      "parent": "root"
+     }
+    ],
+    "initialValue": "root",
+    "response": {
+     "data": {
+      "a": null,
+      "b": null,
+      "__typename": "Mutation",
+      "root": "Mutation",
+      "likeAll": null
+     }
+    }
+   }
+  },
+  {
+   "name": "keys a subscription event's result by the field name instead of the alias",
+   "clause": "malformed",
+   "check": "dataShape",
+   "base": 29,
+   "case": {
+    "v": 1,
+    "fixture": "subscriptionAlias",
+    "trace": [
+     {
+      "call": [
+       "liked"
+      ],
+      "type": "Post",
+      "after": 0,
+      "parent": "event-1"
+     },
+     {
+      "settle": [
+       "liked"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "Post",
+       "token": "o:liked"
+      }
+     },
+     {
+      "call": [
+       "liked",
+       "likes"
+      ],
+      "type": "Int!",
+      "after": 1,
+      "parent": "o:liked"
+     },
+     {
+      "call": [
+       "liked",
+       "title"
+      ],
+      "type": "String",
+      "after": 1,
+      "parent": "o:liked"
+     },
+     {
+      "settle": [
+       "liked",
+       "likes"
+      ],
+      "outcome": {
+       "kind": "leaf"
+      }
+     },
+     {
+      "settle": [
+       "liked",
+       "title"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "initialValue": "root",
+    "event": "event-1",
+    "response": {
+     "data": {
+      "postLiked": {
+       "likes": 1,
+       "title": null,
+       "__typename": "Post"
+      }
+     }
+    }
+   }
+  },
+  {
    "name": "calls a field before its parent has a value",
    "clause": "malformed",
    "check": "callsReachable",
-   "base": 10,
+   "base": 11,
    "case": {
     "v": 1,
     "fixture": "fragments",
@@ -2843,14 +4891,16 @@
        "nodeId"
       ],
       "type": "ID!",
-      "after": 1
+      "after": 1,
+      "parent": "o:node"
      },
      {
       "call": [
        "node"
       ],
       "type": "Node",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -2858,7 +4908,8 @@
       ],
       "outcome": {
        "kind": "object",
-       "type": "Bot"
+       "type": "Bot",
+       "token": "o:node"
       }
      },
      {
@@ -2867,7 +4918,8 @@
        "id"
       ],
       "type": "ID!",
-      "after": 1
+      "after": 1,
+      "parent": "o:node"
      },
      {
       "settle": [
@@ -2879,6 +4931,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "errors": [
       {
@@ -2905,7 +4958,7 @@
    "name": "calls a list item past the list's length",
    "clause": "malformed",
    "check": "callsReachable",
-   "base": 1,
+   "base": 30,
    "case": {
     "v": 1,
     "fixture": "lists",
@@ -2915,14 +4968,16 @@
        "posts"
       ],
       "type": "[Post!]",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "call": [
        "tags"
       ],
       "type": "[String]!",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -2949,6 +5004,7 @@
       "type": "Int!"
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
       "posts": null,
@@ -2961,17 +5017,18 @@
    "name": "stamps a call with a negative after",
    "clause": "malformed",
    "check": "protocol",
-   "base": 7,
+   "base": 8,
    "case": {
     "v": 1,
-    "fixture": "fragments",
+    "fixture": "abstract",
     "trace": [
      {
       "call": [
        "node"
       ],
       "type": "Node",
-      "after": -1
+      "after": -1,
+      "parent": "root"
      },
      {
       "settle": [
@@ -2982,6 +5039,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
       "node": null
@@ -2993,17 +5051,18 @@
    "name": "reports the wrong type for a call",
    "clause": "malformed",
    "check": "protocol",
-   "base": 7,
+   "base": 8,
    "case": {
     "v": 1,
-    "fixture": "fragments",
+    "fixture": "abstract",
     "trace": [
      {
       "call": [
        "node"
       ],
       "type": "Boolean",
-      "after": 0
+      "after": 0,
+      "parent": "root"
      },
      {
       "settle": [
@@ -3014,6 +5073,7 @@
       }
      }
     ],
+    "initialValue": "root",
     "response": {
      "data": {
       "node": null
@@ -3035,14 +5095,16 @@
         "version"
        ],
        "type": "String!",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "call": [
         "user"
        ],
        "type": "User",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "settle": [
@@ -3061,6 +5123,7 @@
        }
       }
      ],
+     "initialValue": "root",
      "response": {
       "errors": [
        {
@@ -3084,14 +5147,15 @@
     },
     {
      "v": 1,
-     "fixture": "fragments",
+     "fixture": "abstract",
      "trace": [
       {
        "call": [
         "node"
        ],
        "type": "Node",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "settle": [
@@ -3102,6 +5166,7 @@
        }
       }
      ],
+     "initialValue": "root",
      "response": {
       "errors": [
        {
@@ -3129,25 +5194,27 @@
    "cases": [
     {
      "v": 1,
-     "fixture": "lists",
+     "fixture": "aliases",
      "trace": [
       {
        "call": [
-        "posts"
+        "second"
        ],
-       "type": "[Post!]",
-       "after": 0
+       "type": "Item",
+       "after": 0,
+       "parent": "root"
       },
       {
        "call": [
-        "tags"
+        "first"
        ],
-       "type": "[String]!",
-       "after": 0
+       "type": "Item",
+       "after": 0,
+       "parent": "root"
       },
       {
        "settle": [
-        "posts"
+        "second"
        ],
        "outcome": {
         "kind": "error"
@@ -3155,17 +5222,18 @@
       },
       {
        "settle": [
-        "tags"
+        "first"
        ],
        "outcome": {
-        "kind": "null"
+        "kind": "error"
        }
       }
      ],
+     "initialValue": "root",
      "response": {
       "errors": [
        {
-        "message": "resolver at posts failed",
+        "message": "resolver at second failed",
         "locations": [
          {
           "line": 0,
@@ -3173,11 +5241,11 @@
          }
         ],
         "path": [
-         "posts"
+         "second"
         ]
        },
        {
-        "message": "Cannot return null for non-nullable field Query.tags.",
+        "message": "resolver at first failed",
         "locations": [
          {
           "line": 0,
@@ -3185,11 +5253,14 @@
          }
         ],
         "path": [
-         "tags"
+         "first"
         ]
        }
       ],
-      "data": null
+      "data": {
+       "second": null,
+       "first": null
+      }
      }
     }
    ]
@@ -3206,21 +5277,24 @@
         "count"
        ],
        "type": "Float",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "call": [
         "ratio"
        ],
        "type": "Float",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "call": [
         "color"
        ],
        "type": "Color",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "settle": [
@@ -3247,6 +5321,7 @@
        }
       }
      ],
+     "initialValue": "root",
      "noResponse": "can't serialize the value"
     }
    ]
@@ -3263,21 +5338,24 @@
         "count"
        ],
        "type": "Int",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "call": [
         "ratio"
        ],
        "type": "Float",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "call": [
         "color"
        ],
        "type": "Color",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "settle": [
@@ -3304,6 +5382,7 @@
        }
       }
      ],
+     "initialValue": "root",
      "response": {
       "data": {
        "count": 1.2,
@@ -3326,14 +5405,16 @@
         "search"
        ],
        "type": "[SearchResult!]",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "call": [
         "matrix"
        ],
        "type": "[[Int!]]!",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "settle": [
@@ -3390,6 +5471,7 @@
        }
       }
      ],
+     "initialValue": "root",
      "response": {
       "data": {
        "search": null,
@@ -3408,14 +5490,15 @@
    "cases": [
     {
      "v": 1,
-     "fixture": "fragments",
+     "fixture": "abstract",
      "trace": [
       {
        "call": [
         "node"
        ],
        "type": "Node",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "settle": [
@@ -3426,6 +5509,7 @@
        }
       }
      ],
+     "initialValue": "root",
      "response": {
       "data": null,
       "errors": [
@@ -3448,28 +5532,11 @@
    "cases": [
     {
      "v": 1,
-     "fixture": "fragments",
-     "trace": [
-      {
-       "call": [
-        "node"
-       ],
-       "type": "Node",
-       "after": 0
-      },
-      {
-       "settle": [
-        "node"
-       ],
-       "outcome": {
-        "kind": "null"
-       }
-      }
-     ],
+     "fixture": "directives_dropped",
+     "trace": [],
+     "initialValue": "root",
      "response": {
-      "data": {
-       "node": null
-      },
+      "data": {},
       "errors": [],
       "status": "ok"
      }
@@ -3488,7 +5555,8 @@
         "node"
        ],
        "type": "Node",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "settle": [
@@ -3496,7 +5564,8 @@
        ],
        "outcome": {
         "kind": "object",
-        "type": "Bot"
+        "type": "Bot",
+        "token": "o:node"
        }
       },
       {
@@ -3505,7 +5574,8 @@
         "id"
        ],
        "type": "ID!",
-       "after": 1
+       "after": 1,
+       "parent": "o:node"
       },
       {
        "call": [
@@ -3513,7 +5583,8 @@
         "nodeId"
        ],
        "type": "ID!",
-       "after": 1
+       "after": 1,
+       "parent": "o:node"
       },
       {
        "settle": [
@@ -3530,7 +5601,8 @@
         "id"
        ],
        "type": "ID!",
-       "after": 1
+       "after": 1,
+       "parent": "o:node"
       },
       {
        "settle": [
@@ -3542,6 +5614,7 @@
        }
       }
      ],
+     "initialValue": "root",
      "response": {
       "data": {
        "node": null
@@ -3562,14 +5635,16 @@
         "first"
        ],
        "type": "Payload",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "call": [
         "second"
        ],
        "type": "Payload!",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "settle": [
@@ -3588,6 +5663,7 @@
        }
       }
      ],
+     "initialValue": "root",
      "response": {
       "data": null,
       "errors": [
@@ -3620,14 +5696,16 @@
         "version"
        ],
        "type": "String!",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "call": [
         "user"
        ],
        "type": "User",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       },
       {
        "settle": [
@@ -3650,9 +5728,11 @@
         "version"
        ],
        "type": "ID!",
-       "after": 0
+       "after": 0,
+       "parent": "root"
       }
      ],
+     "initialValue": "root",
      "response": {
       "errors": [
        {

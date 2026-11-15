@@ -1,12 +1,32 @@
-// Keep report discovery build-time: deploying never requires running adapters.
+import { AREAS } from '../../kit/areas.mjs';
+
+// An area's place in kit/areas.mjs's order; an area it doesn't list comes
+// last, so every report is shown.
+export function areaOrder(area) {
+  return AREAS.includes(area) ? AREAS.indexOf(area) : AREAS.length;
+}
+// Keep report discovery build-time: deploying never requires running
+// adapters. Reports come in area order, as the conformance sheet lists them.
 export function collectReports(files) {
   return Object.entries(files).map(([path, report]) => ({
     ...report, key: path.split('/').at(-1).split('.')[0],
-  }));
+  })).sort((a, b) => areaOrder(a.area) - areaOrder(b.area));
 }
-// The specification areas the reports cover.
+// The specification areas the reports cover, in area order.
 export function areasOf(reports) {
-  return [...new Set(reports.map(r => r.area))];
+  return [...new Set(reports.map(r => r.area))].sort((a, b) => areaOrder(a) - areaOrder(b));
+}
+// Every area some report covers, with one implementation's report in it, or
+// null where its adapter doesn't take part: an absent area is shown as
+// such, never as a pass.
+export function areaRows(all, selected) {
+  return areasOf(all).map(area => ({ area, report: selected.find(r => r.area === area) ?? null }));
+}
+// The capabilities an untested check needs (its `requires`) that the
+// report's adapter doesn't claim, as the sheet's "– needs `x`".
+export function missingCapabilities(check, report) {
+  if (check.status !== 'untested' || !report) return [];
+  return (check.requires ?? []).filter(c => !(report.capabilities ?? []).includes(c));
 }
 // A failing check's severity, as the conformance sheet reads it: a MUST (or
 // the kit's own ADAPTER checks) fails, a SHOULD is a "should", and an INFO
@@ -92,7 +112,7 @@ export function summarize(reports) {
 const matches = (text, query) => text.toLowerCase().includes(query.trim().toLowerCase());
 export function selectChecks(reports, area, status, query) {
   return reports.filter(r => area === 'all' || r.area === area)
-    .flatMap(r => r.checks.map(check => ({ ...check, area: r.area, verdict: verdict(check), sinceLabel: sinceLabel(check) })))
+    .flatMap(r => r.checks.map(check => ({ ...check, area: r.area, verdict: verdict(check), sinceLabel: sinceLabel(check), needs: missingCapabilities(check, r) })))
     .filter(c => (status === 'all' || c.verdict === status) && matches(`${c.id} ${c.title} ${c.area}`, query));
 }
 // A finding's severity: the worst level among the checks it breaks. A

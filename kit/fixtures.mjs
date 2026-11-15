@@ -5,6 +5,10 @@
 // turns graphql-js 17's @experimental_disableErrorPropagation into the
 // `errorPropagation` flag, so an adapter for another implementation never
 // sees a directive it doesn't know.
+//
+// A file with a `# variants:` header is several fixtures: one per variant,
+// with the same schema and document and its own variable values. An
+// adapter sees each as an ordinary fixture with its own id.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { basename, join } from "node:path";
@@ -12,11 +16,32 @@ import { Kind, buildASTSchema, parse, print } from "graphql17";
 
 export const DISABLE_PROPAGATION = "experimental_disableErrorPropagation";
 
+const headerOf = (text) => (key) => text.match(new RegExp(`^# ${key}: (.*)$`, "m"))?.[1];
+
+// The fixtures one file stands for: [{ id, variables }]. Without a
+// `# variants:` header, the file itself, with its `# variables:`. With
+// `# variants: { "on": { "x": true }, "off": { "x": false } }`, one fixture
+// per entry, named <file>_<variant>, whose variables are the entry's values
+// over `# variables:`. Variant names are letters and digits, so every id is
+// a TLA+ record field (specs/Fixtures.tla) and a TypeScript property.
+export const fixtureVariants = (base, text) => {
+  const header = headerOf(text);
+  const variables = JSON.parse(header("variables") ?? "{}");
+  const variants = header("variants");
+  if (variants === undefined) return [{ id: base, variables }];
+  const entries = Object.entries(JSON.parse(variants));
+  if (entries.length === 0) throw new Error(`${base}: # variants: is empty`);
+  return entries.map(([name, values]) => {
+    if (!/^[A-Za-z][A-Za-z0-9]*$/.test(name)) throw new Error(`${base}: variant name ${JSON.stringify(name)} isn't letters and digits`);
+    return { id: `${base}_${name}`, variables: { ...variables, ...values } };
+  });
+};
+
 export const loadFixtures = (dir) =>
   readdirSync(dir)
     .filter((f) => f.endsWith(".graphql"))
     .sort()
-    .map((file) => {
+    .flatMap((file) => {
       const text = readFileSync(join(dir, file), "utf8");
       const parsed = parse(text);
       const isExecutable = (d) =>
@@ -29,17 +54,17 @@ export const loadFixtures = (dir) =>
           ? { ...d, directives: (d.directives ?? []).filter((x) => x.name.value !== DISABLE_PROPAGATION) }
           : d,
       );
-      const header = (key) => text.match(new RegExp(`^# ${key}: (.*)$`, "m"))?.[1];
+      const header = headerOf(text);
       const sdl = print({ kind: Kind.DOCUMENT, definitions: typeDefinitions });
       const operationType = operation.operation;
       const invalidResults = header("invalidResults") === "true";
-      return {
-        id: basename(file, ".graphql"),
+      return fixtureVariants(basename(file, ".graphql"), text).map(({ id, variables }) => ({
+        id,
         sdl,
         document: print({ kind: Kind.DOCUMENT, definitions: executable }),
         schema: buildASTSchema({ kind: Kind.DOCUMENT, definitions: typeDefinitions }),
         operationType,
-        variables: JSON.parse(header("variables") ?? "{}"),
+        variables,
         maxListLength: Number(header("maxListLength") ?? 2),
         errorPropagation,
         invalidResults,
@@ -52,5 +77,5 @@ export const loadFixtures = (dir) =>
           ...(operationType === "query" ? [] : [operationType]),
           ...(errorPropagation ? [] : ["error-propagation-off"]),
         ],
-      };
+      }));
     });

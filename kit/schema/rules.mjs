@@ -1,8 +1,10 @@
 // The schema area's checks: one per rule in TypeSystem!Rules, by the
 // sections that state it, with the sentences it rests on (`basis`, quoted
 // from September 2026, the edition graded). Every rule is a MUST, in every
-// release that has it. ENUM_VALUE_NAME_RESERVED rests on §4's Reserved
-// Names paragraph, since §3.9 says nothing about "__".
+// release that has it, but two INFO checks for what §3 doesn't state about
+// directives applied in SDL (DIRECTIVE_NOT_REPEATED,
+// APPLIED_DIRECTIVE_ARGUMENTS). ENUM_VALUE_NAME_RESERVED rests on §4's
+// Reserved Names paragraph, since §3.9 says nothing about "__".
 //
 // SINCE names the rules October 2021 doesn't have, the release that
 // introduced each (graphql-spec PR in the comment), and the feature it
@@ -23,7 +25,18 @@ export const SINCE = {
   ONEOF_FIELD_NO_DEFAULT: { since: "September2025", feature: "OneOf input objects" }, // #825
   INPUT_OBJECT_DEFAULT_VALUE_CYCLE: { since: "September2025", feature: "default value validation" }, // #793
   DIRECTIVE_LOCATIONS_DEFINED: { since: "September2025", feature: "the rule that a directive definition includes a location" },
+  EXTENSION_ONEOF: { since: "September2025", feature: "OneOf input objects" }, // #825
+  DIRECTIVE_EXTENSION_DEFINED: { since: "September2026", feature: "directive extensions" }, // #1206
+  DIRECTIVE_EXTENSION_NOT_REAPPLIED: { since: "September2026", feature: "directive extensions" },
+  DIRECTIVE_EXTENSION_USES_PREVIOUS: { since: "September2026", feature: "directive extensions" },
+  DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS: { since: "September2026", feature: "directive extensions" },
 };
+
+// The capability an adapter claims when its implementation can build a
+// schema from a document with type system extensions (§3.1), applied in
+// document order to the definitions. Vectors with extensions are asked
+// only of such adapters (docs/kit/schema.md, "Request").
+export const SCHEMA_EXTENSIONS = "schema-extensions";
 
 // Releases as the kit writes them, and as prose.
 export const RELEASES = ["September2025", "September2026"];
@@ -33,6 +46,11 @@ export const releaseName = (release) => release.replace(/^([A-Za-z]+)(\d+)$/, "$
 const OBJECT_AND_INTERFACE = (rule) => `§3.6 Type Validation (and the same item of §3.7 for interfaces): "${rule}"`;
 const IMPLEMENTATION = (step) =>
   `§3.6 IsValidImplementation(type, implementedType), applied by "For each interface declared implemented as interfaceType, IsValidImplementation(objectType, interfaceType) must be true" (§3.6) and "IsValidImplementation(implementingType, implementedType) must be true" (§3.7): "${step}"`;
+// The extension sections, by kind of type: [section, the type's article and
+// name in the rules].
+const EXTENSION_SECTIONS = ["3.5.6", "3.6.3", "3.7.1", "3.8.1", "3.9.1", "3.10.2"];
+const NOT_IN_SECTION_3 =
+  "§3 states no such rule for SDL: this check is informational, and never fails a run. It records whether an implementation rejects such a schema.";
 const DIRECTIVE_USE =
   '§3.13: "Directives must only be used in the locations they are declared to belong in." The same sentence is in October 2021.';
 
@@ -196,8 +214,8 @@ export const RULES = [
     "IMPL_FIELD_PROVIDED",
     "implFieldProvided",
     "An implementation has every field of the interface",
-    ["3.6", "3.7"],
-    IMPLEMENTATION("type must include a field of the same name for every field defined in implementedType."),
+    ["3.6", "3.7", "3.6.3", "3.7.1"],
+    `${IMPLEMENTATION("type must include a field of the same name for every field defined in implementedType.")} For extended types (tagged \`schema-extensions\`): §3.6.3, "The resulting extended object type must be a super-set of all interfaces it implements", and §3.7.1, "Any Object or Interface type which implemented the previous Interface type must also be a super-set of the fields of the Interface type extension (which may be due to Object type extension)."`,
   ],
   [
     "IMPL_ARG_PROVIDED",
@@ -252,8 +270,8 @@ export const RULES = [
     "UNION_MEMBERS_OBJECTS",
     "unionMembersObjects",
     "A union's member types are object types",
-    ["3.8"],
-    '§3.8 Type Validation: "The member types of a Union type must all be Object base types; Scalar, Interface and Union types must not be member types of a Union." A member the document doesn\'t define isn\'t an Object type.',
+    ["3.8", "3.8.1"],
+    '§3.8 Type Validation: "The member types of a Union type must all be Object base types; Scalar, Interface and Union types must not be member types of a Union." A member the document doesn\'t define isn\'t an Object type. §3.8.1 says the same of a union type extension\'s member types: "The member types of a Union type extension must all be Object base types".',
   ],
   [
     "ENUM_VALUES_DEFINED",
@@ -315,15 +333,15 @@ export const RULES = [
     "ONEOF_FIELD_NULLABLE",
     "oneOfFieldNullable",
     "A OneOf input object's fields are nullable",
-    ["3.10", "3.10.1"],
-    '§3.10 Type Validation: "If the Input Object is a OneOf Input Object then: The type of the input field must be nullable."',
+    ["3.10", "3.10.1", "3.10.2"],
+    '§3.10 Type Validation: "If the Input Object is a OneOf Input Object then: The type of the input field must be nullable." §3.10.2, for an extension: "If the original Input Object is a OneOf Input Object then: All fields of the Input Object type extension must be nullable."',
   ],
   [
     "ONEOF_FIELD_NO_DEFAULT",
     "oneOfFieldNoDefault",
     "A OneOf input object's fields have no default value",
-    ["3.10", "3.10.1"],
-    '§3.10 Type Validation: "If the Input Object is a OneOf Input Object then: ... The input field must not have a default value."',
+    ["3.10", "3.10.1", "3.10.2"],
+    '§3.10 Type Validation: "If the Input Object is a OneOf Input Object then: ... The input field must not have a default value." §3.10.2, for an extension: "If the original Input Object is a OneOf Input Object then: ... All fields of the Input Object type extension must not have default values."',
   ],
   [
     "INPUT_OBJECT_UNBREAKABLE_CYCLE",
@@ -374,11 +392,118 @@ export const RULES = [
     ["3.13"],
     `${DIRECTIVE_USE} The built-in directives' locations are September 2026's (§3.13.1 to §3.13.5). @deprecated goes on arguments and input fields since September 2025, and on directive definitions since September 2026; a vector that applies it there is tagged with that release.`,
   ],
-].map(([rule, id, title, spec, basis]) => ({
+  [
+    "EXTENSION_TARGET_DEFINED",
+    "extensionTargetDefined",
+    "A type extension extends a type that is defined",
+    EXTENSION_SECTIONS,
+    'Each kind of type extension\'s Type Validation, item 1: "The named type must already be defined and must be a Scalar type" (§3.5.6), "... an Object type" (§3.6.3), "... an Interface type" (§3.7.1), "... a Union type" (§3.8.1), "... an Enum type" (§3.9.1), "... a Input Object type" (§3.10.2).',
+  ],
+  [
+    "EXTENSION_TARGET_KIND",
+    "extensionTargetKind",
+    "A type extension extends a type of its own kind",
+    EXTENSION_SECTIONS,
+    'Each kind of type extension\'s Type Validation, item 1: "The named type must already be defined and must be a Scalar type" (§3.5.6), "... an Object type" (§3.6.3), "... an Interface type" (§3.7.1), "... a Union type" (§3.8.1), "... an Enum type" (§3.9.1), "... a Input Object type" (§3.10.2).',
+  ],
+  [
+    "EXTENSION_ITEMS_UNIQUE",
+    "extensionItemsUnique",
+    "A type extension's fields, values or member types are unique",
+    ["3.6.3", "3.7.1", "3.8.1", "3.9.1", "3.10.2"],
+    '§3.6.3: "The fields of an Object type extension must have unique names; no two fields may share the same name." §3.7.1 says the same of an Interface type extension. §3.8.1: "All member types of a Union type extension must be unique." §3.9.1: "All values of an Enum type extension must be unique." §3.10.2: "All fields of an Input Object type extension must have unique names."',
+  ],
+  [
+    "EXTENSION_ITEMS_NEW",
+    "extensionItemsNew",
+    "A type extension adds only fields, values or member types the type doesn't have",
+    ["3.6.3", "3.7.1", "3.8.1", "3.9.1", "3.10.2"],
+    '§3.6.3: "Any fields of an Object type extension must not be already defined on the previous Object type." §3.7.1 says the same of an Interface type extension. §3.8.1: "All member types of a Union type extension must not already be a member of the previous Union type." §3.9.1: "All values of an Enum type extension must not already be a value of the previous Enum." §3.10.2: "All fields of an Input Object type extension must not already be a field of the previous Input Object." The previous type is the type as extended so far. October 2021 says "the original" type instead of "the previous" one; a vector whose item an earlier extension adds is tagged since September 2025.',
+  ],
+  [
+    "EXTENSION_INTERFACES_NEW",
+    "extensionInterfacesNew",
+    "An object type extension adds only interfaces the type doesn't implement",
+    ["3.6.3"],
+    '§3.6.3: "Any interfaces provided must not be already implemented by the previous Object type." §3.7.1 has no such rule for interface type extensions.',
+  ],
+  [
+    "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+    "extensionDirectivesNotReapplied",
+    "An extension doesn't apply a non-repeatable directive again",
+    ["3.3.2", ...EXTENSION_SECTIONS],
+    'Every kind of extension\'s Type Validation: "Any non-repeatable directives provided must not already apply to the previous Schema" (§3.3.2), "... the previous Scalar type" (§3.5.6), "... the previous Object type" (§3.6.3), "... the previous Interface type" (§3.7.1), "... the previous Union type" (§3.8.1), "... the previous Enum type" (§3.9.1), "... the previous Input Object type" (§3.10.2). A directive applied by the definition or by an earlier extension already applies. October 2021 says "the original" instead of "the previous"; a vector whose directive only an earlier extension applies is tagged since September 2025.',
+  ],
+  [
+    "EXTENSION_ONEOF",
+    "extensionOneOf",
+    "An input object type extension doesn't apply @oneOf",
+    ["3.10.2", "3.10.1"],
+    '§3.10.2: "The @oneOf directive must not be provided by an Input Object type extension."',
+  ],
+  [
+    "SCHEMA_EXTENSION_DEFINED",
+    "schemaExtensionDefined",
+    "A schema extension extends a schema",
+    ["3.3.2"],
+    '§3.3.2 Schema Validation: "The Schema must already be defined." Whether a document with no schema definition, whose root operation types have the default names, has a schema that is "already defined", the spec doesn\'t say, so no vector is graded.',
+  ],
+  [
+    "SPECIFIED_BY_NOT_BUILTIN",
+    "specifiedByNotBuiltin",
+    "@specifiedBy isn't applied to a built-in scalar",
+    ["3.13.4", "3.5", "3.5.6"],
+    '§3.13.4: "It must not appear on built-in scalar types." §3.5: "Built-in scalar types must not provide a scalar specification URL as they are specified by this document." A document can apply it to one only through a scalar type extension, `extend scalar Int @specifiedBy(url: "…")`. The spec doesn\'t say whether a built-in scalar may be extended at all (§3.5.6, "The named type must already be defined"); either way the schema is invalid, so an implementation that rejects every extension of a built-in scalar passes this check without checking @specifiedBy.',
+  ],
+  [
+    "DIRECTIVE_EXTENSION_DEFINED",
+    "directiveExtensionDefined",
+    "A directive extension extends a defined directive",
+    ["3.13.6"],
+    '§3.13.6 Type Validation: "The previous directive must already be defined." New in September 2026, with directive extensions.',
+  ],
+  [
+    "DIRECTIVE_EXTENSION_NOT_REAPPLIED",
+    "directiveExtensionNotReapplied",
+    "A directive extension doesn't apply a non-repeatable directive again",
+    ["3.13.6"],
+    '§3.13.6 Type Validation: "Any non-repeatable directives provided must not already apply to the previous directive."',
+  ],
+  [
+    "DIRECTIVE_EXTENSION_USES_PREVIOUS",
+    "directiveExtensionUsesPrevious",
+    "A directive extension doesn't apply the directive it extends",
+    ["3.13.6"],
+    '§3.13.6 Type Validation: "Any directives provided must not contain the use of a Directive which references the previous directive directly."',
+  ],
+  [
+    "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
+    "directiveExtensionReferencesPrevious",
+    "A directive extension doesn't reference the directive it extends through a type or directive",
+    ["3.13.6"],
+    '§3.13.6 Type Validation: "Any directives provided must not contain the use of a Directive which references the previous directive indirectly by referencing a Type or Directive which transitively includes a reference to the previous Directive."',
+  ],
+  [
+    "DIRECTIVE_NOT_REPEATED",
+    "directiveNotRepeated",
+    "A definition doesn't apply a non-repeatable directive twice to one element",
+    ["3.13", "5.7.3"],
+    `§3.13: "A directive may be defined as repeatable by including the "repeatable" keyword. Repeatable directives are often useful when the same directive should be used with different arguments at a single location". §3 states the rule against applying a non-repeatable directive again only for extensions ("must not already apply to the previous ..."), and §5.7.3 Directives Are Unique per Location only for executable documents ("if a directive is not repeatable, then only one occurrence of it is allowed per location"). ${NOT_IN_SECTION_3}`,
+    "INFO",
+  ],
+  [
+    "APPLIED_DIRECTIVE_ARGUMENTS",
+    "appliedDirectiveArguments",
+    "A directive applied in SDL has the arguments its definition gives it",
+    ["3.13", "2.13", "5.4"],
+    `§3.13 defines a directive's arguments, such as \`directive @specifiedBy(url: String!) on SCALAR\` (§3.13.4), and §2.13 says "Directives have a name along with a list of arguments which may accept values of any input type". The rules that an argument is defined, given once, given when required, and of its type are §5.4's, which apply to executable documents. ${NOT_IN_SECTION_3}`,
+    "INFO",
+  ],
+].map(([rule, id, title, spec, basis, level = "MUST"]) => ({
   rule,
   id,
   title,
-  level: "MUST",
+  level,
   spec,
   basis,
   ...(SINCE[rule] ?? {}),
@@ -390,4 +515,11 @@ export const RULE = new Map(RULES.map((r) => [r.rule, r]));
 // one location.
 export const UNWRITABLE = {
   DIRECTIVE_LOCATIONS_DEFINED: "SDL can't write a directive without locations, so no vector breaks this rule",
+};
+
+// Rules whose every invalid vector is `unspecified`, so the check is never
+// graded, and why.
+export const UNGRADED = {
+  SCHEMA_EXTENSION_DEFINED:
+    "every vector that breaks it is unspecified: the spec doesn't say whether a document without a schema definition has a schema that is already defined",
 };

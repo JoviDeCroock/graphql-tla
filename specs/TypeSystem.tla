@@ -38,10 +38,27 @@
 (* IntrospectionVectors.tla's):                                            *)
 (*   schemaDefinitions  how many schema definitions the document has;      *)
 (*                      absent: one if schemaDef, else none                *)
-(*   uses       a sequence of [name, location]: every directive the        *)
-(*              document applies, with the DirectiveLocation of the place  *)
-(*              it is applied (OBJECT, FIELD_DEFINITION, ...); absent: no   *)
-(*              use is checked                                             *)
+(*   uses       a sequence of [name, location, site, extension, args]:     *)
+(*              every directive the document applies, with the            *)
+(*              DirectiveLocation of the place it is applied (OBJECT,      *)
+(*              FIELD_DEFINITION, ...); absent: no use is checked. site    *)
+(*              names the element it is applied to: <<kind, name>> for a   *)
+(*              type, <<"SCHEMA", "">> for the schema, <<"DIRECTIVE",      *)
+(*              name>> for a directive (a definition and its extensions    *)
+(*              share the site), and <<"ELEMENT", n>> for a field,         *)
+(*              argument, enum value or input field, n unique in the       *)
+(*              document. extension is 0 for a use in a definition, or k   *)
+(*              for one applied to the k-th extension itself. args is a    *)
+(*              sequence of [name, value], the arguments as written        *)
+(*   extensions a sequence, in document order, of the document's type     *)
+(*              system extensions (§3.1), each                             *)
+(*              [kind, name, fields, interfaces, members, values,          *)
+(*               inputFields, operations, oneOf, directives]               *)
+(*              kind is a __TypeKind name, "SCHEMA" or "DIRECTIVE"; name   *)
+(*              is "" for a schema extension; operations is a sequence of  *)
+(*              [operation, type]; oneOf is whether it applies @oneOf;     *)
+(*              directives is the set of names of directives applied       *)
+(*              anywhere inside it. Absent: no extensions                  *)
 (***************************************************************************)
 EXTENDS Integers, Sequences, FiniteSets, TLC
 
@@ -780,9 +797,257 @@ DoesNotReferenceItselfIndirectly(S, D) ==
   <<"directive", D.name>> \notin Reachable(S, direct, direct)
 
 -----------------------------------------------------------------------------
+(* Type system extensions (§3.1): §3.3.2 Schema Extension, §3.5.6, §3.6.3, *)
+(* §3.7.1, §3.8.1, §3.9.1 and §3.10.2 for the six kinds of type, and       *)
+(* §3.13.6 Directive Extensions (new in September 2026).                   *)
+(*                                                                         *)
+(* Each kind's rules are stated against "the previous" type, schema or     *)
+(* directive: its definition as extended by the extensions before this one *)
+(* in the document. The definition may come anywhere in the document (the  *)
+(* spec doesn't say what "already defined" means for one document that     *)
+(* holds both; no vector depends on the order). Extended(S) is the schema  *)
+(* the extensions make: each extension's items merged into its type,       *)
+(* without the ones its own rules already reject (an item the previous     *)
+(* type has, a second item of one name within the extension), so that one *)
+(* fault breaks one rule. Everything else about the extended schema is     *)
+(* checked by the definitions' rules, as the spec's own rules do: "The     *)
+(* resulting extended object type must be a super-set of all interfaces it *)
+(* implements" is IsValidImplementation on the extended type, and so is    *)
+(* §3.7.1's "Any Object or Interface type which implemented the previous   *)
+(* Interface type must also be a super-set of the fields of the Interface  *)
+(* type extension".                                                        *)
+
+Extensions(S) == IF "extensions" \in DOMAIN S THEN S.extensions ELSE <<>>
+
+TypeKinds == {"SCALAR", "OBJECT", "INTERFACE", "UNION", "ENUM", "INPUT_OBJECT"}
+IsTypeExtension(X) == X.kind \in TypeKinds
+Extends(X, T) == X.kind = T.kind /\ X.name = T.name
+
+\* The items of more that seq doesn't name, and only the first of each name.
+RECURSIVE AppendNamed(_, _), AppendOperations(_, _)
+AppendNamed(seq, more) ==
+  IF more = <<>> THEN seq
+  ELSE AppendNamed(IF Head(more).name \in Range(NamesOf(seq)) THEN seq ELSE Append(seq, Head(more)),
+                   Tail(more))
+AppendOperations(seq, more) ==
+  IF more = <<>> THEN seq
+  ELSE AppendOperations(
+         IF \E i \in DOMAIN seq : seq[i].operation = Head(more).operation THEN seq ELSE Append(seq, Head(more)),
+         Tail(more))
+\* The names of more that seq doesn't have. A name repeated within more
+\* stays repeated: no extension rule is about that, so the extended type's
+\* own rules see it (an object type extension's `implements I & I`).
+NewNames(seq, more) == SelectSeq(more, LAMBDA n : n \notin Range(seq))
+\* Member types: "All member types of a Union type extension must be unique"
+\* is an extension rule, so a repeat within the extension is dropped too.
+RECURSIVE AppendNames(_, _)
+AppendNames(seq, more) ==
+  IF more = <<>> THEN seq
+  ELSE AppendNames(IF Head(more) \in Range(seq) THEN seq ELSE Append(seq, Head(more)), Tail(more))
+
+Merge(T, X) ==
+  [T EXCEPT !.fields = AppendNamed(@, X.fields),
+            !.interfaces = @ \o NewNames(@, X.interfaces),
+            !.members = AppendNames(@, X.members),
+            !.values = AppendNamed(@, X.values),
+            !.inputFields = AppendNamed(@, X.inputFields),
+            !.directives = @ \cup X.directives]
+
+\* T as extended by the extensions of it in exts, in order.
+RECURSIVE ApplyExtensions(_, _)
+ApplyExtensions(T, exts) ==
+  IF exts = <<>> THEN T
+  ELSE ApplyExtensions(IF Extends(Head(exts), T) THEN Merge(T, Head(exts)) ELSE T, Tail(exts))
+
+\* The root operation types schema extensions add. A schema extension needs
+\* a schema definition to extend (SCHEMA_EXTENSION_DEFINED), so without one
+\* it adds none. One that names an operation the schema already has adds
+\* nothing either: the spec has no rule about it (docs/kit/schema.md).
+SchemaExtensionOperations(S) ==
+  LET exts == SelectSeq(Extensions(S), LAMBDA X : X.kind = "SCHEMA") IN
+  [k \in DOMAIN exts |-> exts[k].operations]
+
+RECURSIVE ConcatAll(_)
+ConcatAll(seqs) == IF seqs = <<>> THEN <<>> ELSE Head(seqs) \o ConcatAll(Tail(seqs))
+
+IsFirstDefinition(S, i) == \A j \in DOMAIN S.types : S.types[j].name = S.types[i].name => i <= j
+
+\* The schema the document's definitions and extensions make together.
+Extended(S) ==
+  IF Extensions(S) = <<>> THEN S
+  ELSE [S EXCEPT
+          !.types = [i \in DOMAIN S.types |->
+                       IF IsFirstDefinition(S, i) THEN ApplyExtensions(S.types[i], Extensions(S))
+                       ELSE S.types[i]],
+          !.operations = IF S.schemaDef THEN AppendOperations(@, ConcatAll(SchemaExtensionOperations(S)))
+                         ELSE @]
+
+\* The previous type of the k-th extension: its definition (or the
+\* built-in scalar of that name) as extended by the extensions before it.
+Previous(S, k) ==
+  ApplyExtensions(TypeNamed(S, Extensions(S)[k].name), SubSeq(Extensions(S), 1, k - 1))
+
+\* "The named type must already be defined and must be a Scalar type" (and
+\* likewise "an Object type", "an Interface type", "a Union type", "an Enum
+\* type", "a Input Object type"). A built-in scalar is defined: it is
+\* "specified" by §3.5 and is in every schema. The spec doesn't say whether
+\* a document may extend one; no vector extends one except to apply
+\* @specifiedBy, which is invalid either way.
+ExtensionTargetIsDefined(S, X) == IsTypeExtension(X) => TypeNamed(S, X.name).kind # "UNKNOWN"
+ExtensionTargetHasKind(S, X) == IsTypeExtension(X) => TypeNamed(S, X.name).kind \in {"UNKNOWN", X.kind}
+ExtendsItsKind(S, X) == IsTypeExtension(X) /\ TypeNamed(S, X.name).kind = X.kind
+
+\* "The fields of an Object type extension must have unique names; no two
+\* fields may share the same name." (and an Interface type extension's);
+\* "All values of an Enum type extension must be unique."; "All fields of
+\* an Input Object type extension must have unique names."; "All member
+\* types of a Union type extension must be unique."
+ExtensionItemsAreUnique(X) ==
+  /\ IsUnique(NamesOf(X.fields))
+  /\ IsUnique(NamesOf(X.values))
+  /\ IsUnique(NamesOf(X.inputFields))
+  /\ IsUnique(X.members)
+
+\* "Any fields of an Object type extension must not be already defined on
+\* the previous Object type." (and an Interface type extension's); "All
+\* values of an Enum type extension must not already be a value of the
+\* previous Enum."; "All fields of an Input Object type extension must not
+\* already be a field of the previous Input Object."; "All member types of a
+\* Union type extension must not already be a member of the previous Union
+\* type."
+ExtensionItemsAreNew(S, k) ==
+  LET X == Extensions(S)[k]
+      P == Previous(S, k)
+  IN ExtendsItsKind(S, X) =>
+       /\ Range(NamesOf(X.fields)) \cap Range(NamesOf(P.fields)) = {}
+       /\ Range(NamesOf(X.values)) \cap Range(NamesOf(P.values)) = {}
+       /\ Range(NamesOf(X.inputFields)) \cap Range(NamesOf(P.inputFields)) = {}
+       /\ Range(X.members) \cap Range(P.members) = {}
+
+\* "Any interfaces provided must not be already implemented by the previous
+\* Object type." §3.7.1 has no such rule for interface type extensions.
+ExtensionInterfacesAreNew(S, k) ==
+  LET X == Extensions(S)[k] IN
+  (ExtendsItsKind(S, X) /\ X.kind = "OBJECT") =>
+    Range(X.interfaces) \cap Range(Previous(S, k).interfaces) = {}
+
+\* "The @oneOf directive must not be provided by an Input Object type
+\* extension." The extended type isn't OneOf for it: Merge keeps the
+\* definition's oneOf.
+ExtensionDoesNotAddOneOf(X) == X.kind = "INPUT_OBJECT" => ~X.oneOf
+
+\* "The Schema must already be defined." Read here as: the document has a
+\* schema definition. Whether a schema with no schema definition, whose
+\* root operation types have the default names, is "already defined" the
+\* spec doesn't say, so every vector that breaks this rule is `unspecified`.
+SchemaExtensionHasSchema(S, X) == X.kind = "SCHEMA" => S.schemaDef
+
+\* "The previous directive must already be defined." A built-in directive
+\* is defined here; the spec doesn't say whether one can be extended, and no
+\* vector extends one.
+DirectiveExtensionTargetIsDefined(S, X) == X.kind = "DIRECTIVE" => IsKnownDirective(S, X.name)
+
+\* Directives applied in SDL: their definitions in the document, else the
+\* built-in ones (§3.13.1 to §3.13.5). No built-in directive is repeatable.
+IsRepeatable(S, name) == DefinesDirective(S, name) /\ DirectiveNamed(S, name).repeatable
+
+BuiltinArg(name, type, default) ==
+  [name |-> name, description |-> NoDescription, type |-> type, default |-> default, deprecated |-> <<>>]
+BuiltinDirectiveArgs ==
+  ("skip" :> <<BuiltinArg("if", Ref("Boolean", <<"nonNull">>), <<>>)>>)
+  @@ ("include" :> <<BuiltinArg("if", Ref("Boolean", <<"nonNull">>), <<>>)>>)
+  @@ ("deprecated" :> <<BuiltinArg("reason", Ref("String", <<"nonNull">>),
+                                   <<Value("string", "No longer supported", <<>>, <<>>)>>)>>)
+  @@ ("specifiedBy" :> <<BuiltinArg("url", Ref("String", <<"nonNull">>), <<>>)>>)
+  @@ ("oneOf" :> <<>>)
+DeclaredArgs(S, name) ==
+  IF DefinesDirective(S, name) THEN DirectiveNamed(S, name).args ELSE BuiltinDirectiveArgs[name]
+
+IsDirectiveSite(site) == site[1] = "DIRECTIVE"
+
+\* "Any non-repeatable directives provided must not already apply to the
+\* previous Schema" (and the previous Scalar, Object, Interface, Union,
+\* Enum and Input Object type): a use on the k-th extension that a use on
+\* the definition, or on an earlier extension of the same element, already
+\* makes. On a directive it is §3.13.6's rule, DIRECTIVE_EXTENSION_NOT_REAPPLIED.
+Reapplied(S, directiveSite) ==
+  LET uses == DirectiveUses(S) IN
+  \E k \in DOMAIN uses :
+    LET u == uses[k] IN
+    /\ u.extension > 0
+    /\ IsDirectiveSite(u.site) = directiveSite
+    /\ IsKnownDirective(S, u.name) /\ ~IsRepeatable(S, u.name)
+    /\ \E j \in DOMAIN uses :
+         /\ j # k /\ uses[j].name = u.name /\ uses[j].site = u.site
+         /\ uses[j].extension < u.extension
+
+\* §3.13.6: "Any directives provided must not contain the use of a
+\* Directive which references the previous directive directly." The
+\* extension of @d applies @d.
+DirectiveExtensionUsesPrevious(S) ==
+  \E k \in DOMAIN DirectiveUses(S) :
+    LET u == DirectiveUses(S)[k] IN
+    u.extension > 0 /\ IsDirectiveSite(u.site) /\ u.name = u.site[2]
+
+\* "Any directives provided must not contain the use of a Directive which
+\* references the previous directive indirectly by referencing a Type or
+\* Directive which transitively includes a reference to the previous
+\* Directive." The extension of @d applies @e, and @e's definition reaches
+\* @d through the types and directives it references, in the extended
+\* schema.
+DirectiveExtensionReferencesPrevious(S) ==
+  \E k \in DOMAIN DirectiveUses(S) :
+    LET u == DirectiveUses(S)[k]
+        E == Extended(S)
+        start == References(E, <<"directive", u.name>>)
+    IN /\ u.extension > 0 /\ IsDirectiveSite(u.site) /\ u.name # u.site[2]
+       /\ <<"directive", u.site[2]>> \in Reachable(E, start, start)
+
+\* §3.13.4: "It must not appear on built-in scalar types." §3.5: "Built-in
+\* scalar types must not provide a scalar specification URL". A document can
+\* only apply @specifiedBy to a built-in scalar by extending it (`extend
+\* scalar Int @specifiedBy(url: "…")`), or by declaring it, which breaks
+\* TYPE_NAME_NOT_BUILTIN.
+SpecifiedByIsNotOnABuiltinScalar(S) ==
+  \A k \in DOMAIN DirectiveUses(S) :
+    LET u == DirectiveUses(S)[k] IN
+    (u.name = "specifiedBy" /\ u.site[1] = "SCALAR") => u.site[2] \notin BuiltinScalarNames
+
+\* Not stated by §3 for definitions: a non-repeatable directive applied
+\* twice to one element by one definition or one extension. §3 states the
+\* rule only for extensions against the previous element ("must not already
+\* apply"), and §5.7.3 Directives Are Unique per Location for executable
+\* documents. Graded as information only (kit/schema/rules.mjs).
+DirectivesAreNotRepeated(S) ==
+  LET uses == DirectiveUses(S) IN
+  \A k, j \in DOMAIN uses :
+    (/\ k # j /\ uses[k].name = uses[j].name /\ uses[k].site = uses[j].site
+     /\ uses[k].extension = uses[j].extension /\ IsKnownDirective(S, uses[k].name))
+      => IsRepeatable(S, uses[k].name)
+
+\* Not stated by §3 either: the arguments of a directive applied in SDL fit
+\* its definition. Every argument it names is defined, at most once, every
+\* required argument is given, and every value is compatible with the
+\* argument's type as a default value is (§3.6 rule 2.4.5's "compatible ...
+\* as per the coercion rules"). §5.4 states these rules for executable
+\* documents only. Graded as information only.
+AppliedArgsFit(S, u) ==
+  LET defs == DeclaredArgs(S, u.name) IN
+  /\ IsUnique(NamesOf(u.args))
+  /\ \A i \in DOMAIN u.args : HasArg(defs, u.args[i].name)
+  /\ \A j \in DOMAIN defs : IsRequired(defs[j]) => \E i \in DOMAIN u.args : u.args[i].name = defs[j].name
+  /\ \A i \in DOMAIN u.args :
+       HasArg(defs, u.args[i].name) =>
+         CoerceLiteral(Extended(S), ArgNamed(defs, u.args[i].name).type, u.args[i].value, FALSE, Fuel).ok
+AppliedDirectiveArgumentsFit(S) ==
+  \A k \in DOMAIN DirectiveUses(S) :
+    IsKnownDirective(S, DirectiveUses(S)[k].name) => AppliedArgsFit(S, DirectiveUses(S)[k])
+
+-----------------------------------------------------------------------------
 (* Verdicts: the rules a schema breaks *)
 
-Rules ==
+\* The rules of definitions, which Verdict checks on the extended schema.
+DefinitionRules ==
   { "TYPE_NAMES_UNIQUE", "TYPE_NAME_NOT_BUILTIN", "TYPE_NAME_RESERVED",
     "DIRECTIVE_NAMES_UNIQUE", "DIRECTIVE_NAME_RESERVED", "SCHEMA_DEFINITION_UNIQUE",
     "QUERY_ROOT_PROVIDED", "ROOT_TYPES_ARE_OBJECTS", "ROOT_TYPES_DIFFERENT",
@@ -803,6 +1068,18 @@ Rules ==
     "DIRECTIVE_LOCATIONS_DEFINED", "DIRECTIVE_USES_ITSELF",
     "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
     "DIRECTIVES_DEFINED", "DIRECTIVE_LOCATIONS_VALID" }
+
+\* The rules of extensions, and of where and how directives are applied,
+\* which Verdict checks on the document as written.
+DocumentRules ==
+  { "EXTENSION_TARGET_DEFINED", "EXTENSION_TARGET_KIND", "EXTENSION_ITEMS_UNIQUE",
+    "EXTENSION_ITEMS_NEW", "EXTENSION_INTERFACES_NEW", "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+    "EXTENSION_ONEOF", "SCHEMA_EXTENSION_DEFINED",
+    "DIRECTIVE_EXTENSION_DEFINED", "DIRECTIVE_EXTENSION_NOT_REAPPLIED",
+    "DIRECTIVE_EXTENSION_USES_PREVIOUS", "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
+    "SPECIFIED_BY_NOT_BUILTIN", "DIRECTIVE_NOT_REPEATED", "APPLIED_DIRECTIVE_ARGUMENTS" }
+
+Rules == DefinitionRules \cup DocumentRules
 
 TypesOfKind(S, kinds) == {S.types[i] : i \in {k \in DOMAIN S.types : S.types[k].kind \in kinds}}
 Objects(S) == TypesOfKind(S, {"OBJECT"})
@@ -866,10 +1143,34 @@ Violated(S, rule) ==
          \E i \in DOMAIN S.directives : ~DoesNotReferenceItselfIndirectly(S, S.directives[i])
     [] rule = "DIRECTIVES_DEFINED" -> ~DirectivesAreDefined(S)
     [] rule = "DIRECTIVE_LOCATIONS_VALID" -> ~DirectivesAreInDeclaredLocations(S)
+    [] rule = "EXTENSION_TARGET_DEFINED" ->
+         \E k \in DOMAIN Extensions(S) : ~ExtensionTargetIsDefined(S, Extensions(S)[k])
+    [] rule = "EXTENSION_TARGET_KIND" ->
+         \E k \in DOMAIN Extensions(S) : ~ExtensionTargetHasKind(S, Extensions(S)[k])
+    [] rule = "EXTENSION_ITEMS_UNIQUE" ->
+         \E k \in DOMAIN Extensions(S) : ~ExtensionItemsAreUnique(Extensions(S)[k])
+    [] rule = "EXTENSION_ITEMS_NEW" -> \E k \in DOMAIN Extensions(S) : ~ExtensionItemsAreNew(S, k)
+    [] rule = "EXTENSION_INTERFACES_NEW" -> \E k \in DOMAIN Extensions(S) : ~ExtensionInterfacesAreNew(S, k)
+    [] rule = "EXTENSION_DIRECTIVES_NOT_REAPPLIED" -> Reapplied(S, FALSE)
+    [] rule = "EXTENSION_ONEOF" -> \E k \in DOMAIN Extensions(S) : ~ExtensionDoesNotAddOneOf(Extensions(S)[k])
+    [] rule = "SCHEMA_EXTENSION_DEFINED" ->
+         \E k \in DOMAIN Extensions(S) : ~SchemaExtensionHasSchema(S, Extensions(S)[k])
+    [] rule = "DIRECTIVE_EXTENSION_DEFINED" ->
+         \E k \in DOMAIN Extensions(S) : ~DirectiveExtensionTargetIsDefined(S, Extensions(S)[k])
+    [] rule = "DIRECTIVE_EXTENSION_NOT_REAPPLIED" -> Reapplied(S, TRUE)
+    [] rule = "DIRECTIVE_EXTENSION_USES_PREVIOUS" -> DirectiveExtensionUsesPrevious(S)
+    [] rule = "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS" -> DirectiveExtensionReferencesPrevious(S)
+    [] rule = "SPECIFIED_BY_NOT_BUILTIN" -> ~SpecifiedByIsNotOnABuiltinScalar(S)
+    [] rule = "DIRECTIVE_NOT_REPEATED" -> ~DirectivesAreNotRepeated(S)
+    [] rule = "APPLIED_DIRECTIVE_ARGUMENTS" -> ~AppliedDirectiveArgumentsFit(S)
     [] OTHER -> FALSE
 
-\* The rules S breaks. S is a valid schema when this is empty.
-Verdict(S) == {rule \in Rules : Violated(S, rule)}
+\* The rules S breaks. S is a valid schema when this is empty. The rules of
+\* definitions are checked on the schema the extensions make, the others on
+\* the document as written. Without extensions, Extended(S) is S.
+Verdict(S) ==
+  {rule \in DefinitionRules : Violated(Extended(S), rule)}
+  \cup {rule \in DocumentRules : Violated(S, rule)}
 IsValidSchema(S) == Verdict(S) = {}
 
 \* The rules S breaks under September 2025, for a document in its grammar
@@ -878,7 +1179,7 @@ IsValidSchema(S) == Verdict(S) = {}
 \* HasNoUnbrokenNonNullChain's. The kit tags a schema whose verdict this
 \* changes `since: "September2026"`.
 CycleRuleSeptember2025(S) ==
-  IF \E T \in InputObjects(S) : ~HasNoUnbrokenNonNullChain(S, T)
+  IF \E T \in InputObjects(Extended(S)) : ~HasNoUnbrokenNonNullChain(Extended(S), T)
   THEN {"INPUT_OBJECT_UNBREAKABLE_CYCLE"} ELSE {}
 VerdictSeptember2025(S) ==
   (Verdict(S) \ {"INPUT_OBJECT_UNBREAKABLE_CYCLE"}) \cup CycleRuleSeptember2025(S)

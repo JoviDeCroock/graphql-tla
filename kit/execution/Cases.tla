@@ -31,7 +31,7 @@ MayRaise(fx, O, path, type, fields) ==
          [] outcome.kind = "object" /\ Expected(fx, inner) = "object" ->
               IF ~(outcome.type \in TypeDef(fx, inner.name).possibleTypes) THEN FALSE
               ELSE
-                LET grouped == CollectSubfields(fx, outcome.type, fields) IN
+                LET grouped == Executed(fx, outcome.type, CollectSubfields(fx, outcome.type, fields)) IN
                 \E j \in DOMAIN grouped :
                   IF grouped[j].fields[1].name = "__typename" THEN FALSE
                   ELSE MayRaise(fx, O, Append(path, grouped[j].key),

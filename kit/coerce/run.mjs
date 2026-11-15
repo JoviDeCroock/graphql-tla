@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { Crash, answerOrCrash, crashResponse } from "../areas.mjs";
 import { REPORT_FORMAT, provenance, section } from "../report.mjs";
 import { CHECKS } from "./checks.mjs";
-import { NO_RESPONSE, classify, contextFor, describeAccepted, fieldErrorKindCheck, judge, malformed, noResponseCheck, planFor, releaseName, sameAnswer, summary } from "./judge.mjs";
+import { NO_RESPONSE, classify, contextFor, describeAccepted, fieldErrorKindCheck, judge, malformed, noResponseCheck, planFor, releaseName, sameAnswer, sameJson, summary } from "./judge.mjs";
 
 // Whether a JSON text holds a string with a lone surrogate: the one input an
 // adapter may answer `unsupported` for (docs/kit-areas.md).
@@ -78,10 +78,12 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 // objects, and SourceCharacter as any Unicode scalar value.
 const sinceOf = (vector) => vector.since;
 // Whether October 2021 can't take the vector's input at all: its schema has
-// a OneOf input object, or its document a code point above U+FFFF, which
-// October 2021's SourceCharacter leaves out.
+// a OneOf input object, its document a code point above U+FFFF, which
+// October 2021's SourceCharacter leaves out, or a description on an
+// operation or variable definition (`newInput`), which its grammar has no
+// place for.
 const SUPPLEMENTARY = /[\u{10000}-\u{10FFFF}]/u;
-const newInput = (vector, schema) => /@oneOf\b/.test(schema) || SUPPLEMENTARY.test(vector.document);
+const newInput = (vector, schema) => Boolean(vector.newInput) || /@oneOf\b/.test(schema) || SUPPLEMENTARY.test(vector.document);
 // The release a failure is counted under. A crash fails in every edition
 // where the vector's input is valid, so it counts under the vector's
 // release only where October 2021 can't take the input (docs/kit-areas.md,
@@ -100,9 +102,22 @@ export const loadVectors = () => JSON.parse(readFileSync(join(root, "kit/coerce/
 // go through the same classification and comparison as an adapter's.
 
 // A raw result that shows `answer` the way a correct implementation would.
-const rawFor = (answer, fallbackField) => {
+// For a vector with `at`, a field error or value at its field is shown at
+// the field's positions, and a subscription's value with its source call.
+const rawFor = (answer, fallbackField, vector = {}) => {
   const field = answer.field ?? fallbackField;
   if (answer.outcome === "request-error") return { response: { errors: [{ message: "request error" }] }, calls: [] };
+  const { at } = vector;
+  if (at && field === at.field) {
+    if (answer.outcome === "field-error") {
+      return { response: { data: at.error, errors: at.paths.map((path) => ({ message: "field error", path })) }, calls: [] };
+    }
+    return {
+      response: { data: at.value },
+      calls: at.paths.map((path) => ({ path, arguments: answer.arguments })),
+      ...(vector.sourceCalled ? { sourceCalls: [{ field, arguments: answer.arguments }] } : {}),
+    };
+  }
   if (answer.outcome === "field-error") {
     return { response: { data: { [field]: null }, errors: [{ message: "field error", path: [field] }] }, calls: [] };
   }
@@ -158,7 +173,7 @@ export const selfTest = (graded, inputs, capabilities, schemaOf = () => "") => {
     if (raw instanceof Crash) return judge(vector, plan, NO_RESPONSE, contextFor(vector, inputs, capabilities));
     const problem = malformed(raw);
     if (problem) return { kind: "malformed" };
-    return judge(vector, plan, classify(raw), contextFor(vector, inputs, capabilities, rejectedByValidator));
+    return judge(vector, plan, classify(raw, vector), contextFor(vector, inputs, capabilities, rejectedByValidator));
   };
   // `check` is the check the failure must count against; `not`, one it
   // must not.
@@ -172,12 +187,15 @@ export const selfTest = (graded, inputs, capabilities, schemaOf = () => "") => {
   const accepted = (g, answer) => g.plan.accept.some((a) => sameAnswer(contextFor(g.vector, inputs, capabilities), a, answer));
   graded.forEach((g, i) => {
     const { vector, plan } = g;
-    const field = plan.accept.find((a) => a.field)?.field ?? /\{ (\w+)/.exec(vector.document)?.[1] ?? "int";
+    const field = plan.accept.find((a) => a.field)?.field ?? vector.at?.field ?? /\{ (\w+)/.exec(vector.document)?.[1] ?? "int";
+    const rawOf = (answer, f = field) => rawFor(answer, f, vector);
+    // The field's first response position.
+    const position = vector.at?.paths[0] ?? [field];
     // Every answer the plan accepts passes.
-    for (const a of plan.accept) if (run(g, rawFor(a, field))) problems.push(`an accepted answer fails ${vector.id}`);
+    for (const a of plan.accept) if (run(g, rawOf(a, field))) problems.push(`an accepted answer fails ${vector.id}`);
     const [want] = plan.accept;
     // Without absent-vs-null, null entries may be left out.
-    if (!capabilities.has("absent-vs-null") && want.outcome === "value" && run(g, rawFor({ ...want, arguments: dropNulls(want.arguments) }))) {
+    if (!capabilities.has("absent-vs-null") && want.outcome === "value" && run(g, rawOf({ ...want, arguments: dropNulls(want.arguments) }))) {
       problems.push(`the expected answer without its null entries fails ${vector.id}`);
     }
     // Verdicts flipped, where the plan doesn't accept the flipped answer.
@@ -186,50 +204,50 @@ export const selfTest = (graded, inputs, capabilities, schemaOf = () => "") => {
       [{ outcome: "field-error", field }, "a field error"],
       [{ outcome: "value", field, arguments: want.outcome === "value" ? { ...want.arguments, v: "wrong" } : {} }, "a value"],
     ];
-    for (const [answer, name] of flips) if (!accepted(g, answer)) caught(g, rawFor(answer, field), name);
+    for (const [answer, name] of flips) if (!accepted(g, answer)) caught(g, rawOf(answer, field), name);
     // The answer to the nearest vector whose answer this plan doesn't accept.
     for (let k = 1; k < graded.length; k++) {
       const other = graded[(i + k) % graded.length].plan.accept[0];
       if (!accepted(g, other)) {
-        caught(g, rawFor(other, field), "another vector's answer");
+        caught(g, rawOf(other, field), "another vector's answer");
         break;
       }
     }
     // Answers that leave a SHOULD undone count against that SHOULD's check.
-    for (const d of plan.deviations) caught(g, rawFor(d.answer, field), "an answer that leaves a SHOULD undone", d.check);
+    for (const d of plan.deviations) caught(g, rawOf(d.answer, field), "an answer that leaves a SHOULD undone", d.check);
     // Leaving out one input field default, but not another, still counts
     // against inputFieldDefaults; a wrong value in the one kept doesn't.
     if (plan.withoutDefaults) {
       const paths = addedPaths(want.arguments, plan.withoutDefaults.arguments);
       if (paths.length >= 2) {
         const partial = editAt(want.arguments, paths[0], undefined, true);
-        caught(g, rawFor({ ...want, arguments: partial }), "an answer that leaves out some input field defaults", "inputFieldDefaults");
-        caught(g, rawFor({ ...want, arguments: editAt(partial, paths[1], "wrong") }), "some defaults left out and a wrong value", plan.check);
+        caught(g, rawOf({ ...want, arguments: partial }), "an answer that leaves out some input field defaults", "inputFieldDefaults");
+        caught(g, rawOf({ ...want, arguments: editAt(partial, paths[1], "wrong") }), "some defaults left out and a wrong value", plan.check);
       }
     }
     // October 2021's answer to a vector whose rule is new since then fails
     // the vector's check, and so does the answer of October 2021's §3.11
     // table of examples.
-    for (const a of plan.editions) caught(g, rawFor(a, field), "October 2021's answer to a vector with a newer rule", plan.check);
-    for (const a of plan.examples) caught(g, rawFor(a, field), "the answer of October 2021's §3.11 table", plan.check);
+    for (const a of plan.editions) caught(g, rawOf(a, field), "October 2021's answer to a vector with a newer rule", plan.check);
+    for (const a of plan.examples) caught(g, rawOf(a, field), "the answer of October 2021's §3.11 table", plan.check);
     // A valid document refused by the implementation's own validator fails
     // acceptsValid, even where the reference's answer is a request error;
     // a request error the validator doesn't explain is graded as usual.
-    if (vector.valid !== false && !capabilities.has("unvalidated") && !plan.examples.some((a) => a.outcome === "request-error")) {
-      caught(g, rawFor({ outcome: "request-error" }, field), "a valid document rejected at validation", "acceptsValid", undefined, true);
-      if (want.outcome === "request-error" && run(g, rawFor(want, field), false)) problems.push(`a request error the validator doesn't explain fails ${vector.id}`);
+    if (vector.valid !== false && !vector.unparsable && !capabilities.has("unvalidated") && !plan.examples.some((a) => a.outcome === "request-error")) {
+      caught(g, rawOf({ outcome: "request-error" }, field), "a valid document rejected at validation", "acceptsValid", undefined, true);
+      if (want.outcome === "request-error" && run(g, rawOf(want, field), false)) problems.push(`a request error the validator doesn't explain fails ${vector.id}`);
     }
     // Undeclared null entries, as an argument and inside an input object.
     if (want.outcome === "value") {
-      caught(g, rawFor({ ...want, arguments: withUndeclaredNull(want.arguments, false) }), "an undeclared null argument");
+      caught(g, rawOf({ ...want, arguments: withUndeclaredNull(want.arguments, false) }), "an undeclared null argument");
       const nested = withUndeclaredNull(want.arguments, true);
-      if (nested) caught(g, rawFor({ ...want, arguments: nested }), "an undeclared null input field");
+      if (nested) caught(g, rawOf({ ...want, arguments: nested }), "an undeclared null input field");
     }
     // No response at all, even with a response attached: responds, whatever
     // the reference's answer.
-    caught(g, Object.assign(new Crash("NullPointerException"), rawFor(want, field)), "no response", noResponseCheck(plan));
+    caught(g, Object.assign(new Crash("NullPointerException"), rawOf(want, field)), "no response", noResponseCheck(plan));
     // Responses the classification must not accept.
-    const raw = rawFor(want, field);
+    const raw = rawOf(want, field);
     // A top-level entry other than data, errors and extensions, and an
     // extensions entry that isn't a map, wherever the outcome would
     // otherwise pass (§7.1.8, §7.1.7); a map extensions passes.
@@ -240,35 +258,67 @@ export const selfTest = (graded, inputs, capabilities, schemaOf = () => "") => {
     // argumentErrorKind's SHOULD, or the vector's own check where §3.10 or
     // §3.10.1 requires the execution error.
     if (want.outcome === "field-error" && !accepted(g, { outcome: "request-error" }) && !plan.examples.some((a) => a.outcome === "request-error")) {
-      caught(g, rawFor({ outcome: "request-error" }, field), "a request error for a field error", fieldErrorKindCheck(vector, plan), undefined, false);
+      caught(g, rawOf({ outcome: "request-error" }, field), "a request error for a field error", fieldErrorKindCheck(vector, plan), undefined, false);
     }
     // Errors that aren't maps with a string message: errorFormat, wherever
     // the outcome would otherwise pass.
     if (want.outcome !== "value") {
-      const bad = (errors) => ({ ...raw, response: { ...raw.response, errors } });
-      const path = want.outcome === "field-error" ? { path: [field] } : {};
-      caught(g, bad([null]), "an error that is null", "errorFormat");
-      caught(g, bad([{ ...path }]), "an error without a message", "errorFormat");
-      caught(g, bad([{ message: 1, ...path }]), "an error whose message isn't a string", "errorFormat");
+      const bad = (make) => ({ ...raw, response: { ...raw.response, errors: raw.response.errors.map(make) } });
+      const path = (e) => (want.outcome === "field-error" ? { path: e.path } : {});
+      // Where the reference's data is null (the error reached the root),
+      // an error without a path makes a request error with "data": null:
+      // caught, but not as errorFormat or fieldErrorPath.
+      const rootNull = vector.at?.error === null;
+      caught(g, bad(() => null), "an error that is null", rootNull ? undefined : "errorFormat");
+      caught(g, bad((e) => ({ ...path(e) })), "an error without a message", "errorFormat");
+      caught(g, bad((e) => ({ message: 1, ...path(e) })), "an error whose message isn't a string", "errorFormat");
     }
     if (want.outcome === "request-error") {
       caught(g, { ...raw, response: { ...raw.response, data: null } }, "a request error with data: null", "requestErrorNoData");
       caught(g, { ...raw, calls: [{ path: [field], arguments: {} }] }, "a request error after a resolver ran");
     } else if (want.outcome === "field-error") {
-      caught(g, { ...raw, response: { ...raw.response, errors: [{ message: "field error" }] } }, "a field error without a path", "fieldErrorPath");
-      caught(g, { ...raw, response: { ...raw.response, errors: [{ message: "field error", path: ["v"] }] } }, "a field error at the argument's path", "fieldErrorPath");
-      caught(g, { ...raw, response: { ...raw.response, errors: [{ message: "field error", path: [field, "v"] }] } }, "a field error at a path inside the field", "fieldErrorPath");
-      caught(g, { ...raw, calls: [{ path: [field], arguments: {} }] }, "a field error after the resolver ran");
+      const paths = (make) => ({ ...raw, response: { ...raw.response, errors: raw.response.errors.map((e) => ({ message: e.message, ...make(e.path) })) } });
+      caught(g, paths(() => ({})), "a field error without a path", vector.at?.error === null ? undefined : "fieldErrorPath");
+      caught(g, paths(() => ({ path: ["v"] })), "a field error at the argument's path", "fieldErrorPath");
+      caught(g, paths((p) => ({ path: [...p, "v"] })), "a field error at a path inside the field", "fieldErrorPath");
+      caught(g, { ...raw, calls: [{ path: position, arguments: {} }] }, "a field error after the resolver ran");
+      if (vector.at && vector.at.paths.length > 1) {
+        // A list: one error for all its positions, or the same position
+        // twice, isn't the field error at each of them.
+        caught(g, { ...raw, response: { ...raw.response, errors: raw.response.errors.slice(1) } }, "a field error at one of a list's positions only");
+        caught(g, paths(() => ({ path: position })), "the same position's field error twice", "fieldErrorPath");
+      }
+      if (vector.at && vector.at.error !== null) {
+        // Null at the root, or at the field, where the reference's null is
+        // elsewhere: the error didn't propagate where §6.4.4 says.
+        if (!sameJson(vector.at.error, null)) caught(g, { ...raw, response: { ...raw.response, data: null } }, "a field error that nulls the data");
+        const atField = structuredClone(vector.at.value);
+        for (const p of vector.at.paths) p.slice(0, -1).reduce((x, k) => x[k], atField)[p.at(-1)] = null;
+        if (!sameJson(atField, vector.at.error)) caught(g, { ...raw, response: { ...raw.response, data: atField } }, "a field error that doesn't propagate to a nullable parent");
+      }
     } else {
       caught(g, { ...raw, response: { ...raw.response, errors: [{ message: "extra", path: [field] }] } }, "a value with an error");
       caught(g, { ...raw, calls: [...raw.calls, ...raw.calls] }, "a value from two resolver calls");
       caught(g, { ...raw, calls: [{ ...raw.calls[0], path: ["elsewhere"] }] }, "a value from a call at another field");
       caught(g, { ...raw, response: { ...raw.response, errors: [] } }, "a value with an empty errors list", "errorsList");
+      if (vector.at && vector.at.paths.length > 1) {
+        caught(g, { ...raw, calls: raw.calls.map((c, k) => (k === 0 ? c : { ...c, arguments: { v: "wrong" } })) }, "a value whose positions got other arguments");
+      }
+      if (vector.sourceCalled) {
+        // The source stream: created with other arguments, not created, or
+        // twice.
+        caught(g, { ...raw, sourceCalls: [{ field, arguments: { v: "wrong" } }] }, "a source stream created with other arguments", "sourceStream");
+        caught(g, { ...raw, sourceCalls: [] }, "a value without a source stream", "sourceStream");
+        caught(g, { ...raw, sourceCalls: [...raw.sourceCalls, ...raw.sourceCalls] }, "a source stream created twice", "sourceStream");
+      }
     }
     // A field error at the argument's path, where the vector doesn't accept
     // a field error, fails as a field error would: not fieldErrorPath.
-    const fieldError = { response: { data: { [field]: null }, errors: [{ message: "field error", path: ["v"] }] }, calls: [] };
+    const fieldError = rawOf({ outcome: "field-error", field });
+    fieldError.response.errors = fieldError.response.errors.map((e) => ({ ...e, path: ["v"] }));
     if (!accepted(g, { outcome: "field-error", field })) caught(g, fieldError, "an unexpected field error at the argument's path", undefined, "fieldErrorPath");
+    // A response that isn't a map: resultMap, whatever the vector.
+    for (const response of [[raw.response], "error", null]) caught(g, { ...raw, response }, "a response that isn't a map", "resultMap");
   });
   // A crash counts under the vector's release only where October 2021 can't
   // take its input (a OneOf schema, a code point above U+FFFF); a wrong
@@ -373,6 +423,8 @@ export const run = async ({ adapter, strict, log = console.log }) => {
       document: vector.document,
       variables: vector.variables,
       ...(vector.operationName !== undefined ? { operationName: vector.operationName } : {}),
+      ...(vector.subscribe ? { subscribe: vector.subscribe } : {}),
+      ...(vector.extensions !== undefined ? { extensions: vector.extensions } : {}),
     });
     const reason = result?.unsupported;
     result = unsupportedResolved(vector, result);
@@ -382,8 +434,8 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     }
     const crash = result instanceof Crash;
     const problem = crash ? undefined : malformed(result);
-    const got = crash ? NO_RESPONSE : problem ? undefined : classify(result);
-    const rejected = validator && !problem && vector.valid !== false && got.outcome === "request-error" ? await rejects(vector) : undefined;
+    const got = crash ? NO_RESPONSE : problem ? undefined : classify(result, vector);
+    const rejected = validator && !problem && vector.valid !== false && !vector.unparsable && got.outcome === "request-error" ? await rejects(vector) : undefined;
     const failure = problem ? undefined : judge(vector, g.plan, got, contextFor(vector, inputs, capabilities, rejected));
     outcomes.push({ ...g, result, problem, got, failure });
   }
@@ -410,7 +462,7 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     stats.get(failure.check).failing++;
     countSince(stats.get(failure.check).failingSince, since);
     const key = `${failure.kind}\u0000${failure.check}\u0000${failure.hint ?? ""}\u0000${failure.since ?? ""}`;
-    const input = `${vector.document}  variables: ${vector.variables}${vector.operationName !== undefined ? `  operationName: ${vector.operationName}` : ""}`;
+    const input = `${vector.document}  variables: ${vector.variables}${vector.operationName !== undefined ? `  operationName: ${vector.operationName}` : ""}${vector.subscribe ? `  subscribe: ${vector.subscribe}` : ""}${vector.extensions !== undefined ? `  extensions: ${vector.extensions}` : ""}`;
     const f = findings.get(key) ?? { ...(crash ? { kind: "crash" } : {}), checks: [failure.check], summary: summary(failure), cases: 0, since: {}, fixtures: {} };
     f.cases++;
     // How many of them are lists or input objects that fail through an item
@@ -515,6 +567,8 @@ export const run = async ({ adapter, strict, log = console.log }) => {
         ...(check.levels ? { levels: check.levels } : {}),
         spec: check.spec.map(section),
         ...(check.basis ? { basis: check.basis } : {}),
+        // The capabilities the only vectors that exercise it need.
+        ...(check.requires ? { requires: check.requires } : {}),
         status: s.failing > 0 ? "fail" : s.cases > 0 ? "pass" : "untested",
         cases: s.cases,
         failing: s.failing,

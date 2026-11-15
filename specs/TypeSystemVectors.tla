@@ -62,7 +62,12 @@ Full(S, n, uses) ==
    schemaDef |-> S.schemaDef, operations |-> S.operations,
    schemaDefinitions |-> n, uses |-> uses]
 Uses(S, uses) == Full(S, IF S.schemaDef THEN 1 ELSE 0, uses)
-Use(name, location) == [name |-> name, location |-> location]
+\* A use of a directive at a site, applied by the extension-th extension
+\* (0: by a definition), with arguments args.
+UseAt(name, location, site, extension, args) ==
+  [name |-> name, location |-> location, site |-> site, extension |-> extension, args |-> args]
+\* A use on an element of its own.
+Use(name, location) == UseAt(name, location, <<"ELEMENT", location>>, 0, <<>>)
 At(D, locations) == [D EXCEPT !.locations = locations]
 
 QueryA == Obj("Query", <<>>, <<F("a", R("Int"))>>)
@@ -390,9 +395,11 @@ DirectiveUsesAreChecked == ~done =>
         {"DIRECTIVE_LOCATIONS_VALID"})
   \* Built-in directives need no definition, and have their own locations.
   /\ Is(Uses(With(<<>>), <<Use("deprecated", "FIELD_DEFINITION"), Use("deprecated", "ARGUMENT_DEFINITION"),
-                          Use("specifiedBy", "SCALAR"), Use("oneOf", "INPUT_OBJECT")>>), {})
+                          UseAt("specifiedBy", "SCALAR", <<"ELEMENT", "SCALAR">>, 0, <<E("url", V("string", "x"))>>),
+                          Use("oneOf", "INPUT_OBJECT")>>), {})
   /\ Is(Uses(With(<<>>), <<Use("deprecated", "OBJECT")>>), {"DIRECTIVE_LOCATIONS_VALID"})
-  /\ Is(Uses(With(<<>>), <<Use("skip", "FIELD_DEFINITION")>>), {"DIRECTIVE_LOCATIONS_VALID"})
+  /\ Is(Uses(With(<<>>), <<UseAt("skip", "FIELD_DEFINITION", <<"ELEMENT", "1">>, 0, <<E("if", V("boolean", "true"))>>)>>),
+        {"DIRECTIVE_LOCATIONS_VALID"})
   \* A directive that is neither defined nor built in.
   /\ Is(Uses(With(<<>>), <<Use("notDefined", "OBJECT")>>), {"DIRECTIVES_DEFINED"})
   /\ Is(Uses(WithDirectives(With(<<>>), <<At(Dir("notDefined", <<>>, {}), <<"OBJECT">>)>>), <<Use("notDefined", "OBJECT")>>), {})
@@ -435,4 +442,166 @@ NamesAreChecked == ~done =>
   /\ Is(With(<<Scalar("Date")>>), {})
   /\ Is(With(<<Scalar("String")>>), {"TYPE_NAME_NOT_BUILTIN"})
   /\ Is(With(<<Scalar("A"), Scalar("A")>>), {"TYPE_NAMES_UNIQUE"})
+
+-----------------------------------------------------------------------------
+(* Type system extensions: §3.3.2, §3.5.6, §3.6.3, §3.7.1, §3.8.1, §3.9.1, *)
+(* §3.10.2 and §3.13.6                                                     *)
+
+Ext(kind, name) ==
+  [kind |-> kind, name |-> name, fields |-> <<>>, interfaces |-> <<>>, members |-> <<>>,
+   values |-> <<>>, inputFields |-> <<>>, operations |-> <<>>, oneOf |-> FALSE, directives |-> {}]
+ExtFields(kind, name, fields) == [Ext(kind, name) EXCEPT !.fields = fields]
+ExtImplements(name, interfaces, fields) == [ExtFields("OBJECT", name, fields) EXCEPT !.interfaces = interfaces]
+EV(names) == [k \in DOMAIN names |-> [name |-> names[k], description |-> <<>>, deprecated |-> <<>>]]
+\* Schema data with extensions, the directives the document applies, and
+\* one schema definition if S has one.
+Doc(S, exts, uses) ==
+  [description |-> S.description, types |-> S.types, directives |-> S.directives,
+   schemaDef |-> S.schemaDef, operations |-> S.operations,
+   schemaDefinitions |-> IF S.schemaDef THEN 1 ELSE 0, uses |-> uses, extensions |-> exts]
+Exts(S, exts) == Doc(S, exts, <<>>)
+
+ExtensionsAreChecked == ~done =>
+  \* §3.6.3's example: extend type Story { isHiddenLocally: Boolean }
+  /\ LET S == Exts(With(<<Obj("Story", <<>>, <<F("id", R("ID"))>>)>>),
+                   <<ExtFields("OBJECT", "Story", <<F("isHiddenLocally", R("Boolean"))>>)>>)
+     IN Is(S, {}) /\ HasField(TypeNamed(Extended(S), "Story"), "isHiddenLocally")
+  \* "The named type must already be defined and must be an Object type."
+  /\ Is(Exts(With(<<>>), <<ExtFields("OBJECT", "Missing", <<F("b", R("Int"))>>)>>), {"EXTENSION_TARGET_DEFINED"})
+  /\ Is(Exts(With(<<Scalar("S")>>), <<ExtFields("OBJECT", "S", <<F("b", R("Int"))>>)>>), {"EXTENSION_TARGET_KIND"})
+  /\ Is(Exts(With(<<Enum("E", <<"A">>)>>), <<[Ext("UNION", "E") EXCEPT !.members = <<"Query">>]>>), {"EXTENSION_TARGET_KIND"})
+  \* A built-in scalar is defined, and is a Scalar type.
+  /\ Is(Exts(With(<<>>), <<Ext("SCALAR", "Int")>>), {})
+  /\ Is(Exts(With(<<>>), <<ExtFields("OBJECT", "Int", <<F("b", R("Int"))>>)>>), {"EXTENSION_TARGET_KIND"})
+  \* Unique within the extension, and new to the previous type, which
+  \* includes the extensions before it.
+  /\ Is(Exts(With(<<>>), <<ExtFields("OBJECT", "Query", <<F("b", R("Int")), F("b", R("Int"))>>)>>), {"EXTENSION_ITEMS_UNIQUE"})
+  /\ Is(Exts(With(<<>>), <<ExtFields("OBJECT", "Query", <<F("a", R("Int"))>>)>>), {"EXTENSION_ITEMS_NEW"})
+  /\ Is(Exts(With(<<>>), <<ExtFields("OBJECT", "Query", <<F("b", R("Int"))>>),
+                          ExtFields("OBJECT", "Query", <<F("b", R("Int"))>>)>>), {"EXTENSION_ITEMS_NEW"})
+  /\ Is(Exts(With(<<Enum("E", <<"A">>)>>), <<[Ext("ENUM", "E") EXCEPT !.values = EV(<<"A">>)]>>), {"EXTENSION_ITEMS_NEW"})
+  /\ Is(Exts(With(<<Enum("E", <<"A">>)>>), <<[Ext("ENUM", "E") EXCEPT !.values = EV(<<"B", "B">>)]>>), {"EXTENSION_ITEMS_UNIQUE"})
+  /\ Is(Exts(With(<<Union("U", <<"Query">>)>>), <<[Ext("UNION", "U") EXCEPT !.members = <<"Query">>]>>), {"EXTENSION_ITEMS_NEW"})
+  /\ Is(Exts(With(<<Input("In", <<Arg("x", R("Int"))>>)>>), <<[Ext("INPUT_OBJECT", "In") EXCEPT !.inputFields = <<Arg("x", R("Int"))>>]>>),
+        {"EXTENSION_ITEMS_NEW"})
+  \* "Any interfaces provided must not be already implemented by the
+  \* previous Object type."
+  /\ LET IfaceI == Iface("I", <<>>, <<F("a", R("Int"))>>) IN
+     /\ Is(Exts(Schema(<<Obj("Query", <<"I">>, <<F("a", R("Int"))>>), IfaceI>>), <<ExtImplements("Query", <<"I">>, <<>>)>>),
+           {"EXTENSION_INTERFACES_NEW"})
+     \* "The resulting extended object type must be a super-set of all
+     \* interfaces it implements."
+     /\ Is(Exts(Schema(<<Obj("Query", <<>>, <<F("b", R("Int"))>>), IfaceI>>), <<ExtImplements("Query", <<"I">>, <<>>)>>),
+           {"IMPL_FIELD_PROVIDED"})
+     /\ Is(Exts(Schema(<<Obj("Query", <<>>, <<F("b", R("Int"))>>), IfaceI>>), <<ExtImplements("Query", <<"I">>, <<F("a", R("Int"))>>)>>),
+           {})
+     \* The same interface twice in one extension is the extended type's
+     \* "unique interfaces" rule's.
+     /\ Is(Exts(Schema(<<Obj("Query", <<>>, <<F("a", R("Int"))>>), IfaceI>>), <<ExtImplements("Query", <<"I", "I">>, <<>>)>>),
+           {"IMPLEMENTS_UNIQUE"})
+  \* §3.7.1's example: extend interface NamedEntity { nickname: String },
+  \* with its implementations extended too.
+  /\ LET named == Iface("NamedEntity", <<>>, <<F("name", R("String"))>>)
+         person == Obj("Person", <<"NamedEntity">>, <<F("name", R("String"))>>)
+         business == Obj("Business", <<"NamedEntity">>, <<F("name", R("String"))>>)
+         nickname == <<F("nickname", R("String"))>>
+     IN /\ Is(Exts(With(<<named, person, business>>),
+                    <<ExtFields("INTERFACE", "NamedEntity", nickname), ExtFields("OBJECT", "Person", nickname),
+                      ExtFields("OBJECT", "Business", nickname)>>), {})
+        \* "Any Object or Interface type which implemented the previous
+        \* Interface type must also be a super-set of the fields of the
+        \* Interface type extension"
+        /\ Is(Exts(With(<<named, person, business>>),
+                    <<ExtFields("INTERFACE", "NamedEntity", nickname), ExtFields("OBJECT", "Person", nickname)>>),
+              {"IMPL_FIELD_PROVIDED"})
+  \* "The member types of a Union type extension must all be Object base
+  \* types": the extended union's rule.
+  /\ Is(Exts(With(<<Union("U", <<"Query">>), Iface("I", <<>>, <<F("x", R("Int"))>>)>>),
+             <<[Ext("UNION", "U") EXCEPT !.members = <<"I">>]>>), {"UNION_MEMBERS_OBJECTS"})
+  \* OneOf: "The @oneOf directive must not be provided by an Input Object
+  \* type extension." If the original is OneOf, the extension's fields are
+  \* nullable and have no default: the extended type's own rules.
+  /\ Is(Exts(With(<<Input("In", <<Arg("a", R("Int"))>>)>>), <<[Ext("INPUT_OBJECT", "In") EXCEPT !.oneOf = TRUE]>>),
+        {"EXTENSION_ONEOF"})
+  /\ Is(Exts(With(<<OneOf("In", <<Arg("a", R("Int"))>>)>>), <<[Ext("INPUT_OBJECT", "In") EXCEPT !.inputFields = <<Arg("b", NN(R("Int")))>>]>>),
+        {"ONEOF_FIELD_NULLABLE"})
+  /\ Is(Exts(With(<<OneOf("In", <<Arg("a", R("Int"))>>)>>), <<[Ext("INPUT_OBJECT", "In") EXCEPT !.inputFields = <<ArgD("b", R("Int"), I("1"))>>]>>),
+        {"ONEOF_FIELD_NO_DEFAULT"})
+  /\ Is(Exts(With(<<OneOf("In", <<Arg("a", R("Int"))>>)>>), <<[Ext("INPUT_OBJECT", "In") EXCEPT !.inputFields = <<Arg("b", R("Int"))>>]>>), {})
+  \* Schema extensions: "The Schema must already be defined." The operation
+  \* types they add are the schema's.
+  /\ LET M == Obj("M", <<>>, <<F("a", R("Int"))>>)
+         addM == [Ext("SCHEMA", "") EXCEPT !.operations = <<Op("mutation", "M")>>]
+     IN /\ Is(Exts(With(<<M>>), <<addM>>), {"SCHEMA_EXTENSION_DEFINED"})
+        /\ Is(Exts(WithRoots(With(<<M>>), <<Op("query", "Query")>>), <<addM>>), {})
+        /\ RootTypeName(Extended(Exts(WithRoots(With(<<M>>), <<Op("query", "Query")>>), <<addM>>)), "mutation") = <<"M">>
+        /\ Is(Exts(WithRoots(With(<<Input("M", <<Arg("a", R("Int"))>>)>>), <<Op("query", "Query")>>),
+                    <<[Ext("SCHEMA", "") EXCEPT !.operations = <<Op("mutation", "M")>>]>>), {"ROOT_TYPES_ARE_OBJECTS"})
+  \* Without extensions, the extended schema is the schema.
+  /\ Extended(With(<<>>)) = With(<<>>)
+
+\* Directives applied by extensions, and how directives are applied.
+QueryAt(name, extension) == UseAt(name, "OBJECT", <<"OBJECT", "Query">>, extension, <<>>)
+OnObject(name) == At(Dir(name, <<>>, {}), <<"OBJECT">>)
+Repeatable(D) == [D EXCEPT !.repeatable = TRUE]
+
+AppliedDirectivesAreChecked == ~done =>
+  \* "Any non-repeatable directives provided must not already apply to the
+  \* previous Object type."
+  /\ Is(Doc(WithDirectives(With(<<>>), <<OnObject("d")>>), <<Ext("OBJECT", "Query")>>, <<QueryAt("d", 0), QueryAt("d", 1)>>),
+        {"EXTENSION_DIRECTIVES_NOT_REAPPLIED"})
+  /\ Is(Doc(WithDirectives(With(<<>>), <<OnObject("d")>>), <<Ext("OBJECT", "Query"), Ext("OBJECT", "Query")>>,
+            <<QueryAt("d", 1), QueryAt("d", 2)>>), {"EXTENSION_DIRECTIVES_NOT_REAPPLIED"})
+  \* §3.13's example: @delegateField is repeatable, on Book and on its
+  \* extension.
+  /\ Is(Doc(WithDirectives(With(<<>>), <<Repeatable(OnObject("d"))>>), <<Ext("OBJECT", "Query")>>,
+            <<QueryAt("d", 0), QueryAt("d", 0), QueryAt("d", 1)>>), {})
+  /\ Is(Doc(WithDirectives(With(<<>>), <<OnObject("d")>>), <<Ext("OBJECT", "Query")>>, <<QueryAt("d", 1)>>), {})
+  \* Twice on one definition: not a rule of §3, graded as information.
+  /\ Is(Doc(WithDirectives(With(<<>>), <<OnObject("d")>>), <<>>, <<QueryAt("d", 0), QueryAt("d", 0)>>),
+        {"DIRECTIVE_NOT_REPEATED"})
+  \* @specifiedBy "must not appear on built-in scalar types".
+  /\ LET url == <<E("url", V("string", "x"))>> IN
+     /\ Is(Doc(With(<<>>), <<Ext("SCALAR", "Int")>>, <<UseAt("specifiedBy", "SCALAR", <<"SCALAR", "Int">>, 1, url)>>),
+           {"SPECIFIED_BY_NOT_BUILTIN"})
+     /\ Is(Doc(With(<<Scalar("S")>>), <<Ext("SCALAR", "S")>>, <<UseAt("specifiedBy", "SCALAR", <<"SCALAR", "S">>, 1, url)>>), {})
+     \* Applied arguments: a required one left out, and a value of the
+     \* wrong type, are information only.
+     /\ Is(Doc(With(<<Scalar("S")>>), <<>>, <<UseAt("specifiedBy", "SCALAR", <<"SCALAR", "S">>, 0, <<>>)>>),
+           {"APPLIED_DIRECTIVE_ARGUMENTS"})
+  /\ Is(Uses(With(<<>>), <<UseAt("deprecated", "FIELD_DEFINITION", <<"ELEMENT", "1">>, 0, <<E("reason", I("1"))>>)>>),
+        {"APPLIED_DIRECTIVE_ARGUMENTS"})
+  /\ Is(Uses(With(<<>>), <<UseAt("deprecated", "FIELD_DEFINITION", <<"ELEMENT", "1">>, 0, <<E("why", V("string", "x"))>>)>>),
+        {"APPLIED_DIRECTIVE_ARGUMENTS"})
+  /\ Is(Uses(With(<<>>), <<UseAt("deprecated", "FIELD_DEFINITION", <<"ELEMENT", "1">>, 0, <<E("reason", V("string", "x"))>>)>>), {})
+
+\* §3.13.6 Directive Extensions, new in September 2026: extend directive @d
+\* with directives allowed on directive definitions.
+DirAt(name, extension) == UseAt(name, "DIRECTIVE_DEFINITION", <<"DIRECTIVE", "d">>, extension, <<>>)
+OnDefinitions(D) == At(D, <<"FIELD", "DIRECTIVE_DEFINITION">>)
+
+DirectiveExtensionsAreChecked == ~done =>
+  /\ LET S(dirs) == WithDirectives(With(<<>>), dirs) IN
+     /\ Is(Doc(S(<<Dir("d", <<>>, {}), OnDefinitions(Dir("e", <<>>, {}))>>), <<Ext("DIRECTIVE", "d")>>, <<DirAt("e", 1)>>), {})
+     \* "The previous directive must already be defined."
+     /\ Is(Doc(S(<<OnDefinitions(Dir("e", <<>>, {}))>>), <<Ext("DIRECTIVE", "d")>>, <<DirAt("e", 1)>>),
+           {"DIRECTIVE_EXTENSION_DEFINED"})
+     \* "Any non-repeatable directives provided must not already apply to
+     \* the previous directive."
+     /\ Is(Doc(S(<<Dir("d", <<>>, {"e"}), OnDefinitions(Dir("e", <<>>, {}))>>), <<Ext("DIRECTIVE", "d")>>,
+               <<DirAt("e", 0), DirAt("e", 1)>>), {"DIRECTIVE_EXTENSION_NOT_REAPPLIED"})
+     /\ Is(Doc(S(<<Dir("d", <<>>, {"e"}), Repeatable(OnDefinitions(Dir("e", <<>>, {})))>>), <<Ext("DIRECTIVE", "d")>>,
+               <<DirAt("e", 0), DirAt("e", 1)>>), {})
+     \* "... must not contain the use of a Directive which references the
+     \* previous directive directly."
+     /\ Is(Doc(S(<<OnDefinitions(Dir("d", <<>>, {}))>>), <<Ext("DIRECTIVE", "d")>>, <<DirAt("d", 1)>>),
+           {"DIRECTIVE_EXTENSION_USES_PREVIOUS"})
+     \* "... nor indirectly by referencing a Type or Directive which
+     \* transitively includes a reference to the previous Directive":
+     \* @e's definition uses @d; or @e's argument's type uses @d.
+     /\ Is(Doc(S(<<OnDefinitions(Dir("d", <<>>, {})), OnDefinitions(Dir("e", <<>>, {"d"}))>>), <<Ext("DIRECTIVE", "d")>>,
+               <<DirAt("e", 1)>>), {"DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS"})
+     /\ Is(Doc(WithDirectives(With(<<Using(Input("In", <<Arg("f", R("Int"))>>), {"d"})>>),
+                              <<OnDefinitions(Dir("d", <<>>, {})), OnDefinitions(Dir("e", <<Arg("x", R("In"))>>, {}))>>),
+               <<Ext("DIRECTIVE", "d")>>, <<DirAt("e", 1)>>), {"DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS"})
 ====

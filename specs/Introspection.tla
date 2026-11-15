@@ -266,20 +266,6 @@ Oct2021Directives == <<
 \* B for a service that implements the October 2021 edition.
 Oct2021Builtins == [types |-> Oct2021IntrospectionTypes, directives |-> Oct2021Directives]
 
-\* Whether October 2021 can express S: no OneOf input object, and nothing
-\* deprecates an argument, an input field or a directive, which its
-\* @deprecated locations don't allow. For such a schema, the fields only
-\* the later editions' introspection types have are fixed: isOneOf is
-\* false for every input object, and no input value or directive is
-\* deprecated.
-IsOct2021Schema(S) ==
-  /\ \A T \in Range(S.types) :
-       /\ ~(T.kind = "INPUT_OBJECT" /\ T.oneOf)
-       /\ \A k \in DOMAIN T.inputFields : ~IsDeprecated(T.inputFields[k])
-       /\ \A k \in DOMAIN T.fields : \A j \in DOMAIN T.fields[k].args : ~IsDeprecated(T.fields[k].args[j])
-  /\ \A D \in Range(S.directives) :
-       ~IsDeprecated(D) /\ \A j \in DOMAIN D.args : ~IsDeprecated(D.args[j])
-
 -----------------------------------------------------------------------------
 (* The September 2025 edition's built-in definitions *)
 
@@ -332,10 +318,38 @@ Sep2025Builtins == [types |-> Sep2025IntrospectionTypes, directives |-> Sep2025D
 
 \* Whether September 2025 can express S: no directive definition has a
 \* directive applied (its DirectiveDefinition has no Directives), so none
-\* is deprecated. For such a schema, the fields only September 2026's
-\* introspection types have are fixed: no directive is deprecated.
+\* is deprecated, and none names the location DIRECTIVE_DEFINITION, which
+\* its DirectiveLocation and __DirectiveLocation don't have. For such a
+\* schema, the fields only September 2026's introspection types have are
+\* fixed: no directive is deprecated.
+\*
+\* D.directives holds the directives used anywhere in the definition, its
+\* arguments' included (TypeSystem.tla), and September 2025 has Directives
+\* on an argument definition. Of those, only @deprecated shows (as a
+\* deprecated argument), so it is the one allowed; a definition whose
+\* argument has another directive counts as September 2026's, which only
+\* narrows the profiles its vectors are asked under.
 IsSep2025Schema(S) ==
-  \A D \in Range(S.directives) : ~IsDeprecated(D) /\ D.directives = {}
+  \A D \in Range(S.directives) :
+    /\ ~IsDeprecated(D)
+    /\ D.directives \subseteq (IF \E j \in DOMAIN D.args : IsDeprecated(D.args[j]) THEN {"deprecated"} ELSE {})
+    /\ "DIRECTIVE_DEFINITION" \notin Range(D.locations)
+
+\* Whether October 2021 can express S: nothing September 2025 can't
+\* express (IsSep2025Schema, above), no OneOf input object, and nothing
+\* deprecates an argument, an input field or a directive, which its
+\* @deprecated locations don't allow. For such a schema, the fields only
+\* the later editions' introspection types have are fixed: isOneOf is
+\* false for every input object, and no input value or directive is
+\* deprecated.
+IsOct2021Schema(S) ==
+  /\ IsSep2025Schema(S)
+  /\ \A T \in Range(S.types) :
+       /\ ~(T.kind = "INPUT_OBJECT" /\ T.oneOf)
+       /\ \A k \in DOMAIN T.inputFields : ~IsDeprecated(T.inputFields[k])
+       /\ \A k \in DOMAIN T.fields : \A j \in DOMAIN T.fields[k].args : ~IsDeprecated(T.fields[k].args[j])
+  /\ \A D \in Range(S.directives) :
+       ~IsDeprecated(D) /\ \A j \in DOMAIN D.args : ~IsDeprecated(D.args[j])
 
 -----------------------------------------------------------------------------
 
@@ -680,15 +694,21 @@ WrapperMatches(w) ==
   /\ w.enumValues = None
   /\ w.inputFields = None
 
-\* The wrapper types WrapperMatches judges are read from __type(name:
-\* "__Schema")'s fields. `fields` holds them as a service returned them,
-\* each [name, type] with type a type ref. Each field of B's __Schema must
-\* be there, once, with its type, so that an empty or partial answer can't
-\* pass vacuously. A service may return more fields.
-SchemaFieldsMatch(B, fields) ==
-  \A f \in Range(TypeNamed(B, "__Schema").fields) :
+\* The wrapper types WrapperMatches judges are read from __type(name:)'s
+\* fields, for a type named `name` in FS (the built-ins B, or a schema with
+\* them, Full(S, B)). `fields` holds them as a service returned them, each
+\* [name, type] with type a type ref. Each field the type returns by
+\* default (includeDeprecated is false) must be there, once, with its
+\* type, so that an empty or partial answer can't pass vacuously. More fields
+\* are allowed here: an introspection type may have fields of the
+\* service's own, and a document type's fields are judged by TypeMatches.
+TypeFieldsMatch(FS, name, fields) ==
+  \A f \in Range(VisibleOf(FALSE, TypeNamed(FS, name).fields)) :
     /\ Cardinality({i \in DOMAIN fields : fields[i].name = f.name}) = 1
-    /\ ByName(fields, f.name).type = RefResult(B, f.type)
+    /\ ByName(fields, f.name).type = RefResult(FS, f.type)
+
+\* The same for __type(name: "__Schema"): each field of B's __Schema.
+SchemaFieldsMatch(B, fields) == TypeFieldsMatch(B, "__Schema", fields)
 
 \* Whether a service's __type(name:) result `actual` (an optional __Type)
 \* is right.
@@ -782,4 +802,23 @@ Mismatches(S0, B, inc, full, actual) ==
 
 \* Whether actual is a correct __schema result.
 Matches(S, B, inc, full, actual) == Mismatches(S, B, inc, full, actual) = {}
+
+-----------------------------------------------------------------------------
+(* Built-in directives a request shows the service provides *)
+
+\* §3.13: "When introspecting a GraphQL service all provided directives,
+\* including any built-in directive, must be included in the set of
+\* returned directives", and §4.2.1: "directives must return the set of all
+\* directives available within this schema including all built-in
+\* directives". A service that executes a request using @skip or @include
+\* as §3.13.1 and §3.13.2 say (a field under @skip(if: true) left out, one
+\* under @skip(if: false) kept) provides that directive. `honored` is the
+\* set of built-in directives a request showed this way; the ones among
+\* them the service must return.
+HonoredDirectiveNames(honored) == honored \cap BuiltinDirectiveNames(SpecBuiltins)
+
+\* Whether a service that honoured `honored` and returned the directives
+\* named `returned` (its __schema's directives, in the same response)
+\* returned each one it showed it provides.
+HonoredDirectivesMatch(honored, returned) == HonoredDirectiveNames(honored) \subseteq returned
 ====

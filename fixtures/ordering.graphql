@@ -1,0 +1,41 @@
+# Field ordering (§3.6, §6.3.2, §7.2.2): the response keys follow the order
+# in which CollectFields first meets each response name, "excluding
+# fragments for which the type does not apply and fields or fragments that
+# are skipped via @skip or @include directives". The spec's examples from
+# §3.6 (a field skipped before it appears again, a fragment spread before
+# other fields), with literal @skip and @include, both together, an inline
+# fragment without a type condition, and a field selected again by a
+# fragment. The response keys are bar, foo, baz, qux; quux is never
+# executed.
+# maxListLength: 0
+# spec: 3.6, 3.13.1, 3.13.2, 6.3.2, 7.2.2
+
+type Query {
+  foo: Int
+  bar: Int
+  baz: Int
+  qux: Int
+  quux: Int
+}
+
+query {
+  foo @skip(if: true)
+  bar
+  ... {
+    foo
+  }
+  ...Frag
+  quux @skip(if: false) @include(if: false)
+  qux @skip(if: false) @include(if: true)
+  quux @include(if: false)
+  ...Never @skip(if: true) @include(if: true)
+}
+
+fragment Frag on Query {
+  baz
+  bar
+}
+
+fragment Never on Query {
+  quux
+}

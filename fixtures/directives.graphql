@@ -1,0 +1,30 @@
+# @skip and @include with variables (§3.13.1, §3.13.2, §6.3.2), run once
+# per row of the truth table of $s and $i: on a field, both on one field
+# (included only if "the @skip condition is false and the @include
+# condition is true"), on an inline fragment without a type condition,
+# which applies to the enclosing type (§2.9.2), and on a fragment spread
+# inside it. With $s true and $i false, every root field is left out, and
+# data is {}.
+# variants: {"kept": {"s": false, "i": true}, "skipped": {"s": true, "i": true}, "excluded": {"s": false, "i": false}, "dropped": {"s": true, "i": false}}
+# maxListLength: 0
+# spec: 3.13.1, 3.13.2, 6.3.2, 2.9.2
+
+type Query {
+  a: Int
+  b: Int
+  c: Int
+  d: Int
+}
+
+query ($s: Boolean!, $i: Boolean!) {
+  a @skip(if: $s)
+  b @include(if: $i)
+  c @skip(if: $s) @include(if: $i)
+  ... @include(if: $i) {
+    ...D @skip(if: $s)
+  }
+}
+
+fragment D on Query {
+  d
+}

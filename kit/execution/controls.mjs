@@ -6,6 +6,7 @@
 // can catch each kind of bug, independently of what the implementation did.
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
+const isMap = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const rootCalls = (c) => c.trace.map((e, i) => [e, i]).filter(([e]) => e.call && e.call.length === 1);
 const withoutErrors = (response, keep) => {
   const errors = (response.errors ?? []).filter(keep);
@@ -320,6 +321,132 @@ export const CONTROLS = [
       const trace = clone(c.trace);
       trace.splice(i + 1, 0, { call: ["node", "key"], type: "ID!" }, { settle: ["node", "key"], outcome: { kind: "leaf" } });
       return [{ trace }];
+    },
+  },
+  // Field collection, in the fixtures that exercise it (merging, abstract,
+  // directives_*, aliases, ordering, mutationRoot, subscriptionAlias).
+  {
+    name: "drops a subfield that a merged selection set adds",
+    clause: "dataMatches",
+    make: (c) => {
+      const a = c.fixture === "merging" && c.response.data?.a;
+      if (!isMap(a) || !("subfield2" in a)) return [];
+      const { subfield2: _, ...rest } = a;
+      return [{ response: { ...c.response, data: { ...c.response.data, a: rest } } }];
+    },
+  },
+  {
+    name: "applies a fragment on a union to an object type that isn't a member",
+    clause: "malformed",
+    check: "dataShape",
+    make: (c) => {
+      const settled = c.trace.find((e) => samePath(e.settle ?? [], ["node"]));
+      if (c.fixture !== "abstract" || settled?.outcome.type !== "Bot" || !isMap(c.response.data?.node)) return [];
+      return [{ response: { ...c.response, data: { ...c.response.data, node: { __typename: "Bot", ...c.response.data.node } } } }];
+    },
+  },
+  {
+    name: "applies a fragment on an interface to an object type that doesn't implement it",
+    clause: "malformed",
+    check: "callsSelected",
+    make: (c) => {
+      if (c.fixture !== "abstract") return [];
+      const i = c.trace.findIndex((e) => samePath(e.settle ?? [], ["node", "latest"]) && e.outcome.type === "Post");
+      if (i === -1) return [];
+      const trace = clone(c.trace);
+      trace.splice(i + 1, 0, { call: ["node", "latest", "id"], type: "ID!" }, { settle: ["node", "latest", "id"], outcome: { kind: "leaf" } });
+      return [{ trace }];
+    },
+  },
+  {
+    name: "executes a field whose @skip(if: $s) is true",
+    clause: "malformed",
+    check: "dataShape",
+    make: (c) => (c.fixture === "directives_skipped" && isMap(c.response.data) ? [{ response: { ...c.response, data: { a: 1, ...c.response.data } } }] : []),
+  },
+  {
+    name: "executes a field whose @skip is false though its @include is false",
+    clause: "malformed",
+    check: "dataShape",
+    make: (c) =>
+      c.fixture === "directives_excluded" && isMap(c.response.data)
+        ? [{ response: { ...c.response, data: Object.fromEntries([...Object.entries(c.response.data), ["c", 1]]) } }]
+        : [],
+  },
+  {
+    name: "answers data null when @skip and @include leave out every root field",
+    clause: "dataMatches",
+    make: (c) => (c.fixture === "directives_dropped" ? [{ response: { data: null } }] : []),
+  },
+  {
+    name: "keys an aliased list by its field name",
+    clause: "malformed",
+    check: "dataShape",
+    make: (c) => {
+      const second = c.fixture === "aliases" && c.response.data?.second;
+      if (!isMap(second) || !Array.isArray(second.list) || second.list.length === 0) return [];
+      return [{ response: { ...c.response, data: { ...c.response.data, second: { items: second.list } } } }];
+    },
+  },
+  {
+    name: "reports an error inside an aliased list under the field names",
+    clause: "malformed",
+    check: "responsePosition",
+    make: (c) => {
+      const error = c.fixture === "aliases" && c.response.errors?.find((e) => samePath(e.path, ["second", "list", 0, "key"]));
+      return error ? [{ response: withError(c.response, error, { ...error, path: ["first", "items", 0, "id"] }) }] : [];
+    },
+  },
+  {
+    name: "executes the field an alias names instead of the field it selects",
+    clause: "malformed",
+    check: "dataShape",
+    make: (c) => {
+      const data = c.fixture === "aliases" && c.response.data;
+      if (!isMap(data) || !isMap(data.first) || !isMap(data.second)) return [];
+      return [{ response: { ...c.response, data: { ...data, second: data.first, first: data.second } } }];
+    },
+  },
+  {
+    name: "orders a field by a selection that @skip left out",
+    clause: "keyOrder",
+    make: (c) => {
+      const data = c.fixture === "ordering" && c.response.data;
+      if (!isMap(data) || Object.keys(data)[0] !== "bar") return [];
+      const { foo, ...rest } = data;
+      return [{ response: { ...c.response, data: { foo, ...rest } } }];
+    },
+  },
+  {
+    name: "answers an aliased __typename with another type's name",
+    clause: "dataMatches",
+    make: (c) =>
+      c.fixture === "mutationRoot" && c.response.data?.root === "Mutation"
+        ? [{ response: { ...c.response, data: { ...c.response.data, root: "Query" } } }]
+        : [],
+  },
+  {
+    name: "executes a mutation root field that @skip leaves out",
+    clause: "malformed",
+    check: "mutationFieldsOnce",
+    make: (c, fixture) => (c.fixture === "mutationRoot" && fixture.operationType === "mutation" ? [{ trace: [...c.trace, { call: ["unlike"], type: "Payload" }] }] : []),
+  },
+  {
+    name: "executes a mutation root field again for a fragment that selects it",
+    clause: "malformed",
+    check: "mutationFieldsOnce",
+    make: (c) => {
+      const call = c.fixture === "mutationRoot" && c.trace.find((e) => samePath(e.call ?? [], ["a"]));
+      return call ? [{ trace: [...c.trace, call] }] : [];
+    },
+  },
+  {
+    name: "keys a subscription event's result by the field name instead of the alias",
+    clause: "malformed",
+    check: "dataShape",
+    make: (c) => {
+      const data = c.fixture === "subscriptionAlias" && c.response.data;
+      return isMap(data) && isMap(data.liked) ? [{ response: { ...c.response, data: { postLiked: data.liked } } }] : [];
     },
   },
   {

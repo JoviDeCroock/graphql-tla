@@ -56,8 +56,24 @@
 (*     query root type, and no fields list may contain __typename (§4.1).  *)
 (*   - __type(name:) results (lookup cases) are judged by                  *)
 (*     Introspection!TypeByNameMatches, item by item as for types.         *)
+(*   - How a service prints a default value's strings (§2.10.4, "When      *)
+(*     producing a StringValue, implementations should use escape          *)
+(*     sequences to represent non-printable control characters", and "If   *)
+(*     an implementation chooses to escape a supplementary character, it   *)
+(*     should only use a variable-width unicode escape sequence") isn't in *)
+(*     Matches, which compares the value: "printedControl" and             *)
+(*     "printedPair" problems, which the kit grades as SHOULDs.            *)
+(*   - A probe case (c.kind = "probe") is a request that uses @skip or     *)
+(*     @include, and asks for the directives' names in the same request:   *)
+(*     a directive the request shows is honoured must be among them        *)
+(*     (Introspection!HonoredDirectivesMatch). One that isn't honoured is  *)
+(*     a builtinDirectives problem, a SHOULD.                              *)
 (***************************************************************************)
 EXTENDS Introspection
+
+\* The lexical grammar, for reading the strings in a printed default value.
+\* Lexer's one variable only drives its own hand-written vectors.
+L == INSTANCE Lexer WITH vector <- 0
 
 P(aspect, where) == <<aspect, where>>
 
@@ -116,6 +132,36 @@ DefaultProblems(FS, where, e, a) ==
   ELSE IF e.defaultValue # None /\ a.defaultValue = None THEN {P("defaultValueOmitted", where)}
   ELSE {P("defaultValue", where)}
 
+\* The string tokens of a printed value src (a sequence of code points), in
+\* order, each as <<start, end, block>>: the token runs from src[start],
+\* its opening quote, up to end - 1. Lexing stops at the first code point
+\* that starts no token; the defaultValue check judges such a value.
+RECURSIVE StringTokens(_, _, _)
+StringTokens(src, i, acc) ==
+  IF i > Len(src) THEN acc
+  ELSE IF L!IgnoredLength(src, i) > 0 THEN StringTokens(src, i + L!IgnoredLength(src, i), acc)
+  ELSE LET next == L!TokenAt(src, i) IN
+       IF ~next.scan.ok THEN acc
+       ELSE StringTokens(src, next.scan.end,
+                         IF next.kind \in {"StringValue", "BlockString"}
+                         THEN Append(acc, <<i, next.scan.end, next.kind = "BlockString">>)
+                         ELSE acc)
+
+\* What is wrong with how a service printed a default value (its text as
+\* code points, empty for null), by §2.10.4: "When producing a StringValue,
+\* implementations should use escape sequences to represent non-printable
+\* control characters (U+0000 to U+001F and U+007F to U+009F)" ("printedControl";
+\* a block string can't escape one, so one there counts too), and "If an
+\* implementation chooses to escape a supplementary character, it should
+\* only use a variable-width unicode escape sequence" ("printedPair"). The
+\* two are Lexer.tla's WellPrintedStringAt, told apart.
+PrintingProblems(where, printed) ==
+  LET tokens == StringTokens(printed, 1, <<>>) IN
+  (IF \E t \in Range(tokens) : \E k \in t[1]..(t[2] - 1) : L!IsNonPrintableControl(printed[k])
+   THEN {P("printedControl", where)} ELSE {})
+  \cup (IF \E t \in Range(tokens) : ~t[3] /\ L!PairEscapeFrom(printed, t[1] + 1)
+        THEN {P("printedPair", where)} ELSE {})
+
 \* A type ref without its Non-Null wrappers.
 Nullable(ref) == SelectSeq(ref, LAMBDA r : r.kind # "NON_NULL")
 
@@ -144,6 +190,7 @@ InputValueProblems(FS, aspect, where, e, a) ==
    ELSE {P(aspect, where)})
   \cup DescriptionProblems(where, e, a)
   \cup DefaultProblems(FS, where, e, a)
+  \cup PrintingProblems(where, a.printed)
   \cup DeprecationProblems(where, e, a)
 
 \* A list of arguments (open "(", close ":)") or input fields (".", "").
@@ -233,13 +280,15 @@ DirectiveProblems(FS, D, e, a) ==
   \cup InputValuesProblems(FS, ~IsBuiltinDirectiveName(D.name), "arguments", w, "(", ":)", D.args, e.args, a.args)
   \cup DeprecationProblems(w, e, a)
 
-\* The fields of __Schema the wrapper answer must have, each once with its
-\* type (Introspection!SchemaFieldsMatch), one problem per field.
-WrapperFieldsProblems(B, fields) ==
-  {P("wrapperFields", "__Schema." \o f.name) :
-     f \in {g \in Range(TypeNamed(B, "__Schema").fields) :
+\* The fields of the type named `name` (__Schema, or one of the document's)
+\* the wrapper answer must have, each once with its type
+\* (Introspection!TypeFieldsMatch), one problem per field. FS is the
+\* schema with the built-ins.
+WrapperFieldsProblems(FS, name, fields) ==
+  {P("wrapperFields", name \o "." \o f.name) :
+     f \in {g \in Range(VisibleOf(FALSE, TypeNamed(FS, name).fields)) :
               IF Cardinality({i \in DOMAIN fields : fields[i].name = g.name}) # 1 THEN TRUE
-              ELSE ByName(fields, g.name).type # RefResult(B, g.type)}}
+              ELSE ByName(fields, g.name).type # RefResult(FS, g.type)}}
 
 \* The built-ins a service may provide: the edition's introspection types
 \* and built-in directives (E), its own directives (`extras`), and the
@@ -323,14 +372,27 @@ Problems(S0, B, extraTypes, inc, actual) ==
   \cup {P("builtinDirectives", "@" \o d) : d \in RecommendedDirectiveNames(S0) \ (returned \cup required)}
   \cup UNION {DirectiveProblems(FS, DirectiveNamed(FS, d), ByName(ed, d), ByName(ad, d)) : d \in Common(ed, ad)}
 
-\* What is wrong with the answer to __type(name: "__Schema"): the wrapper
-\* types among its fields' types, and the fields themselves.
-\* A wrapper whose only non-null field besides kind and ofType is isOneOf,
-\* new in September 2025, is a "wrapperIsOneOf" problem.
-WrappersProblems(B, actual) ==
+\* What is wrong with the answer to __type(name:) for the type `name`
+\* (__Schema, or one of the document's): the wrapper types among its
+\* fields' types, and the fields themselves. A wrapper whose only non-null
+\* field besides kind and ofType is isOneOf, new in September 2025, is a
+\* "wrapperIsOneOf" problem.
+WrappersProblems(FS, name, actual) ==
   {P(IF WrapperMatches([w EXCEPT !.isOneOf = None]) THEN "wrapperIsOneOf" ELSE "wrapper", w.where) :
      w \in {x \in Range(actual.wrappers) : ~WrapperMatches(x)}}
-  \cup WrapperFieldsProblems(B, actual.wrapperFields)
+  \cup WrapperFieldsProblems(FS, name, actual.wrapperFields)
+
+\* What is wrong with a probe's answer: c.actual is [directive, honored,
+\* returned], whether the request showed the built-in `directive` is
+\* honoured, and the names of the directives the same response returned.
+\* One that is honoured must be returned (§3.13, §4.2.1); one that isn't
+\* honoured isn't provided, which §3.13's "should provide the @skip and
+\* @include directives" makes a SHOULD.
+ProbeProblems(c) ==
+  LET d == c.actual.directive IN
+  IF ~c.actual.honored THEN {P("builtinDirectives", "@" \o d)}
+  ELSE IF HonoredDirectivesMatch({d}, c.actual.returned) THEN {}
+  ELSE {P("requiredDirective", "@" \o d)}
 
 \* What is wrong with a sequence of __type(name:) results, each
 \* [name, result] with result an optional __Type. `provided` names the
@@ -361,7 +423,8 @@ EditionBuiltins(profile) ==
 \* The problems with a case for the edition's built-ins E.
 CaseProblems(S, c, E) ==
   CASE c.kind = "lookup" -> LookupProblems(S, E, c.inc, c.actual, c.provided)
-    [] c.kind = "wrappers" -> WrappersProblems(E, c.actual)
+    [] c.kind = "wrappers" -> WrappersProblems(Full(S, E), c.wrapperType, c.actual)
+    [] c.kind = "probe" -> ProbeProblems(c)
     [] OTHER -> Problems(S, ServiceBuiltins(E, c.extras, c.extraTypes), c.extraTypes, c.inc, c.actual)
 
 \* The reference's verdict on a case, the problems behind it, and for an
@@ -377,7 +440,9 @@ CaseResult(S, c) ==
                  TypeByNameMatches(AsProvided(S, c.provided), E, c.inc, c.actual[i].name, c.actual[i].result)
           [] c.kind = "wrappers" ->
                /\ \A i \in DOMAIN c.actual.wrappers : WrapperMatches(c.actual.wrappers[i])
-               /\ SchemaFieldsMatch(E, c.actual.wrapperFields)
+               /\ TypeFieldsMatch(Full(S, E), c.wrapperType, c.actual.wrapperFields)
+          [] c.kind = "probe" ->
+               ~c.actual.honored \/ HonoredDirectivesMatch({c.actual.directive}, c.actual.returned)
           [] OTHER -> Matches(S, ServiceBuiltins(E, c.extras, c.extraTypes), c.inc, TRUE, c.actual)
   IN <<problems, matches,
        IF problems = {} THEN <<>>

@@ -82,7 +82,7 @@ const deprecatedOf = (directives = []) => {
   const d = directives.find((x) => x.name.value === "deprecated");
   if (!d) return [];
   const reason = d.arguments?.find((a) => a.name.value === "reason");
-  return [reason ? reason.value.value : "No longer supported"];
+  return [reason?.value.kind === "StringValue" ? reason.value.value : "No longer supported"];
 };
 
 const appliedIn = (node, out = new Set()) => {
@@ -93,18 +93,71 @@ const appliedIn = (node, out = new Set()) => {
   return out;
 };
 
-// A document with more than one schema definition keeps the last one:
-// "a document must include at most one schema definition" (§3.3) isn't
-// modelled, and no vector has two.
-export const schemaData = (sdl) => {
-  const doc = graphql.parse(sdl);
-  const inputValue = (node) => ({
-    name: node.name.value,
-    description: opt(node.description?.value),
-    type: typeRefOf(node.type),
-    default: node.defaultValue ? [valueOf(node.defaultValue)] : [],
-    deprecated: deprecatedOf(node.directives),
-  });
+// The kind of each type extension (§3.4.3), as its type's kind.
+const EXTENSION_KIND = {
+  ScalarTypeExtension: "SCALAR",
+  ObjectTypeExtension: "OBJECT",
+  InterfaceTypeExtension: "INTERFACE",
+  UnionTypeExtension: "UNION",
+  EnumTypeExtension: "ENUM",
+  InputObjectTypeExtension: "INPUT_OBJECT",
+};
+
+const inputValueOf = (node) => ({
+  name: node.name.value,
+  description: opt(node.description?.value),
+  type: typeRefOf(node.type),
+  default: node.defaultValue ? [valueOf(node.defaultValue)] : [],
+  deprecated: deprecatedOf(node.directives),
+});
+
+const fieldOf = (f) => ({
+  name: f.name.value,
+  description: opt(f.description?.value),
+  args: (f.arguments ?? []).map(inputValueOf),
+  type: typeRefOf(f.type),
+  deprecated: deprecatedOf(f.directives),
+});
+
+const enumValueOf = (v) => ({
+  name: v.name.value,
+  description: opt(v.description?.value),
+  deprecated: deprecatedOf(v.directives),
+});
+
+// What a type definition and a type extension both have: fields, interfaces,
+// member types, values and input fields.
+const itemsOf = (def, kind) => ({
+  fields: kind === "INPUT_OBJECT" ? [] : (def.fields ?? []).map(fieldOf),
+  interfaces: (def.interfaces ?? []).map((i) => i.name.value),
+  members: (def.types ?? []).map((t) => t.name.value),
+  values: (def.values ?? []).map(enumValueOf),
+  inputFields: kind === "INPUT_OBJECT" ? (def.fields ?? []).map(inputValueOf) : [],
+});
+
+const appliesOneOf = (def) => (def.directives ?? []).some((d) => d.name.value === "oneOf");
+
+const isExtension = (def) => def.kind === "SchemaExtension" || def.kind === "DirectiveExtension" || def.kind in EXTENSION_KIND;
+
+// A type system extension (§3.1) as TypeSystem.tla's extension record.
+const extensionOf = (def) => {
+  const none = { fields: [], interfaces: [], members: [], values: [], inputFields: [] };
+  const common = { operations: [], oneOf: appliesOneOf(def), directives: appliedIn(def) };
+  if (def.kind === "SchemaExtension") {
+    const operations = (def.operationTypes ?? []).map((o) => ({ operation: o.operation, type: o.type.name.value }));
+    return { kind: "SCHEMA", name: "", ...none, ...common, operations };
+  }
+  if (def.kind === "DirectiveExtension") return { kind: "DIRECTIVE", name: def.name.value, ...none, ...common };
+  const kind = EXTENSION_KIND[def.kind];
+  return { kind, name: def.name.value, ...itemsOf(def, kind), ...common };
+};
+
+// The definitions of a parsed document as schema data. A document with more
+// than one schema definition keeps the last one: schemaVerdictData counts
+// them for "a document must include at most one schema definition" (§3.3).
+// Extensions are skipped when `extensions` is set (schemaVerdictData reads
+// them), and are an error otherwise.
+const definitionsOf = (doc, extensions = false) => {
   const types = [];
   const directives = [];
   let schemaDef = false;
@@ -121,7 +174,7 @@ export const schemaData = (sdl) => {
       directives.push({
         name: def.name.value,
         description: opt(def.description?.value),
-        args: (def.arguments ?? []).map(inputValue),
+        args: (def.arguments ?? []).map(inputValueOf),
         repeatable: def.repeatable,
         locations: def.locations.map((l) => l.value),
         deprecated: deprecatedOf(def.directives),
@@ -129,86 +182,103 @@ export const schemaData = (sdl) => {
       });
       continue;
     }
+    if (extensions && isExtension(def)) continue;
     const kind = KIND[def.kind];
     if (!kind) throw new Error(`the kit's schemas don't use ${def.kind}`);
-    const specifiedBy = def.directives?.find((d) => d.name.value === "specifiedBy");
+    const url = def.directives?.find((d) => d.name.value === "specifiedBy")?.arguments?.find((a) => a.name.value === "url");
     types.push({
       kind,
       name: def.name.value,
       description: opt(def.description?.value),
-      fields:
-        kind === "INPUT_OBJECT"
-          ? []
-          : (def.fields ?? []).map((f) => ({
-              name: f.name.value,
-              description: opt(f.description?.value),
-              args: (f.arguments ?? []).map(inputValue),
-              type: typeRefOf(f.type),
-              deprecated: deprecatedOf(f.directives),
-            })),
-      interfaces: (def.interfaces ?? []).map((i) => i.name.value),
-      members: (def.types ?? []).map((t) => t.name.value),
-      values: (def.values ?? []).map((v) => ({
-        name: v.name.value,
-        description: opt(v.description?.value),
-        deprecated: deprecatedOf(v.directives),
-      })),
-      inputFields: kind === "INPUT_OBJECT" ? (def.fields ?? []).map(inputValue) : [],
-      oneOf: (def.directives ?? []).some((d) => d.name.value === "oneOf"),
-      specifiedBy: specifiedBy ? [specifiedBy.arguments.find((a) => a.name.value === "url").value.value] : [],
+      ...itemsOf(def, kind),
+      oneOf: appliesOneOf(def),
+      specifiedBy: url?.value.kind === "StringValue" ? [url.value.value] : [],
       directives: appliedIn(def),
     });
   }
   return { description, types, directives, schemaDef, operations };
 };
 
-// The DirectiveLocation of each kind of definition a directive can be
-// applied to in SDL (§3.13 TypeSystemDirectiveLocation).
+// An SDL document's type system definitions as TypeSystem.tla's schema
+// data. It may not contain extensions.
+export const schemaData = (sdl) => definitionsOf(graphql.parse(sdl));
+
+// The DirectiveLocation of each kind of definition or extension a directive
+// can be applied to in SDL (§3.13 TypeSystemDirectiveLocation).
 const LOCATION = {
   SchemaDefinition: "SCHEMA",
+  SchemaExtension: "SCHEMA",
   ScalarTypeDefinition: "SCALAR",
+  ScalarTypeExtension: "SCALAR",
   ObjectTypeDefinition: "OBJECT",
+  ObjectTypeExtension: "OBJECT",
   FieldDefinition: "FIELD_DEFINITION",
   InputValueDefinition: "ARGUMENT_DEFINITION",
   InterfaceTypeDefinition: "INTERFACE",
+  InterfaceTypeExtension: "INTERFACE",
   UnionTypeDefinition: "UNION",
+  UnionTypeExtension: "UNION",
   EnumTypeDefinition: "ENUM",
+  EnumTypeExtension: "ENUM",
   EnumValueDefinition: "ENUM_VALUE",
   InputObjectTypeDefinition: "INPUT_OBJECT",
+  InputObjectTypeExtension: "INPUT_OBJECT",
   DirectiveDefinition: "DIRECTIVE_DEFINITION",
+  DirectiveExtension: "DIRECTIVE_DEFINITION",
 };
 
-// Every directive the document applies, as [name, location], in document
-// order. An input value is an argument, except an input object's field.
+// The element a top-level definition or extension applies its directives
+// to, as TypeSystem.tla's site: a definition and its extensions share one.
+const siteOf = (def) => {
+  if (def.kind === "SchemaDefinition" || def.kind === "SchemaExtension") return ["SCHEMA", ""];
+  if (def.kind === "DirectiveDefinition" || def.kind === "DirectiveExtension") return ["DIRECTIVE", def.name.value];
+  return [KIND[def.kind] ?? EXTENSION_KIND[def.kind], def.name.value];
+};
+
+// Every directive the document applies, as [name, location, site,
+// extension, args], in document order. An input value is an argument,
+// except an input object's field. Every field, argument, enum value and
+// input field is a site of its own. `extension` is k for a use applied to
+// the k-th extension itself, else 0.
 const usesOf = (doc) => {
   const uses = [];
-  const visit = (node, inputObject = false) => {
-    const location =
-      node.kind === "InputValueDefinition" && inputObject ? "INPUT_FIELD_DEFINITION" : LOCATION[node.kind];
-    for (const d of node.directives ?? []) uses.push({ name: d.name.value, location });
-    const own = node.kind === "InputObjectTypeDefinition";
-    for (const f of node.fields ?? []) visit(f, own);
-    for (const a of node.arguments ?? []) if (a.kind === "InputValueDefinition") visit(a);
-    for (const v of node.values ?? []) visit(v);
+  let element = 0;
+  const visit = (node, site, extension, inputObject = false) => {
+    const location = node.kind === "InputValueDefinition" && inputObject ? "INPUT_FIELD_DEFINITION" : LOCATION[node.kind];
+    for (const d of node.directives ?? []) {
+      const args = (d.arguments ?? []).map((a) => ({ name: a.name.value, value: valueOf(a.value) }));
+      uses.push({ name: d.name.value, location, site, extension, args });
+    }
+    const own = node.kind === "InputObjectTypeDefinition" || node.kind === "InputObjectTypeExtension";
+    const inner = (child, isInputField = false) => visit(child, ["ELEMENT", String(++element)], 0, isInputField);
+    for (const f of node.fields ?? []) inner(f, own);
+    for (const a of node.arguments ?? []) if (a.kind === "InputValueDefinition") inner(a);
+    for (const v of node.values ?? []) inner(v);
   };
-  for (const def of doc.definitions) visit(def);
+  let extensions = 0;
+  for (const def of doc.definitions) visit(def, siteOf(def), isExtension(def) ? ++extensions : 0);
   return uses;
 };
 
-// schemaData with TypeSystem.tla's two optional fields, for the schema
-// area's verdicts: how many schema definitions the document has (§3.3, "at
-// most one"), and where it applies each directive (§3.13, "Directives must
-// only be used in the locations they are declared to belong in"). The
-// introspect area keeps to schemaData, so its schemas aren't judged by
-// these two rules.
+// schemaData with TypeSystem.tla's optional fields, for the schema area's
+// verdicts: how many schema definitions the document has (§3.3, "at most
+// one"), where and how it applies each directive (§3.13, "Directives must
+// only be used in the locations they are declared to belong in"), and its
+// type system extensions (§3.1), in document order. The introspect area
+// keeps to schemaData, so its schemas aren't judged by these rules.
 export const schemaVerdictData = (sdl) => {
   const doc = graphql.parse(sdl);
   return {
-    ...schemaData(sdl),
+    ...definitionsOf(doc, true),
     schemaDefinitions: doc.definitions.filter((d) => d.kind === "SchemaDefinition").length,
     uses: usesOf(doc),
+    extensions: doc.definitions.filter(isExtension).map(extensionOf),
   };
 };
+
+// Whether an SDL document has type system extensions: the schema area asks
+// such a schema only of adapters that claim `schema-extensions`.
+export const hasExtensions = (sdl) => graphql.parse(sdl).definitions.some(isExtension);
 
 // ---------------------------------------------------------------------------
 // TLA+ text

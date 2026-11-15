@@ -1051,6 +1051,125 @@ Check(rule, S, D) == CheckRule(rule, WithIntrospection(S), D)
 IsValid(S, D) == LET Full == WithIntrospection(S) IN \A rule \in Rules : CheckRule(rule, Full, D) = {}
 
 -----------------------------------------------------------------------------
+(* Numeric literals out of range *)
+
+\* Coercible above checks Int and Float literals by kind only, and IsValid
+\* with it: scripts/generate-vectors-coerce.mjs relies on that (its
+\* `literalOnly` vectors). §5.6.1 asks for a literal "coercible to type",
+\* and §3.5.1 and §3.5.2 bound what Int and Float coerce:
+\*   Int    "If the integer input value represents a value less than -2^31
+\*          or greater than or equal to 2^31, a request error should be
+\*          raised." A SHOULD: IntInputRange below, which isn't one of
+\*          Rules.
+\*   Float  "If the input value otherwise represents a value not
+\*          representable by finite IEEE 754 (e.g. NaN, Infinity, or a
+\*          value outside the available precision), a request error must
+\*          be raised." A MUST for a literal too large for binary64, which
+\*          rounds to Infinity: ValuesOfCorrectTypeWithRanges. A literal
+\*          too small (1e-400) is left alone: whether rounding it to 0 is
+\*          "outside the available precision" the spec doesn't say.
+\* scripts/generate-vectors-validate.mjs grades the validate area with
+\* KitCheckRule, which uses both.
+\*
+\* A literal is a string such as "-12", "1.5e-3" or "1E400": IntValue and
+\* FloatValue as written (§2.10.1, §2.10.2), so an integer part has no
+\* leading zero.
+
+LiteralChar(text, i) == SubSeq(text, i, i)
+DigitChars == {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
+DigitValue(c) == CHOOSE d \in 0..9 : ToString(d) = c
+
+\* The first index from i whose character is in chars, or Len(text) + 1.
+RECURSIVE FirstIndexOf(_, _, _)
+FirstIndexOf(text, chars, i) ==
+  IF i > Len(text) THEN i ELSE IF LiteralChar(text, i) \in chars THEN i ELSE FirstIndexOf(text, chars, i + 1)
+
+\* Digits as a number, from index i on. Only for short digit strings: TLC's
+\* integers are 32-bit.
+RECURSIVE DigitsValue(_, _, _)
+DigitsValue(digits, i, acc) ==
+  IF i > Len(digits) THEN acc ELSE DigitsValue(digits, i + 1, acc * 10 + DigitValue(LiteralChar(digits, i)))
+
+\* Whether the digit string a, read as a decimal fraction 0.a, is less than
+\* 0.b: digits compared from the left, a missing digit read as 0.
+RECURSIVE DecimalLess(_, _, _)
+DecimalLess(a, b, i) ==
+  IF i > Len(a) /\ i > Len(b) THEN FALSE
+  ELSE LET x == IF i <= Len(a) THEN DigitValue(LiteralChar(a, i)) ELSE 0
+           y == IF i <= Len(b) THEN DigitValue(LiteralChar(b, i)) ELSE 0
+       IN IF x # y THEN x < y ELSE DecimalLess(a, b, i + 1)
+
+Unsigned(text) == IF LiteralChar(text, 1) = "-" THEN SubSeq(text, 2, Len(text)) ELSE text
+
+\* §3.5.1: an IntValue's value is in [-2^31, 2^31). Without leading zeros,
+\* a shorter digit string is a smaller number, and digit strings of one
+\* length compare from the left.
+IntLiteralFits(text) ==
+  LET digits == Unsigned(text)
+      limit == IF LiteralChar(text, 1) = "-" THEN "2147483648" ELSE "2147483647"
+  IN Len(digits) < 10 \/ (Len(digits) = 10 /\ ~DecimalLess(limit, digits, 1))
+
+\* The smallest magnitude binary64 rounds to Infinity, 2^1024 - 2^970,
+\* written d.ddd... (it is a whole number of 309 digits): round to nearest
+\* takes every value from here up to Infinity, and this one too, since the
+\* largest finite double has an odd significand (ties go to even).
+OverflowDigits ==
+  "179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497792"
+
+\* §3.5.2: whether an IntValue or FloatValue rounds to a finite binary64.
+\* The literal's value is 0.d1d2d3... x 10^(point + exp), where the digits
+\* are the integer and fractional parts run together; with k the first
+\* digit that isn't 0, the leading digit's place is E = point - k + exp
+\* (value = dk.dk+1... x 10^E). Every value below 10^308 is finite, every
+\* value from 10^309 on isn't, and between them the digits from dk on are
+\* compared with OverflowDigits. An exponent of more than 6 digits is read
+\* as +-1000000, which decides the same.
+FloatLiteralFinite(text) ==
+  LET u == Unsigned(text)
+      e == FirstIndexOf(u, {"e", "E"}, 1)
+      mantissa == SubSeq(u, 1, e - 1)
+      dot == FirstIndexOf(mantissa, {"."}, 1)
+      intPart == SubSeq(mantissa, 1, dot - 1)
+      digits == intPart \o (IF dot > Len(mantissa) THEN "" ELSE SubSeq(mantissa, dot + 1, Len(mantissa)))
+      expText == IF e > Len(u) THEN "" ELSE SubSeq(u, e + 1, Len(u))
+      negative == expText # "" /\ LiteralChar(expText, 1) = "-"
+      expDigits == IF expText # "" /\ LiteralChar(expText, 1) \in {"-", "+"} THEN SubSeq(expText, 2, Len(expText)) ELSE expText
+      magnitude == IF Len(expDigits) > 6 THEN 1000000 ELSE DigitsValue(expDigits, 1, 0)
+      exp == IF negative THEN -magnitude ELSE magnitude
+      k == FirstIndexOf(digits, DigitChars \ {"0"}, 1)
+      place == Len(intPart) - k + exp
+  IN \/ k > Len(digits)
+     \/ place < 308
+     \/ place = 308 /\ DecimalLess(SubSeq(digits, k, Len(digits)), OverflowDigits, 1)
+
+\* The type an Int or Float literal coerces to at a position: a literal
+\* that isn't a list, given to a list type, is coerced as a list of one
+\* (§3.11), so it is the innermost named type.
+LiteralPositions(S, D, kinds) == {p \in AllPositions(S, D) : p.type # NoType /\ p.value.kind \in kinds}
+
+\* §3.5.2: Float literals that round to Infinity, as written.
+FloatLiteralsNotFinite(S, D) ==
+  {p.value.value : p \in {q \in LiteralPositions(S, D, {"int", "float"}) :
+                            q.type.name = "Float" /\ ~FloatLiteralFinite(q.value.value)}}
+
+\* §5.6.1 Values of Correct Type with §3.5.2's finiteness.
+ValuesOfCorrectTypeWithRanges(S, D) ==
+  ValuesOfCorrectType(S, D) \cup (IF FloatLiteralsNotFinite(S, D) = {} THEN {} ELSE {"value"})
+
+\* §3.5.1, a SHOULD: Int literals out of range, as written. ID takes any
+\* integer, and Float has its own bound.
+IntInputRange(S, D) ==
+  {p.value.value : p \in {q \in LiteralPositions(S, D, {"int"}) :
+                            q.type.name = "Int" /\ ~IntLiteralFits(q.value.value)}}
+
+\* The rules the validate area grades: Rules, with ranges.
+KitRules == Rules \cup {"IntInputRange"}
+KitCheckRule(rule, S, D) ==
+  CASE rule = "ValuesOfCorrectType" -> ValuesOfCorrectTypeWithRanges(S, D)
+    [] rule = "IntInputRange" -> IntInputRange(S, D)
+    [] OTHER -> CheckRule(rule, S, D)
+
+-----------------------------------------------------------------------------
 (* Test vectors: the spec's examples *)
 
 (* Constructors for writing schemas and documents by hand. *)
@@ -1597,11 +1716,48 @@ October2021Vectors == <<
     <<Sub("sub", <<NewMessage, WithDirs(On("", <<F("disallowedSecondRootField")>>), IncludeIf(BoolV("false")))>>)>>, TRUE)
 >>
 
+\* Numeric literals out of range (KitCheckRule): documents this module adds,
+\* not the spec's examples, over the example schema's Arguments type.
+FloatV(text) == Lit("float", text)
+IntArg(text) == OnArguments("", <<>>, <<FA("intArgField", <<A("intArg", IntV(text))>>)>>)
+FloatArg(value) == OnArguments("", <<>>, <<FA("floatArgField", <<A("floatArg", value)>>)>>)
+\* A whole number of 309 digits, 10^308, and one of 310, 10^309.
+E308 == "1" \o "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+RangeVectors == <<
+  Added("IntInputRange", Examples, IntArg("2147483647"), TRUE),
+  Added("IntInputRange", Examples, IntArg("2147483648"), FALSE),
+  Added("IntInputRange", Examples, IntArg("-2147483648"), TRUE),
+  Added("IntInputRange", Examples, IntArg("-2147483649"), FALSE),
+  Added("IntInputRange", Examples, IntArg("999999999"), TRUE),
+  Added("IntInputRange", Examples, IntArg("10000000000"), FALSE),
+  \* Int's range isn't Float's.
+  Added("IntInputRange", Examples, FloatArg(IntV("2147483648")), TRUE),
+  Added("IntInputRange", Examples,
+    OnArguments("", <<VarDefault("v", T("Int"), IntV("2147483648"))>>, <<FA("intArgField", <<A("intArg", Var("v"))>>)>>), FALSE),
+  Added("IntInputRange", Examples,
+    <<Q("", <<>>, <<WithArgs(F("booleanList"), <<A("booleanListArg", ListOf(<<BoolV("true")>>))>>)>>)>>, TRUE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("1e400")), FALSE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("1e300")), TRUE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("1.7976931348623157e308")), TRUE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("1.7976931348623158e308")), TRUE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("1.7976931348623159e308")), FALSE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("-1e309")), FALSE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("10e308")), FALSE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("0.001e311")), TRUE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("0.0")), TRUE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("1e-400")), TRUE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("1E+1234567")), FALSE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(IntV(E308)), TRUE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(IntV(E308 \o "0")), FALSE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV(OverflowDigits \o ".0")), FALSE)
+>>
+
 \* Each initial state is one vector, so a violation's trace names it.
 VARIABLE vector
 Init ==
   vector \in UNION {{[group |-> g, n |-> n] : n \in DOMAIN Vectors[g]} : g \in DOMAIN Vectors}
                \cup {[group |-> "october2021", n |-> n] : n \in DOMAIN October2021Vectors}
+               \cup {[group |-> "ranges", n |-> n] : n \in DOMAIN RangeVectors}
 Next == UNCHANGED vector
 
 VectorHolds(group) ==
@@ -1619,4 +1775,7 @@ VariableExamplesHold == VectorHolds("variables")
 October2021ExamplesHold ==
   vector.group = "october2021" =>
     LET v == October2021Vectors[vector.n] IN (SingleRootFieldOctober2021(WithIntrospection(v.schema), v.doc) = {}) = v.valid
+RangeExamplesHold ==
+  vector.group = "ranges" =>
+    LET v == RangeVectors[vector.n] IN (KitCheckRule(v.rule, WithIntrospection(v.schema), v.doc) = {}) = v.valid
 ====

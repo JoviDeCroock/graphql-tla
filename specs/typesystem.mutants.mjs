@@ -5,6 +5,7 @@
 // `differential: false`, for rules graphql-js doesn't check.
 const file = "TypeSystem.tla";
 const module = "TypeSystemVectors.tla";
+const NO_EXTENSIONS = "the differential's documents have no extensions, and its schema data doesn't record where or how directives are applied";
 
 const mutants = [
   {
@@ -198,6 +199,145 @@ const mutants = [
     property: "DirectiveUsesAreChecked",
     differential: false,
     why: "the differential's schema data doesn't record where directives are applied",
+  },
+  // Type system extensions, and how directives are applied. The
+  // differential's documents have no extensions, and its schema data
+  // doesn't record directive uses, so none of these is differential.
+  {
+    name: "an extension's fields may repeat the previous type's",
+    find: "       /\\ Range(NamesOf(X.fields)) \\cap Range(NamesOf(P.fields)) = {}\n",
+    replace: "",
+    property: "ExtensionsAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "the previous type is the definition alone, without the extensions before",
+    find: "  ApplyExtensions(TypeNamed(S, Extensions(S)[k].name), SubSeq(Extensions(S), 1, k - 1))",
+    replace: "  TypeNamed(S, Extensions(S)[k].name)",
+    property: "ExtensionsAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "a built-in scalar can't be extended",
+    find: 'ExtensionTargetIsDefined(S, X) == IsTypeExtension(X) => TypeNamed(S, X.name).kind # "UNKNOWN"',
+    replace: "ExtensionTargetIsDefined(S, X) == IsTypeExtension(X) => X.name \\in Range(AllNames(S))",
+    property: "ExtensionsAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "extensions add nothing to the schema the rules of definitions check",
+    find: "  IF Extensions(S) = <<>> THEN S\n  ELSE [S EXCEPT",
+    replace: "  IF TRUE THEN S\n  ELSE [S EXCEPT",
+    property: "ExtensionsAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "an input object type extension may apply @oneOf",
+    find: 'ExtensionDoesNotAddOneOf(X) == X.kind = "INPUT_OBJECT" => ~X.oneOf',
+    replace: "ExtensionDoesNotAddOneOf(X) == TRUE",
+    property: "ExtensionsAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "an object type extension may implement an interface the type already implements",
+    find: "    Range(X.interfaces) \\cap Range(Previous(S, k).interfaces) = {}",
+    replace: "    TRUE",
+    property: "ExtensionsAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "a schema extension needs no schema to extend",
+    find: 'SchemaExtensionHasSchema(S, X) == X.kind = "SCHEMA" => S.schemaDef',
+    replace: "SchemaExtensionHasSchema(S, X) == TRUE",
+    property: "ExtensionsAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "a directive the definition applies doesn't count as already applied",
+    find: "         /\\ uses[j].extension < u.extension",
+    replace: "         /\\ 0 < uses[j].extension /\\ uses[j].extension < u.extension",
+    property: "AppliedDirectivesAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "a repeatable directive can't be applied again by an extension",
+    find: "    /\\ IsKnownDirective(S, u.name) /\\ ~IsRepeatable(S, u.name)\n",
+    replace: "    /\\ IsKnownDirective(S, u.name)\n",
+    property: "AppliedDirectivesAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "@specifiedBy may be applied to a built-in scalar",
+    find: '    (u.name = "specifiedBy" /\\ u.site[1] = "SCALAR") => u.site[2] \\notin BuiltinScalarNames',
+    replace: "    TRUE",
+    property: "AppliedDirectivesAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "an applied directive's required arguments may be left out",
+    find: "  /\\ \\A j \\in DOMAIN defs : IsRequired(defs[j]) => \\E i \\in DOMAIN u.args : u.args[i].name = defs[j].name\n",
+    replace: "",
+    property: "AppliedDirectivesAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "an applied directive's argument values aren't coerced",
+    find: "         CoerceLiteral(Extended(S), ArgNamed(defs, u.args[i].name).type, u.args[i].value, FALSE, Fuel).ok",
+    replace: "         TRUE",
+    property: "AppliedDirectivesAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "a non-repeatable directive may be applied twice by one definition",
+    find: "      => IsRepeatable(S, uses[k].name)",
+    replace: "      => TRUE",
+    property: "AppliedDirectivesAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "a directive extension may extend a directive nobody defined",
+    find: 'DirectiveExtensionTargetIsDefined(S, X) == X.kind = "DIRECTIVE" => IsKnownDirective(S, X.name)',
+    replace: "DirectiveExtensionTargetIsDefined(S, X) == TRUE",
+    property: "DirectiveExtensionsAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "a directive extension may apply the directive it extends",
+    find: "    u.extension > 0 /\\ IsDirectiveSite(u.site) /\\ u.name = u.site[2]",
+    replace: "    FALSE",
+    property: "DirectiveExtensionsAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "a directive extension's indirect references stop at what the applied directive references directly",
+    find: "       /\\ <<\"directive\", u.site[2]>> \\in Reachable(E, start, start)",
+    replace: "       /\\ <<\"directive\", u.site[2]>> \\in start",
+    property: "DirectiveExtensionsAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
+    name: "a directive the definition of a directive applies doesn't count as already applied by its extension",
+    find: "Reapplied(S, directiveSite) ==\n  LET uses == DirectiveUses(S) IN",
+    replace: "Reapplied(S, directiveSite) ==\n  LET uses == SelectSeq(DirectiveUses(S), LAMBDA x : ~(directiveSite /\\ x.extension = 0)) IN",
+    property: "DirectiveExtensionsAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
   },
 ];
 

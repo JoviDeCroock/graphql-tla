@@ -31,11 +31,15 @@ import {
   Malformed,
   caseOf,
   envelopeProblems,
+  exactProblem,
   fillDefinitions,
+  fromTla,
   fullResponse,
   isBuiltinType,
   isRequestError,
   lookupCaseOf,
+  probeCaseOf,
+  toTla,
   wrappersCaseOf,
 } from "./data.mjs";
 import { CONTROLS, PROFILE_CONTROLS } from "./controls.mjs";
@@ -43,6 +47,8 @@ import { DISCOVERY_ALIASES, DISCOVERY_QUERY, INCLUDE_DEPRECATED, PRIMARY, PROFIL
 
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
 const checksModule = readFileSync(join(root, "kit/introspect/IntrospectChecks.tla"), "utf8");
+// IntrospectChecks reads printed default values with the reference's lexer.
+const lexerModule = readFileSync(join(root, "specs/Lexer.tla"), "utf8");
 
 export const loadVectors = () => JSON.parse(readFileSync(join(root, "kit/introspect/vectors.json"), "utf8"));
 
@@ -182,6 +188,18 @@ export const CHECKS = [
     {
       basis:
         '§4.2.4: "defaultValue may return a String encoding (using the GraphQL language) of the default value used by this input value in the condition a value is not provided at runtime. If this input value has no default value, returns null." By Appendix A, a lowercase "may" keeps its RFC 2119 meaning, so the encoding is optional; the intent is plainly that a default is encoded, which makes this a SHOULD. A string that isn\'t an encoding of the default, or one for an input value without a default, still fails defaultValue.',
+    },
+  ],
+  [
+    "defaultValuePrinting",
+    "A default value's strings are printed with control characters escaped, and supplementary characters, if escaped, as \\u{…}",
+    "SHOULD",
+    ["2.10.4", "4.2.4"],
+    {
+      since: "September2025",
+      feature: "rule on producing a StringValue",
+      basis:
+        '§2.10.4: "When producing a StringValue, implementations should use escape sequences to represent non-printable control characters (U+0000 to U+001F and U+007F to U+009F)." "If an implementation chooses to escape a supplementary character, it should only use a variable-width unicode escape sequence." §4.2.4: "defaultValue may return a String encoding (using the GraphQL language) of the default value". So a string in the encoding that has a control character unescaped, or a surrogate pair of fixed-width escapes, fails this check. A block string can\'t escape anything, so one that holds a control character (a line feed included) fails it too. September 2025 introduced both sentences; the value the encoding stands for is graded by defaultValue.',
     },
   ],
   [
@@ -368,7 +386,7 @@ const SCHEMA_ONLY = new Set(["roots", "types", "builtinScalars", "directives", "
 const LOOKUP_ONLY = new Set(["typeByName"]);
 // Checks the October 2021 profile doesn't grade: its query doesn't select
 // isOneOf, and October 2021 has no Stable Ordering.
-const NOT_OCT2021 = new Set(["isOneOf", "order"]);
+const NOT_OCT2021 = new Set(["isOneOf", "order", "defaultValuePrinting"]);
 // Checks only the October 2021 profile grades: under the later releases'
 // profiles, a null deprecationReason is a deprecation problem.
 const ONLY_OCT2021 = new Set(["deprecationReasonOmitted"]);
@@ -378,6 +396,10 @@ const exercises = (vector, id, profile) => {
   // release defines it.
   if (id === "builtinEdition" && profile === PRIMARY) return false;
   if (vector.wrappers) return id === "typeKinds";
+  // A probe (a request that uses @skip or @include) is about directives
+  // only; an exact vector only about executing.
+  if (vector.probe) return id === "directives" || id === "builtinDirectives";
+  if (vector.exact) return false;
   return vector.lookups ? !SCHEMA_ONLY.has(id) : !LOOKUP_ONLY.has(id);
 };
 
@@ -440,7 +462,7 @@ const hides = (m, [aspect, where], kindOf) => {
   if (field === "isDeprecated" || field === "deprecationReason") return (aspect === "deprecation" || aspect === "deprecationReasonOmitted") && of;
   if (field === "specifiedByURL") return aspect === field || aspect === "specifiedByURLOmitted";
   if (field === "isOneOf") return aspect === "isOneOf" || aspect === "isOneOfNull" || aspect === "wrapperIsOneOf";
-  if (field === "defaultValue") return aspect === "defaultValue" || aspect === "defaultValueOmitted";
+  if (field === "defaultValue") return ["defaultValue", "defaultValueOmitted", "printedControl", "printedPair"].includes(aspect);
   if (field === "isRepeatable") return aspect === "isRepeatable";
   return false;
 };
@@ -451,6 +473,8 @@ const ASPECT = {
   arguments: "arguments",
   defaultValue: "defaultValue",
   defaultValueOmitted: "defaultValueOmitted",
+  printedControl: "defaultValuePrinting",
+  printedPair: "defaultValuePrinting",
   inputFields: "inputFields",
   enumValues: "enumValues",
   interfaces: "interfaces",
@@ -512,6 +536,8 @@ export const checkOf = ([aspect, where]) => {
   if (aspect === "serviceTypes") return "directives";
   if (aspect === "wrapper") return "typeKinds";
   if (aspect === "order" || aspect === "typename") return aspect;
+  // How a default is printed, a built-in's included.
+  if (aspect === "printedControl" || aspect === "printedPair") return "defaultValuePrinting";
   if (ownerOf(where).builtin) return "builtinDefinitions";
   const check = ASPECT[aspect];
   if (!check) throw new Error(`no check for the aspect ${aspect}`);
@@ -612,15 +638,24 @@ const evaluate = async (schemas, cases) => {
       return;
     }
     try {
+      // The reference gives the whole answer: judged here, as executes.
+      if (c.exact) {
+        const problem = exactProblem(c.response, c.expected);
+        results[i] = problem ? { envelope, malformed: problem } : { envelope, problems: [], matches: true, other: {}, labels: new Map() };
+        return;
+      }
       const response = fillDefinitions(c.response, c.missing, c.builtins[c.profile], c.profile);
       let data;
-      if (c.wrappers) data = { kind: "wrappers", ...wrappersCaseOf(response, c.profile, c.missing) };
+      if (c.wrappers) {
+        const type = c.wrapperType ?? "__Schema";
+        data = { kind: "wrappers", wrapperType: type, ...wrappersCaseOf(response, c.profile, c.missing, type, c.wrapperDepth) };
+      } else if (c.probe) data = { kind: "probe", ...probeCaseOf(c.response, c.probe) };
       else if (c.lookups) {
         const lookup = lookupCaseOf(response, c.lookups, c.profile, c.missing);
         data = { kind: "lookup", extras: [], extraTypes: [], provided: new Set([...c.provided, ...shownIn(lookup.actual)]), ...lookup };
       } else data = { kind: "schema", ...caseOf(response, c.directives, c.types, c.profile, c.missing) };
       results[i] = { envelope };
-      prepared.push({ i, tla: tla({ schema: c.schema + 1, profile: c.profile, inc: c.inc, ...data }) });
+      prepared.push({ i, tla: tla(toTla({ schema: c.schema + 1, profile: c.profile, inc: c.inc, ...data })) });
     } catch (error) {
       if (!(error instanceof Malformed)) throw error;
       results[i] = { envelope, malformed: error.message };
@@ -628,7 +663,7 @@ const evaluate = async (schemas, cases) => {
   });
   const shards = [];
   for (let k = 0; k < prepared.length; k += SHARD) shards.push(prepared.slice(k, k + SHARD));
-  const schemaText = chunked("Schemas", schemas.map((s) => tla(s)));
+  const schemaText = chunked("Schemas", schemas.map((s) => tla(toTla(s))));
   await pool(shards, async (shard, k) => {
     const module = `---- MODULE Shard ----
 EXTENDS IntrospectChecks
@@ -639,12 +674,12 @@ ${chunked("Checked", shard.map((p) => p.tla), 1)}
 
 ASSUME \\A i \\in DOMAIN Checked : PrintT(<<"verdict", i, CaseResult(Schemas[Checked[i].schema], Checked[i])>>)
 ${moduleFooter}`;
-    const values = await evaluateModule("Shard", module, { "IntrospectChecks.tla": checksModule });
+    const values = await evaluateModule("Shard", module, { "IntrospectChecks.tla": checksModule, "Lexer.tla": lexerModule });
     const verdicts = values.filter((v) => v[0] === "verdict");
     if (verdicts.length !== shard.length || new Set(verdicts.map((v) => v[1])).size !== shard.length) {
       throw new Error(`read ${verdicts.length} verdicts from shard ${k}, which has ${shard.length} cases`);
     }
-    for (const [, n, [problems, matches, others]] of verdicts) {
+    for (const [, n, [problems, matches, others]] of fromTla(verdicts)) {
       const { i } = shard[n - 1];
       const other = Object.fromEntries(others.map(([edition, found]) => [edition, new Set(found.map(key))]));
       Object.assign(results[i], { problems: problems.map(([aspect, where]) => [aspect, where]), matches, other });
@@ -657,16 +692,17 @@ ${moduleFooter}`;
   results.forEach((r, i) => {
     if (r.malformed || r.rejected || r.crash || r.unbuilt) return;
     const c = cases[i];
-    const graded = r.problems.filter(([aspect]) => !["typename", "builtinDirectives", "serviceTypes"].includes(aspect));
+    const graded = r.problems.filter(([aspect]) => !["typename", "builtinDirectives", "serviceTypes", "printedControl", "printedPair"].includes(aspect));
     if (r.matches && graded.length > 0) throw new Error(`kit bug: Introspection!Matches holds, but IntrospectChecks found ${JSON.stringify(graded)}`);
     const visible = r.problems.filter((p) => !c.missing.some((m) => hides(m, p, c.kindOf)));
     if (!r.matches && r.problems.length === 0) visible.push(["other", ""]);
-    // Since September 2025, deprecationReason "returns the reason": a null
-    // one is a deprecation problem. Only October 2021's "optionally
-    // provides a reason" makes it deprecationReasonOmitted.
+    // October 2021 has no Stable Ordering and no rule on producing a
+    // StringValue. Since September 2025, deprecationReason "returns the
+    // reason": a null one is a deprecation problem. Only October 2021's
+    // "optionally provides a reason" makes it deprecationReasonOmitted.
     r.problems =
       c.profile === "October2021"
-        ? visible.filter(([aspect]) => aspect !== "order")
+        ? visible.filter(([aspect]) => !["order", "printedControl", "printedPair"].includes(aspect))
         : visible.map(([aspect, where]) => [aspect === "deprecationReasonOmitted" ? "deprecation" : aspect, where]);
     // Every check about built-in definitions is labelled the same way:
     // definitions, additions and Non-Null wrapping. A problem where the
@@ -724,7 +760,7 @@ const failedChecks = (r) =>
 const problemSince = (problem, r) => {
   const [aspect, where] = problem;
   if (aspect.startsWith("edition:")) return aspect.split(":")[1];
-  if (where === "@oneOf" || ["isOneOf", "isOneOfNull", "wrapperIsOneOf", "order"].includes(aspect)) return "September2025";
+  if (where === "@oneOf" || ["isOneOf", "isOneOfNull", "wrapperIsOneOf", "order", "printedControl", "printedPair"].includes(aspect)) return "September2025";
   return r.labels.get(key(problem))?.since;
 };
 
@@ -774,9 +810,12 @@ const describe = (problem, vector, r, profile) => {
     const expected = vector.expected.response.data.__schema.types.some((t) => t.name === where);
     return expected ? `leaves out ${where}, a built-in scalar the schema references` : `includes ${where}, a built-in scalar nothing references`;
   }
-  if (aspect === "builtinDirectives") return `doesn't provide ${where}${oneOf}`;
+  if (aspect === "builtinDirectives") {
+    return vector.probe ? `answers a request that uses ${where} with errors, so doesn't provide it` : `doesn't provide ${where}${oneOf}`;
+  }
   if (aspect === "unsupportedDirective") return `rejects a schema that applies ${where}, so doesn't provide it${oneOf}`;
   if (aspect === "requiredDirective") {
+    if (vector.probe) return `honours ${where} in a request, but doesn't return it in directives`;
     if (where === "@deprecated") return "doesn't return @deprecated, though the schema deprecates something";
     if (where === "@specifiedBy") return "doesn't return @specifiedBy in directives, though a scalar's specifiedByURL shows it is provided";
     return "doesn't return @oneOf in directives, though an input object's isOneOf shows it is provided (since September 2025)";
@@ -811,6 +850,8 @@ const describe = (problem, vector, r, profile) => {
   }
   if (check === "typename") return where === "" ? "the root's __typename isn't the query root type's name" : "lists __typename among a type's fields";
   if (aspect === "defaultValueOmitted") return "defaultValue is null for an input value that has a default";
+  if (aspect === "printedControl") return "a printed default value has a control character in a string, unescaped";
+  if (aspect === "printedPair") return "a printed default value escapes a supplementary character as a surrogate pair, not as \\u{…}";
   if (aspect === "specifiedByURLOmitted") return "specifiedByURL is null for a custom scalar that has a URL, though @specifiedBy is provided";
   if (aspect === "deprecationReasonOmitted") return "deprecationReason is null for a deprecated field or enum value that has a reason";
   if (aspect === "unreferencedTypes") return vector.lookups ? "__type(name:) returns null for a type the document defines that nothing references" : "leaves out a type the document defines that nothing references";
@@ -821,6 +862,7 @@ const describe = (problem, vector, r, profile) => {
 // The part of a response a problem is about: the type or directive, the
 // wrapper types of one of __Schema's fields, or the schema's root fields.
 const partOf = (response, [aspect, where], vector) => {
+  if (vector.probe || vector.exact) return response;
   if (aspect === "wrapperFields") return response?.data?.wrappers ?? response;
   if (aspect === "wrapper" || aspect === "wrapperIsOneOf") {
     const name = where.split(".")[1];
@@ -934,7 +976,15 @@ export const buildReport = ({
     const whole = r.malformed || r.crash || r.unbuilt;
     const first = whole ? null : [...r.problems].sort((a, b) => rank(a) - rank(b))[0];
     const expected = fullResponse(v, builtins, profile);
-    const what = v.wrappers ? '__type(name: "__Schema")\'s fields and their types' : v.lookups ? `__type(name:) for ${v.lookups.map((l) => l.name).join(", ")}` : "the introspection query";
+    const what = v.wrappers
+      ? `__type(name: ${JSON.stringify(v.wrapperType ?? "__Schema")})'s fields and their types`
+      : v.probe
+        ? `a request that uses @${v.probe}`
+        : v.exact
+          ? `the query ${v.queries[PRIMARY].replace(/\s+/g, " ").trim()}`
+          : v.lookups
+            ? `__type(name:) for ${v.lookups.map((l) => l.name).join(", ")}${v.fragmentsOn ? `, inside fragments on ${v.fragmentsOn}` : ""}`
+            : "the introspection query";
     const example = {
       input: `${v.since ? `[since ${editionName(v.since)}] ` : ""}${v.sdl.replace(/\s+/g, " ")}  (${what}${profile === PRIMARY ? "" : `, ${editionName(profile)} profile`}; includeDeprecated: ${v.includeDeprecated ? "true" : "the default"})`,
       response: r.crash ? crashResponse(answers[i]) : whole || !first ? answers[i] : partOf(answers[i].response, first, v),
@@ -1220,6 +1270,11 @@ export const run = async ({ adapter, strict, log = console.log }) => {
       types: S.types.map((t) => t.name),
       lookups: v.lookups,
       wrappers: v.wrappers,
+      wrapperType: v.wrapperType,
+      wrapperDepth: v.wrapperDepth,
+      probe: v.probe,
+      exact: v.exact,
+      expected: v.expected.response,
       provided: provided ?? editionDirectives(profile),
       needs: v.needs,
       syntax: v.syntax,
@@ -1253,9 +1308,9 @@ export const run = async ({ adapter, strict, log = console.log }) => {
 
   // The vector's query for the profile, without what the service lacks.
   const queryOf = (v) => {
-    if (missing.length) {
-      if (v.wrappers) return wrappersQuery(profile, missing);
-      return v.lookups ? lookupQuery(profile, v.lookups, v.includeDeprecated, missing) : schemaQuery(profile, v.includeDeprecated, missing);
+    if (missing.length && !v.probe && !v.exact) {
+      if (v.wrappers) return wrappersQuery(profile, missing, v.wrapperType, v.wrapperDepth);
+      return v.lookups ? lookupQuery(profile, v.lookups, v.includeDeprecated, missing, v.fragmentsOn) : schemaQuery(profile, v.includeDeprecated, missing);
     }
     return v.queries[profile];
   };

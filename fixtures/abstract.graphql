@@ -1,0 +1,77 @@
+# DoesFragmentTypeApply (§6.3.2) for each kind of type condition, with both
+# outcomes. A union condition inside an interface-typed field applies to
+# User, a member, but not to Bot. An interface condition inside a
+# union-typed field applies to User, which implements Node, but not to Post.
+# Each comes as an inline fragment and as a fragment spread. `friend` is
+# selected under two fragments, and its sub-selections are merged. It is
+# interface-typed, and its __typename, aliased or not, must name the
+# concrete object type (§4.1).
+# maxListLength: 0
+# spec: 6.3.2, 3.7, 3.8, 4.1, 6.4.3
+
+interface Node {
+  id: ID!
+}
+
+type User implements Node {
+  id: ID!
+  name: String
+  friend: Node
+  latest: SearchResult
+}
+
+type Bot implements Node {
+  id: ID!
+}
+
+type Post {
+  title: String
+}
+
+union SearchResult = User | Post
+
+type Query {
+  node: Node
+}
+
+query {
+  node {
+    ... on SearchResult {
+      __typename
+    }
+    ...Named
+    ... on Node {
+      ... on User {
+        friend {
+          id
+        }
+      }
+    }
+  }
+}
+
+fragment Named on SearchResult {
+  ... on User {
+    friend {
+      __typename
+      kind: __typename
+    }
+    latest {
+      ... on Node {
+        id
+      }
+      ...Identified
+      ...Titled
+    }
+  }
+}
+
+fragment Identified on Node {
+  nodeId: id
+}
+
+fragment Titled on SearchResult {
+  ... on Post {
+    title
+  }
+}

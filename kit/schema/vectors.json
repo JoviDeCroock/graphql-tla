@@ -1919,7 +1919,9 @@
       "id": "implFieldProvided.1.invalid",
       "spec": [
         "3.6",
-        "3.7"
+        "3.7",
+        "3.6.3",
+        "3.7.1"
       ],
       "family": "implementation",
       "rule": "IMPL_FIELD_PROVIDED",
@@ -1936,7 +1938,9 @@
       "id": "implFieldProvided.1.valid",
       "spec": [
         "3.6",
-        "3.7"
+        "3.7",
+        "3.6.3",
+        "3.7.1"
       ],
       "family": "implementation",
       "rule": "IMPL_FIELD_PROVIDED",
@@ -2220,7 +2224,11 @@
       ],
       "expected": {
         "valid": false
-      }
+      },
+      "siblings": [
+        "implDeprecation.1.valid",
+        "implDeprecation.3.valid"
+      ]
     },
     {
       "id": "implDeprecation.1.valid",
@@ -2300,7 +2308,8 @@
     {
       "id": "unionMembersObjects.1.invalid",
       "spec": [
-        "3.8"
+        "3.8",
+        "3.8.1"
       ],
       "family": "union",
       "rule": "UNION_MEMBERS_OBJECTS",
@@ -2316,7 +2325,8 @@
     {
       "id": "unionMembersObjects.1.valid",
       "spec": [
-        "3.8"
+        "3.8",
+        "3.8.1"
       ],
       "family": "union",
       "rule": "UNION_MEMBERS_OBJECTS",
@@ -2330,7 +2340,8 @@
     {
       "id": "unionMembersObjects.2.invalid",
       "spec": [
-        "3.8"
+        "3.8",
+        "3.8.1"
       ],
       "family": "union",
       "rule": "UNION_MEMBERS_OBJECTS",
@@ -2346,7 +2357,8 @@
     {
       "id": "unionMembersObjects.2.valid",
       "spec": [
-        "3.8"
+        "3.8",
+        "3.8.1"
       ],
       "family": "union",
       "rule": "UNION_MEMBERS_OBJECTS",
@@ -2360,7 +2372,8 @@
     {
       "id": "unionMembersObjects.3.invalid",
       "spec": [
-        "3.8"
+        "3.8",
+        "3.8.1"
       ],
       "family": "union",
       "rule": "UNION_MEMBERS_OBJECTS",
@@ -2376,7 +2389,8 @@
     {
       "id": "unionMembersObjects.3.valid",
       "spec": [
-        "3.8"
+        "3.8",
+        "3.8.1"
       ],
       "family": "union",
       "rule": "UNION_MEMBERS_OBJECTS",
@@ -2390,7 +2404,8 @@
     {
       "id": "unionMembersObjects.4.invalid",
       "spec": [
-        "3.8"
+        "3.8",
+        "3.8.1"
       ],
       "family": "union",
       "rule": "UNION_MEMBERS_OBJECTS",
@@ -2406,7 +2421,8 @@
     {
       "id": "unionMembersObjects.4.valid",
       "spec": [
-        "3.8"
+        "3.8",
+        "3.8.1"
       ],
       "family": "union",
       "rule": "UNION_MEMBERS_OBJECTS",
@@ -2678,7 +2694,11 @@
       ],
       "expected": {
         "valid": false
-      }
+      },
+      "siblings": [
+        "requiredInputFieldNotDeprecated.1.valid",
+        "requiredInputFieldNotDeprecated.2.valid"
+      ]
     },
     {
       "id": "requiredInputFieldNotDeprecated.1.valid",
@@ -2701,7 +2721,8 @@
       "id": "oneOfFieldNullable.1.invalid",
       "spec": [
         "3.10",
-        "3.10.1"
+        "3.10.1",
+        "3.10.2"
       ],
       "family": "input",
       "rule": "ONEOF_FIELD_NULLABLE",
@@ -2720,7 +2741,8 @@
       "id": "oneOfFieldNullable.1.valid",
       "spec": [
         "3.10",
-        "3.10.1"
+        "3.10.1",
+        "3.10.2"
       ],
       "family": "input",
       "rule": "ONEOF_FIELD_NULLABLE",
@@ -2737,7 +2759,8 @@
       "id": "oneOfFieldNoDefault.1.invalid",
       "spec": [
         "3.10",
-        "3.10.1"
+        "3.10.1",
+        "3.10.2"
       ],
       "family": "input",
       "rule": "ONEOF_FIELD_NO_DEFAULT",
@@ -2756,7 +2779,8 @@
       "id": "oneOfFieldNoDefault.1.valid",
       "spec": [
         "3.10",
-        "3.10.1"
+        "3.10.1",
+        "3.10.2"
       ],
       "family": "input",
       "rule": "ONEOF_FIELD_NO_DEFAULT",
@@ -3379,6 +3403,5476 @@
       "rule": "DIRECTIVE_LOCATIONS_VALID",
       "pair": "directiveLocationsValid.3.invalid",
       "sdl": "type Query { a: Int @deprecated }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "typeNamesUnique.2.invalid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAMES_UNIQUE",
+      "pair": "typeNamesUnique.2.valid",
+      "sdl": "type A { a: Int } enum A { X } type Query { a: A }",
+      "verdict": [
+        "TYPE_NAMES_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "typeNamesUnique.2.valid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAMES_UNIQUE",
+      "pair": "typeNamesUnique.2.invalid",
+      "sdl": "type A { a: Int } enum B { X } type Query { a: A }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "typeNamesUnique.3.invalid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAMES_UNIQUE",
+      "pair": "typeNamesUnique.3.valid",
+      "sdl": "input A { a: Int } scalar A type Query { f(a: A): Int }",
+      "verdict": [
+        "TYPE_NAMES_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "typeNamesUnique.3.valid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAMES_UNIQUE",
+      "pair": "typeNamesUnique.3.invalid",
+      "sdl": "input A { a: Int } scalar B type Query { f(a: A): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "typeNamesUnique.4.invalid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAMES_UNIQUE",
+      "pair": "typeNamesUnique.4.valid",
+      "sdl": "interface A { a: Int } union A = Query type Query implements A { a: Int }",
+      "verdict": [
+        "TYPE_NAMES_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "typeNamesUnique.4.valid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAMES_UNIQUE",
+      "pair": "typeNamesUnique.4.invalid",
+      "sdl": "interface A { a: Int } union B = Query type Query implements A { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "typeNameNotBuiltin.3.invalid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAME_NOT_BUILTIN",
+      "pair": "typeNameNotBuiltin.3.valid",
+      "sdl": "enum Boolean { YES NO } type Query { a: Int }",
+      "verdict": [
+        "TYPE_NAME_NOT_BUILTIN"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "typeNameNotBuiltin.3.valid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAME_NOT_BUILTIN",
+      "pair": "typeNameNotBuiltin.3.invalid",
+      "sdl": "enum Bool { YES NO } type Query { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "typeNameNotBuiltin.4.invalid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAME_NOT_BUILTIN",
+      "pair": "typeNameNotBuiltin.4.valid",
+      "sdl": "input ID { a: Int } type Query { f(i: ID): Int }",
+      "verdict": [
+        "TYPE_NAME_NOT_BUILTIN"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "typeNameNotBuiltin.4.valid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAME_NOT_BUILTIN",
+      "pair": "typeNameNotBuiltin.4.invalid",
+      "sdl": "input Id { a: Int } type Query { f(i: Id): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "typeNameReserved.2.invalid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAME_RESERVED",
+      "pair": "typeNameReserved.2.valid",
+      "sdl": "scalar __S type Query { a: __S }",
+      "verdict": [
+        "TYPE_NAME_RESERVED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "typeNameReserved.2.valid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAME_RESERVED",
+      "pair": "typeNameReserved.2.invalid",
+      "sdl": "scalar _S type Query { a: _S }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "typeNameReserved.3.invalid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAME_RESERVED",
+      "pair": "typeNameReserved.3.valid",
+      "sdl": "enum __E { A } type Query { a: __E }",
+      "verdict": [
+        "TYPE_NAME_RESERVED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "typeNameReserved.3.valid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAME_RESERVED",
+      "pair": "typeNameReserved.3.invalid",
+      "sdl": "enum _E { A } type Query { a: _E }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "typeNameReserved.4.invalid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAME_RESERVED",
+      "pair": "typeNameReserved.4.valid",
+      "sdl": "input __I { a: Int } type Query { f(i: __I): Int }",
+      "verdict": [
+        "TYPE_NAME_RESERVED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "typeNameReserved.4.valid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAME_RESERVED",
+      "pair": "typeNameReserved.4.invalid",
+      "sdl": "input _I { a: Int } type Query { f(i: _I): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "typeNameReserved.5.invalid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAME_RESERVED",
+      "pair": "typeNameReserved.5.valid",
+      "sdl": "union __U = Query type Query { a: __U }",
+      "verdict": [
+        "TYPE_NAME_RESERVED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "typeNameReserved.5.valid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAME_RESERVED",
+      "pair": "typeNameReserved.5.invalid",
+      "sdl": "union _U = Query type Query { a: _U }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "typeNameReserved.6.invalid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAME_RESERVED",
+      "pair": "typeNameReserved.6.valid",
+      "sdl": "interface __I { a: Int } type Query implements __I { a: Int }",
+      "verdict": [
+        "TYPE_NAME_RESERVED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "typeNameReserved.6.valid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "names",
+      "rule": "TYPE_NAME_RESERVED",
+      "pair": "typeNameReserved.6.invalid",
+      "sdl": "interface _I { a: Int } type Query implements _I { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "rootTypesDifferent.3.invalid",
+      "spec": [
+        "3.3.1"
+      ],
+      "family": "root",
+      "rule": "ROOT_TYPES_DIFFERENT",
+      "pair": "rootTypesDifferent.3.valid",
+      "sdl": "schema { query: Q mutation: M subscription: M } type Q { a: Int } type M { a: Int } type S { a: Int }",
+      "verdict": [
+        "ROOT_TYPES_DIFFERENT"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "rootTypesDifferent.3.valid",
+      "spec": [
+        "3.3.1"
+      ],
+      "family": "root",
+      "rule": "ROOT_TYPES_DIFFERENT",
+      "pair": "rootTypesDifferent.3.invalid",
+      "sdl": "schema { query: Q mutation: M subscription: S } type Q { a: Int } type M { a: Int } type S { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "rootTypesAreObjects.5.invalid",
+      "spec": [
+        "3.3.1"
+      ],
+      "family": "root",
+      "rule": "ROOT_TYPES_ARE_OBJECTS",
+      "pair": "rootTypesAreObjects.5.valid",
+      "sdl": "schema { query: Q subscription: U } type Q { a: Int } type S { a: Int } union U = S",
+      "verdict": [
+        "ROOT_TYPES_ARE_OBJECTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "rootTypesAreObjects.5.valid",
+      "spec": [
+        "3.3.1"
+      ],
+      "family": "root",
+      "rule": "ROOT_TYPES_ARE_OBJECTS",
+      "pair": "rootTypesAreObjects.5.invalid",
+      "sdl": "schema { query: Q subscription: S } type Q { a: Int } type S { a: Int } union U = S",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "rootTypesAreObjects.6.invalid",
+      "spec": [
+        "3.3.1"
+      ],
+      "family": "root",
+      "rule": "ROOT_TYPES_ARE_OBJECTS",
+      "pair": "rootTypesAreObjects.6.valid",
+      "sdl": "schema { query: S } scalar S type Q { a: S }",
+      "verdict": [
+        "ROOT_TYPES_ARE_OBJECTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "rootTypesAreObjects.6.valid",
+      "spec": [
+        "3.3.1"
+      ],
+      "family": "root",
+      "rule": "ROOT_TYPES_ARE_OBJECTS",
+      "pair": "rootTypesAreObjects.6.invalid",
+      "sdl": "schema { query: Q } scalar S type Q { a: S }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "schemaDefinitionUnique.2.invalid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "root",
+      "rule": "SCHEMA_DEFINITION_UNIQUE",
+      "pair": "schemaDefinitionUnique.2.valid",
+      "sdl": "schema { query: Query } schema { query: Q2 } type Query { a: Int } type Q2 { a: Int }",
+      "verdict": [
+        "SCHEMA_DEFINITION_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "schemaDefinitionUnique.2.valid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "root",
+      "rule": "SCHEMA_DEFINITION_UNIQUE",
+      "pair": "schemaDefinitionUnique.2.invalid",
+      "sdl": "schema { query: Q2 } type Query { a: Int } type Q2 { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "fieldNameReserved.2.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "names",
+      "rule": "FIELD_NAME_RESERVED",
+      "pair": "fieldNameReserved.2.valid",
+      "sdl": "type Query { a: I } interface I { __b: Int }",
+      "verdict": [
+        "FIELD_NAME_RESERVED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "fieldNameReserved.2.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "names",
+      "rule": "FIELD_NAME_RESERVED",
+      "pair": "fieldNameReserved.2.invalid",
+      "sdl": "type Query { a: I } interface I { _b: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "fieldOutputType.4.invalid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.4.2"
+      ],
+      "family": "typeUse",
+      "rule": "FIELD_OUTPUT_TYPE",
+      "pair": "fieldOutputType.4.valid",
+      "sdl": "input In { x: Int } type Query { a: I } interface I { f: In }",
+      "verdict": [
+        "FIELD_OUTPUT_TYPE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "fieldOutputType.4.valid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.4.2"
+      ],
+      "family": "typeUse",
+      "rule": "FIELD_OUTPUT_TYPE",
+      "pair": "fieldOutputType.4.invalid",
+      "sdl": "input In { x: Int } type Query { a: I } interface I { f(x: In): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "argNameReserved.3.invalid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.13"
+      ],
+      "family": "names",
+      "rule": "ARG_NAME_RESERVED",
+      "pair": "argNameReserved.3.valid",
+      "sdl": "type Query { a: I } interface I { f(__x: Int): Int }",
+      "verdict": [
+        "ARG_NAME_RESERVED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "argNameReserved.3.valid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.13"
+      ],
+      "family": "names",
+      "rule": "ARG_NAME_RESERVED",
+      "pair": "argNameReserved.3.invalid",
+      "sdl": "type Query { a: I } interface I { f(_x: Int): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "argNamesUnique.3.invalid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.13"
+      ],
+      "family": "names",
+      "rule": "ARG_NAMES_UNIQUE",
+      "since": "September2025",
+      "editionNote": "new in September 2025: argument name uniqueness",
+      "pair": "argNamesUnique.3.valid",
+      "sdl": "type Query { a: I } interface I { f(x: Int, x: Int): Int }",
+      "verdict": [
+        "ARG_NAMES_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "argNamesUnique.3.valid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.13"
+      ],
+      "family": "names",
+      "rule": "ARG_NAMES_UNIQUE",
+      "pair": "argNamesUnique.3.invalid",
+      "sdl": "type Query { a: I } interface I { f(x: Int, y: Int): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "argInputType.5.invalid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.13",
+        "3.4.2"
+      ],
+      "family": "typeUse",
+      "rule": "ARG_INPUT_TYPE",
+      "pair": "argInputType.5.valid",
+      "sdl": "type Query { a: I } interface I { f(x: Query): Int }",
+      "verdict": [
+        "ARG_INPUT_TYPE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "argInputType.5.valid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.13",
+        "3.4.2"
+      ],
+      "family": "typeUse",
+      "rule": "ARG_INPUT_TYPE",
+      "pair": "argInputType.5.invalid",
+      "sdl": "type Query { a: I } interface I { f(x: Int): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "argInputType.6.invalid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.13",
+        "3.4.2"
+      ],
+      "family": "typeUse",
+      "rule": "ARG_INPUT_TYPE",
+      "origin": "§3.7: interfaces are never valid inputs",
+      "pair": "argInputType.6.valid",
+      "sdl": "interface I { a: Int } type Query implements I { a: Int f(x: I): Int }",
+      "verdict": [
+        "ARG_INPUT_TYPE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "argInputType.6.valid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.13",
+        "3.4.2"
+      ],
+      "family": "typeUse",
+      "rule": "ARG_INPUT_TYPE",
+      "origin": "§3.7: interfaces are never valid inputs",
+      "pair": "argInputType.6.invalid",
+      "sdl": "interface I { a: Int } type Query implements I { a: Int f(x: Int): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "inputFieldInputType.3.invalid",
+      "spec": [
+        "3.10",
+        "3.4.2"
+      ],
+      "family": "input",
+      "rule": "INPUT_FIELD_INPUT_TYPE",
+      "pair": "inputFieldInputType.3.valid",
+      "sdl": "interface I { a: Int } type Query implements I { a: Int f(i: In): Int } input In { x: I }",
+      "verdict": [
+        "INPUT_FIELD_INPUT_TYPE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "inputFieldInputType.3.valid",
+      "spec": [
+        "3.10",
+        "3.4.2"
+      ],
+      "family": "input",
+      "rule": "INPUT_FIELD_INPUT_TYPE",
+      "pair": "inputFieldInputType.3.invalid",
+      "sdl": "interface I { a: Int } type Query implements I { a: Int f(i: In): Int } input In { x: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "inputFieldInputType.4.invalid",
+      "spec": [
+        "3.10",
+        "3.4.2"
+      ],
+      "family": "input",
+      "rule": "INPUT_FIELD_INPUT_TYPE",
+      "origin": "§3.8: unions are never valid inputs",
+      "pair": "inputFieldInputType.4.valid",
+      "sdl": "union U = Query type Query { f(i: In): Int } input In { x: [U] }",
+      "verdict": [
+        "INPUT_FIELD_INPUT_TYPE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "inputFieldInputType.4.valid",
+      "spec": [
+        "3.10",
+        "3.4.2"
+      ],
+      "family": "input",
+      "rule": "INPUT_FIELD_INPUT_TYPE",
+      "origin": "§3.8: unions are never valid inputs",
+      "pair": "inputFieldInputType.4.invalid",
+      "sdl": "enum U { A } type Query { f(i: In): Int } input In { x: [U] }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implementsUnique.2.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPLEMENTS_UNIQUE",
+      "pair": "implementsUnique.2.valid",
+      "sdl": "interface J { a: Int } interface I implements J & J { a: Int } type Query implements I & J { a: Int }",
+      "verdict": [
+        "IMPLEMENTS_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implementsUnique.2.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPLEMENTS_UNIQUE",
+      "pair": "implementsUnique.2.invalid",
+      "sdl": "interface J { a: Int } interface I implements J { a: Int } type Query implements I & J { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implementsInterfaces.3.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPLEMENTS_INTERFACES",
+      "origin": "§3.6: ImplementsInterfaces may start with an optional &",
+      "pair": "implementsInterfaces.3.valid",
+      "sdl": "type I { a: Int } type Query implements & I { a: Int }",
+      "verdict": [
+        "IMPLEMENTS_INTERFACES"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implementsInterfaces.3.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPLEMENTS_INTERFACES",
+      "origin": "§3.6: ImplementsInterfaces may start with an optional &",
+      "pair": "implementsInterfaces.3.invalid",
+      "sdl": "interface I { a: Int } type Query implements & I { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implFieldProvided.2.invalid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.6.3",
+        "3.7.1"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_FIELD_PROVIDED",
+      "pair": "implFieldProvided.2.valid",
+      "sdl": "interface J { a: Int } interface I implements J { b: Int } type Query implements I & J { a: Int b: Int }",
+      "verdict": [
+        "IMPL_FIELD_PROVIDED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implFieldProvided.2.valid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.6.3",
+        "3.7.1"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_FIELD_PROVIDED",
+      "pair": "implFieldProvided.2.invalid",
+      "sdl": "interface J { a: Int } interface I implements J { a: Int b: Int } type Query implements I & J { a: Int b: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implArgProvided.2.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_ARG_PROVIDED",
+      "pair": "implArgProvided.2.valid",
+      "sdl": "interface J { f(x: Int): Int } interface I implements J { f: Int } type Query implements I & J { f(x: Int): Int }",
+      "verdict": [
+        "IMPL_ARG_PROVIDED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implArgProvided.2.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_ARG_PROVIDED",
+      "pair": "implArgProvided.2.invalid",
+      "sdl": "interface J { f(x: Int): Int } interface I implements J { f(x: Int): Int } type Query implements I & J { f(x: Int): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implArgInvariant.3.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_ARG_INVARIANT",
+      "pair": "implArgInvariant.3.valid",
+      "sdl": "interface I { f(a: Int): Int } type Query implements I { f(a: String): Int }",
+      "verdict": [
+        "IMPL_ARG_INVARIANT"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implArgInvariant.3.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_ARG_INVARIANT",
+      "pair": "implArgInvariant.3.invalid",
+      "sdl": "interface I { f(a: Int): Int } type Query implements I { f(a: Int): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implArgInvariant.4.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_ARG_INVARIANT",
+      "pair": "implArgInvariant.4.valid",
+      "sdl": "interface I { f(a: [Int]): Int } type Query implements I { f(a: [[Int]]): Int }",
+      "verdict": [
+        "IMPL_ARG_INVARIANT"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implArgInvariant.4.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_ARG_INVARIANT",
+      "pair": "implArgInvariant.4.invalid",
+      "sdl": "interface I { f(a: [Int]): Int } type Query implements I { f(a: [Int]): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implArgInvariant.5.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_ARG_INVARIANT",
+      "pair": "implArgInvariant.5.valid",
+      "sdl": "interface J { f(x: Int): Int } interface I implements J { f(x: String): Int } type Query implements I & J { f(x: Int): Int }",
+      "verdict": [
+        "IMPL_ARG_INVARIANT"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implArgInvariant.5.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_ARG_INVARIANT",
+      "pair": "implArgInvariant.5.invalid",
+      "sdl": "interface J { f(x: Int): Int } interface I implements J { f(x: Int): Int } type Query implements I & J { f(x: Int): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implExtraArgOptional.2.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_EXTRA_ARG_OPTIONAL",
+      "pair": "implExtraArgOptional.2.valid",
+      "sdl": "interface J { f: Int } interface I implements J { f(b: Int!): Int } type Query implements I & J { f(b: Int!): Int }",
+      "verdict": [
+        "IMPL_EXTRA_ARG_OPTIONAL"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implExtraArgOptional.2.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_EXTRA_ARG_OPTIONAL",
+      "pair": "implExtraArgOptional.2.invalid",
+      "sdl": "interface J { f: Int } interface I implements J { f(b: Int): Int } type Query implements I & J { f(b: Int): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implFieldCovariant.5.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_FIELD_COVARIANT",
+      "pair": "implFieldCovariant.5.valid",
+      "sdl": "interface J { f: Int! } interface I implements J { f: Int } type Query implements I & J { f: Int! }",
+      "verdict": [
+        "IMPL_FIELD_COVARIANT"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implFieldCovariant.5.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_FIELD_COVARIANT",
+      "pair": "implFieldCovariant.5.invalid",
+      "sdl": "interface J { f: Int! } interface I implements J { f: Int! } type Query implements I & J { f: Int! }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implFieldCovariant.6.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_FIELD_COVARIANT",
+      "pair": "implFieldCovariant.6.valid",
+      "sdl": "interface I { f: [I] } type Query implements I { f: [Int] }",
+      "verdict": [
+        "IMPL_FIELD_COVARIANT"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implFieldCovariant.6.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_FIELD_COVARIANT",
+      "pair": "implFieldCovariant.6.invalid",
+      "sdl": "interface I { f: [I] } type Query implements I { f: [Query!]! }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implFieldCovariant.7.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_FIELD_COVARIANT",
+      "pair": "implFieldCovariant.7.valid",
+      "sdl": "interface I { f: [[Int]] } type Query implements I { f: [Int] }",
+      "verdict": [
+        "IMPL_FIELD_COVARIANT"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implFieldCovariant.7.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_FIELD_COVARIANT",
+      "pair": "implFieldCovariant.7.invalid",
+      "sdl": "interface I { f: [[Int]] } type Query implements I { f: [[Int!]!] }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implFieldCovariant.8.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_FIELD_COVARIANT",
+      "pair": "implFieldCovariant.8.valid",
+      "sdl": "interface I { f: [U] } union U = A type A { x: Int } type B { x: Int } type Query implements I { f: [B] }",
+      "verdict": [
+        "IMPL_FIELD_COVARIANT"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implFieldCovariant.8.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_FIELD_COVARIANT",
+      "pair": "implFieldCovariant.8.invalid",
+      "sdl": "interface I { f: [U] } union U = A type A { x: Int } type B { x: Int } type Query implements I { f: [A!] }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implFieldCovariant.9.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_FIELD_COVARIANT",
+      "origin": "§3.6 IsSubType: an Interface type that declares it implements the interface is a sub-type of it",
+      "pair": "implFieldCovariant.9.valid",
+      "sdl": "interface Node { f: Node } interface Other { x: Int } type Query implements Node & Other { x: Int f: Other }",
+      "verdict": [
+        "IMPL_FIELD_COVARIANT"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implFieldCovariant.9.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_FIELD_COVARIANT",
+      "origin": "§3.6 IsSubType: an Interface type that declares it implements the interface is a sub-type of it",
+      "pair": "implFieldCovariant.9.invalid",
+      "sdl": "interface Node { f: Node } interface Sub implements Node { f: Node } type Query implements Node & Sub { f: Sub }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implDeprecation.2.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_DEPRECATION",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecation of implementing fields",
+      "pair": "implDeprecation.2.valid",
+      "sdl": "interface J { f: Int } interface I implements J { f: Int @deprecated } type Query implements I & J { f: Int }",
+      "verdict": [
+        "IMPL_DEPRECATION"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implDeprecation.2.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_DEPRECATION",
+      "pair": "implDeprecation.2.invalid",
+      "sdl": "interface J { f: Int @deprecated } interface I implements J { f: Int @deprecated } type Query implements I & J { f: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implDeprecation.3.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_DEPRECATION",
+      "origin": "§3.6: the rule asks that implementedField is deprecated, not for the same reason",
+      "pair": "implDeprecation.1.invalid",
+      "sdl": "interface I { f: Int @deprecated(reason: \"a\") } type Query implements I { f: Int @deprecated(reason: \"b\") }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "unionMembersObjects.5.invalid",
+      "spec": [
+        "3.8",
+        "3.8.1"
+      ],
+      "family": "union",
+      "rule": "UNION_MEMBERS_OBJECTS",
+      "pair": "unionMembersObjects.5.valid",
+      "sdl": "enum E { A } union U = Query | E type Query { u: U }",
+      "verdict": [
+        "UNION_MEMBERS_OBJECTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "unionMembersObjects.5.valid",
+      "spec": [
+        "3.8",
+        "3.8.1"
+      ],
+      "family": "union",
+      "rule": "UNION_MEMBERS_OBJECTS",
+      "pair": "unionMembersObjects.5.invalid",
+      "sdl": "type E { a: Int } union U = Query | E type Query { u: U }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "unionMembersObjects.6.invalid",
+      "spec": [
+        "3.8",
+        "3.8.1"
+      ],
+      "family": "union",
+      "rule": "UNION_MEMBERS_OBJECTS",
+      "pair": "unionMembersObjects.6.valid",
+      "sdl": "input In { a: Int } union U = In type Query { u: U }",
+      "verdict": [
+        "UNION_MEMBERS_OBJECTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "unionMembersObjects.6.valid",
+      "spec": [
+        "3.8",
+        "3.8.1"
+      ],
+      "family": "union",
+      "rule": "UNION_MEMBERS_OBJECTS",
+      "pair": "unionMembersObjects.6.invalid",
+      "sdl": "type In { a: Int } union U = In type Query { u: U }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "unionMembersUnique.2.invalid",
+      "spec": [
+        "3.8"
+      ],
+      "family": "union",
+      "rule": "UNION_MEMBERS_UNIQUE",
+      "origin": "§3.8: \"Union members may be defined with an optional leading | character\"",
+      "pair": "unionMembersUnique.2.valid",
+      "sdl": "type A { a: Int } union U = | A | A type Query { u: U }",
+      "verdict": [
+        "UNION_MEMBERS_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "unionMembersUnique.2.valid",
+      "spec": [
+        "3.8"
+      ],
+      "family": "union",
+      "rule": "UNION_MEMBERS_UNIQUE",
+      "origin": "§3.8: \"Union members may be defined with an optional leading | character\"",
+      "pair": "unionMembersUnique.2.invalid",
+      "sdl": "type A { a: Int } union U = | A | Query type Query { u: U }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "requiredInputFieldNotDeprecated.2.valid",
+      "spec": [
+        "3.10",
+        "3.13.3"
+      ],
+      "family": "input",
+      "rule": "REQUIRED_INPUT_FIELD_NOT_DEPRECATED",
+      "origin": "§3.13.3: a required input field must first be made optional, by making its type nullable",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecated input fields",
+      "pair": "requiredInputFieldNotDeprecated.1.invalid",
+      "sdl": "input In { x: Int @deprecated } type Query { f(i: In): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "oneOfFieldNullable.2.invalid",
+      "spec": [
+        "3.10",
+        "3.10.1",
+        "3.10.2"
+      ],
+      "family": "input",
+      "rule": "ONEOF_FIELD_NULLABLE",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "pair": "oneOfFieldNullable.2.valid",
+      "sdl": "input In @oneOf { a: [Int]! } type Query { f(i: In): Int }",
+      "verdict": [
+        "ONEOF_FIELD_NULLABLE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "oneOfFieldNullable.2.valid",
+      "spec": [
+        "3.10",
+        "3.10.1",
+        "3.10.2"
+      ],
+      "family": "input",
+      "rule": "ONEOF_FIELD_NULLABLE",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "pair": "oneOfFieldNullable.2.invalid",
+      "sdl": "input In @oneOf { a: [Int!] } type Query { f(i: In): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "oneOfFieldNullable.3.invalid",
+      "spec": [
+        "3.10",
+        "3.10.1",
+        "3.10.2"
+      ],
+      "family": "input",
+      "rule": "ONEOF_FIELD_NULLABLE",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "pair": "oneOfFieldNullable.3.valid",
+      "sdl": "input P { x: Int } input In @oneOf { a: P! } type Query { f(i: In): Int }",
+      "verdict": [
+        "ONEOF_FIELD_NULLABLE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "oneOfFieldNullable.3.valid",
+      "spec": [
+        "3.10",
+        "3.10.1",
+        "3.10.2"
+      ],
+      "family": "input",
+      "rule": "ONEOF_FIELD_NULLABLE",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "pair": "oneOfFieldNullable.3.invalid",
+      "sdl": "input P { x: Int } input In @oneOf { a: P } type Query { f(i: In): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "oneOfFieldNoDefault.2.invalid",
+      "spec": [
+        "3.10",
+        "3.10.1",
+        "3.10.2"
+      ],
+      "family": "input",
+      "rule": "ONEOF_FIELD_NO_DEFAULT",
+      "origin": "§3.10: a default of null is still a default value",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "pair": "oneOfFieldNoDefault.2.valid",
+      "sdl": "input In @oneOf { a: Int = null b: String } type Query { f(i: In): Int }",
+      "verdict": [
+        "ONEOF_FIELD_NO_DEFAULT"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "oneOfFieldNoDefault.2.valid",
+      "spec": [
+        "3.10",
+        "3.10.1",
+        "3.10.2"
+      ],
+      "family": "input",
+      "rule": "ONEOF_FIELD_NO_DEFAULT",
+      "origin": "§3.10: a default of null is still a default value",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "pair": "oneOfFieldNoDefault.2.invalid",
+      "sdl": "input In @oneOf { a: Int b: String } type Query { f(i: In): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "argDefaultCompatible.11.invalid",
+      "spec": [
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
+      ],
+      "family": "defaults",
+      "rule": "ARG_DEFAULT_COMPATIBLE",
+      "origin": "§3.11: a single value is coerced to a list of one, at every level",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
+      "pair": "argDefaultCompatible.11.valid",
+      "sdl": "type Query { f(x: [[Int]] = [[\"a\"]]): Int }",
+      "verdict": [
+        "ARG_DEFAULT_COMPATIBLE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "argDefaultCompatible.11.valid",
+      "spec": [
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
+      ],
+      "family": "defaults",
+      "rule": "ARG_DEFAULT_COMPATIBLE",
+      "origin": "§3.11: a single value is coerced to a list of one, at every level",
+      "pair": "argDefaultCompatible.11.invalid",
+      "sdl": "type Query { f(x: [[Int]] = 1): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "argDefaultCompatible.12.invalid",
+      "spec": [
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
+      ],
+      "family": "defaults",
+      "rule": "ARG_DEFAULT_COMPATIBLE",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
+      "pair": "argDefaultCompatible.12.valid",
+      "sdl": "enum Color { RED } enum Size { BIG } type Query { f(c: Color = BIG): Int }",
+      "verdict": [
+        "ARG_DEFAULT_COMPATIBLE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "argDefaultCompatible.12.valid",
+      "spec": [
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
+      ],
+      "family": "defaults",
+      "rule": "ARG_DEFAULT_COMPATIBLE",
+      "pair": "argDefaultCompatible.12.invalid",
+      "sdl": "enum Color { RED } enum Size { BIG } type Query { f(c: Color = RED): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "argDefaultCompatible.13.invalid",
+      "spec": [
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
+      ],
+      "family": "defaults",
+      "rule": "ARG_DEFAULT_COMPATIBLE",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects, default value validation",
+      "pair": "argDefaultCompatible.13.valid",
+      "sdl": "input Pick @oneOf { a: Int b: String } type Query { f(p: [Pick] = [{a: 1, b: \"s\"}]): Int }",
+      "verdict": [
+        "ARG_DEFAULT_COMPATIBLE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "argDefaultCompatible.13.valid",
+      "spec": [
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
+      ],
+      "family": "defaults",
+      "rule": "ARG_DEFAULT_COMPATIBLE",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "pair": "argDefaultCompatible.13.invalid",
+      "sdl": "input Pick @oneOf { a: Int b: String } type Query { f(p: [Pick] = [{a: 1}, {b: \"s\"}]): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "argDefaultCompatible.14.invalid",
+      "spec": [
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
+      ],
+      "family": "defaults",
+      "rule": "ARG_DEFAULT_COMPATIBLE",
+      "origin": "§3.5: a custom scalar's input coercion is the service's",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
+      "pair": "argDefaultCompatible.14.valid",
+      "sdl": "scalar Json type Query { f(x: Int = {a: 1}): Int }",
+      "verdict": [
+        "ARG_DEFAULT_COMPATIBLE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "argDefaultCompatible.14.valid",
+      "spec": [
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
+      ],
+      "family": "defaults",
+      "rule": "ARG_DEFAULT_COMPATIBLE",
+      "origin": "§3.5: a custom scalar's input coercion is the service's",
+      "pair": "argDefaultCompatible.14.invalid",
+      "sdl": "scalar Json type Query { f(x: Json = {a: 1}): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.4.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.4.valid",
+      "sdl": "directive @d on OBJECT schema @d { query: Query } type Query { a: Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.4.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.4.invalid",
+      "sdl": "directive @d on SCHEMA schema @d { query: Query } type Query { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.5.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.5.valid",
+      "sdl": "directive @d on OBJECT scalar S @d type Query { a: S }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.5.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.5.invalid",
+      "sdl": "directive @d on SCALAR scalar S @d type Query { a: S }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.6.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.6.valid",
+      "sdl": "directive @d on OBJECT interface I @d { a: Int } type Query implements I { a: Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.6.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.6.invalid",
+      "sdl": "directive @d on INTERFACE interface I @d { a: Int } type Query implements I { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.7.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.7.valid",
+      "sdl": "directive @d on OBJECT union U @d = Query type Query { a: U }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.7.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.7.invalid",
+      "sdl": "directive @d on UNION union U @d = Query type Query { a: U }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.8.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.8.valid",
+      "sdl": "directive @d on ENUM_VALUE enum E @d { A } type Query { e: E }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.8.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.8.invalid",
+      "sdl": "directive @d on ENUM enum E @d { A } type Query { e: E }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.9.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.9.valid",
+      "sdl": "directive @d on ENUM enum E { A @d } type Query { e: E }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.9.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.9.invalid",
+      "sdl": "directive @d on ENUM_VALUE enum E { A @d } type Query { e: E }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.10.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.10.valid",
+      "sdl": "directive @d on INPUT_FIELD_DEFINITION input In @d { a: Int } type Query { f(i: In): Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.10.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.10.invalid",
+      "sdl": "directive @d on INPUT_OBJECT input In @d { a: Int } type Query { f(i: In): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.11.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.11.valid",
+      "sdl": "directive @d on ARGUMENT_DEFINITION input In { a: Int @d } type Query { f(i: In): Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.11.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.11.invalid",
+      "sdl": "directive @d on INPUT_FIELD_DEFINITION input In { a: Int @d } type Query { f(i: In): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.12.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.12.valid",
+      "sdl": "directive @d on INPUT_FIELD_DEFINITION type Query { f(x: Int @d): Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.12.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.12.invalid",
+      "sdl": "directive @d on ARGUMENT_DEFINITION type Query { f(x: Int @d): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.13.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.13.valid",
+      "sdl": "directive @d on FIELD_DEFINITION directive @e(x: Int @d) on FIELD type Query { a: Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.13.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.13.invalid",
+      "sdl": "directive @d on ARGUMENT_DEFINITION directive @e(x: Int @d) on FIELD type Query { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.14.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directives on directive definitions",
+      "pair": "directiveLocationsValid.14.valid",
+      "sdl": "directive @d on FIELD directive @e @d on FIELD type Query { a: Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.14.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directives on directive definitions",
+      "pair": "directiveLocationsValid.14.invalid",
+      "sdl": "directive @d on DIRECTIVE_DEFINITION directive @e @d on FIELD type Query { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.15.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "origin": "§3.13: \"Directive locations may be defined with an optional leading | character\"",
+      "pair": "directiveLocationsValid.15.valid",
+      "sdl": "directive @d on | FIELD_DEFINITION | SCALAR type Query @d { a: Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.15.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "origin": "§3.13: \"Directive locations may be defined with an optional leading | character\"",
+      "pair": "directiveLocationsValid.15.invalid",
+      "sdl": "directive @d on | FIELD_DEFINITION | OBJECT type Query @d { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.16.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.16.valid",
+      "sdl": "type Query @specifiedBy(url: \"https://example.com\") { a: Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.16.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.16.invalid",
+      "sdl": "scalar S @specifiedBy(url: \"https://example.com\") type Query { a: S }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.17.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "pair": "directiveLocationsValid.17.valid",
+      "sdl": "type Query @oneOf { a: Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.17.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "pair": "directiveLocationsValid.17.invalid",
+      "sdl": "input In @oneOf { a: Int } type Query { f(i: In): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.18.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.18.valid",
+      "sdl": "type Query { a: Int @skip(if: true) }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.18.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.18.invalid",
+      "sdl": "type Query { a: Int @deprecated(reason: \"x\") }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.19.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "since": "September2026",
+      "editionNote": "new in September 2025: OneOf input objects; new in September 2026: directives on directive definitions",
+      "pair": "directiveLocationsValid.19.valid",
+      "sdl": "directive @d @oneOf on FIELD type Query { a: Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.19.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directives on directive definitions",
+      "pair": "directiveLocationsValid.19.invalid",
+      "sdl": "directive @d @deprecated on FIELD type Query { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.20.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.20.valid",
+      "sdl": "schema @deprecated { query: Query } type Query { a: Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.20.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.20.invalid",
+      "sdl": "schema { query: Query } type Query { a: Int @deprecated }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.21.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.21.valid",
+      "sdl": "scalar S @deprecated type Query { a: S }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.21.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.21.invalid",
+      "sdl": "scalar S type Query { a: S @deprecated }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.22.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.22.valid",
+      "sdl": "interface I @deprecated { a: Int } type Query implements I { a: Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.22.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.22.invalid",
+      "sdl": "interface I { a: Int @deprecated } type Query implements I { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.23.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.23.valid",
+      "sdl": "union U @deprecated = Query type Query { a: U }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.23.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.23.invalid",
+      "sdl": "union U = Query type Query { a: U @deprecated }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.24.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.24.valid",
+      "sdl": "enum E @deprecated { A } type Query { e: E }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.24.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.24.invalid",
+      "sdl": "enum E { A @deprecated } type Query { e: E }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.25.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.25.valid",
+      "sdl": "input In @deprecated { a: Int } type Query { f(i: In): Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.25.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecated input fields",
+      "pair": "directiveLocationsValid.25.invalid",
+      "sdl": "input In { a: Int @deprecated } type Query { f(i: In): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveUsesItself.3.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_USES_ITSELF",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directives on directive definitions",
+      "pair": "directiveUsesItself.3.valid",
+      "sdl": "directive @d @d on DIRECTIVE_DEFINITION type Query { a: Int }",
+      "verdict": [
+        "DIRECTIVE_USES_ITSELF"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveUsesItself.3.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_USES_ITSELF",
+      "pair": "directiveUsesItself.3.invalid",
+      "sdl": "directive @d on DIRECTIVE_DEFINITION type Query { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveReferencesItselfIndirectly.5.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directives on directive definitions",
+      "pair": "directiveReferencesItselfIndirectly.5.valid",
+      "sdl": "directive @a @b on DIRECTIVE_DEFINITION directive @b @a on DIRECTIVE_DEFINITION type Query { a: Int }",
+      "verdict": [
+        "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveReferencesItselfIndirectly.5.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directives on directive definitions",
+      "pair": "directiveReferencesItselfIndirectly.5.invalid",
+      "sdl": "directive @a @b on DIRECTIVE_DEFINITION directive @b on DIRECTIVE_DEFINITION type Query { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveReferencesItselfIndirectly.6.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+      "pair": "directiveReferencesItselfIndirectly.6.valid",
+      "sdl": "directive @a(x: Int @b) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @b(y: In) on ARGUMENT_DEFINITION input In { f: Int @a } type Query { a: Int }",
+      "verdict": [
+        "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveReferencesItselfIndirectly.6.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+      "pair": "directiveReferencesItselfIndirectly.6.invalid",
+      "sdl": "directive @a(x: Int @b) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @b(y: In) on ARGUMENT_DEFINITION input In { f: Int } type Query { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveNotRepeated.1.invalid",
+      "spec": [
+        "3.13",
+        "5.7.3"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_NOT_REPEATED",
+      "pair": "directiveNotRepeated.1.valid",
+      "sdl": "directive @d on OBJECT type Query @d @d { a: Int }",
+      "verdict": [
+        "DIRECTIVE_NOT_REPEATED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveNotRepeated.1.valid",
+      "spec": [
+        "3.13",
+        "5.7.3"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_NOT_REPEATED",
+      "pair": "directiveNotRepeated.1.invalid",
+      "sdl": "directive @d repeatable on OBJECT type Query @d @d { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveNotRepeated.2.invalid",
+      "spec": [
+        "3.13",
+        "5.7.3"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_NOT_REPEATED",
+      "pair": "directiveNotRepeated.2.valid",
+      "sdl": "type Query { a: Int @deprecated @deprecated }",
+      "verdict": [
+        "DIRECTIVE_NOT_REPEATED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveNotRepeated.2.valid",
+      "spec": [
+        "3.13",
+        "5.7.3"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_NOT_REPEATED",
+      "pair": "directiveNotRepeated.2.invalid",
+      "sdl": "type Query { a: Int @deprecated }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.1.invalid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.1.valid",
+      "sdl": "type Query { a: Int @deprecated(reason: 1) }",
+      "verdict": [
+        "APPLIED_DIRECTIVE_ARGUMENTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.1.valid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.1.invalid",
+      "sdl": "type Query { a: Int @deprecated(reason: \"1\") }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.2.invalid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.2.valid",
+      "sdl": "type Query { a: Int @deprecated(why: \"x\") }",
+      "verdict": [
+        "APPLIED_DIRECTIVE_ARGUMENTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.2.valid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.2.invalid",
+      "sdl": "type Query { a: Int @deprecated(reason: \"x\") }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.3.invalid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "since": "September2025",
+      "editionNote": "new in September 2025: a non-null reason for @deprecated",
+      "pair": "appliedDirectiveArguments.3.valid",
+      "sdl": "type Query { a: Int @deprecated(reason: null) }",
+      "verdict": [
+        "APPLIED_DIRECTIVE_ARGUMENTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.3.valid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.3.invalid",
+      "sdl": "type Query { a: Int @deprecated }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.4.invalid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.4.valid",
+      "sdl": "type Query { a: Int @deprecated(reason: \"x\", reason: \"y\") }",
+      "verdict": [
+        "APPLIED_DIRECTIVE_ARGUMENTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.4.valid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.4.invalid",
+      "sdl": "type Query { a: Int @deprecated(reason: \"x\") }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.5.invalid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.5.valid",
+      "sdl": "scalar S @specifiedBy type Query { a: S }",
+      "verdict": [
+        "APPLIED_DIRECTIVE_ARGUMENTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.5.valid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.5.invalid",
+      "sdl": "scalar S @specifiedBy(url: \"https://example.com\") type Query { a: S }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.6.invalid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.6.valid",
+      "sdl": "scalar S @specifiedBy(url: null) type Query { a: S }",
+      "verdict": [
+        "APPLIED_DIRECTIVE_ARGUMENTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.6.valid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.6.invalid",
+      "sdl": "scalar S @specifiedBy(url: \"https://example.com\") type Query { a: S }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.7.invalid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.7.valid",
+      "sdl": "directive @d(x: Int) on OBJECT type Query @d(x: \"a\") { a: Int }",
+      "verdict": [
+        "APPLIED_DIRECTIVE_ARGUMENTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.7.valid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.7.invalid",
+      "sdl": "directive @d(x: Int) on OBJECT type Query @d(x: 1) { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.8.invalid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.8.valid",
+      "sdl": "directive @d(x: Int!) on OBJECT type Query @d { a: Int }",
+      "verdict": [
+        "APPLIED_DIRECTIVE_ARGUMENTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.8.valid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.8.invalid",
+      "sdl": "directive @d(x: Int!) on OBJECT type Query @d(x: 1) { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.9.invalid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.9.valid",
+      "sdl": "input In { a: Int! } directive @d(x: In) on OBJECT type Query @d(x: {}) { a: Int }",
+      "verdict": [
+        "APPLIED_DIRECTIVE_ARGUMENTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "appliedDirectiveArguments.9.valid",
+      "spec": [
+        "3.13",
+        "2.13",
+        "5.4"
+      ],
+      "family": "directive",
+      "rule": "APPLIED_DIRECTIVE_ARGUMENTS",
+      "pair": "appliedDirectiveArguments.9.invalid",
+      "sdl": "input In { a: Int! } directive @d(x: In) on OBJECT type Query @d(x: {a: 1}) { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionTargetDefined.1.invalid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_DEFINED",
+      "origin": "§3.6.3's example: a local data field is added to a Story type",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetDefined.1.valid",
+      "sdl": "type Query { a: Int } extend type Story { isHiddenLocally: Boolean }",
+      "verdict": [
+        "EXTENSION_TARGET_DEFINED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionTargetDefined.1.valid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_DEFINED",
+      "origin": "§3.6.3's example: a local data field is added to a Story type",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetDefined.1.invalid",
+      "sdl": "type Query { story: Story } type Story { id: ID } extend type Story { isHiddenLocally: Boolean }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionTargetDefined.2.invalid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_DEFINED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetDefined.2.valid",
+      "sdl": "type Query { a: Int } extend interface I { b: Int }",
+      "verdict": [
+        "EXTENSION_TARGET_DEFINED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionTargetDefined.2.valid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_DEFINED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetDefined.2.invalid",
+      "sdl": "interface I { a: Int } type Query implements I { a: Int b: Int } extend interface I { b: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionTargetDefined.3.invalid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_DEFINED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetDefined.3.valid",
+      "sdl": "type A { a: Int } type Query { a: Int } extend union U = Query",
+      "verdict": [
+        "EXTENSION_TARGET_DEFINED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionTargetDefined.3.valid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_DEFINED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetDefined.3.invalid",
+      "sdl": "type A { a: Int } type Query { a: Int } union U = A extend union U = Query",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionTargetDefined.4.invalid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_DEFINED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetDefined.4.valid",
+      "sdl": "type Query { a: Int } extend enum E { B }",
+      "verdict": [
+        "EXTENSION_TARGET_DEFINED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionTargetDefined.4.valid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_DEFINED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetDefined.4.invalid",
+      "sdl": "type Query { a: Int } enum E { A } extend enum E { B }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionTargetDefined.5.invalid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_DEFINED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetDefined.5.valid",
+      "sdl": "type Query { a: Int } extend input In { b: Int }",
+      "verdict": [
+        "EXTENSION_TARGET_DEFINED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionTargetDefined.5.valid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_DEFINED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetDefined.5.invalid",
+      "sdl": "type Query { a: Int } input In { a: Int } extend input In { b: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionTargetDefined.6.invalid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_DEFINED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetDefined.6.valid",
+      "sdl": "directive @d on SCALAR type Query { a: Int } extend scalar S @d",
+      "verdict": [
+        "EXTENSION_TARGET_DEFINED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionTargetDefined.6.valid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_DEFINED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetDefined.6.invalid",
+      "sdl": "directive @d on SCALAR type Query { a: Int } scalar S extend scalar S @d",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionTargetKind.1.invalid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_KIND",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetKind.1.valid",
+      "sdl": "scalar S type Query { a: Int } extend type S { b: Int }",
+      "verdict": [
+        "EXTENSION_TARGET_KIND"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionTargetKind.1.valid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_KIND",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetKind.1.invalid",
+      "sdl": "type S { a: Int } type Query { a: Int } extend type S { b: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionTargetKind.2.invalid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_KIND",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetKind.2.valid",
+      "sdl": "type Query { a: Int } extend interface Query { b: Int }",
+      "verdict": [
+        "EXTENSION_TARGET_KIND"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionTargetKind.2.valid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_KIND",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetKind.2.invalid",
+      "sdl": "type Query { a: Int } extend type Query { b: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionTargetKind.3.invalid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_KIND",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetKind.3.valid",
+      "sdl": "enum E { A } type A { a: Int } type Query { e: E } extend union E = Query",
+      "verdict": [
+        "EXTENSION_TARGET_KIND"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionTargetKind.3.valid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_KIND",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetKind.3.invalid",
+      "sdl": "union E = A type A { a: Int } type Query { e: E } extend union E = Query",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionTargetKind.4.invalid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_KIND",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetKind.4.valid",
+      "sdl": "input E { a: Int } type Query { f(e: E): Int } extend enum E { B }",
+      "verdict": [
+        "EXTENSION_TARGET_KIND"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionTargetKind.4.valid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_KIND",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetKind.4.invalid",
+      "sdl": "enum E { A } type Query { f(e: E): Int } extend enum E { B }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionTargetKind.5.invalid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_KIND",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetKind.5.valid",
+      "sdl": "enum In { A } type Query { f(i: In): Int } extend input In { b: Int }",
+      "verdict": [
+        "EXTENSION_TARGET_KIND"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionTargetKind.5.valid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_KIND",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetKind.5.invalid",
+      "sdl": "input In { a: Int } type Query { f(i: In): Int } extend input In { b: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionTargetKind.6.invalid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_KIND",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetKind.6.valid",
+      "sdl": "directive @d on SCALAR | OBJECT type Query { a: Int } extend scalar Query @d",
+      "verdict": [
+        "EXTENSION_TARGET_KIND"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionTargetKind.6.valid",
+      "spec": [
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_TARGET_KIND",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionTargetKind.6.invalid",
+      "sdl": "directive @d on SCALAR | OBJECT type Query { a: Int } extend type Query @d",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionItemsUnique.1.invalid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_UNIQUE",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsUnique.1.valid",
+      "sdl": "type Query { a: Int } extend type Query { b: Int b: Int }",
+      "verdict": [
+        "EXTENSION_ITEMS_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionItemsUnique.1.valid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_UNIQUE",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsUnique.1.invalid",
+      "sdl": "type Query { a: Int } extend type Query { b: Int c: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionItemsUnique.2.invalid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_UNIQUE",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsUnique.2.valid",
+      "sdl": "interface I { a: Int } type Query implements I { a: Int b: Int } extend interface I { b: Int b: Int }",
+      "verdict": [
+        "EXTENSION_ITEMS_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionItemsUnique.2.valid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_UNIQUE",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsUnique.2.invalid",
+      "sdl": "interface I { a: Int } type Query implements I { a: Int b: Int } extend interface I { b: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionItemsUnique.3.invalid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_UNIQUE",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsUnique.3.valid",
+      "sdl": "type A { a: Int } type Query { a: Int } union U = Query extend union U = A | A",
+      "verdict": [
+        "EXTENSION_ITEMS_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionItemsUnique.3.valid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_UNIQUE",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsUnique.3.invalid",
+      "sdl": "type A { a: Int } type Query { a: Int } union U = Query extend union U = A",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionItemsUnique.4.invalid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_UNIQUE",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsUnique.4.valid",
+      "sdl": "enum E { A } type Query { e: E } extend enum E { B B }",
+      "verdict": [
+        "EXTENSION_ITEMS_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionItemsUnique.4.valid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_UNIQUE",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsUnique.4.invalid",
+      "sdl": "enum E { A } type Query { e: E } extend enum E { B C }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionItemsUnique.5.invalid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_UNIQUE",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsUnique.5.valid",
+      "sdl": "input In { a: Int } type Query { f(i: In): Int } extend input In { b: Int b: Int }",
+      "verdict": [
+        "EXTENSION_ITEMS_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionItemsUnique.5.valid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_UNIQUE",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsUnique.5.invalid",
+      "sdl": "input In { a: Int } type Query { f(i: In): Int } extend input In { b: Int c: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionItemsNew.1.invalid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsNew.1.valid",
+      "sdl": "type Query { a: Int } extend type Query { a: Int }",
+      "verdict": [
+        "EXTENSION_ITEMS_NEW"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionItemsNew.1.valid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsNew.1.invalid",
+      "sdl": "type Query { a: Int } extend type Query { b: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionItemsNew.2.invalid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsNew.2.valid",
+      "sdl": "interface I { a: Int } type Query implements I { a: Int b: Int } extend interface I { a: Int }",
+      "verdict": [
+        "EXTENSION_ITEMS_NEW"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionItemsNew.2.valid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsNew.2.invalid",
+      "sdl": "interface I { a: Int } type Query implements I { a: Int b: Int } extend interface I { b: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionItemsNew.3.invalid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsNew.3.valid",
+      "sdl": "type A { a: Int } type Query { a: Int } union U = A extend union U = A",
+      "verdict": [
+        "EXTENSION_ITEMS_NEW"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionItemsNew.3.valid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsNew.3.invalid",
+      "sdl": "type A { a: Int } type Query { a: Int } union U = A extend union U = Query",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionItemsNew.4.invalid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsNew.4.valid",
+      "sdl": "enum E { A } type Query { e: E } extend enum E { A }",
+      "verdict": [
+        "EXTENSION_ITEMS_NEW"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionItemsNew.4.valid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsNew.4.invalid",
+      "sdl": "enum E { A } type Query { e: E } extend enum E { B }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionItemsNew.5.invalid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsNew.5.valid",
+      "sdl": "input In { a: Int } type Query { f(i: In): Int } extend input In { a: Int }",
+      "verdict": [
+        "EXTENSION_ITEMS_NEW"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionItemsNew.5.valid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsNew.5.invalid",
+      "sdl": "input In { a: Int } type Query { f(i: In): Int } extend input In { b: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionItemsNew.6.invalid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_NEW",
+      "since": "September2025",
+      "editionNote": "new in September 2025: \"the previous\" type in the extension rules (October 2021: \"the original\")",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsNew.6.valid",
+      "sdl": "type Query { a: Int } extend type Query { b: Int } extend type Query { b: Int }",
+      "verdict": [
+        "EXTENSION_ITEMS_NEW"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionItemsNew.6.valid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsNew.6.invalid",
+      "sdl": "type Query { a: Int } extend type Query { b: Int } extend type Query { c: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionItemsNew.7.invalid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_NEW",
+      "since": "September2025",
+      "editionNote": "new in September 2025: \"the previous\" type in the extension rules (October 2021: \"the original\")",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsNew.7.valid",
+      "sdl": "enum E { A } type Query { e: E } extend enum E { B } extend enum E { B }",
+      "verdict": [
+        "EXTENSION_ITEMS_NEW"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionItemsNew.7.valid",
+      "spec": [
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ITEMS_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionItemsNew.7.invalid",
+      "sdl": "enum E { A } type Query { e: E } extend enum E { B } extend enum E { C }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionInterfacesNew.1.invalid",
+      "spec": [
+        "3.6.3"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_INTERFACES_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionInterfacesNew.1.valid",
+      "sdl": "interface I { a: Int } interface J { a: Int } type Query implements I { a: Int } extend type Query implements I",
+      "verdict": [
+        "EXTENSION_INTERFACES_NEW"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionInterfacesNew.1.valid",
+      "spec": [
+        "3.6.3"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_INTERFACES_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionInterfacesNew.1.invalid",
+      "sdl": "interface I { a: Int } interface J { a: Int } type Query implements I { a: Int } extend type Query implements J",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionInterfacesNew.2.invalid",
+      "spec": [
+        "3.6.3"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_INTERFACES_NEW",
+      "since": "September2025",
+      "editionNote": "new in September 2025: \"the previous\" type in the extension rules (October 2021: \"the original\")",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionInterfacesNew.2.valid",
+      "sdl": "interface I { a: Int } interface J { a: Int } type Query { a: Int } extend type Query implements I extend type Query implements I",
+      "verdict": [
+        "EXTENSION_INTERFACES_NEW"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionInterfacesNew.2.valid",
+      "spec": [
+        "3.6.3"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_INTERFACES_NEW",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionInterfacesNew.2.invalid",
+      "sdl": "interface I { a: Int } interface J { a: Int } type Query { a: Int } extend type Query implements I extend type Query implements J",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implFieldProvided.3.invalid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.6.3",
+        "3.7.1"
+      ],
+      "family": "extension",
+      "rule": "IMPL_FIELD_PROVIDED",
+      "origin": "§3.6.3: the resulting extended object type must be a super-set of all interfaces it implements",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "implFieldProvided.3.valid",
+      "sdl": "interface I { x: Int } type Query { a: Int } extend type Query implements I",
+      "verdict": [
+        "IMPL_FIELD_PROVIDED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implFieldProvided.3.valid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.6.3",
+        "3.7.1"
+      ],
+      "family": "extension",
+      "rule": "IMPL_FIELD_PROVIDED",
+      "origin": "§3.6.3: the resulting extended object type must be a super-set of all interfaces it implements",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "implFieldProvided.3.invalid",
+      "sdl": "interface I { x: Int } type Query { a: Int } extend type Query implements I { x: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implFieldProvided.4.invalid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.6.3",
+        "3.7.1"
+      ],
+      "family": "extension",
+      "rule": "IMPL_FIELD_PROVIDED",
+      "origin": "§3.7.1's example: a field is added to NamedEntity along with the types which implement it",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "implFieldProvided.4.valid",
+      "sdl": "interface NamedEntity { name: String } type Person implements NamedEntity { name: String } type Business implements NamedEntity { name: String } type Query { e: NamedEntity } extend interface NamedEntity { nickname: String } extend type Person { nickname: String }",
+      "verdict": [
+        "IMPL_FIELD_PROVIDED"
+      ],
+      "expected": {
+        "valid": false
+      },
+      "siblings": [
+        "implFieldProvided.4.valid",
+        "implFieldProvided.5.valid"
+      ]
+    },
+    {
+      "id": "implFieldProvided.4.valid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.6.3",
+        "3.7.1"
+      ],
+      "family": "extension",
+      "rule": "IMPL_FIELD_PROVIDED",
+      "origin": "§3.7.1's example: a field is added to NamedEntity along with the types which implement it",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "implFieldProvided.4.invalid",
+      "sdl": "interface NamedEntity { name: String } type Person implements NamedEntity { name: String } type Business implements NamedEntity { name: String } type Query { e: NamedEntity } extend interface NamedEntity { nickname: String } extend type Person { nickname: String } extend type Business { nickname: String }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implFieldProvided.5.valid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.6.3",
+        "3.7.1"
+      ],
+      "family": "extension",
+      "rule": "IMPL_FIELD_PROVIDED",
+      "origin": "§3.7.1's example, with the object type extensions first: \"which may be due to Object type extension\"",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "implFieldProvided.4.invalid",
+      "sdl": "interface NamedEntity { name: String } type Person implements NamedEntity { name: String } type Business implements NamedEntity { name: String } type Query { e: NamedEntity } extend type Person { nickname: String } extend type Business { nickname: String } extend interface NamedEntity { nickname: String }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implFieldProvided.6.invalid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.6.3",
+        "3.7.1"
+      ],
+      "family": "extension",
+      "rule": "IMPL_FIELD_PROVIDED",
+      "origin": "§3.7.1: the resulting extended Interface type must be a super-set of all Interfaces it implements",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "implFieldProvided.6.valid",
+      "sdl": "interface K { k: Int } interface I { a: Int } type Query implements I & K { a: Int k: Int } extend interface I implements K",
+      "verdict": [
+        "IMPL_FIELD_PROVIDED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implFieldProvided.6.valid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.6.3",
+        "3.7.1"
+      ],
+      "family": "extension",
+      "rule": "IMPL_FIELD_PROVIDED",
+      "origin": "§3.7.1: the resulting extended Interface type must be a super-set of all Interfaces it implements",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "implFieldProvided.6.invalid",
+      "sdl": "interface K { k: Int } interface I { a: Int } type Query implements I & K { a: Int k: Int } extend interface I implements K { k: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "unionMembersObjects.7.invalid",
+      "spec": [
+        "3.8",
+        "3.8.1"
+      ],
+      "family": "extension",
+      "rule": "UNION_MEMBERS_OBJECTS",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "unionMembersObjects.7.valid",
+      "sdl": "type A { a: Int } type Query { a: Int } union U = Query extend union U = Int",
+      "verdict": [
+        "UNION_MEMBERS_OBJECTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "unionMembersObjects.7.valid",
+      "spec": [
+        "3.8",
+        "3.8.1"
+      ],
+      "family": "extension",
+      "rule": "UNION_MEMBERS_OBJECTS",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "unionMembersObjects.7.invalid",
+      "sdl": "type A { a: Int } type Query { a: Int } union U = Query extend union U = A",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "fieldNameReserved.3.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "extension",
+      "rule": "FIELD_NAME_RESERVED",
+      "origin": "§3.6.3: an extension's fields are fields of the extended Object type, which §3.6's rules apply to",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "fieldNameReserved.3.valid",
+      "sdl": "type Query { a: Int } extend type Query { __b: Int }",
+      "verdict": [
+        "FIELD_NAME_RESERVED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "fieldNameReserved.3.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "extension",
+      "rule": "FIELD_NAME_RESERVED",
+      "origin": "§3.6.3: an extension's fields are fields of the extended Object type, which §3.6's rules apply to",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "fieldNameReserved.3.invalid",
+      "sdl": "type Query { a: Int } extend type Query { _b: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.1.invalid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.1.valid",
+      "sdl": "directive @d on OBJECT type Query @d { a: Int } extend type Query @d",
+      "verdict": [
+        "EXTENSION_DIRECTIVES_NOT_REAPPLIED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.1.valid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.1.invalid",
+      "sdl": "directive @d repeatable on OBJECT type Query @d { a: Int } extend type Query @d",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.2.invalid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "origin": "§3.13's example of a repeatable directive, applied twice to Book and once to its extension",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.2.valid",
+      "sdl": "directive @delegateField(name: String!) on OBJECT | INTERFACE type Book @delegateField(name: \"pageCount\") { id: ID! } type Query { book: Book } extend type Book @delegateField(name: \"index\")",
+      "verdict": [
+        "EXTENSION_DIRECTIVES_NOT_REAPPLIED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.2.valid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "origin": "§3.13's example of a repeatable directive, applied twice to Book and once to its extension",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.2.invalid",
+      "sdl": "directive @delegateField(name: String!) repeatable on OBJECT | INTERFACE type Book @delegateField(name: \"pageCount\") @delegateField(name: \"author\") { id: ID! } type Query { book: Book } extend type Book @delegateField(name: \"index\")",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.3.invalid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.3.valid",
+      "sdl": "directive @d on SCHEMA schema @d { query: Query } type Query { a: Int } extend schema @d",
+      "verdict": [
+        "EXTENSION_DIRECTIVES_NOT_REAPPLIED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.3.valid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.3.invalid",
+      "sdl": "directive @d repeatable on SCHEMA schema @d { query: Query } type Query { a: Int } extend schema @d",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.4.invalid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.4.valid",
+      "sdl": "directive @d on SCALAR scalar S @d type Query { a: S } extend scalar S @d",
+      "verdict": [
+        "EXTENSION_DIRECTIVES_NOT_REAPPLIED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.4.valid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.4.invalid",
+      "sdl": "directive @d repeatable on SCALAR scalar S @d type Query { a: S } extend scalar S @d",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.5.invalid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.5.valid",
+      "sdl": "directive @d on INTERFACE interface I @d { a: Int } type Query implements I { a: Int } extend interface I @d",
+      "verdict": [
+        "EXTENSION_DIRECTIVES_NOT_REAPPLIED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.5.valid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.5.invalid",
+      "sdl": "directive @d repeatable on INTERFACE interface I @d { a: Int } type Query implements I { a: Int } extend interface I @d",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.6.invalid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.6.valid",
+      "sdl": "directive @d on UNION union U @d = Query type Query { a: U } extend union U @d",
+      "verdict": [
+        "EXTENSION_DIRECTIVES_NOT_REAPPLIED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.6.valid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.6.invalid",
+      "sdl": "directive @d repeatable on UNION union U @d = Query type Query { a: U } extend union U @d",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.7.invalid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.7.valid",
+      "sdl": "directive @d on ENUM enum E @d { A } type Query { e: E } extend enum E @d",
+      "verdict": [
+        "EXTENSION_DIRECTIVES_NOT_REAPPLIED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.7.valid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.7.invalid",
+      "sdl": "directive @d repeatable on ENUM enum E @d { A } type Query { e: E } extend enum E @d",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.8.invalid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.8.valid",
+      "sdl": "directive @d on INPUT_OBJECT input In @d { a: Int } type Query { f(i: In): Int } extend input In @d",
+      "verdict": [
+        "EXTENSION_DIRECTIVES_NOT_REAPPLIED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.8.valid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.8.invalid",
+      "sdl": "directive @d repeatable on INPUT_OBJECT input In @d { a: Int } type Query { f(i: In): Int } extend input In @d",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.9.invalid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.9.valid",
+      "sdl": "scalar S @specifiedBy(url: \"https://example.com/a\") type Query { a: S } extend scalar S @specifiedBy(url: \"https://example.com/b\")",
+      "verdict": [
+        "EXTENSION_DIRECTIVES_NOT_REAPPLIED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.9.valid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.9.invalid",
+      "sdl": "scalar S type Query { a: S } extend scalar S @specifiedBy(url: \"https://example.com/b\")",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.10.invalid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "since": "September2025",
+      "editionNote": "new in September 2025: \"the previous\" type in the extension rules (October 2021: \"the original\")",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.10.valid",
+      "sdl": "directive @d on OBJECT type Query { a: Int } extend type Query @d extend type Query @d",
+      "verdict": [
+        "EXTENSION_DIRECTIVES_NOT_REAPPLIED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionDirectivesNotReapplied.10.valid",
+      "spec": [
+        "3.3.2",
+        "3.5.6",
+        "3.6.3",
+        "3.7.1",
+        "3.8.1",
+        "3.9.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionDirectivesNotReapplied.10.invalid",
+      "sdl": "directive @d repeatable on OBJECT type Query { a: Int } extend type Query @d extend type Query @d",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveNotRepeated.3.invalid",
+      "spec": [
+        "3.13",
+        "5.7.3"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_NOT_REPEATED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveNotRepeated.3.valid",
+      "sdl": "directive @d on OBJECT type Query { a: Int } extend type Query @d @d",
+      "verdict": [
+        "DIRECTIVE_NOT_REPEATED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveNotRepeated.3.valid",
+      "spec": [
+        "3.13",
+        "5.7.3"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_NOT_REPEATED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveNotRepeated.3.invalid",
+      "sdl": "directive @d repeatable on OBJECT type Query { a: Int } extend type Query @d @d",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.26.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveLocationsValid.26.valid",
+      "sdl": "directive @d on FIELD_DEFINITION type Query { a: Int } extend type Query @d",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.26.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveLocationsValid.26.invalid",
+      "sdl": "directive @d on OBJECT type Query { a: Int } extend type Query @d",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.27.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveLocationsValid.27.valid",
+      "sdl": "directive @d on OBJECT type Query { a: Int } extend type Query { b: Int @d }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.27.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveLocationsValid.27.invalid",
+      "sdl": "directive @d on FIELD_DEFINITION type Query { a: Int } extend type Query { b: Int @d }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directivesDefined.3.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVES_DEFINED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directivesDefined.3.valid",
+      "sdl": "type Query { a: Int } extend type Query @undefinedInThisSchema",
+      "verdict": [
+        "DIRECTIVES_DEFINED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directivesDefined.3.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVES_DEFINED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directivesDefined.3.invalid",
+      "sdl": "directive @undefinedInThisSchema on OBJECT type Query { a: Int } extend type Query @undefinedInThisSchema",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionOneOf.1.invalid",
+      "spec": [
+        "3.10.2",
+        "3.10.1"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ONEOF",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionOneOf.1.valid",
+      "sdl": "input In { a: Int } type Query { f(i: In): Int } extend input In @oneOf",
+      "verdict": [
+        "EXTENSION_ONEOF"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionOneOf.1.valid",
+      "spec": [
+        "3.10.2",
+        "3.10.1"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ONEOF",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionOneOf.1.invalid",
+      "sdl": "input In @oneOf { a: Int } type Query { f(i: In): Int } extend input In { b: String }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "extensionOneOf.2.invalid",
+      "spec": [
+        "3.10.2",
+        "3.10.1"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ONEOF",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionOneOf.2.valid",
+      "sdl": "input In { a: Int b: String } type Query { f(i: In): Int } extend input In @oneOf { c: Int }",
+      "verdict": [
+        "EXTENSION_ONEOF"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "extensionOneOf.2.valid",
+      "spec": [
+        "3.10.2",
+        "3.10.1"
+      ],
+      "family": "extension",
+      "rule": "EXTENSION_ONEOF",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "extensionOneOf.2.invalid",
+      "sdl": "input In { a: Int b: String } type Query { f(i: In): Int } extend input In { c: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "oneOfFieldNullable.4.invalid",
+      "spec": [
+        "3.10",
+        "3.10.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "ONEOF_FIELD_NULLABLE",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "oneOfFieldNullable.4.valid",
+      "sdl": "input In @oneOf { a: Int } type Query { f(i: In): Int } extend input In { b: String! }",
+      "verdict": [
+        "ONEOF_FIELD_NULLABLE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "oneOfFieldNullable.4.valid",
+      "spec": [
+        "3.10",
+        "3.10.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "ONEOF_FIELD_NULLABLE",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "oneOfFieldNullable.4.invalid",
+      "sdl": "input In @oneOf { a: Int } type Query { f(i: In): Int } extend input In { b: String }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "oneOfFieldNoDefault.3.invalid",
+      "spec": [
+        "3.10",
+        "3.10.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "ONEOF_FIELD_NO_DEFAULT",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "oneOfFieldNoDefault.3.valid",
+      "sdl": "input In @oneOf { a: Int } type Query { f(i: In): Int } extend input In { b: String = \"x\" }",
+      "verdict": [
+        "ONEOF_FIELD_NO_DEFAULT"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "oneOfFieldNoDefault.3.valid",
+      "spec": [
+        "3.10",
+        "3.10.1",
+        "3.10.2"
+      ],
+      "family": "extension",
+      "rule": "ONEOF_FIELD_NO_DEFAULT",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "oneOfFieldNoDefault.3.invalid",
+      "sdl": "input In @oneOf { a: Int } type Query { f(i: In): Int } extend input In { b: String }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "inputObjectUnbreakableCycle.6.invalid",
+      "spec": [
+        "3.10"
+      ],
+      "family": "extension",
+      "rule": "INPUT_OBJECT_UNBREAKABLE_CYCLE",
+      "since": "September2026",
+      "editionNote": "new in September 2025: OneOf input objects; new in September 2026: OneOf inhabitability, InputObjectHasUnbreakableCycle (September 2025's rule, \"at least one of the fields in the chain of references must be either a nullable or a List type\", accepts this schema)",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "inputObjectUnbreakableCycle.6.valid",
+      "sdl": "input A @oneOf { b: B } input B { c: Int } type Query { f(a: A): Int } extend input B { a: A! }",
+      "verdict": [
+        "INPUT_OBJECT_UNBREAKABLE_CYCLE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "inputObjectUnbreakableCycle.6.valid",
+      "spec": [
+        "3.10"
+      ],
+      "family": "extension",
+      "rule": "INPUT_OBJECT_UNBREAKABLE_CYCLE",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "inputObjectUnbreakableCycle.6.invalid",
+      "sdl": "input A @oneOf { b: B } input B { c: Int } type Query { f(a: A): Int } extend input B { a: A }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "schemaExtensionDefined.1.invalid",
+      "spec": [
+        "3.3.2"
+      ],
+      "family": "extension",
+      "rule": "SCHEMA_EXTENSION_DEFINED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "unspecified": "§3.3.2 says \"The Schema must already be defined.\" This document has no schema definition, but it has a schema: its query root operation type is the type named Query. Whether that schema is \"already defined\" the spec doesn't say. TypeSystem.tla reads it as not defined.",
+      "pair": "schemaExtensionDefined.1.valid",
+      "sdl": "directive @d on SCHEMA type Query { a: Int } extend schema @d",
+      "verdict": [
+        "SCHEMA_EXTENSION_DEFINED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "schemaExtensionDefined.1.valid",
+      "spec": [
+        "3.3.2"
+      ],
+      "family": "extension",
+      "rule": "SCHEMA_EXTENSION_DEFINED",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "schemaExtensionDefined.1.invalid",
+      "sdl": "directive @d on SCHEMA schema { query: Query } type Query { a: Int } extend schema @d",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "rootTypesAreObjects.7.invalid",
+      "spec": [
+        "3.3.1"
+      ],
+      "family": "extension",
+      "rule": "ROOT_TYPES_ARE_OBJECTS",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "rootTypesAreObjects.7.valid",
+      "sdl": "schema { query: Query } type Query { a: Int } input M { a: Int } extend schema { mutation: M }",
+      "verdict": [
+        "ROOT_TYPES_ARE_OBJECTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "rootTypesAreObjects.7.valid",
+      "spec": [
+        "3.3.1"
+      ],
+      "family": "extension",
+      "rule": "ROOT_TYPES_ARE_OBJECTS",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "rootTypesAreObjects.7.invalid",
+      "sdl": "schema { query: Query } type Query { a: Int } type M { a: Int } extend schema { mutation: M }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "rootTypesDifferent.4.invalid",
+      "spec": [
+        "3.3.1"
+      ],
+      "family": "extension",
+      "rule": "ROOT_TYPES_DIFFERENT",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "rootTypesDifferent.4.valid",
+      "sdl": "schema { query: Query } type Query { a: Int } type M { a: Int } extend schema { mutation: Query }",
+      "verdict": [
+        "ROOT_TYPES_DIFFERENT"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "rootTypesDifferent.4.valid",
+      "spec": [
+        "3.3.1"
+      ],
+      "family": "extension",
+      "rule": "ROOT_TYPES_DIFFERENT",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "rootTypesDifferent.4.invalid",
+      "sdl": "schema { query: Query } type Query { a: Int } type M { a: Int } extend schema { mutation: M }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "specifiedByNotBuiltin.1.invalid",
+      "spec": [
+        "3.13.4",
+        "3.5",
+        "3.5.6"
+      ],
+      "family": "extension",
+      "rule": "SPECIFIED_BY_NOT_BUILTIN",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "specifiedByNotBuiltin.1.valid",
+      "sdl": "type Query { a: Int } extend scalar Int @specifiedBy(url: \"https://example.com/int\")",
+      "verdict": [
+        "SPECIFIED_BY_NOT_BUILTIN"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "specifiedByNotBuiltin.1.valid",
+      "spec": [
+        "3.13.4",
+        "3.5",
+        "3.5.6"
+      ],
+      "family": "extension",
+      "rule": "SPECIFIED_BY_NOT_BUILTIN",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "specifiedByNotBuiltin.1.invalid",
+      "sdl": "scalar S type Query { a: S } extend scalar S @specifiedBy(url: \"https://example.com/int\")",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "specifiedByNotBuiltin.2.invalid",
+      "spec": [
+        "3.13.4",
+        "3.5",
+        "3.5.6"
+      ],
+      "family": "extension",
+      "rule": "SPECIFIED_BY_NOT_BUILTIN",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "specifiedByNotBuiltin.2.valid",
+      "sdl": "type Query { a: String } extend scalar String @specifiedBy(url: \"https://example.com/string\")",
+      "verdict": [
+        "SPECIFIED_BY_NOT_BUILTIN"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "specifiedByNotBuiltin.2.valid",
+      "spec": [
+        "3.13.4",
+        "3.5",
+        "3.5.6"
+      ],
+      "family": "extension",
+      "rule": "SPECIFIED_BY_NOT_BUILTIN",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "specifiedByNotBuiltin.2.invalid",
+      "sdl": "scalar S type Query { a: S } extend scalar S @specifiedBy(url: \"https://example.com/string\")",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveExtensionDefined.1.invalid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_DEFINED",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionDefined.1.valid",
+      "sdl": "directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e",
+      "verdict": [
+        "DIRECTIVE_EXTENSION_DEFINED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveExtensionDefined.1.valid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_DEFINED",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionDefined.1.invalid",
+      "sdl": "directive @d on FIELD directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveExtensionNotReapplied.1.invalid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_NOT_REAPPLIED",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions, directives on directive definitions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionNotReapplied.1.valid",
+      "sdl": "directive @e on DIRECTIVE_DEFINITION directive @d @e on FIELD type Query { a: Int } extend directive @d @e",
+      "verdict": [
+        "DIRECTIVE_EXTENSION_NOT_REAPPLIED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveExtensionNotReapplied.1.valid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_NOT_REAPPLIED",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions, directives on directive definitions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionNotReapplied.1.invalid",
+      "sdl": "directive @e repeatable on DIRECTIVE_DEFINITION directive @d @e on FIELD type Query { a: Int } extend directive @d @e",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveExtensionNotReapplied.2.invalid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_NOT_REAPPLIED",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions, directives on directive definitions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionNotReapplied.2.valid",
+      "sdl": "directive @d @deprecated on FIELD type Query { a: Int } extend directive @d @deprecated(reason: \"x\")",
+      "verdict": [
+        "DIRECTIVE_EXTENSION_NOT_REAPPLIED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveExtensionNotReapplied.2.valid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_NOT_REAPPLIED",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionNotReapplied.2.invalid",
+      "sdl": "directive @d on FIELD type Query { a: Int } extend directive @d @deprecated(reason: \"x\")",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveExtensionNotReapplied.3.invalid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_NOT_REAPPLIED",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionNotReapplied.3.valid",
+      "sdl": "directive @e on DIRECTIVE_DEFINITION directive @d on FIELD type Query { a: Int } extend directive @d @e extend directive @d @e",
+      "verdict": [
+        "DIRECTIVE_EXTENSION_NOT_REAPPLIED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveExtensionNotReapplied.3.valid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_NOT_REAPPLIED",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionNotReapplied.3.invalid",
+      "sdl": "directive @e repeatable on DIRECTIVE_DEFINITION directive @d on FIELD type Query { a: Int } extend directive @d @e extend directive @d @e",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveExtensionUsesPrevious.1.invalid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_USES_PREVIOUS",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionUsesPrevious.1.valid",
+      "sdl": "directive @d on FIELD | DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @d",
+      "verdict": [
+        "DIRECTIVE_EXTENSION_USES_PREVIOUS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveExtensionUsesPrevious.1.valid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_USES_PREVIOUS",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionUsesPrevious.1.invalid",
+      "sdl": "directive @d on FIELD | DIRECTIVE_DEFINITION directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveExtensionReferencesPrevious.1.invalid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions, directives on directive definitions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionReferencesPrevious.1.valid",
+      "sdl": "directive @d on FIELD | DIRECTIVE_DEFINITION directive @e @d on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e",
+      "verdict": [
+        "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveExtensionReferencesPrevious.1.valid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionReferencesPrevious.1.invalid",
+      "sdl": "directive @d on FIELD | DIRECTIVE_DEFINITION directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveExtensionReferencesPrevious.2.invalid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionReferencesPrevious.2.valid",
+      "sdl": "directive @d on FIELD | INPUT_FIELD_DEFINITION directive @e(x: In) on DIRECTIVE_DEFINITION input In { f: Int @d } type Query { a(i: In): Int } extend directive @d @e",
+      "verdict": [
+        "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveExtensionReferencesPrevious.2.valid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionReferencesPrevious.2.invalid",
+      "sdl": "directive @d on FIELD | INPUT_FIELD_DEFINITION directive @e(x: In) on DIRECTIVE_DEFINITION input In { f: Int } type Query { a(i: In): Int } extend directive @d @e",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.28.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveLocationsValid.28.valid",
+      "sdl": "directive @d on FIELD directive @e on FIELD type Query { a: Int } extend directive @d @e",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.28.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveLocationsValid.28.invalid",
+      "sdl": "directive @d on FIELD directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e",
       "verdict": [],
       "expected": {
         "valid": true

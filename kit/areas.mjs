@@ -3,12 +3,18 @@
 // {"type": <area>, "id": n, ...} and the adapter answers
 // {"type": "result", "id": n, ...}, or {"type": "error", "id": n, "message"}.
 //
-// In parse, validate, coerce and schema, an `error` answer to a vector means
-// the implementation crashed on it (docs/kit-areas.md, "Protocol"): those
-// areas ask with answerOrCrash, which turns it into a Crash. Elsewhere it
-// stops the run.
+// In parse, validate, coerce, schema and coordinate, an `error` answer to a
+// vector means the implementation crashed on it (docs/kit-areas.md,
+// "Protocol"): those areas ask with answerOrCrash, which turns it into a
+// Crash. Elsewhere it stops the run.
+//
+// AREAS is every area, in the order reports, the conformance sheet and the
+// website list them. A new area needs only kit/<area>/run.mjs and a name
+// here: scripts/conformance-reports.mjs runs it, scripts/check-conformance.mjs
+// reproduces graphql-js's reports in it, and the sheet and the website show
+// any area a report names.
 
-export const AREAS = ["execution", "parse", "validate", "coerce", "schema", "introspect"];
+export const AREAS = ["execution", "parse", "validate", "coerce", "schema", "introspect", "coordinate"];
 
 let nextId = 1;
 

@@ -6,7 +6,11 @@
 // in JS before the reference sees a case. `level` is the level in September
 // 2026, the edition the kit grades. `levels` gives the level in an older
 // release whose wording gives a different one ("September2025",
-// "October2021"); a release it leaves out has `level`. `basis` quotes the
+// "October2021"); a release it leaves out has `level`. `since` names the
+// first release whose text has the rule, if after October 2021.
+// `requires` names the capabilities without which nothing exercises a check
+// (docs/kit-areas.md, "Reports"): the sheet shows it untested for that
+// reason. `basis` quotes the
 // sentences a check rests on, in each release where they differ, and says
 // why its level is the one it is. A level comes only from normative prose:
 // examples ("for example", example blocks) are non-normative (Appendix A),
@@ -151,6 +155,85 @@ export const CHECKS = [
     basis:
       "§7.1.2: \"A response stream must be a stream of execution result\", and §7.1.1: \"for each event in a subscription's source stream, the response stream will emit an execution result.\" MapSourceToResponseEvent (§6.2.3.2) completes the response stream with an error only if \"internal {error} was raised\", and its Note says the only such errors \"are internal exceptional errors not described by this specification\": execution errors are handled by ExecuteSubscriptionEvent. September 2025 has the same sentences and Note. October 2021's MapSourceToResponseEvent yields an event containing the result for each source event, and §7 requires \"a well-formed response\".",
   },
+  // A subscription run as a stream the kit drives (subscription-stream):
+  // checked on its lifecycle case, the log of what the kit's source stream
+  // did and what the response stream yielded. Each event's result is a case
+  // of its own, checked like any other.
+  {
+    id: "eventPerSourceEvent",
+    level: "MUST",
+    spec: ["6.2.3.2", "7.1.2"],
+    title: "Each source event yields one execution result on the response stream, before it completes",
+    streamOnly: true,
+    requires: ["subscription-stream"],
+    basis:
+      "MapSourceToResponseEvent (§6.2.3.2): \"When {sourceStream} emits {sourceValue}: Let {executionResult} be the result of running {ExecuteSubscriptionEvent(...)} ... Otherwise emit {executionResult} on {responseStream}\", and the response stream completes only after that, when the source completes, fails or the stream is cancelled. §7.1.2: \"A response stream must be a stream of execution result\", and §6.2.3: \"each event in the event stream is the result of executing the operation's root selection set for each new event on an underlying source stream\". Algorithm steps have the algorithm's level (Appendix A). The only other way out is an internal error, which the Note after the algorithm says is \"not described by this specification\": the kit's resolvers raise execution errors, which ExecuteSubscriptionEvent handles. So an event emitted while the stream is open that yields no result before the stream completes, a result for no event, or a result after the stream completed, fails here. An event still executing when the kit cancels the stream isn't counted (nothingAfterCancel). September 2025 says the same; October 2021's MapSourceToResponseEvent says \"For each {event} on {sourceStream}: ... Yield an event containing {response}\".",
+  },
+  {
+    id: "streamEndsOnlyForCause",
+    level: "SHOULD",
+    spec: ["6.2.3", "6.2.3.2"],
+    title: "The response stream completes only when its source completes or fails, or it is cancelled",
+    streamOnly: true,
+    requires: ["subscription-stream"],
+    basis:
+      "MapSourceToResponseEvent (§6.2.3.2) completes {responseStream} when the source completes normally or with an error, when it is cancelled, and on an internal error, which its Note says is \"not described by this specification\". But §6.2.3 says of event streams in general, which a response stream is: \"An event stream may complete at any point, often because no further events will occur\", and \"Internal user code also may cancel an event stream for any reason, which would be observed as that event stream completing.\" With the level in doubt the kit takes the weaker one. A stream that completes instead of yielding an event's result fails eventPerSourceEvent, a MUST, instead. September 2025 says the same; October 2021: \"Event streams may produce an infinite sequence of events or may complete at any point.\"",
+  },
+  {
+    id: "completesWithSource",
+    level: "MUST",
+    levels: { October2021: "SHOULD" },
+    spec: ["6.2.3.2"],
+    title: "When the source stream completes, the response stream completes normally",
+    streamOnly: true,
+    requires: ["subscription-stream"],
+    basis:
+      "MapSourceToResponseEvent (§6.2.3.2): \"When {sourceStream} completes normally: Complete {responseStream} normally.\" Algorithm steps have the algorithm's level (Appendix A). A response stream that completes with an error, or doesn't complete once every event has its result, fails. September 2025 says the same. October 2021's step reads \"When {responseStream} completes: complete this event stream\", which names the response stream where the source is meant; with its level in doubt the kit takes the weaker one there.",
+  },
+  {
+    id: "failsWithSource",
+    level: "MUST",
+    since: "September2025",
+    spec: ["6.2.3", "6.2.3.2"],
+    title: "When the source stream fails, the response stream completes with an error",
+    streamOnly: true,
+    requires: ["subscription-stream"],
+    basis:
+      "§6.2.3 (Event Streams): \"If an event stream encounters an error, it must complete with that error.\" MapSourceToResponseEvent (§6.2.3.2): \"When {sourceStream} completes with {error}: Complete {responseStream} with {error}.\" A response stream that completes normally, or doesn't complete, fails. The kit doesn't compare error messages: an implementation may wrap the source's error. New in September 2025; October 2021 says only \"Event streams may complete in response to an error\".",
+  },
+  {
+    id: "cancelCompletes",
+    level: "MUST",
+    since: "September2025",
+    spec: ["6.2.3", "6.2.3.2", "6.2.3.3"],
+    title: "A cancelled response stream completes normally",
+    streamOnly: true,
+    requires: ["subscription-stream"],
+    basis:
+      "§6.2.3 (Event Streams): \"When an event stream is cancelled, it must complete.\" MapSourceToResponseEvent (§6.2.3.2): \"When {responseStream} is cancelled: Cancel {sourceStream}. Complete {responseStream} normally.\" Unsubscribe (§6.2.3.3): \"Cancel {responseStream}.\" A response stream that completes with an error after the client cancelled it, or doesn't complete, fails. New in September 2025; October 2021 says only that after cancelling, an observer \"must receive no more events from that event stream\" (nothingAfterCancel).",
+  },
+  {
+    id: "cancelCancelsSource",
+    level: "MUST",
+    since: "September2025",
+    spec: ["6.2.3.2", "6.2.3.3"],
+    title: "Cancelling the response stream cancels the source stream",
+    streamOnly: true,
+    requires: ["subscription-stream"],
+    basis:
+      "MapSourceToResponseEvent (§6.2.3.2): \"When {responseStream} is cancelled: Cancel {sourceStream}.\" §6.2.3.3: \"Unsubscribe cancels the response stream when a client no longer wishes to receive payloads for a subscription. This in turn also cancels the Source Stream\". Algorithm steps have the algorithm's level (Appendix A). The adapter reports the source being cancelled (`source-cancelled`); a cancelled stream whose source never is fails. September 2025 says the same. October 2021: \"This may in turn also cancel the Source Stream\", a may.",
+  },
+  {
+    id: "nothingAfterCancel",
+    level: "SHOULD",
+    levels: { October2021: "MUST" },
+    spec: ["6.2.3", "6.2.3.2"],
+    title: "No result arrives after the client cancels the response stream",
+    streamOnly: true,
+    requires: ["subscription-stream"],
+    basis:
+      "MapSourceToResponseEvent (§6.2.3.2): \"When {responseStream} is cancelled: Cancel {sourceStream}. Complete {responseStream} normally\", and a completed stream emits nothing more. But the algorithm doesn't say what happens to an event whose ExecuteSubscriptionEvent was already running when the stream was cancelled, whose step \"emit {executionResult} on {responseStream}\" comes after, and §6.2.3's \"When an event stream is cancelled, it must complete\" doesn't say how soon. With the level in doubt the kit takes the weaker one. The kit's scenario cancels the stream while an event's resolvers are pending, then settles them; a result for that event after the cancel fails here (graphql-js 17 delivers it, then completes). September 2025 says the same. October 2021's §6.2.3: after cancelling, an observer \"must receive no more events from that event stream\", a must.",
+  },
   {
     id: "dataShape",
     level: "MUST",
@@ -162,10 +245,10 @@ export const CHECKS = [
   {
     id: "resultCoercion",
     level: "MUST",
-    spec: ["3.5.2", "3.9", "6.4.3"],
-    title: "A non-finite Float or an unknown enum value raises an execution error instead of being passed through",
+    spec: ["3.5", "3.5.2", "3.9", "6.4.3"],
+    title: "A non-finite Float, an unknown enum value or a value a custom scalar rejects raises an execution error instead of being passed through",
     basis:
-      "§3.5.2: \"Non-finite floating-point internal values ({NaN} and {Infinity}) cannot be coerced to {Float} and must raise an execution error.\" §3.9: \"GraphQL services must return one of the defined set of possible values. If a reasonable coercion is not possible they must raise an execution error.\" CoerceResult (§6.4.3): the internal method \"must return a valid value for the type and not {null}. Otherwise raise an execution error.\" September 2025 says the same, and October 2021 too, with \"field error\". A value passed through fails here, as does no response at all after such a value, whose root cause it is. A null without an error is coercionErrorReported.",
+      "§3.5.2: \"Non-finite floating-point internal values ({NaN} and {Infinity}) cannot be coerced to {Float} and must raise an execution error.\" §3.5, for every scalar, custom ones included: a service \"must uphold the contract the scalar type describes, either by coercing the value or producing an execution error if a value cannot be coerced\" (custom scalars with custom-scalar-results, whose resolver returns a value the scalar's result coercion rejects). §3.9: \"GraphQL services must return one of the defined set of possible values. If a reasonable coercion is not possible they must raise an execution error.\" CoerceResult (§6.4.3): the internal method \"must return a valid value for the type and not {null}. Otherwise raise an execution error.\" September 2025 says the same, and October 2021 too, with \"field error\". A value passed through fails here, as does no response at all after such a value, whose root cause it is. A null without an error is coercionErrorReported.",
   },
   {
     id: "intFraction",
@@ -179,10 +262,29 @@ export const CHECKS = [
     id: "coercionErrorReported",
     level: "MUST",
     levels: { October2021: "SHOULD" },
-    spec: ["3.5.1", "3.5.2", "3.9", "6.4.3", "6.4.4"],
+    spec: ["3.5", "3.5.1", "3.5.2", "3.9", "6.4.3", "6.4.4"],
     title: "A position whose resolver returned a value its type can't represent isn't null without an error",
     basis:
       "Such a value \"must raise an execution error\" (§3.5.1, §3.5.2, §3.9), CoerceResult's internal method \"must return a valid value for the type and not {null}\" (§6.4.3), and §6.4.4 says the error \"must be added to the {\"errors\"} list\" and opens \"While these errors must be reported in the response\". A null without an error at its path breaks one of these, in September 2026 and September 2025 alike, whichever the service did: coerced the value to null, or raised the error and left it out. October 2021 keeps the musts on raising, but says raised field errors \"should be reported\" and \"should include all raised field errors\" (see nullsExplained). The response can't tell the two apart, so the kit takes the weaker reading there: a SHOULD.",
+  },
+  {
+    id: "intRange",
+    level: "SHOULD",
+    spec: ["3.5.1"],
+    requires: ["scalar-results"],
+    title: "An Int outside 32 bits returned by a resolver (2147483648) raises an execution error instead of being passed through",
+    basis:
+      "§3.5.1: \"If the integer internal value represents a value less than -2^31 or greater than or equal to 2^31, an execution error should be raised.\" September 2025 says the same, and October 2021 too, with \"a field error\". Graded only for adapters with scalar-results, in fixtures with invalid results. A null without an error is coercionErrorReported.",
+  },
+  {
+    id: "idAsString",
+    level: "MUST",
+    levels: { October2021: "SHOULD" },
+    spec: ["3.5.5"],
+    requires: ["scalar-results"],
+    title: "An ID whose resolver returned an integer (4) is serialized as a String (\"4\")",
+    basis:
+      "§3.5.5: \"The ID type is serialized in the same way as a String; however, it is not intended to be human-readable. While it is often numeric, it must always serialize as a String.\" Its Result Coercion lets a service raise an execution error when \"coercion is not possible\", which also passes. September 2025 says the same. October 2021: \"it should always serialize as a String\". Graded only for adapters with scalar-results, in fixtures with invalid results.",
   },
   {
     id: "leafValues",
@@ -256,6 +358,22 @@ export const CHECKS = [
       "§7.1.6: \"it should contain an entry with the key {\"locations\"} with a list of locations, where each location is a map with the keys {\"line\"} and {\"column\"}, both positive numbers starting from `1`\". The whole sentence, shape included, is a should. September 2025 and October 2021 (§7.1.2) say the same.",
   },
   {
+    id: "errorLocationsPresent",
+    level: "SHOULD",
+    spec: ["7.1.6"],
+    title: "An execution error raised at a field has locations",
+    basis:
+      "§7.1.6: \"If an error can be associated to a particular point in the requested GraphQL document, it should contain an entry with the key {\"locations\"} with a list of locations\". Every error the kit's resolvers cause is raised at a field, or a list item of a field, of the document the kit sent. An error without locations, or with an empty list, fails. September 2025 and October 2021 (§7.1.2) say the same.",
+  },
+  {
+    id: "errorLocationsAccurate",
+    level: "SHOULD",
+    spec: ["7.1.6"],
+    title: "An execution error's locations point at the field it was raised at",
+    basis:
+      "§7.1.6: each location is a map with the keys line and column, \"both positive numbers starting from `1` which describe the beginning of an associated syntax element\". For an error raised at a field, or at an item of a list field, the associated element is that field's selection in the document the kit sent: the kit accepts the start of any of its field nodes (several when selections merge), or the start of the field's name after an alias. A location elsewhere fails. Locations are only compared for errors whose path is where the kit's outcome raised the error. The whole sentence is a should. September 2025 and October 2021 (§7.1.2) say the same.",
+  },
+  {
     id: "errorPath",
     level: "MUST",
     spec: ["7.1.6"],
@@ -287,6 +405,23 @@ export const CHECKS = [
     title: "Errors have no entries besides message, locations, path and extensions",
     basis:
       "§7.1.6: \"GraphQL services should not provide any additional entries to the error format\", and its Note: \"While non-specified entries are not violations, they are still discouraged.\" September 2025 and October 2021 (§7.1.2) say the same.",
+  },
+  {
+    id: "uniqueKeys",
+    level: "MUST",
+    spec: ["7.1.1", "7.2.1"],
+    title: "No map in the serialized response repeats a key",
+    basis:
+      "§7.1.1: \"An execution result must be a map\", and Appendix B defines a map: \"Each entry has a unique key\". Data is built of maps too (ExecuteCollectedFields, §6.3.3, sets one entry per response name), as is each error. §7.2.1 serializes a map as a JSON object; a JSON object that repeats a name, which JSON.parse silently reduces to the last one, describes no map with unique keys. The kit reads the adapter's raw line for this. September 2025 says the same; October 2021's §7.1 says \"A response to a GraphQL request must be a map\", and its Appendix A defines no map, so the rule rests there on JSON objects meaning maps.",
+  },
+  {
+    id: "parentValue",
+    level: "MUST",
+    spec: ["6.2.1", "6.2.3.2", "6.3.3", "6.4.2", "6.4.3"],
+    requires: ["parent-values"],
+    title: "Each field's resolver is given its parent's value: the initial value at the root, a subscription event's value at its root",
+    basis:
+      "ResolveFieldValue (§6.4.2): \"Return the result of calling {resolver}, providing {objectValue} and {argumentValues}\". ExecuteCollectedFields (§6.3.3) passes its {objectValue} to ExecuteField for every field; CompleteValue (§6.4.3) runs an object's subfields with {result}, the resolved value, as theirs; ExecuteRootSelectionSet passes the {initialValue} (§6.2.1: \"An initial value may be provided when executing a query operation\"), and §6.2.3.2: \"Each event from the underlying source stream triggers execution of the subscription selection set using that event's value as the {initialValue}\". Algorithm steps have the algorithm's level (Appendix A). Graded only for adapters with parent-values: the kit names each object its outcomes stand for, and each call reports the one its resolver got. September 2025 and October 2021 have the same algorithms.",
   },
   {
     id: "protocol",

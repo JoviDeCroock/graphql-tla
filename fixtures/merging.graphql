@@ -1,0 +1,33 @@
+# Merging selection sets (§6.3.2 CollectSubfields), with the spec's own
+# example from §6.3.2: `a` is selected twice, once through a fragment
+# spread, so it is executed once, and its two sub-selections are merged into
+# one collected fields map, in the order each subfield first appears
+# (subfield1, then subfield2). subfield2 is Non-Null, so its error nulls the
+# merged `a` once.
+# maxListLength: 0
+# spec: 6.3.2, 6.3.3, 6.4.4
+
+type A {
+  subfield1: String
+  subfield2: Int!
+}
+
+type Query {
+  a: A
+  b: String
+}
+
+query {
+  a {
+    subfield1
+  }
+  ...ExampleFragment
+}
+
+fragment ExampleFragment on Query {
+  a {
+    subfield2
+    subfield1
+  }
+  b
+}

@@ -42,15 +42,24 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as graphql from "graphql17";
-import { RELEASES, RULE, RULES, UNWRITABLE, releaseName } from "../kit/schema/rules.mjs";
-import { chunked, evaluateModule, moduleFooter, pool, schemaVerdictData, tla } from "../kit/schema/tla.mjs";
+import { RELEASES, RULE, RULES, SCHEMA_EXTENSIONS, UNWRITABLE, releaseName } from "../kit/schema/rules.mjs";
+import { chunked, evaluateModule, hasExtensions, moduleFooter, pool, schemaVerdictData, tla } from "../kit/schema/tla.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
 const out = join(root, "kit/schema/vectors.json");
 
-// [family, rule, invalid, valid, origin]. Families are the differential's
-// scenarios: names, root, typeUse, defaults, implementation, union, enum,
-// input, directive. `origin` marks the spec's own examples.
+// The release that first says "the previous" type (as extended so far)
+// where October 2021 says "the original" one: an invalid schema whose
+// conflict is with an earlier extension, not the definition, relies on it.
+const PREVIOUS = ["September2025", "\"the previous\" type in the extension rules (October 2021: \"the original\")"];
+
+// [family, rule, invalid, valid, origin, options]. Families are the
+// differential's scenarios: names, root, typeUse, defaults, implementation,
+// union, enum, input, directive; and `extension`, for schemas with type
+// system extensions, which the differential doesn't generate. `origin`
+// marks the spec's own examples, or the sentence a pair follows.
+// `options.since` is a [release, feature] the invalid schema relies on that
+// its syntax doesn't show.
 const PAIRS = [
   // §3.3 Schema
   ["names", "TYPE_NAMES_UNIQUE", "scalar A scalar A type Query { a: A }", "scalar A scalar B type Query { a: A }"],
@@ -359,7 +368,325 @@ const PAIRS = [
   ["directive", "DIRECTIVES_DEFINED", "type Query { a: Int @undefinedInThisSchema }", "type Query { a: Int @deprecated }"],
   ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d on FIELD type Query { a: Int @d }", "directive @d on FIELD_DEFINITION type Query { a: Int @d }"],
   ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d on FIELD_DEFINITION type Query @d { a: Int }", "directive @d on OBJECT type Query @d { a: Int }"],
-  ["directive", "DIRECTIVE_LOCATIONS_VALID", "type Query @deprecated { a: Int }", "type Query { a: Int @deprecated }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "type Query @deprecated { a: Int }", "type Query { a: Int @deprecated }"],  // --- Added for September 2026's coverage: the THIN rows of §3.3 to §3.13 --
+  // §3.3: every kind of type, named twice, named like a built-in, and with
+  // "__".
+  ["names", "TYPE_NAMES_UNIQUE", "type A { a: Int } enum A { X } type Query { a: A }", "type A { a: Int } enum B { X } type Query { a: A }"],
+  ["names", "TYPE_NAMES_UNIQUE", "input A { a: Int } scalar A type Query { f(a: A): Int }", "input A { a: Int } scalar B type Query { f(a: A): Int }"],
+  ["names", "TYPE_NAMES_UNIQUE", "interface A { a: Int } union A = Query type Query implements A { a: Int }", "interface A { a: Int } union B = Query type Query implements A { a: Int }"],
+  ["names", "TYPE_NAME_NOT_BUILTIN", "enum Boolean { YES NO } type Query { a: Int }", "enum Bool { YES NO } type Query { a: Int }"],
+  ["names", "TYPE_NAME_NOT_BUILTIN", "input ID { a: Int } type Query { f(i: ID): Int }", "input Id { a: Int } type Query { f(i: Id): Int }"],
+  ["names", "TYPE_NAME_RESERVED", "scalar __S type Query { a: __S }", "scalar _S type Query { a: _S }"],
+  ["names", "TYPE_NAME_RESERVED", "enum __E { A } type Query { a: __E }", "enum _E { A } type Query { a: _E }"],
+  ["names", "TYPE_NAME_RESERVED", "input __I { a: Int } type Query { f(i: __I): Int }", "input _I { a: Int } type Query { f(i: _I): Int }"],
+  ["names", "TYPE_NAME_RESERVED", "union __U = Query type Query { a: __U }", "union _U = Query type Query { a: _U }"],
+  ["names", "TYPE_NAME_RESERVED", "interface __I { a: Int } type Query implements __I { a: Int }", "interface _I { a: Int } type Query implements _I { a: Int }"],
+  // §3.3.1: the third pair of roots, a non-object subscription root, a
+  // scalar as query root, two schema definitions with different roots.
+  [
+    "root",
+    "ROOT_TYPES_DIFFERENT",
+    "schema { query: Q mutation: M subscription: M } type Q { a: Int } type M { a: Int } type S { a: Int }",
+    "schema { query: Q mutation: M subscription: S } type Q { a: Int } type M { a: Int } type S { a: Int }",
+  ],
+  ["root", "ROOT_TYPES_ARE_OBJECTS", "schema { query: Q subscription: U } type Q { a: Int } type S { a: Int } union U = S", "schema { query: Q subscription: S } type Q { a: Int } type S { a: Int } union U = S"],
+  ["root", "ROOT_TYPES_ARE_OBJECTS", "schema { query: S } scalar S type Q { a: S }", "schema { query: Q } scalar S type Q { a: S }"],
+  ["root", "SCHEMA_DEFINITION_UNIQUE", "schema { query: Query } schema { query: Q2 } type Query { a: Int } type Q2 { a: Int }", "schema { query: Q2 } type Query { a: Int } type Q2 { a: Int }"],
+  // §3.7: the field and argument rules on an interface, and §3.4.2's "never
+  // valid inputs" for interfaces and unions.
+  ["names", "FIELD_NAME_RESERVED", "type Query { a: I } interface I { __b: Int }", "type Query { a: I } interface I { _b: Int }"],
+  ["typeUse", "FIELD_OUTPUT_TYPE", "input In { x: Int } type Query { a: I } interface I { f: In }", "input In { x: Int } type Query { a: I } interface I { f(x: In): Int }"],
+  ["names", "ARG_NAME_RESERVED", "type Query { a: I } interface I { f(__x: Int): Int }", "type Query { a: I } interface I { f(_x: Int): Int }"],
+  ["names", "ARG_NAMES_UNIQUE", "type Query { a: I } interface I { f(x: Int, x: Int): Int }", "type Query { a: I } interface I { f(x: Int, y: Int): Int }"],
+  ["typeUse", "ARG_INPUT_TYPE", "type Query { a: I } interface I { f(x: Query): Int }", "type Query { a: I } interface I { f(x: Int): Int }"],
+  ["typeUse", "ARG_INPUT_TYPE", "interface I { a: Int } type Query implements I { a: Int f(x: I): Int }", "interface I { a: Int } type Query implements I { a: Int f(x: Int): Int }", "§3.7: interfaces are never valid inputs"],
+  ["input", "INPUT_FIELD_INPUT_TYPE", "interface I { a: Int } type Query implements I { a: Int f(i: In): Int } input In { x: I }", "interface I { a: Int } type Query implements I { a: Int f(i: In): Int } input In { x: Int }"],
+  ["input", "INPUT_FIELD_INPUT_TYPE", "union U = Query type Query { f(i: In): Int } input In { x: [U] }", "enum U { A } type Query { f(i: In): Int } input In { x: [U] }", "§3.8: unions are never valid inputs"],
+  // §3.6 and §3.7 IsValidImplementation: interfaces implementing interfaces,
+  // and the type mismatches the first pairs don't make.
+  [
+    "implementation",
+    "IMPLEMENTS_UNIQUE",
+    "interface J { a: Int } interface I implements J & J { a: Int } type Query implements I & J { a: Int }",
+    "interface J { a: Int } interface I implements J { a: Int } type Query implements I & J { a: Int }",
+  ],
+  ["implementation", "IMPLEMENTS_INTERFACES", "type I { a: Int } type Query implements & I { a: Int }", "interface I { a: Int } type Query implements & I { a: Int }", "§3.6: ImplementsInterfaces may start with an optional &"],
+  [
+    "implementation",
+    "IMPL_FIELD_PROVIDED",
+    "interface J { a: Int } interface I implements J { b: Int } type Query implements I & J { a: Int b: Int }",
+    "interface J { a: Int } interface I implements J { a: Int b: Int } type Query implements I & J { a: Int b: Int }",
+  ],
+  [
+    "implementation",
+    "IMPL_ARG_PROVIDED",
+    "interface J { f(x: Int): Int } interface I implements J { f: Int } type Query implements I & J { f(x: Int): Int }",
+    "interface J { f(x: Int): Int } interface I implements J { f(x: Int): Int } type Query implements I & J { f(x: Int): Int }",
+  ],
+  ["implementation", "IMPL_ARG_INVARIANT", "interface I { f(a: Int): Int } type Query implements I { f(a: String): Int }", "interface I { f(a: Int): Int } type Query implements I { f(a: Int): Int }"],
+  ["implementation", "IMPL_ARG_INVARIANT", "interface I { f(a: [Int]): Int } type Query implements I { f(a: [[Int]]): Int }", "interface I { f(a: [Int]): Int } type Query implements I { f(a: [Int]): Int }"],
+  [
+    "implementation",
+    "IMPL_ARG_INVARIANT",
+    "interface J { f(x: Int): Int } interface I implements J { f(x: String): Int } type Query implements I & J { f(x: Int): Int }",
+    "interface J { f(x: Int): Int } interface I implements J { f(x: Int): Int } type Query implements I & J { f(x: Int): Int }",
+  ],
+  [
+    "implementation",
+    "IMPL_EXTRA_ARG_OPTIONAL",
+    "interface J { f: Int } interface I implements J { f(b: Int!): Int } type Query implements I & J { f(b: Int!): Int }",
+    "interface J { f: Int } interface I implements J { f(b: Int): Int } type Query implements I & J { f(b: Int): Int }",
+  ],
+  [
+    "implementation",
+    "IMPL_FIELD_COVARIANT",
+    "interface J { f: Int! } interface I implements J { f: Int } type Query implements I & J { f: Int! }",
+    "interface J { f: Int! } interface I implements J { f: Int! } type Query implements I & J { f: Int! }",
+  ],
+  ["implementation", "IMPL_FIELD_COVARIANT", "interface I { f: [I] } type Query implements I { f: [Int] }", "interface I { f: [I] } type Query implements I { f: [Query!]! }"],
+  ["implementation", "IMPL_FIELD_COVARIANT", "interface I { f: [[Int]] } type Query implements I { f: [Int] }", "interface I { f: [[Int]] } type Query implements I { f: [[Int!]!] }"],
+  [
+    "implementation",
+    "IMPL_FIELD_COVARIANT",
+    "interface I { f: [U] } union U = A type A { x: Int } type B { x: Int } type Query implements I { f: [B] }",
+    "interface I { f: [U] } union U = A type A { x: Int } type B { x: Int } type Query implements I { f: [A!] }",
+  ],
+  [
+    "implementation",
+    "IMPL_FIELD_COVARIANT",
+    "interface Node { f: Node } interface Other { x: Int } type Query implements Node & Other { x: Int f: Other }",
+    "interface Node { f: Node } interface Sub implements Node { f: Node } type Query implements Node & Sub { f: Sub }",
+    "§3.6 IsSubType: an Interface type that declares it implements the interface is a sub-type of it",
+  ],
+  [
+    "implementation",
+    "IMPL_DEPRECATION",
+    "interface J { f: Int } interface I implements J { f: Int @deprecated } type Query implements I & J { f: Int }",
+    "interface J { f: Int @deprecated } interface I implements J { f: Int @deprecated } type Query implements I & J { f: Int }",
+  ],
+  [
+    "implementation",
+    "IMPL_DEPRECATION",
+    "interface I { f: Int } type Query implements I { f: Int @deprecated }",
+    'interface I { f: Int @deprecated(reason: "a") } type Query implements I { f: Int @deprecated(reason: "b") }',
+    "§3.6: the rule asks that implementedField is deprecated, not for the same reason",
+  ],
+  // §3.8: enum and input object members; the optional leading |.
+  ["union", "UNION_MEMBERS_OBJECTS", "enum E { A } union U = Query | E type Query { u: U }", "type E { a: Int } union U = Query | E type Query { u: U }"],
+  ["union", "UNION_MEMBERS_OBJECTS", "input In { a: Int } union U = In type Query { u: U }", "type In { a: Int } union U = In type Query { u: U }"],
+  ["union", "UNION_MEMBERS_UNIQUE", "type A { a: Int } union U = | A | A type Query { u: U }", "type A { a: Int } union U = | A | Query type Query { u: U }", "§3.8: \"Union members may be defined with an optional leading | character\""],
+  // §3.10: second pairs of the input object rules.
+  ["input", "REQUIRED_INPUT_FIELD_NOT_DEPRECATED", "input In { x: Int! @deprecated } type Query { f(i: In): Int }", "input In { x: Int @deprecated } type Query { f(i: In): Int }", "§3.13.3: a required input field must first be made optional, by making its type nullable"],
+  ["input", "ONEOF_FIELD_NULLABLE", "input In @oneOf { a: [Int]! } type Query { f(i: In): Int }", "input In @oneOf { a: [Int!] } type Query { f(i: In): Int }"],
+  ["input", "ONEOF_FIELD_NULLABLE", "input P { x: Int } input In @oneOf { a: P! } type Query { f(i: In): Int }", "input P { x: Int } input In @oneOf { a: P } type Query { f(i: In): Int }"],
+  ["input", "ONEOF_FIELD_NO_DEFAULT", "input In @oneOf { a: Int = null b: String } type Query { f(i: In): Int }", "input In @oneOf { a: Int b: String } type Query { f(i: In): Int }", "§3.10: a default of null is still a default value"],
+  // §3.6 rule 2.4.5: nested lists, another enum's value, a OneOf in a list,
+  // a custom scalar's default.
+  ["defaults", "ARG_DEFAULT_COMPATIBLE", 'type Query { f(x: [[Int]] = [["a"]]): Int }', "type Query { f(x: [[Int]] = 1): Int }", "§3.11: a single value is coerced to a list of one, at every level"],
+  ["defaults", "ARG_DEFAULT_COMPATIBLE", "enum Color { RED } enum Size { BIG } type Query { f(c: Color = BIG): Int }", "enum Color { RED } enum Size { BIG } type Query { f(c: Color = RED): Int }"],
+  [
+    "defaults",
+    "ARG_DEFAULT_COMPATIBLE",
+    'input Pick @oneOf { a: Int b: String } type Query { f(p: [Pick] = [{a: 1, b: "s"}]): Int }',
+    'input Pick @oneOf { a: Int b: String } type Query { f(p: [Pick] = [{a: 1}, {b: "s"}]): Int }',
+  ],
+  ["defaults", "ARG_DEFAULT_COMPATIBLE", "scalar Json type Query { f(x: Int = {a: 1}): Int }", "scalar Json type Query { f(x: Json = {a: 1}): Int }", "§3.5: a custom scalar's input coercion is the service's"],
+  // §3.13: directives in the wrong place, for every TypeSystemDirectiveLocation
+  // and the built-in directives; the optional leading |.
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d on OBJECT schema @d { query: Query } type Query { a: Int }", "directive @d on SCHEMA schema @d { query: Query } type Query { a: Int }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d on OBJECT scalar S @d type Query { a: S }", "directive @d on SCALAR scalar S @d type Query { a: S }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d on OBJECT interface I @d { a: Int } type Query implements I { a: Int }", "directive @d on INTERFACE interface I @d { a: Int } type Query implements I { a: Int }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d on OBJECT union U @d = Query type Query { a: U }", "directive @d on UNION union U @d = Query type Query { a: U }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d on ENUM_VALUE enum E @d { A } type Query { e: E }", "directive @d on ENUM enum E @d { A } type Query { e: E }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d on ENUM enum E { A @d } type Query { e: E }", "directive @d on ENUM_VALUE enum E { A @d } type Query { e: E }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d on INPUT_FIELD_DEFINITION input In @d { a: Int } type Query { f(i: In): Int }", "directive @d on INPUT_OBJECT input In @d { a: Int } type Query { f(i: In): Int }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d on ARGUMENT_DEFINITION input In { a: Int @d } type Query { f(i: In): Int }", "directive @d on INPUT_FIELD_DEFINITION input In { a: Int @d } type Query { f(i: In): Int }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d on INPUT_FIELD_DEFINITION type Query { f(x: Int @d): Int }", "directive @d on ARGUMENT_DEFINITION type Query { f(x: Int @d): Int }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d on FIELD_DEFINITION directive @e(x: Int @d) on FIELD type Query { a: Int }", "directive @d on ARGUMENT_DEFINITION directive @e(x: Int @d) on FIELD type Query { a: Int }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d on FIELD directive @e @d on FIELD type Query { a: Int }", "directive @d on DIRECTIVE_DEFINITION directive @e @d on FIELD type Query { a: Int }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d on | FIELD_DEFINITION | SCALAR type Query @d { a: Int }", "directive @d on | FIELD_DEFINITION | OBJECT type Query @d { a: Int }", "§3.13: \"Directive locations may be defined with an optional leading | character\""],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", 'type Query @specifiedBy(url: "https://example.com") { a: Int }', 'scalar S @specifiedBy(url: "https://example.com") type Query { a: S }'],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "type Query @oneOf { a: Int }", "input In @oneOf { a: Int } type Query { f(i: In): Int }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "type Query { a: Int @skip(if: true) }", 'type Query { a: Int @deprecated(reason: "x") }'],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "directive @d @oneOf on FIELD type Query { a: Int }", "directive @d @deprecated on FIELD type Query { a: Int }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "schema @deprecated { query: Query } type Query { a: Int }", "schema { query: Query } type Query { a: Int @deprecated }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "scalar S @deprecated type Query { a: S }", "scalar S type Query { a: S @deprecated }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "interface I @deprecated { a: Int } type Query implements I { a: Int }", "interface I { a: Int @deprecated } type Query implements I { a: Int }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "union U @deprecated = Query type Query { a: U }", "union U = Query type Query { a: U @deprecated }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "enum E @deprecated { A } type Query { e: E }", "enum E { A @deprecated } type Query { e: E }"],
+  ["directive", "DIRECTIVE_LOCATIONS_VALID", "input In @deprecated { a: Int } type Query { f(i: In): Int }", "input In { a: Int @deprecated } type Query { f(i: In): Int }"],
+  // §3.13 Type Validation 2 and 3 through directives on directive
+  // definitions (new in September 2026), and through a type.
+  ["directive", "DIRECTIVE_USES_ITSELF", "directive @d @d on DIRECTIVE_DEFINITION type Query { a: Int }", "directive @d on DIRECTIVE_DEFINITION type Query { a: Int }"],
+  [
+    "directive",
+    "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+    "directive @a @b on DIRECTIVE_DEFINITION directive @b @a on DIRECTIVE_DEFINITION type Query { a: Int }",
+    "directive @a @b on DIRECTIVE_DEFINITION directive @b on DIRECTIVE_DEFINITION type Query { a: Int }",
+  ],
+  [
+    "directive",
+    "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+    "directive @a(x: Int @b) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @b(y: In) on ARGUMENT_DEFINITION input In { f: Int @a } type Query { a: Int }",
+    "directive @a(x: Int @b) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @b(y: In) on ARGUMENT_DEFINITION input In { f: Int } type Query { a: Int }",
+  ],
+  // Directives applied in SDL that §3 has no rule about: twice to one
+  // element, and arguments that don't fit the definition. Informational.
+  ["directive", "DIRECTIVE_NOT_REPEATED", "directive @d on OBJECT type Query @d @d { a: Int }", "directive @d repeatable on OBJECT type Query @d @d { a: Int }"],
+  ["directive", "DIRECTIVE_NOT_REPEATED", "type Query { a: Int @deprecated @deprecated }", "type Query { a: Int @deprecated }"],
+  ["directive", "APPLIED_DIRECTIVE_ARGUMENTS", "type Query { a: Int @deprecated(reason: 1) }", 'type Query { a: Int @deprecated(reason: "1") }'],
+  ["directive", "APPLIED_DIRECTIVE_ARGUMENTS", 'type Query { a: Int @deprecated(why: "x") }', 'type Query { a: Int @deprecated(reason: "x") }'],
+  ["directive", "APPLIED_DIRECTIVE_ARGUMENTS", "type Query { a: Int @deprecated(reason: null) }", "type Query { a: Int @deprecated }", undefined, { since: ["September2025", "a non-null reason for @deprecated"] }],
+  ["directive", "APPLIED_DIRECTIVE_ARGUMENTS", 'type Query { a: Int @deprecated(reason: "x", reason: "y") }', 'type Query { a: Int @deprecated(reason: "x") }'],
+  ["directive", "APPLIED_DIRECTIVE_ARGUMENTS", "scalar S @specifiedBy type Query { a: S }", 'scalar S @specifiedBy(url: "https://example.com") type Query { a: S }'],
+  ["directive", "APPLIED_DIRECTIVE_ARGUMENTS", "scalar S @specifiedBy(url: null) type Query { a: S }", 'scalar S @specifiedBy(url: "https://example.com") type Query { a: S }'],
+  ["directive", "APPLIED_DIRECTIVE_ARGUMENTS", 'directive @d(x: Int) on OBJECT type Query @d(x: "a") { a: Int }', "directive @d(x: Int) on OBJECT type Query @d(x: 1) { a: Int }"],
+  ["directive", "APPLIED_DIRECTIVE_ARGUMENTS", "directive @d(x: Int!) on OBJECT type Query @d { a: Int }", "directive @d(x: Int!) on OBJECT type Query @d(x: 1) { a: Int }"],
+  ["directive", "APPLIED_DIRECTIVE_ARGUMENTS", "input In { a: Int! } directive @d(x: In) on OBJECT type Query @d(x: {}) { a: Int }", "input In { a: Int! } directive @d(x: In) on OBJECT type Query @d(x: {a: 1}) { a: Int }"],
+  // --- Type system extensions (§3.1): asked only of adapters that claim
+  // schema-extensions. ---
+  // Item 1 of every kind: "The named type must already be defined and must be
+  // a ... type."
+  [
+    "extension",
+    "EXTENSION_TARGET_DEFINED",
+    "type Query { a: Int } extend type Story { isHiddenLocally: Boolean }",
+    "type Query { story: Story } type Story { id: ID } extend type Story { isHiddenLocally: Boolean }",
+    "§3.6.3's example: a local data field is added to a Story type",
+  ],
+  ["extension", "EXTENSION_TARGET_DEFINED", "type Query { a: Int } extend interface I { b: Int }", "interface I { a: Int } type Query implements I { a: Int b: Int } extend interface I { b: Int }"],
+  ["extension", "EXTENSION_TARGET_DEFINED", "type A { a: Int } type Query { a: Int } extend union U = Query", "type A { a: Int } type Query { a: Int } union U = A extend union U = Query"],
+  ["extension", "EXTENSION_TARGET_DEFINED", "type Query { a: Int } extend enum E { B }", "type Query { a: Int } enum E { A } extend enum E { B }"],
+  ["extension", "EXTENSION_TARGET_DEFINED", "type Query { a: Int } extend input In { b: Int }", "type Query { a: Int } input In { a: Int } extend input In { b: Int }"],
+  ["extension", "EXTENSION_TARGET_DEFINED", "directive @d on SCALAR type Query { a: Int } extend scalar S @d", "directive @d on SCALAR type Query { a: Int } scalar S extend scalar S @d"],
+  ["extension", "EXTENSION_TARGET_KIND", "scalar S type Query { a: Int } extend type S { b: Int }", "type S { a: Int } type Query { a: Int } extend type S { b: Int }"],
+  ["extension", "EXTENSION_TARGET_KIND", "type Query { a: Int } extend interface Query { b: Int }", "type Query { a: Int } extend type Query { b: Int }"],
+  ["extension", "EXTENSION_TARGET_KIND", "enum E { A } type A { a: Int } type Query { e: E } extend union E = Query", "union E = A type A { a: Int } type Query { e: E } extend union E = Query"],
+  ["extension", "EXTENSION_TARGET_KIND", "input E { a: Int } type Query { f(e: E): Int } extend enum E { B }", "enum E { A } type Query { f(e: E): Int } extend enum E { B }"],
+  ["extension", "EXTENSION_TARGET_KIND", "enum In { A } type Query { f(i: In): Int } extend input In { b: Int }", "input In { a: Int } type Query { f(i: In): Int } extend input In { b: Int }"],
+  ["extension", "EXTENSION_TARGET_KIND", "directive @d on SCALAR | OBJECT type Query { a: Int } extend scalar Query @d", "directive @d on SCALAR | OBJECT type Query { a: Int } extend type Query @d"],
+  // Unique within the extension.
+  ["extension", "EXTENSION_ITEMS_UNIQUE", "type Query { a: Int } extend type Query { b: Int b: Int }", "type Query { a: Int } extend type Query { b: Int c: Int }"],
+  ["extension", "EXTENSION_ITEMS_UNIQUE", "interface I { a: Int } type Query implements I { a: Int b: Int } extend interface I { b: Int b: Int }", "interface I { a: Int } type Query implements I { a: Int b: Int } extend interface I { b: Int }"],
+  ["extension", "EXTENSION_ITEMS_UNIQUE", "type A { a: Int } type Query { a: Int } union U = Query extend union U = A | A", "type A { a: Int } type Query { a: Int } union U = Query extend union U = A"],
+  ["extension", "EXTENSION_ITEMS_UNIQUE", "enum E { A } type Query { e: E } extend enum E { B B }", "enum E { A } type Query { e: E } extend enum E { B C }"],
+  ["extension", "EXTENSION_ITEMS_UNIQUE", "input In { a: Int } type Query { f(i: In): Int } extend input In { b: Int b: Int }", "input In { a: Int } type Query { f(i: In): Int } extend input In { b: Int c: Int }"],
+  // Not already on the previous type.
+  ["extension", "EXTENSION_ITEMS_NEW", "type Query { a: Int } extend type Query { a: Int }", "type Query { a: Int } extend type Query { b: Int }"],
+  ["extension", "EXTENSION_ITEMS_NEW", "interface I { a: Int } type Query implements I { a: Int b: Int } extend interface I { a: Int }", "interface I { a: Int } type Query implements I { a: Int b: Int } extend interface I { b: Int }"],
+  ["extension", "EXTENSION_ITEMS_NEW", "type A { a: Int } type Query { a: Int } union U = A extend union U = A", "type A { a: Int } type Query { a: Int } union U = A extend union U = Query"],
+  ["extension", "EXTENSION_ITEMS_NEW", "enum E { A } type Query { e: E } extend enum E { A }", "enum E { A } type Query { e: E } extend enum E { B }"],
+  ["extension", "EXTENSION_ITEMS_NEW", "input In { a: Int } type Query { f(i: In): Int } extend input In { a: Int }", "input In { a: Int } type Query { f(i: In): Int } extend input In { b: Int }"],
+  ["extension", "EXTENSION_ITEMS_NEW", "type Query { a: Int } extend type Query { b: Int } extend type Query { b: Int }", "type Query { a: Int } extend type Query { b: Int } extend type Query { c: Int }", undefined, { since: PREVIOUS }],
+  ["extension", "EXTENSION_ITEMS_NEW", "enum E { A } type Query { e: E } extend enum E { B } extend enum E { B }", "enum E { A } type Query { e: E } extend enum E { B } extend enum E { C }", undefined, { since: PREVIOUS }],
+  // §3.6.3 item 5, and item 6 on the extended type.
+  [
+    "extension",
+    "EXTENSION_INTERFACES_NEW",
+    "interface I { a: Int } interface J { a: Int } type Query implements I { a: Int } extend type Query implements I",
+    "interface I { a: Int } interface J { a: Int } type Query implements I { a: Int } extend type Query implements J",
+  ],
+  [
+    "extension",
+    "EXTENSION_INTERFACES_NEW",
+    "interface I { a: Int } interface J { a: Int } type Query { a: Int } extend type Query implements I extend type Query implements I",
+    "interface I { a: Int } interface J { a: Int } type Query { a: Int } extend type Query implements I extend type Query implements J",
+    undefined,
+    { since: PREVIOUS },
+  ],
+  ["extension", "IMPL_FIELD_PROVIDED", "interface I { x: Int } type Query { a: Int } extend type Query implements I", "interface I { x: Int } type Query { a: Int } extend type Query implements I { x: Int }", "§3.6.3: the resulting extended object type must be a super-set of all interfaces it implements"],
+  [
+    "extension",
+    "IMPL_FIELD_PROVIDED",
+    "interface NamedEntity { name: String } type Person implements NamedEntity { name: String } type Business implements NamedEntity { name: String } type Query { e: NamedEntity } extend interface NamedEntity { nickname: String } extend type Person { nickname: String }",
+    "interface NamedEntity { name: String } type Person implements NamedEntity { name: String } type Business implements NamedEntity { name: String } type Query { e: NamedEntity } extend interface NamedEntity { nickname: String } extend type Person { nickname: String } extend type Business { nickname: String }",
+    "§3.7.1's example: a field is added to NamedEntity along with the types which implement it",
+  ],
+  [
+    "extension",
+    "IMPL_FIELD_PROVIDED",
+    "interface NamedEntity { name: String } type Person implements NamedEntity { name: String } type Business implements NamedEntity { name: String } type Query { e: NamedEntity } extend interface NamedEntity { nickname: String } extend type Person { nickname: String }",
+    "interface NamedEntity { name: String } type Person implements NamedEntity { name: String } type Business implements NamedEntity { name: String } type Query { e: NamedEntity } extend type Person { nickname: String } extend type Business { nickname: String } extend interface NamedEntity { nickname: String }",
+    "§3.7.1's example, with the object type extensions first: \"which may be due to Object type extension\"",
+  ],
+  [
+    "extension",
+    "IMPL_FIELD_PROVIDED",
+    "interface K { k: Int } interface I { a: Int } type Query implements I & K { a: Int k: Int } extend interface I implements K",
+    "interface K { k: Int } interface I { a: Int } type Query implements I & K { a: Int k: Int } extend interface I implements K { k: Int }",
+    "§3.7.1: the resulting extended Interface type must be a super-set of all Interfaces it implements",
+  ],
+  ["extension", "UNION_MEMBERS_OBJECTS", "type A { a: Int } type Query { a: Int } union U = Query extend union U = Int", "type A { a: Int } type Query { a: Int } union U = Query extend union U = A"],
+  ["extension", "FIELD_NAME_RESERVED", "type Query { a: Int } extend type Query { __b: Int }", "type Query { a: Int } extend type Query { _b: Int }", "§3.6.3: an extension's fields are fields of the extended Object type, which §3.6's rules apply to"],
+  // Directives an extension applies again.
+  ["extension", "EXTENSION_DIRECTIVES_NOT_REAPPLIED", "directive @d on OBJECT type Query @d { a: Int } extend type Query @d", "directive @d repeatable on OBJECT type Query @d { a: Int } extend type Query @d"],
+  [
+    "extension",
+    "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+    'directive @delegateField(name: String!) on OBJECT | INTERFACE type Book @delegateField(name: "pageCount") { id: ID! } type Query { book: Book } extend type Book @delegateField(name: "index")',
+    'directive @delegateField(name: String!) repeatable on OBJECT | INTERFACE type Book @delegateField(name: "pageCount") @delegateField(name: "author") { id: ID! } type Query { book: Book } extend type Book @delegateField(name: "index")',
+    "§3.13's example of a repeatable directive, applied twice to Book and once to its extension",
+  ],
+  ["extension", "EXTENSION_DIRECTIVES_NOT_REAPPLIED", "directive @d on SCHEMA schema @d { query: Query } type Query { a: Int } extend schema @d", "directive @d repeatable on SCHEMA schema @d { query: Query } type Query { a: Int } extend schema @d"],
+  ["extension", "EXTENSION_DIRECTIVES_NOT_REAPPLIED", "directive @d on SCALAR scalar S @d type Query { a: S } extend scalar S @d", "directive @d repeatable on SCALAR scalar S @d type Query { a: S } extend scalar S @d"],
+  [
+    "extension",
+    "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+    "directive @d on INTERFACE interface I @d { a: Int } type Query implements I { a: Int } extend interface I @d",
+    "directive @d repeatable on INTERFACE interface I @d { a: Int } type Query implements I { a: Int } extend interface I @d",
+  ],
+  ["extension", "EXTENSION_DIRECTIVES_NOT_REAPPLIED", "directive @d on UNION union U @d = Query type Query { a: U } extend union U @d", "directive @d repeatable on UNION union U @d = Query type Query { a: U } extend union U @d"],
+  ["extension", "EXTENSION_DIRECTIVES_NOT_REAPPLIED", "directive @d on ENUM enum E @d { A } type Query { e: E } extend enum E @d", "directive @d repeatable on ENUM enum E @d { A } type Query { e: E } extend enum E @d"],
+  [
+    "extension",
+    "EXTENSION_DIRECTIVES_NOT_REAPPLIED",
+    "directive @d on INPUT_OBJECT input In @d { a: Int } type Query { f(i: In): Int } extend input In @d",
+    "directive @d repeatable on INPUT_OBJECT input In @d { a: Int } type Query { f(i: In): Int } extend input In @d",
+  ],
+  ["extension", "EXTENSION_DIRECTIVES_NOT_REAPPLIED", 'scalar S @specifiedBy(url: "https://example.com/a") type Query { a: S } extend scalar S @specifiedBy(url: "https://example.com/b")', 'scalar S type Query { a: S } extend scalar S @specifiedBy(url: "https://example.com/b")'],
+  ["extension", "EXTENSION_DIRECTIVES_NOT_REAPPLIED", "directive @d on OBJECT type Query { a: Int } extend type Query @d extend type Query @d", "directive @d repeatable on OBJECT type Query { a: Int } extend type Query @d extend type Query @d", undefined, { since: PREVIOUS }],
+  ["extension", "DIRECTIVE_NOT_REPEATED", "directive @d on OBJECT type Query { a: Int } extend type Query @d @d", "directive @d repeatable on OBJECT type Query { a: Int } extend type Query @d @d"],
+  // Where an extension applies a directive.
+  ["extension", "DIRECTIVE_LOCATIONS_VALID", "directive @d on FIELD_DEFINITION type Query { a: Int } extend type Query @d", "directive @d on OBJECT type Query { a: Int } extend type Query @d"],
+  ["extension", "DIRECTIVE_LOCATIONS_VALID", "directive @d on OBJECT type Query { a: Int } extend type Query { b: Int @d }", "directive @d on FIELD_DEFINITION type Query { a: Int } extend type Query { b: Int @d }"],
+  ["extension", "DIRECTIVES_DEFINED", "type Query { a: Int } extend type Query @undefinedInThisSchema", "directive @undefinedInThisSchema on OBJECT type Query { a: Int } extend type Query @undefinedInThisSchema"],
+  // §3.10.2: OneOf.
+  ["extension", "EXTENSION_ONEOF", "input In { a: Int } type Query { f(i: In): Int } extend input In @oneOf", "input In @oneOf { a: Int } type Query { f(i: In): Int } extend input In { b: String }"],
+  ["extension", "EXTENSION_ONEOF", "input In { a: Int b: String } type Query { f(i: In): Int } extend input In @oneOf { c: Int }", "input In { a: Int b: String } type Query { f(i: In): Int } extend input In { c: Int }"],
+  ["extension", "ONEOF_FIELD_NULLABLE", "input In @oneOf { a: Int } type Query { f(i: In): Int } extend input In { b: String! }", "input In @oneOf { a: Int } type Query { f(i: In): Int } extend input In { b: String }"],
+  ["extension", "ONEOF_FIELD_NO_DEFAULT", 'input In @oneOf { a: Int } type Query { f(i: In): Int } extend input In { b: String = "x" }', "input In @oneOf { a: Int } type Query { f(i: In): Int } extend input In { b: String }"],
+  ["extension", "INPUT_OBJECT_UNBREAKABLE_CYCLE", "input A @oneOf { b: B } input B { c: Int } type Query { f(a: A): Int } extend input B { a: A! }", "input A @oneOf { b: B } input B { c: Int } type Query { f(a: A): Int } extend input B { a: A }"],
+  // §3.3.2: schema extensions.
+  ["extension", "SCHEMA_EXTENSION_DEFINED", "directive @d on SCHEMA type Query { a: Int } extend schema @d", "directive @d on SCHEMA schema { query: Query } type Query { a: Int } extend schema @d"],
+  ["extension", "ROOT_TYPES_ARE_OBJECTS", "schema { query: Query } type Query { a: Int } input M { a: Int } extend schema { mutation: M }", "schema { query: Query } type Query { a: Int } type M { a: Int } extend schema { mutation: M }"],
+  ["extension", "ROOT_TYPES_DIFFERENT", "schema { query: Query } type Query { a: Int } type M { a: Int } extend schema { mutation: Query }", "schema { query: Query } type Query { a: Int } type M { a: Int } extend schema { mutation: M }"],
+  // §3.13.4: @specifiedBy on a built-in scalar.
+  ["extension", "SPECIFIED_BY_NOT_BUILTIN", 'type Query { a: Int } extend scalar Int @specifiedBy(url: "https://example.com/int")', 'scalar S type Query { a: S } extend scalar S @specifiedBy(url: "https://example.com/int")'],
+  ["extension", "SPECIFIED_BY_NOT_BUILTIN", 'type Query { a: String } extend scalar String @specifiedBy(url: "https://example.com/string")', 'scalar S type Query { a: S } extend scalar S @specifiedBy(url: "https://example.com/string")'],
+  // §3.13.6 Directive Extensions, new in September 2026.
+  ["extension", "DIRECTIVE_EXTENSION_DEFINED", "directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e", "directive @d on FIELD directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e"],
+  ["extension", "DIRECTIVE_EXTENSION_NOT_REAPPLIED", "directive @e on DIRECTIVE_DEFINITION directive @d @e on FIELD type Query { a: Int } extend directive @d @e", "directive @e repeatable on DIRECTIVE_DEFINITION directive @d @e on FIELD type Query { a: Int } extend directive @d @e"],
+  ["extension", "DIRECTIVE_EXTENSION_NOT_REAPPLIED", 'directive @d @deprecated on FIELD type Query { a: Int } extend directive @d @deprecated(reason: "x")', 'directive @d on FIELD type Query { a: Int } extend directive @d @deprecated(reason: "x")'],
+  [
+    "extension",
+    "DIRECTIVE_EXTENSION_NOT_REAPPLIED",
+    "directive @e on DIRECTIVE_DEFINITION directive @d on FIELD type Query { a: Int } extend directive @d @e extend directive @d @e",
+    "directive @e repeatable on DIRECTIVE_DEFINITION directive @d on FIELD type Query { a: Int } extend directive @d @e extend directive @d @e",
+  ],
+  ["extension", "DIRECTIVE_EXTENSION_USES_PREVIOUS", "directive @d on FIELD | DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @d", "directive @d on FIELD | DIRECTIVE_DEFINITION directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e"],
+  [
+    "extension",
+    "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
+    "directive @d on FIELD | DIRECTIVE_DEFINITION directive @e @d on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e",
+    "directive @d on FIELD | DIRECTIVE_DEFINITION directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e",
+  ],
+  [
+    "extension",
+    "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
+    "directive @d on FIELD | INPUT_FIELD_DEFINITION directive @e(x: In) on DIRECTIVE_DEFINITION input In { f: Int @d } type Query { a(i: In): Int } extend directive @d @e",
+    "directive @d on FIELD | INPUT_FIELD_DEFINITION directive @e(x: In) on DIRECTIVE_DEFINITION input In { f: Int } type Query { a(i: In): Int } extend directive @d @e",
+  ],
+  ["extension", "DIRECTIVE_LOCATIONS_VALID", "directive @d on FIELD directive @e on FIELD type Query { a: Int } extend directive @d @e", "directive @d on FIELD directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e"],
 ];
 
 // Invalid schemas whose verdict depends on a reading the spec's formal
@@ -392,8 +719,15 @@ const SELF_REFERENCE_THROUGH_ARGUMENT =
 // neither that clause nor that example.
 const PRESUMED_ROOT =
   "No normative sentence says what the mutation root is when the schema definition is omitted and a type named Mutation isn't an object type. §3.3.1 only says the definition \"can omit the schema definition when each root operation type uses its respective default root type name, no other type uses any default root type name, and the schema does not have a description\", a condition on writing SDL. The reading that Mutation is the mutation root, an interface, and so the schema is invalid, rests on an example's \"would be incorrectly presumed to be the mutation root operation type\". October 2021 has neither the \"no other type\" clause nor that example, and its text allows reading the schema as one with no mutation root, which is valid. TypeSystem.tla follows the example.";
+// `type Query { a: Int } extend schema @d`: §3.3.2 says "The Schema must
+// already be defined". A document with no schema definition still has a
+// schema, whose root operation types have the default names; whether that
+// schema is "already defined" the spec doesn't say.
+const IMPLICIT_SCHEMA =
+  "§3.3.2 says \"The Schema must already be defined.\" This document has no schema definition, but it has a schema: its query root operation type is the type named Query. Whether that schema is \"already defined\" the spec doesn't say. TypeSystem.tla reads it as not defined.";
 const UNSPECIFIED = {
   "type Query { a: Int } interface Mutation { a: Int }": PRESUMED_ROOT,
+  "directive @d on SCHEMA type Query { a: Int } extend schema @d": IMPLICIT_SCHEMA,
   "directive @d(a: In) on INPUT_FIELD_DEFINITION input In { f: Int @d } type Query { a(x: In): Int }": SELF_REFERENCE_THROUGH_ARGUMENT,
   "directive @d(c: Color) on ENUM_VALUE enum Color { RED @d BLUE } type Query { a: Color }": SELF_REFERENCE_THROUGH_ARGUMENT,
 };
@@ -410,9 +744,11 @@ const newSyntax = (sdl) => {
   for (const def of graphql.parse(sdl).definitions) {
     if ((def.directives ?? []).some((d) => d.name.value === "oneOf")) out.push(["September2025", "OneOf input objects"]);
     if (def.kind === "DirectiveDefinition" && (def.directives ?? []).length > 0) out.push(["September2026", "directives on directive definitions"]);
+    if (def.kind === "DirectiveExtension") out.push(["September2026", "directive extensions"]);
     const args = def.kind === "DirectiveDefinition" ? (def.arguments ?? []) : (def.fields ?? []).flatMap((f) => f.arguments ?? []);
     if (args.some(deprecated)) out.push(["September2025", "deprecated arguments"]);
-    if (def.kind === "InputObjectTypeDefinition" && (def.fields ?? []).some(deprecated)) out.push(["September2025", "deprecated input fields"]);
+    const inputObject = def.kind === "InputObjectTypeDefinition" || def.kind === "InputObjectTypeExtension";
+    if (inputObject && (def.fields ?? []).some(deprecated)) out.push(["September2025", "deprecated input fields"]);
   }
   return out;
 };
@@ -422,8 +758,9 @@ const ONEOF_INHABITABILITY =
 
 // `since` and `editionNote` for a vector, if October 2021 doesn't give
 // its verdict. `verdict2025` is TypeSystem!VerdictSeptember2025.
-const sinceOf = (rule, sdl, valid, verdict2025) => {
+const sinceOf = (rule, sdl, valid, verdict2025, extra) => {
   const features = newSyntax(sdl);
+  if (extra) features.push(extra);
   if (rule.since && !valid) features.push([rule.since, rule.feature]);
   if ((verdict2025.length === 0) !== valid) features.push(["September2026", rule.rule === "INPUT_OBJECT_UNBREAKABLE_CYCLE" ? ONEOF_INHABITABILITY : `September 2026's ${rule.rule}`]);
   if (features.length === 0) return {};
@@ -463,7 +800,9 @@ ${moduleFooter}`;
   // siblings, is one vector: its first pair's. The later siblings name it
   // as their pair, and it lists them all in `siblings`.
   const invalidVector = new Map();
-  PAIRS.forEach(([family, rule, invalid, valid, origin], p) => {
+  // Schemas with extensions need the schema-extensions capability.
+  const requires = (sdl) => (hasExtensions(sdl) ? { requires: [SCHEMA_EXTENSIONS] } : {});
+  PAIRS.forEach(([family, rule, invalid, valid, origin, options = {}], p) => {
     const r = RULE.get(rule);
     if (!r) throw new Error(`unknown rule ${rule}`);
     const [bad, good] = [verdicts[2 * p], verdicts[2 * p + 1]];
@@ -479,12 +818,22 @@ ${moduleFooter}`;
     const seen = invalidVector.get(`${rule}\u0000${invalid}`);
     if (seen) {
       seen.siblings = [...(seen.siblings ?? [seen.pair]), `${base}.valid`];
-      vectors.push({ id: `${base}.valid`, ...common, ...sinceOf(r, valid, true, good2025), pair: seen.id, sdl: valid, verdict: good, expected: { valid: true } });
+      vectors.push({ id: `${base}.valid`, ...common, ...sinceOf(r, valid, true, good2025), ...requires(valid), pair: seen.id, sdl: valid, verdict: good, expected: { valid: true } });
       return;
     }
-    const vector = { id: `${base}.invalid`, ...common, ...sinceOf(r, invalid, false, bad2025), ...unspecified, pair: `${base}.valid`, sdl: invalid, verdict: bad, expected: { valid: false } };
+    const vector = {
+      id: `${base}.invalid`,
+      ...common,
+      ...sinceOf(r, invalid, false, bad2025, options.since),
+      ...requires(invalid),
+      ...unspecified,
+      pair: `${base}.valid`,
+      sdl: invalid,
+      verdict: bad,
+      expected: { valid: false },
+    };
     invalidVector.set(`${rule}\u0000${invalid}`, vector);
-    vectors.push(vector, { id: `${base}.valid`, ...common, ...sinceOf(r, valid, true, good2025), pair: `${base}.invalid`, sdl: valid, verdict: good, expected: { valid: true } });
+    vectors.push(vector, { id: `${base}.valid`, ...common, ...sinceOf(r, valid, true, good2025), ...requires(valid), pair: `${base}.invalid`, sdl: valid, verdict: good, expected: { valid: true } });
   });
   const unused = Object.keys(UNSPECIFIED).filter((sdl) => !PAIRS.some(([, , invalid]) => invalid === sdl));
   for (const sdl of unused) problems.push(`UNSPECIFIED names a schema no pair has:\n  ${sdl}`);

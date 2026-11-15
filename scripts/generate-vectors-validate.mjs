@@ -834,10 +834,12 @@ const obj = (f) => (Array.isArray(f) || f === undefined ? {} : f);
 // The reference's verdicts: for each document, the rules it breaks and the
 // subjects each reports.
 
-// Every rule's violations, as a function from the rules a document breaks.
+// Every rule's violations, as a function from the rules a document breaks:
+// the rules the kit grades (KitRules), which add §3.5's numeric ranges to
+// Validation.tla's Rules.
 const ALL_RULES = `LET Full == WithIntrospection(Schema)
-      violations == [r \\in Rules |-> CheckRule(r, Full, Docs[i])]
-  IN [r \\in {x \\in Rules : violations[x] # {}} |-> violations[r]]`;
+      violations == [r \\in KitRules |-> KitCheckRule(r, Full, Docs[i])]
+  IN [r \\in {x \\in KitRules : violations[x] # {}} |-> violations[r]]`;
 const asViolations = (violations) =>
   Object.fromEntries(Object.entries(obj(violations)).map(([rule, subjects]) => [rule, [...subjects].sort()]));
 
@@ -1214,17 +1216,27 @@ const ORDER = [...RULES].sort((a, b) => {
   for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] ?? -1) !== (y[i] ?? -1)) return (x[i] ?? -1) - (y[i] ?? -1);
   return 0;
 });
+// Validation.tla's IntInputRange isn't one of §5's rules: §3.5.1's range for
+// Int literals, a SHOULD, which bears on §5.6.1's "coercible". It comes
+// right after Values of Correct Type.
+SECTION.IntInputRange = "3.5.1";
+ORDER.splice(ORDER.indexOf("ValuesOfCorrectType") + 1, 0, "IntInputRange");
 
 // A schema with a custom scalar, for the extra documents below. It uses
 // every built-in scalar, since a schema holds only the ones it references.
 const SCALARS_SDL = `type Query {
   json(value: Json): String
   dog: Dog
+  animal: Animal
 }
 
 scalar Json
 
-type Dog {
+interface Named {
+  name: String
+}
+
+type Dog implements Named {
   id: ID
   name: String
   age: Int
@@ -1232,8 +1244,67 @@ type Dog {
   good: Boolean
 }
 
+union Animal = Dog
+
 input DogInput {
   name: String
+}
+`;
+
+// A schema for the hand-written pairs (TWINS below): an interface that
+// implements another, with an object type that implements both (the case
+// §5.5.2.3's prose and formal text agree on); input objects nested in an
+// input object and in a list; two enums with the same values; a
+// deprecated field and enum value; and a name with an underscore.
+const TWINS_SDL = `type Query {
+  node(id: ID!): Node
+  resource: Resource
+  image: Image
+  tag: Tag
+  old: Int @deprecated(reason: "Use a.")
+  a: Int
+  other_name: Int
+  echo(outer: Outer, inners: [Inner!], size: Size, shape: Shape): String
+}
+
+interface Node {
+  id: ID!
+}
+
+interface Resource implements Node {
+  id: ID!
+  url: String
+}
+
+type Image implements Resource & Node {
+  id: ID!
+  url: String
+  width: Int
+}
+
+type Tag {
+  name: String
+}
+
+input Outer {
+  inner: Inner
+  inners: [Inner!]
+}
+
+input Inner {
+  a: Int
+  b: Int
+}
+
+enum Size {
+  S
+  M
+  L @deprecated(reason: "Use M.")
+}
+
+enum Shape {
+  S
+  M
 }
 `;
 
@@ -1314,11 +1385,152 @@ const EXTRA = {
   ],
 };
 
+// Pairs written by hand (family `twins`): an invalid document that breaks
+// one rule, and a valid document a small edit away, for statements the
+// families above never isolate. Each entry is [schema, invalid, valid];
+// either side may be a list, and every invalid document is paired with
+// every valid one. The reference must agree: the generator fails if an
+// invalid document doesn't break exactly one rule (or one of the two-rule
+// cases ruleOf allows), or a valid one breaks any. Unlike the families,
+// these pairs are kept whatever their distance.
+const TWINS = [
+  // §5.7.3: "Directives Are Unique per Location" applies only to directives
+  // that aren't repeatable; @label is repeatable, @once isn't. At every
+  // location @label allows, and with identical arguments.
+  ["differential", `{ user @once @once { id } }`, [`{ user @label(name: "a") @label(name: "b") { id } }`, `{ user @label(name: "a") @label(name: "a") { id } }`]],
+  ["differential", `query Q @once @once { user { id } }`, `query Q @label(name: "a") @label(name: "b") { user { id } }`],
+  ["differential", `subscription S @label(name: "a") @once { postAdded { id } }`, `subscription S @label(name: "a") @label(name: "b") { postAdded { id } }`],
+  ["differential", `{ user { ...F @skip(if: false) @skip(if: false) } } fragment F on User { id }`, `{ user { ...F @label(name: "a") @label(name: "b") } } fragment F on User { id }`],
+  ["differential", `{ user { ... on User @include(if: true) @include(if: true) { id } } }`, `{ user { ... on User @label(name: "a") @label(name: "b") { id } } }`],
+  ["differential", `{ user { ...F } } fragment F on User @once { id }`, `{ user { ...F } } fragment F on User @label(name: "a") @label(name: "b") { id }`],
+  // §5.7.3: the same directive at two locations, the spec's example on
+  // this schema (the two fields also merge).
+  ["differential", `query Q($a: Boolean!, $b: Boolean!) { user @skip(if: $a) @skip(if: $b) { id } }`, `query Q($a: Boolean!, $b: Boolean!) { user @skip(if: $a) { id } user @skip(if: $b) { name } }`],
+  // §5.4.3: "value must not be the null literal". A null for a Non-Null
+  // argument also isn't coercible (§5.6.1), so these break both.
+  ["differential", `subscription { userJoined(room: null) { id } }`, `subscription { userJoined(room: "1") { id } }`],
+  ["differential", `{ user { id @include(if: null) } }`, `{ user { id @include(if: true) } }`],
+  // §5.2.1.1 for subscriptions: neither schema has a subscription root.
+  ["mutation", [`subscription S { count }`, `subscription { __typename }`], [`query S { count }`, `query { __typename }`]],
+  ["hello", `subscription { hello }`, `{ hello }`],
+  // §5.2.4.1: @skip and @include on a fragment spread or an inline
+  // fragment at a subscription's root, and on a field at the top level of
+  // a spread fragment, which CollectSubscriptionFields visits too. Below
+  // the root field they are allowed.
+  ["differential", `subscription { ...SF @skip(if: false) } fragment SF on Subscription { postAdded { id } }`, `subscription { ...SF } fragment SF on Subscription { postAdded { id } }`],
+  ["differential", `subscription { ... @include(if: true) { postAdded { id } } }`, `subscription { ... { postAdded { id } } }`],
+  ["differential", `subscription { ... on Subscription @skip(if: false) { postAdded { id } } }`, `subscription { ... on Subscription { postAdded { id } } }`],
+  ["differential", `subscription { ...SF } fragment SF on Subscription { postAdded @include(if: true) { id } }`, `subscription { ...SF } fragment SF on Subscription { postAdded { id } }`],
+  ["differential", `subscription { postAdded @skip(if: false) { id } }`, [`subscription { postAdded { id @skip(if: false) } }`, `subscription { postAdded { author @include(if: true) { id } } }`]],
+  // §5.3.3 and §4.1: __typename is a String!, a leaf.
+  ["differential", `{ user { __typename { x } } }`, `{ user { __typename } }`],
+  ["differential", `{ search { __typename { x } } }`, `{ search { __typename } }`],
+  ["differential", `{ __typename { x } }`, `{ __typename }`],
+  ["differential", `{ node(id: "1") { __typename {} } }`, `{ node(id: "1") { __typename } }`],
+  // §5.3.1 and §4.2: __schema and __type are on the query root only.
+  ["mutation", [`mutation { __schema { queryType { name } } }`, `mutation { __type(name: "Query") { name } }`], [`{ __schema { queryType { name } } }`, `{ __type(name: "Query") { name } }`]],
+  ["differential", `{ search { __type(name: "User") { name } } }`, `{ search { __typename } }`],
+  ["differential", `{ node(id: "1") { __schema { queryType { name } } } }`, `{ node(id: "1") { __typename } }`],
+  // §2.8 / §5.3.1: "There are no limitations on alias names", reserved or
+  // keyword-like ones included.
+  ["differential", `{ __x: __y }`, `{ __x: __typename }`],
+  ["differential", `{ query: query { id } }`, [`{ query: user { id } }`, `{ fragment: user { id } on: post { id } }`]],
+  ["differential", `{ __typename: user { id } __typename }`, `{ __typename: user { id } }`],
+  // §2.1.8: "Names in GraphQL are case-sensitive", and "Underscores are
+  // significant".
+  ["differential", `{ User { id } }`, `{ user { id } }`],
+  ["differential", `{ user { ID } }`, `{ user { id } }`],
+  ["differential", `{ user(ID: "1") { id } }`, `{ user(id: "1") { id } }`],
+  ["differential", `{ user { ... on user { id } } }`, `{ user { ... on User { id } } }`],
+  ["differential", `{ user @Skip(if: true) { id } }`, `{ user @skip(if: true) { id } }`],
+  ["differential", `{ echo(role: admin) }`, `{ echo(role: ADMIN) }`],
+  ["differential", `query Q($v: Int, $v: Int) { echo(int: $v, opt: $v) }`, `query Q($v: Int, $V: Int) { echo(int: $v, opt: $V) }`],
+  ["differential", `{ user { ...F } } fragment F on User { id } fragment F on User { name }`, `{ user { ...F ...f } } fragment F on User { id } fragment f on User { name }`],
+  ["differential", `query A { user { id } } query A { post { id } }`, `query a { user { id } } query A { post { id } }`],
+  ["twins", `{ othername }`, `{ other_name }`],
+  // §2.7: arguments are unordered, also when two fields merge (§5.3.2).
+  ["differential", `{ a: echo(int: 1, float: 2) a: echo(float: 3, int: 1) }`, `{ a: echo(int: 1, float: 2) a: echo(float: 2, int: 1) }`],
+  ["differential", `{ a: user(id: "1") @skip(if: false) { id } a: user(id: "2") { name } }`, `{ a: user(id: "1") @skip(if: false) { id } a: user(id: "1") { name } }`],
+  // §5.5.1.3: input object and scalar type conditions, inline and named.
+  ["differential", [`{ post { ... on Filter { __typename } } }`, `{ post { ... on Int { __typename } } }`], `{ post { ... on Post { __typename } } }`],
+  ["differential", [`{ post { ...F } } fragment F on Filter { __typename }`, `{ post { ...F } } fragment F on String { __typename }`], `{ post { ...F } } fragment F on Post { __typename }`],
+  // §5.1.1: every kind of type system definition and extension.
+  [
+    "differential",
+    [
+      `{ user { id } } scalar Date`,
+      `{ user { id } } enum Color { RED }`,
+      `{ user { id } } union Thing = User | Post`,
+      `{ user { id } } input Range { from: Int }`,
+      `{ user { id } } interface Named { name: String }`,
+      `{ user { id } } "A type." type Tag { name: String }`,
+      `{ user { id } } extend schema { mutation: Post }`,
+      `{ user { id } } extend scalar Date @deprecated`,
+      `{ user { id } } extend enum Role { OWNER }`,
+      `{ user { id } } extend union Result = User`,
+      `{ user { id } } extend input Filter { page: Int }`,
+      `{ user { id } } extend interface Node { name: String }`,
+      `{ user { id } } directive @x on FIELD | DIRECTIVE_DEFINITION`,
+      `{ user { id } } directive @x @deprecated on FIELD`,
+      `{ user { id } } extend directive @label @deprecated`,
+    ],
+    `{ user { id } }`,
+  ],
+  // §5.5.2.3: an interface spread into the scope of an interface it
+  // implements, where an object type implements both. The formal text and
+  // the prose agree here (see `readings`).
+  ["twins", `{ node(id: "1") { ... on Tag { name } } }`, [`{ node(id: "1") { ... on Resource { url } } }`, `{ resource { ... on Node { id } } }`, `{ resource { ... on Resource { url } } }`]],
+  ["twins", `{ node(id: "1") { ...T } } fragment T on Tag { name }`, [`{ node(id: "1") { ...R } } fragment R on Resource { url }`, `{ node(id: "1") { ...interfaceWithInterface } } fragment interfaceWithInterface on Node { ...resourceFragment } fragment resourceFragment on Resource { url }`]],
+  // §3.6.2: "It is still legal to include these fields in a selection
+  // set"; a deprecated enum value is still a value of its enum.
+  ["twins", `{ old(a: 1) }`, `{ old }`],
+  ["twins", `{ echo(size: XL) }`, [`{ echo(size: L) }`, `query Q($v: Size = L) { echo(size: $v) }`]],
+  // §5.8.5: AreTypesCompatible compares named types: an enum isn't another
+  // with the same values.
+  ["twins", `query Q($v: Shape) { echo(size: $v) }`, `query Q($v: Size) { echo(size: $v) }`],
+  // §5.6.3 inside a nested input object and inside a list item.
+  ["twins", `{ echo(outer: {inner: {a: 1, a: 2}}) }`, `{ echo(outer: {inner: {a: 1, b: 2}}) }`],
+  ["twins", `{ echo(inners: [{a: 1}, {a: 1, a: 2}]) }`, `{ echo(inners: [{a: 1}, {a: 1, b: 2}]) }`],
+  ["twins", `{ echo(outer: {inners: [{b: 1, b: 1}]}) }`, `{ echo(outer: {inners: [{b: 1}]}) }`],
+  // §5.8.2 and §2.12: interfaces, unions and undefined types aren't input
+  // types. Only inside a custom scalar's literal is such a variable used
+  // without an expected type (needs custom-scalar-literals).
+  [
+    "scalars",
+    [
+      `query Q($v: Named) { json(value: {a: $v}) }`,
+      `query Q($v: Animal) { json(value: {a: $v}) }`,
+      `query Q($v: [Named!]) { json(value: {a: $v}) }`,
+      `query Q($v: Unknown) { json(value: {a: $v}) }`,
+      `query Q($v: [Unknown!]!) { json(value: {a: $v}) }`,
+      `query Q($v: string) { json(value: {a: $v}) }`,
+    ],
+    `query Q($v: String) { json(value: {a: $v}) }`,
+  ],
+  // §5.8.5's OneOf prose: a second vector of the case its formal text
+  // allows (see `readings`).
+  ["differential", `query Q($v: String) { echo(pick: {name: $v}) }`, `query Q($v: String = "x") { echo(pick: {name: $v}) }`],
+  // §3.5.1 (IntInputRange, a SHOULD) and §3.5.2 (§5.6.1): numeric literals
+  // out of range. ID takes any integer; Float rounds to Infinity only from
+  // 2^1024 - 2^970 on.
+  ["differential", `{ echo(int: 2147483648) }`, `{ echo(int: 2147483647) }`],
+  ["differential", `{ echo(int: -2147483649) }`, `{ echo(int: -2147483648) }`],
+  ["differential", `{ echo(list: [1, 2147483648]) }`, `{ echo(list: [1, 2147483647]) }`],
+  ["differential", `query Q($v: Int = 2147483648) { echo(int: $v) }`, `query Q($v: Int = 2147483647) { echo(int: $v) }`],
+  ["differential", `{ user(id: 1.5) { id } }`, `{ user(id: 2147483648) { id } }`],
+  ["differential", `{ echo(float: 1e400) }`, [`{ echo(float: 1e300) }`, `{ echo(float: 2147483648) }`]],
+  ["differential", `{ echo(float: 1.7976931348623159e308) }`, [`{ echo(float: 1.7976931348623157e308) }`, `{ echo(float: 1.7976931348623158e308) }`]],
+  ["differential", `{ echo(float: -1e309) }`, `{ echo(float: -1e308) }`],
+  ["differential", `{ echo(float: 10e308) }`, `{ echo(float: 0.001e311) }`],
+  ["differential", `{ echo(float: 1${"0".repeat(309)}) }`, `{ echo(float: 1${"0".repeat(308)}) }`],
+];
+
 // The schemas the reference evaluates every document against.
 const SCHEMAS = {
   differential: `${SDL.trim()}\n`,
   scalars: SCALARS_SDL,
   mutation: MUTATION_SDL,
+  twins: TWINS_SDL,
   examples: schemaSdl(spec.schemas.examples),
   hello: schemaSdl(spec.schemas.hello),
 };
@@ -1368,6 +1580,7 @@ const OUTPUT_SCHEMAS = {
   differentialOneOf: SCHEMAS.differential,
   scalars: SCHEMAS.scalars,
   mutation: SCHEMAS.mutation,
+  twins: SCHEMAS.twins,
   examples: WITHOUT_ONE_OF.examples,
   examplesOneOf: SCHEMAS.examples,
   hello: SCHEMAS.hello,
@@ -1386,52 +1599,99 @@ const schemaTla = Object.fromEntries(Object.entries(built).map(([name, s]) => [n
 const builtWithoutOneOf = buildAll(WITHOUT_ONE_OF);
 const schemaTlaWithoutOneOf = Object.fromEntries(Object.entries(builtWithoutOneOf).map(([name, s]) => [name, schemaToTla(graphql16, s)]));
 
-// Every candidate document, once per schema. A spec example that only
-// September 2026's grammar parses (an empty selection set, `SelectionSet :
-// { Selection* }`, where October 2021 and September 2025 have `Selection+`)
-// is parsed and printed with graphql-js 17, which follows September 2026
-// there, and marked `newSyntax`.
+// Every candidate document, once per schema. A document that only a newer
+// release's grammar parses is parsed and printed with graphql-js 17, which
+// follows September 2026 there, and marked with the grammar it uses
+// (`syntax`, and `syntaxSince` the release that introduced it):
+//   an empty selection set     September 2026 (§2.5 SelectionSet :
+//                              { Selection* }, where October 2021 and
+//                              September 2025 have { Selection+ })
+//   a description on an operation, fragment or variable definition
+//                              September 2025 (§2.2 Descriptions)
+//   directives on a directive definition, `extend directive`, and the
+//   DIRECTIVE_DEFINITION location
+//                              September 2026 (§3.13)
+// Only the spec's examples and the families written for this
+// (`twins`, `descriptions`) may use them; other families' documents that
+// graphql-js 16 can't parse are dropped.
 const docs = [];
 const byKey = new Map();
-const NEW_SYNTAX =
-  "an empty selection set, new in September 2026 (§2.5 SelectionSet : { Selection* }, where October 2021 and September 2025 have { Selection+ }); §5.3.3 was reworded with it, from \"must be empty\" to \"must not be present\"";
+const SYNTAX = {
+  emptySelectionSet: {
+    since: "September2026",
+    text: "an empty selection set, new in September 2026 (§2.5 SelectionSet : { Selection* }, where October 2021 and September 2025 have { Selection+ }); §5.3.3 was reworded with it, from \"must be empty\" to \"must not be present\"",
+  },
+  description: {
+    since: "September2025",
+    text: "a description on an operation, fragment or variable definition, new in September 2025 (§2.2: ExecutableDefinition takes Description?)",
+  },
+  directiveDefinitionDirectives: {
+    since: "September2026",
+    text: "directives on a directive definition or `extend directive`, new in September 2026 (§3.13 DirectiveDefinition : Description? directive @ Name ArgumentsDefinition? Directives[Const]? repeatable? on DirectiveLocations, and DirectiveExtension)",
+  },
+};
+const newerSyntax = (ast) => {
+  const found = new Set();
+  const described = (node) => void (node.description && found.add("description"));
+  graphql17.visit(ast, {
+    SelectionSet: (node) => void (node.selections.length === 0 && found.add("emptySelectionSet")),
+    OperationDefinition: described,
+    FragmentDefinition: described,
+    VariableDefinition: described,
+    DirectiveDefinition: (node) =>
+      void ((node.directives?.length || node.locations.some((l) => l.value === "DIRECTIVE_DEFINITION")) && found.add("directiveDefinitionDirectives")),
+    DirectiveExtension: () => void found.add("directiveDefinitionDirectives"),
+  });
+  return Object.keys(SYNTAX).filter((k) => found.has(k));
+};
 const parseNewer = (text) => {
   const ast = graphql17.parse(text, { noLocation: true });
-  let empty = false;
-  graphql17.visit(ast, { SelectionSet: (node) => void (node.selections.length === 0 && (empty = true)) });
-  if (!empty) throw new Error(`graphql-js 17 parses a document graphql-js 16 doesn't, for another reason than an empty selection set:\n${text}`);
-  return ast;
+  const features = newerSyntax(ast);
+  if (features.length === 0) throw new Error(`graphql-js 17 parses a document graphql-js 16 doesn't, for a reason the generator doesn't know:\n${text}`);
+  return { ast, features };
 };
 // A vector's document as a syntax tree.
 const parseDocument = (text) => {
   try {
     return parse(text, { noLocation: true });
   } catch {
-    return parseNewer(text);
+    return parseNewer(text).ast;
   }
 };
+const NEWER_FAMILIES = new Set(["spec", "twins", "descriptions"]);
 const addDoc = (family, schema, text) => {
   let ast;
-  let newSyntax = false;
   try {
     ast = parse(text, { noLocation: true });
   } catch {
-    if (family !== "spec") return undefined;
+    if (!NEWER_FAMILIES.has(family)) return undefined;
     try {
-      ast = parseNewer(text);
-      newSyntax = true;
-    } catch {
-      return undefined;
+      ({ ast } = parseNewer(text));
+    } catch (error) {
+      if (family === "spec") return undefined;
+      throw error;
     }
   }
-  const printedText = newSyntax ? graphql17.print(ast) : print(ast);
+  // graphql-js 16.15 parses descriptions on executable definitions too, so
+  // the grammar a document uses is read from its tree.
+  const features = newerSyntax(ast);
+  if (features.length && !NEWER_FAMILIES.has(family)) return undefined;
+  const printedText = features.length ? graphql17.print(ast) : print(ast);
   const key = `${schema}\u0000${printedText}`;
   if (byKey.has(key)) return byKey.get(key);
   const index = docs.length;
-  docs.push({ family, schema, text: printedText, ast, tla: documentToTla(ast), tokens: tokensOf(printedText), ...(newSyntax ? { newSyntax } : {}) });
+  docs.push({ family, schema, text: printedText, ast, tla: documentToTla(ast), tokens: tokensOf(printedText), ...(features.length ? { features } : {}) });
   byKey.set(key, index);
   return index;
 };
+// The `syntax` and `syntaxSince` of a document that uses newer grammar.
+const syntaxOf = (features) =>
+  features?.length
+    ? {
+        syntax: features.map((f) => SYNTAX[f].text).join("; "),
+        syntaxSince: features.map((f) => SYNTAX[f].since).sort().at(-1),
+      }
+    : {};
 
 const FAMILIES = {
   cycles: cycles(),
@@ -1475,6 +1735,11 @@ for (let i = 0, n = docs.length; i < n; i++) {
   const text = withoutUnusedVariables(docs[i].ast);
   if (text) addDoc(docs[i].family, docs[i].schema, text);
 }
+// The hand-written pairs, as pairs of document indices.
+const twinPairs = TWINS.flatMap(([schema, invalidTexts, validTexts]) => {
+  const indices = (texts) => [texts].flat().map((text) => addDoc("twins", schema, text));
+  return product(indices(invalidTexts), indices(validTexts));
+});
 const familyCount = docs.length;
 
 // The spec's examples, each in every way it can be presented.
@@ -1527,10 +1792,31 @@ const metaFieldAtSubscriptionRoot = (i) => {
   const root = built[docs[i].schema].getSubscriptionType()?.name;
   return v.FieldSelections.every((s) => s === `${root}.__schema` || s === `${root}.__type`);
 };
+// Required Arguments also says "value must not be the null literal" (§5.4.3),
+// and a null for a Non-Null argument isn't coercible either (§5.6.1). A
+// document whose only fault is such a null is filed under Required
+// Arguments, and counts against both. Random documents are left out: their
+// second rule may have another cause.
+const nullForRequiredArgument = (i) => {
+  const v = docs[i].violations;
+  const b = broken(i);
+  if (docs[i].family === "random" || b.length !== 2 || !v.RequiredArguments || !v.ValuesOfCorrectType) return false;
+  const nulls = new Set();
+  graphql17.visit(docs[i].ast, {
+    enter(node) {
+      if (node.kind !== "Field" && node.kind !== "Directive") return;
+      for (const a of node.arguments ?? []) {
+        if (a.value.kind === "NullValue") nulls.add(`${node.kind === "Directive" ? "@" : ""}${node.name.value}(${a.name.value})`);
+      }
+    },
+  });
+  return v.RequiredArguments.every((subject) => nulls.has(subject));
+};
 const ruleOf = (i) => {
   const b = broken(i);
   if (b.length === 1) return b[0];
   if (metaFieldAtSubscriptionRoot(i)) return "SingleRootField";
+  if (nullForRequiredArgument(i)) return "RequiredArguments";
   return b.find((r) => ALSO[r] && b.length === 1 + ALSO[r].length && ALSO[r].every((x) => b.includes(x)));
 };
 
@@ -1539,7 +1825,8 @@ const ruleOf = (i) => {
 // rest get one by removing a part, which tla-ts evaluates in a second pass.
 const NEAR = 3;
 const FAR = 6;
-const inFamilies = (i) => docs[i].family !== "spec";
+// The spec's examples and the hand-written pairs aren't paired by distance.
+const inFamilies = (i) => docs[i].family !== "spec" && docs[i].family !== "twins";
 const invalid = docs.map((_, i) => i).filter((i) => inFamilies(i) && ruleOf(i));
 const byFamily = (list) => {
   const m = new Map();
@@ -1611,6 +1898,13 @@ for (const [family, list] of validInFamilies) {
     if (best) addPair(best.j, j, best.dist);
   }
 }
+// The hand-written pairs, which the reference must confirm.
+for (const [i, j] of twinPairs) {
+  if (!ruleOf(i)) throw new Error(`a hand-written invalid document doesn't break exactly one rule (${JSON.stringify(docs[i].violations)}): ${docs[i].text}`);
+  if (broken(j).length) throw new Error(`a hand-written valid document breaks ${broken(j).join(", ")}: ${docs[j].text}`);
+  addPair(i, j, distance(docs[i].tokens, docs[j].tokens, Infinity));
+  pairs.get(`${i} ${j}`).twin = true;
+}
 
 // ---------------------------------------------------------------------------
 // Choosing the vectors: every pair from the systematic families, and up to
@@ -1618,7 +1912,7 @@ for (const [family, list] of validInFamilies) {
 // taken, then shorter documents.
 
 const RANDOM_CAP = 15;
-const FAMILY_ORDER = [...Object.keys(FAMILIES), "extra"];
+const FAMILY_ORDER = [...Object.keys(FAMILIES), "extra", "twins"];
 const vectors = [];
 const idOf = new Map();
 const vectorOf = new Map();
@@ -1645,7 +1939,7 @@ for (const rule of ORDER) {
   const seen = new Set();
   const fresh = random.filter((p) => !seen.has(p.edit) && seen.add(p.edit));
   const randomChosen = [...fresh, ...random.filter((p) => !fresh.includes(p))].slice(0, RANDOM_CAP);
-  const chosen = mine.filter((p) => docs[p.i].family !== "random" || randomChosen.includes(p));
+  const chosen = mine.filter((p) => p.twin || docs[p.i].family !== "random" || randomChosen.includes(p));
   const emit = (index, fields) => {
     if (idOf.has(index)) return vectorOf.get(index);
     const vector = {
@@ -1656,6 +1950,7 @@ for (const rule of ORDER) {
       schema: docs[index].schema,
       document: docs[index].text,
       ...fields,
+      ...syntaxOf(docs[index].features),
     };
     idOf.set(index, vector.id);
     vectorOf.set(index, vector);
@@ -1705,7 +2000,7 @@ for (const rule of ORDER) {
         ? { origin: `Validation.tla's own ${e.valid ? "valid" : "invalid"} document ${e.name}, written beside the spec's examples; not one of them` }
         : { example: e.name }),
       ...(fit.completed.length ? { completed: fit.completed } : {}),
-      ...(d.newSyntax ? { syntax: NEW_SYNTAX } : {}),
+      ...syntaxOf(d.features),
     });
   }
   coverage[rule] = { pairs: chosen.length, invalid: new Set(chosen.map((p) => p.i)).size, spec: k, added: a };
@@ -1783,18 +2078,31 @@ const proseAllows = (schemaName, subject) => {
   if (!isInterfaceType(parent) || !isInterfaceType(fragment)) return false;
   return parent === fragment || fragment.getInterfaces().includes(parent);
 };
+// The readings of an unspecified vector: which verdict each reading gives,
+// so the kit can record the one an implementation follows (an INFO check,
+// `readings.check`). A vector that two disagreements leave unsettled gets
+// none.
+const readingsOf = new Map();
+const unspecify = (v, why, readings) => {
+  v.unspecified = v.unspecified ? `${v.unspecified}; ${why}` : why;
+  readingsOf.set(v, readingsOf.has(v) ? null : readings);
+};
 for (const v of vectors) {
   const subjects = v.violations?.FragmentSpreadIsPossible;
   if (!subjects || Object.keys(v.violations).length !== 1) continue;
   if (subjects.every((s) => proseAllows(v.schema, s))) {
-    v.unspecified =
-      "the formal text rejects this spread because no object type implements the interface; the prose allows an interface fragment in the scope of an interface it implements, and doesn't settle an interface in its own scope";
+    const ownScope = subjects.every((s) => s.split(">")[0] === s.split(">")[1]);
+    unspecify(
+      v,
+      "the formal text rejects this spread because no object type implements the interface; the prose allows an interface fragment in the scope of an interface it implements, and doesn't settle an interface in its own scope",
+      {
+        check: "fragmentSpreadReading",
+        valid: ownScope ? "own scope, which the prose doesn't settle" : "the prose",
+        invalid: "the formal text",
+      },
+    );
   }
 }
-
-const unspecify = (v, why) => {
-  v.unspecified = v.unspecified ? `${v.unspecified}; ${why}` : why;
-};
 const astOf = (v) => parseDocument(v.document);
 // Evaluates `expression` on each vector's document (or docOf's rewrite of
 // it), against its schema as tlaOf gives it. A Map from vector to result.
@@ -1830,6 +2138,7 @@ for (const [v, variables] of oneOfProse) {
     unspecify(
       v,
       "§5.8.5's formal text lets a nullable variable with a non-null default value into a OneOf Input Object field; its prose says such variables must be non-nullable",
+      { check: "oneOfVariableReading", valid: "the formal text", invalid: "the prose" },
     );
   }
 }
@@ -1890,9 +2199,10 @@ const mayDependOnArgumentIdentity = (v) => {
   return [...keys.values()].some((k) => k.count > 1 && k.withArguments);
 };
 const identityCandidates = vectors.filter(mayDependOnArgumentIdentity);
-const READINGS = { text: "their text", coerced: "their coerced values" };
+const READINGS = { literal: "their literal values", text: "their text", coerced: "their coerced values" };
+const OTHER_READINGS = ["text", "coerced"];
 const mergingUnder = {};
-for (const reading of Object.keys(READINGS)) {
+for (const reading of OTHER_READINGS) {
   mergingUnder[reading] = await evaluateVectors(identityCandidates, {
     docOf: (v) => rewriteArguments(v, reading),
     expression: 'Check("FieldSelectionMerging", Schema, Docs[i])',
@@ -1901,11 +2211,15 @@ for (const reading of Object.keys(READINGS)) {
 }
 for (const v of identityCandidates) {
   const breaks = Boolean(v.violations?.FieldSelectionMerging);
-  const others = Object.keys(READINGS).filter((r) => mergingUnder[r].get(v).length > 0 !== breaks);
+  const others = OTHER_READINGS.filter((r) => mergingUnder[r].get(v).length > 0 !== breaks);
   if (others.length === 0) continue;
+  const same = OTHER_READINGS.filter((r) => !others.includes(r));
+  const labels = (list) => list.map((r) => READINGS[r]).join(" or ");
+  const reference = labels(["literal", ...same]);
   unspecify(
     v,
     `§5.3.2 doesn't define "identical sets of arguments": compared by literal value, as the reference does, the arguments of two fields here ${breaks ? "differ" : "are identical"}, but compared by ${others.map((r) => READINGS[r]).join(" or by ")} they ${breaks ? "are identical" : "differ"}`,
+    { check: "identicalArgumentsReading", valid: breaks ? labels(others) : reference, invalid: breaks ? reference : labels(others) },
   );
 }
 
@@ -1967,6 +2281,9 @@ const withoutOneOfVerdicts = await evaluateVectors(splitCandidates, { tlaOf: (s)
 const sameViolations = (a, b) => stable(a) === stable(b);
 const needsOneOfSchema = new Set(splitCandidates.filter((v) => !sameViolations(withoutOneOfVerdicts.get(v), v.violations ?? {})));
 
+// The newer grammar a vector's document uses (SYNTAX).
+const featuresOf = (v) => newerSyntax(parseDocument(v.document));
+
 // A vector's `since` is the latest release among its reasons: it needs
 // every one of them.
 const RELEASES = ["September2025", "September2026"];
@@ -1982,14 +2299,99 @@ for (const v of vectors) {
   if (restsOnOneOf.has(v)) why.push(["September2025", "OneOf Input Objects are new in September 2025"]);
   if (v.expected.valid && inspected.get(v).oneOf) why.push(["September2025", "it uses a OneOf Input Object, new in September 2025"]);
   if (needsOneOfSchema.has(v) && why.every(([, w]) => !w.includes("OneOf"))) why.push(["September2025", "its schema needs a OneOf Input Object, new in September 2025"]);
-  if (v.syntax) why.push(["September2026", `it has ${v.syntax}`]);
+  // Newer grammar decides a verdict where an older release would reject
+  // the document: an empty selection set or a description. A type system
+  // definition in newer grammar is rejected under every release.
+  for (const f of featuresOf(v)) {
+    if (f !== "directiveDefinitionDirectives" || v.expected.valid) why.push([SYNTAX[f].since, `it has ${SYNTAX[f].text}`]);
+  }
   if (why.length) {
     v.since = RELEASES[Math.max(...why.map(([r]) => RELEASES.indexOf(r)))];
     v.editionNote = why.map(([, w]) => w).join("; ");
   }
 }
+for (const [v, readings] of readingsOf) if (readings) v.readings = readings;
+
+// Descriptions and comments (§2.2, since September 2025: "Descriptions in
+// GraphQL executable documents are purely for documentation purposes. They
+// MUST NOT affect the execution, validation, or response of a GraphQL
+// document"; §2.1.4, every release: comments "have no significance to the
+// semantic meaning of a GraphQL Document"). For each rule, its first
+// invalid vector of a systematic family or the hand-written pairs, and that
+// vector's first valid sibling, get two twins each: one with a description
+// on every operation, fragment and variable definition (family
+// `descriptions`), one with a comment after every line (family
+// `comments`). The reference evaluates every twin, and must give it the
+// original's violations. A twin keeps its original's verdict, rule and
+// capabilities, and names it in `twinOf`; the kit grades twins only under
+// descriptionsInert.
+const DESCRIBED = {
+  OperationDefinition: { kind: "StringValue", block: true, value: "Runs the test.\nIt mentions query Q { user { id } }, fragment F on User,\n$v and # a hash, all inside the description." },
+  FragmentDefinition: { kind: "StringValue", block: false, value: "A fragment: query { x } and $y are only text here." },
+  VariableDefinition: { kind: "StringValue", block: false, value: "A variable." },
+};
+const described = (ast) =>
+  graphql17.visit(ast, {
+    enter(node) {
+      if (DESCRIBED[node.kind]) return { ...node, description: DESCRIBED[node.kind] };
+      return undefined;
+    },
+  });
+const commented = (text) => `# A comment before the document.\n${text.split("\n").map((line) => `${line} # a comment: query { x } $v`).join("\n")}\n# The end.`;
+const twinSources = [];
+const executableDefinitions = (v) => parseDocument(v.document).definitions.some((d) => d.kind === "OperationDefinition" || d.kind === "FragmentDefinition");
+for (const rule of ORDER) {
+  const candidate = (v) => v.rule === rule && !v.expected.valid && !v.unspecified && v.siblings?.length && executableDefinitions(v);
+  const original = vectors.find((v) => candidate(v) && !["random", "spec", "extra"].includes(v.family)) ?? vectors.find(candidate);
+  if (!original) continue;
+  const sibling = vectors.find((v) => v.id === original.siblings[0]);
+  for (const v of [original, ...(sibling && !sibling.unspecified ? [sibling] : [])]) if (!twinSources.includes(v)) twinSources.push(v);
+}
+const twinDocs = [];
+for (const v of twinSources) {
+  const index = addDoc("descriptions", v.schema, graphql17.print(described(parseDocument(v.document))));
+  if (!docs[index].features?.includes("description")) throw new Error(`the description twin of ${v.id} has no description`);
+  twinDocs.push({ original: v, index, kind: "described" });
+  if (/"""/.test(v.document)) continue;
+  const text = commented(v.document);
+  const key = `${v.schema}\u0000${text}`;
+  if (!byKey.has(key)) {
+    byKey.set(key, docs.length);
+    // Kept as written: printing would drop the comments.
+    const features = featuresOf({ document: text });
+    docs.push({ family: "comments", schema: v.schema, text, ast: parseDocument(text), tla: documentToTla(parseDocument(text)), tokens: [], ...(features.length ? { features } : {}) });
+  }
+  twinDocs.push({ original: v, index: byKey.get(key), kind: "commented" });
+}
+await evaluateDocs([...new Set(twinDocs.map((t) => t.index))]);
+const twinVectors = [];
+for (const { original, index, kind } of twinDocs) {
+  const d = docs[index];
+  if (stable(d.violations) !== stable(original.violations ?? {})) {
+    throw new Error(`the reference gives ${original.id}'s ${kind} twin other violations (${stable(d.violations)}): ${d.text}`);
+  }
+  const why = original.since ? [[original.since, original.editionNote]] : [];
+  if (kind === "described") why.push(["September2025", "descriptions on executable definitions, and §2.2's \"MUST NOT affect\", are new in September 2025"]);
+  const since = why.length ? RELEASES[Math.max(...why.map(([r]) => RELEASES.indexOf(r)))] : undefined;
+  twinVectors.push({
+    id: `${original.id}-${kind}`,
+    spec: [kind === "described" ? "2.2" : "2.1.4", ...original.spec],
+    family: kind === "described" ? "descriptions" : "comments",
+    rule: original.rule,
+    schema: original.schema,
+    document: d.text,
+    expected: original.expected,
+    ...(original.violations ? { violations: original.violations } : {}),
+    twinOf: original.id,
+    ...(original.requires ? { requires: original.requires } : {}),
+    ...(since ? { since, editionNote: why.map(([, w]) => w).join("; ") } : {}),
+    ...syntaxOf(d.features),
+  });
+}
+vectors.push(...twinVectors);
+
 for (const v of vectors) {
-  if (needsOneOfSchema.has(v)) v.schema = ONE_OF[v.schema];
+  if (needsOneOfSchema.has(v) || (v.twinOf && needsOneOfSchema.has(vectors.find((w) => w.id === v.twinOf)))) v.schema = ONE_OF[v.schema];
   if (v.schema.endsWith("OneOf") && !v.since) throw new Error(`${v.id} uses a schema with a OneOf Input Object but has no \`since\``);
 }
 

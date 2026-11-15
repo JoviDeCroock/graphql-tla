@@ -23,9 +23,20 @@
 //                      it differs. With a lone surrogate in a JSON string
 //                      kept as sent, or replaced with U+FFFD, the
 //                      `loneSurrogate` answers, where they differ;
-//   Coercion!GetOperation    which root field the selected operation runs;
+//                      ExecuteSource wraps it for a document that doesn't
+//                      parse or holds a type system definition (a request
+//                      error), and for a subscription whose source stream
+//                      resolver raises (`subscribe`); SourceCalled says
+//                      whether that resolver runs;
+//   Coercion!GetOperation    which field the selected operation runs, at
+//                      the root or below it; Positions and DataOf, its
+//                      response positions and the data with and without
+//                      its error (`at`);
 //   Lexer!StringValueAt      every string literal's Unicode text (§2.10.4),
 //                      which the coercion cases hold;
+//   Parser!ParseExecutable   which documents don't parse (`unparsable`),
+//                      checked against graphql-js, and Lexer's tokens for
+//                      the lexing family, checked the same way;
 //   Validation!IsValid whether the document is valid. A document that is
 //                      invalid by Validation.tla is `valid: false`. One that
 //                      is only invalid because an Int or Float literal
@@ -52,6 +63,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as graphql from "graphql16";
+import * as graphql17 from "graphql17";
 import { CHECK_IDS, CHECKS } from "../kit/coerce/checks.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
@@ -131,6 +143,40 @@ const SDL_ONEOF = SDL.replace(
   "type Mutation {",
   "input ExampleOneOfInputObject @oneOf {\n  a: String\n  b: Int\n}\n\ntype Mutation {",
 ).replace("  example(arg: ExampleInputObject): String\n", "  example(arg: ExampleInputObject): String\n  oneOfExample(arg: ExampleOneOfInputObject): String\n");
+
+// The schema of the vectors below the root (capability nested-fields): the
+// same, plus an object type Nested whose fields take the root fields'
+// arguments, and root fields that return it, as an object, a Non-Null
+// object, a list and a list of Non-Null items. The resolver of a list field
+// returns two objects (docs/kit/coerce.md), so a field below it has two
+// response positions. Nested's int and intNN take the same arguments as
+// the root fields of those names; strict returns a Non-Null String.
+const NESTED_TYPE = `type Nested {
+  int(v: Int): String
+  intNN(v: Int!): String
+  strict(v: Int!): String!
+  child: Nested
+}
+
+`;
+const NESTED_FIELDS = "  nested: Nested\n  nestedNN: Nested!\n  items: [Nested]\n  itemsNN: [Nested!]\n";
+const withNested = (sdl) => sdl.replace("type Mutation {", `${NESTED_TYPE}type Mutation {`).replace("type Query {\n", `type Query {\n${NESTED_FIELDS}`);
+const SDL_NESTED = withNested(SDL);
+
+// The schema of the subscription vectors (capability subscription-source): the
+// same, plus a subscription root type. Its field names are unique across
+// the root types, as every root field's is.
+const SUBSCRIPTION_TYPE = `
+type Subscription {
+  event(v: Int): String
+  eventNN(v: Int!): String
+}
+`;
+const SDL_SUBSCRIPTION = SDL + SUBSCRIPTION_TYPE;
+
+// Every schema at once, for the references: a vector's document only names
+// what its own schema has, so its answer and its validity are the same.
+const SDL_ALL = withNested(SDL_ONEOF) + SUBSCRIPTION_TYPE;
 
 // Copied from differential-coercion.mjs: argument literals as GraphQL
 // source, variable values as JSON source, and a variable default and value
@@ -301,7 +347,7 @@ const OMITTED_FIELDS = [
 // ---------------------------------------------------------------------------
 // The schema, from its SDL (as differential-coercion.mjs reads it).
 
-const sdl = graphql.parse(SDL_ONEOF);
+const sdl = graphql.parse(SDL_ALL);
 const typeRef = (node) => {
   if (node.kind === "NamedType") return { name: node.name.value, wrappers: [] };
   const inner = typeRef(node.type);
@@ -324,9 +370,49 @@ for (const def of sdl.definitions) {
     const oneOf = def.directives.some((d) => d.name.value === "oneOf");
     model.types.set(def.name.value, { kind: "inputObject", fields: def.fields.map(inputValue), oneOf });
   } else if (def.kind === "ObjectTypeDefinition") {
-    for (const field of def.fields) model.fields.set(field.name.value, field.arguments.map(inputValue));
+    for (const field of def.fields) {
+      const args = field.arguments.map(inputValue);
+      // Fields of one name take the same arguments, wherever they are.
+      const known = model.fields.get(field.name.value);
+      if (known && JSON.stringify(known.map((a) => a.typeText)) !== JSON.stringify(args.map((a) => a.typeText))) {
+        throw new Error(`two fields named ${field.name.value} take different arguments`);
+      }
+      model.fields.set(field.name.value, args);
+    }
   }
 }
+// Each object type's fields' return types, to find the way down to a field
+// below the root.
+const outputs = new Map(
+  sdl.definitions
+    .filter((d) => d.kind === "ObjectTypeDefinition")
+    .map((d) => [d.name.value, new Map(d.fields.map((f) => [f.name.value, typeRef(f.type)]))]),
+);
+// A document's syntax tree, for finding its parts: from graphql-js 16, or
+// 17 for one that 16 can't read (descriptions on operations and variables,
+// new in September 2025), or null where neither parses it. Whether a
+// document parses is Parser.tla's to say: for the families that rely on it,
+// the generator checks that Parser.tla agrees (see parsed below).
+const docs = new Map();
+const docOf = (text) => {
+  if (!docs.has(text)) {
+    let doc = null;
+    for (const g of [graphql, graphql17]) {
+      try {
+        doc = g.parse(text);
+        break;
+      } catch {}
+    }
+    docs.set(text, doc);
+  }
+  return docs.get(text);
+};
+
+// The main schema's root fields, which the families below go through one by
+// one.
+const MAIN_FIELDS = new Set(
+  graphql.parse(SDL).definitions.filter((d) => d.kind === "ObjectTypeDefinition").flatMap((d) => d.fields.map((f) => f.name.value)),
+);
 
 // ---------------------------------------------------------------------------
 // Which check a vector belongs to. This only files the vector under a
@@ -579,6 +665,7 @@ const operations = [];
 const add = (family, check, document, variables, operationName = null, schema = undefined) =>
   operations.push({ family, check, document, variables, operationName, schema });
 for (const [field, args] of model.fields) {
+  if (!MAIN_FIELDS.has(field)) continue;
   if (field === "pair" || field === "example" || field === "mutate" || field === "oneOfExample" || field === "settings") continue;
   const [arg] = args;
   const type = arg.typeText;
@@ -619,6 +706,262 @@ for (const [document, names, variableSets] of OPERATIONS) {
 }
 for (const [document, variableSets] of OMITTED_FIELDS) {
   for (const variables of variableSets) add("omitted-field", "inputObject", document, variables);
+}
+
+// ---------------------------------------------------------------------------
+// The families added for September 2026's statements on the request as a
+// whole. They come last, so the other vectors keep their ids. Each names its
+// check and sections itself (`spec`), and, where it is the twin of another
+// request that must get the same answer, that request (`twin`): the vector
+// rests on it (restsOn), and the generator checks that Coercion.tla gives
+// both the same answer.
+const fresh = (family, check, document, variables, extra = {}) =>
+  operations.push({ ...extra, family, check, document, variables, operationName: extra.operationName ?? null, schema: extra.schema, fresh: true });
+// A twin that isn't a vector yet is added first, in the same family.
+const twinned = (family, check, document, variables, twin, extra = {}) => {
+  const operationName = twin.operationName ?? extra.operationName ?? null;
+  const t = { document: twin.document, variables: twin.variables ?? variables, operationName };
+  if (!operations.some((o) => o.document === t.document && o.variables === t.variables && o.operationName === t.operationName && o.schema === extra.schema)) {
+    fresh(family, twin.check, t.document, t.variables, { operationName, schema: extra.schema, spec: twin.spec ?? [] });
+  }
+  fresh(family, check, document, variables, { ...extra, twin: t });
+};
+
+// §2.10.4: block strings whose text only BlockStringValue's details give,
+// and escapes and raw characters every edition reads the same way.
+const MORE_STRING_LITERALS = [
+  '"""\n    a\n  \n    b\n"""',
+  '"""\n  a  \n  b"""',
+  '"""   \n  a\n  b"""',
+  '"""\n\t  a\n \t b"""',
+  '"""\n"""',
+  '"""a\n\n    b\n    c"""',
+  String.raw`"a\u0000b"`,
+  '"a\tb"',
+  String.raw`"\u005C\u0022"`,
+];
+for (const literal of MORE_STRING_LITERALS) fresh("string-value", "stringValue", `{ string(v: ${literal}) }`, "{}");
+
+// §2.1 lexing that only a value shows: commas and white space between
+// list items and object fields (§2.1.4: "commas are optional throughout"),
+// and where one number token ends (§2.10.1's lookahead). Each has a twin
+// written the plain way, except the Float literals (§2.10.2), whose value
+// the reference gives. Lexer.tla's tokens for these documents must be
+// graphql-js's, which the generator checks.
+const LEXING = [
+  ["list", "{ ints(v: [1 2 3]) }", "{ ints(v: [1, 2, 3]) }", ["2.1.4"]],
+  ["list", "{ ints(v: [1,,2,]) }", "{ ints(v: [1, 2]) }", ["2.1.4"]],
+  ["list", "{ ints(v:[1,2,3,]) }", "{ ints(v: [1, 2, 3]) }", ["2.1.4"]],
+  ["list", "{ ints(v: [1-2]) }", "{ ints(v: [1, -2]) }", ["2.10.1"]],
+  ["list", "{ ints(v: [-0]) }", "{ ints(v: [0]) }", ["2.10.1"]],
+  ["list", "{ matrix(v: [[1 2][3]]) }", "{ matrix(v: [[1, 2], [3]]) }", ["2.1.4"]],
+  ["inputObject", "{ point(v: {x:1 y:2}) }", "{ point(v: { x: 1, y: 2 }) }", ["2.1.4"]],
+  ["inputObject", "{ point(v: { x: 1,, y: 2, }) }", "{ point(v: { x: 1, y: 2 }) }", ["2.1.4"]],
+  ["int", "{ int(v:-1) }", "{ int(v: -1) }", ["2.10.1"]],
+  ["string", '{ string(v:"abc"#c\n) }', '{ string(v: "abc") }', ["2.1.3"]],
+  ["boolean", "{ boolean(v:true,) }", "{ boolean(v: true) }", ["2.1.4"]],
+];
+for (const [check, document, twin, spec] of LEXING) {
+  twinned("lexing", check, document, "{}", { document: twin, check }, { spec });
+}
+for (const literal of ["1E3", "1.5e+2", "2e-1", "0.0", "-0.0", "1.5e-3", "0e0", "123.456E-2", "-1.25E1"]) {
+  fresh("lexing", "float", `{ float(v: ${literal}) }`, "{}", { spec: ["2.10.2"] });
+}
+
+// §2.7 and §2.10.8: "Arguments may be provided in any syntactic order and
+// maintain identical semantic meaning", and the same for input object
+// fields; JSON map keys too.
+const ORDER = [
+  ["{ pair(b: 2, a: 1) }", "{}", "{ pair(a: 1, b: 2) }", "arguments", ["2.7"]],
+  ["{ pair(b: null, a: 1) }", "{}", "{ pair(a: 1, b: null) }", "arguments", ["2.7"]],
+  ["query($a: Int, $b: Int!) { pair(b: $b, a: $a) }", '{"b": 3, "a": 1}', "query($a: Int, $b: Int!) { pair(a: $a, b: $b) }", "arguments", ["2.7"]],
+  ["{ point(v: { y: 2, x: 1 }) }", "{}", "{ point(v: { x: 1, y: 2 }) }", "inputObject", ["2.10.8"]],
+  ['{ point(v: { label: "p", x: 1 }) }', "{}", '{ point(v: { x: 1, label: "p" }) }', "inputObject", ["2.10.8"]],
+  ["{ shape(v: { color: BLUE, origin: { y: 1, x: 2 } }) }", "{}", "{ shape(v: { origin: { x: 2, y: 1 }, color: BLUE }) }", "inputObject", ["2.10.8"]],
+  ['{ example(arg: { b: 123, a: "abc" }) }', "{}", '{ example(arg: { a: "abc", b: 123 }) }', "inputObject", ["2.10.8"]],
+];
+for (const [document, variables, twin, check, spec] of ORDER) {
+  twinned("order", "syntacticOrder", document, variables, { document: twin, check }, { spec });
+}
+twinned("order", "syntacticOrder", "query($x: Point) { point(v: $x) }", '{"x": {"y": 2, "x": 1}}', { document: "query($x: Point) { point(v: $x) }", variables: '{"x": {"x": 1, "y": 2}}', check: "inputObject" }, { spec: ["3.10"] });
+
+// §2.2: "Descriptions in GraphQL executable documents ... MUST NOT affect the
+// execution, validation, or response of a GraphQL document. It is safe to
+// remove all descriptions and comments from executable documents without
+// changing their behavior or results." Descriptions on executable
+// definitions are new in September 2025 (`since`); comments are in every
+// edition. Each twin is the document without them.
+const DESCRIBED = [
+  ['"d" query Q { int(v: 1) }', "{}", "query Q { int(v: 1) }", "int"],
+  ['"""\n  block\n  text\n"""\nquery($x: Int) { int(v: $x) }', '{"x": 1}', "query($x: Int) { int(v: $x) }", "int"],
+  ['query("d" $x: Int) { int(v: $x) }', '{"x": 1}', "query($x: Int) { int(v: $x) }", "int"],
+  ['query("""multi\n  line""" $x: Int = 4) { int(v: $x) }', "{}", "query($x: Int = 4) { int(v: $x) }", "variables"],
+  ['query("d" $x: Int!) { intNN(v: $x) }', "{}", "query($x: Int!) { intNN(v: $x) }", "variables"],
+  ['"query { string } $x # { not a comment" query Q { string(v: "s") }', "{}", 'query Q { string(v: "s") }', "string"],
+  ['"d" mutation { mutate(v: 1) }', "{}", "mutation { mutate(v: 1) }", "getOperation"],
+  ['query Q("a" $a: Int, "b" $b: Int!) { pair(a: $a, b: $b) }', '{"a": 1, "b": 2}', "query Q($a: Int, $b: Int!) { pair(a: $a, b: $b) }", "arguments"],
+];
+for (const [document, variables, twin, check] of DESCRIBED) {
+  twinned("descriptions", "descriptionsInert", document, variables, { document: twin, check }, { spec: ["2.2"], since: "September2025" });
+}
+twinned("descriptions", "descriptionsInert", '"first" query A { int(v: 1) } "second" query B { string(v: "b") }', "{}",
+  { document: 'query A { int(v: 1) } query B { string(v: "b") }', check: "getOperation" }, { spec: ["2.2"], since: "September2025", operationName: "B" });
+const COMMENTED = [
+  ["query # c\n($x: Int # c2\n) { int(v: $x) # c3\n}", '{"x": 1}', "query($x: Int) { int(v: $x) }", "int"],
+  ["{ int(v: # c\n 5) }", "{}", "{ int(v: 5) }", "int"],
+  ['# leading "quote\n{ string(v: "s") } # trailing', "{}", '{ string(v: "s") }', "string"],
+  ["{ int(v: 1) }#", "{}", "{ int(v: 1) }", "int"],
+  ["query($x: Int!) { intNN(v: $x) } # $x: Int = 1", "{}", "query($x: Int!) { intNN(v: $x) }", "variables"],
+];
+for (const [document, variables, twin, check] of COMMENTED) {
+  twinned("descriptions", "descriptionsInert", document, variables, { document: twin, check }, { spec: ["2.2", "2.1.3"] });
+}
+twinned("descriptions", "descriptionsInert", 'query A { int(v: 1) }\n# query B { string(v: "b") }', "{}",
+  { document: "query A { int(v: 1) }", check: "getOperation" }, { spec: ["2.2", "2.1.3"] });
+
+// §2.1.8: "Names in GraphQL are case-sensitive ... Underscores are
+// significant": operation names that differ only so.
+const NAMED = [
+  ['query A { int(v: 1) } query a { string(v: "b") }', ["a", "A"]],
+  ["query A { int(v: 1) }", ["a"]],
+  ['query getValue { int(v: 1) } query getvalue { string(v: "b") }', ["getvalue", "getValue"]],
+  ['query a_b { int(v: 1) } query ab { string(v: "b") }', ["ab", "a_b"]],
+];
+for (const [document, names] of NAMED) for (const name of names) fresh("operation", "getOperation", document, "{}", { operationName: name, spec: ["2.1.8"] });
+
+// §2.3: "A Document which contains TypeSystemDefinitionOrExtension must not
+// be executed", and §6: a request's document "must contain GraphQL
+// OperationDefinition".
+const NOT_EXECUTABLE = [
+  ["type T { a: Int }", null],
+  ["type T { a: Int } query { int(v: 1) }", null],
+  ["query { int(v: 1) } extend type Query { more: Int }", null],
+  ['scalar S\nquery Q { string(v: "s") }', "Q"],
+  ["query Q { int(v: 1) } directive @d on FIELD", "Q"],
+  ["schema { query: Query } query Q { int(v: 1) }", "Q"],
+];
+for (const [document, operationName] of NOT_EXECUTABLE) fresh("not-executable", "notExecutable", document, "{}", { operationName, spec: ["6.1"] });
+
+// §6: the executor "must have a parsed Document"; a source that doesn't
+// parse is a request error (§7.1.6: "a request error may occur due to a
+// parse grammar or validation error in the Document"). Parser.tla says
+// which sources don't parse.
+const UNPARSABLE = [
+  ["{ int(v: 1) ", "{}"],
+  ["", "{}"],
+  ['{ int(v: "unterminated) }', "{}"],
+  ["{ int(v: 01) }", "{}"],
+  ["{ int(v: 1.) }", "{}"],
+  ["{ int(v: 1e) }", "{}"],
+  ["{ int(v: $) }", "{}"],
+  ["query($x: Int) { int(v: $x)", '{"x": 1}'],
+  ["query($x: Int) { int(v: $x)", '{"x": "a"}'],
+  ["{ int(v: 1) } }", "{}"],
+  ["{ int(v: 1) } garbage", "{}"],
+  ['"d" { int(v: 1) }', "{}"],
+  ["{ int(v: 1)) }", "{}"],
+  ["query Q($x: Int = $y) { int(v: $x) }", "{}"],
+  ["{ int(v: 1x) }", "{}"],
+  ["{ string(v: \"\\x\") }", "{}"],
+];
+for (const [document, variables] of UNPARSABLE) fresh("unparsable", "syntaxError", document, variables, { spec: ["6.1"], unparsable: true });
+
+// Selections only an invalid document has at the root (for adapters with
+// `unvalidated`; others get them as invalid documents): §6.3.2 CollectFields
+// "If no such fragment exists, continue", and §6.3.3 "If fieldType is
+// defined".
+const UNVALIDATED = [
+  ["{ int(v: 1) ...Missing }", "{}", ["6.3.2"]],
+  ["{ int(v: 1) nope }", "{}", ["6.3.3"]],
+  ["{ int(v: 1) nope(x: 1) { a } }", "{}", ["6.3.3"]],
+  ["{ intNN(v: null) nope ...Missing }", "{}", ["6.3.2", "6.3.3"]],
+];
+for (const [document, variables, spec] of UNVALIDATED) fresh("unvalidated", "unvalidatedBranches", document, variables, { spec });
+
+// §6.2.3.1 CreateSourceEventStream (capability subscription-source). `subscribe`
+// says what the subscription field's source stream resolver does:
+// "stream", return a source stream with one event; "raise", raise an error.
+// Errors raised there are raised before operation execution begins, so the
+// response "must be a request error result" (§7.1.5), new in September
+// 2026 (`since`). `typeCheck`: the check a value counts against where an
+// argument doesn't coerce (sourceStreamArguments accepts either error).
+const SUBSCRIPTIONS = [
+  ["sourceStream", "subscription { event(v: 1) }", "{}", "stream", {}],
+  ["sourceStream", "subscription { alias: event(v: 2) }", "{}", "stream", {}],
+  ["sourceStream", "subscription($x: Int) { event(v: $x) }", '{"x": 3}', "stream", {}],
+  ["sourceStream", "subscription S { event }", "{}", "stream", { operationName: "S" }],
+  ["sourceStream", "query Q { int(v: 1) } subscription S { event(v: 1) }", "{}", "raise", { operationName: "Q" }],
+  ["sourceStreamArguments", "subscription { eventNN(v: null) }", "{}", "stream", { typeCheck: "nonNull" }],
+  ["sourceStreamArguments", "subscription { eventNN }", "{}", "stream", { typeCheck: "nonNull" }],
+  ["sourceStreamArguments", "subscription($x: Int) { eventNN(v: $x) }", '{"x": null}', "stream", { typeCheck: "nonNull" }],
+  ["sourceStreamArguments", 'subscription { event(v: "a") }', "{}", "stream", { typeCheck: "int" }],
+  ["sourceStreamArguments", "subscription($x: Int = 1) { eventNN(v: $x) }", '{"x": null}', "stream", { typeCheck: "nonNull" }],
+  ["variables", "subscription($x: Int) { event(v: $x) }", '{"x": "a"}', "stream", {}],
+  ["sourceStreamError", "subscription { event(v: 1) }", "{}", "raise", {}],
+  ["sourceStreamError", "subscription($x: Int) { event(v: $x) }", '{"x": 1}', "raise", {}],
+  ["sourceStreamError", "subscription { a: event(v: 1) }", "{}", "raise", {}],
+  ["sourceStreamError", "query Q { int(v: 1) } subscription S { event(v: 1) }", "{}", "raise", { operationName: "S" }],
+  ["unvalidatedBranches", "subscription { event(v: 1) eventNN(v: 1) }", "{}", "stream", {}],
+  ["unvalidatedBranches", "subscription { event(v: 1) nope }", "{}", "stream", {}],
+  ["unvalidatedBranches", "subscription { event(v: 1) ...Missing }", "{}", "stream", {}],
+];
+const SUBSCRIPTION_SPEC = {
+  sourceStream: ["6.2.3.1"],
+  sourceStreamArguments: ["6.2.3.1", "6.4.1"],
+  variables: ["6.2.3.1"],
+  sourceStreamError: ["7.1.6", "6.2.3.1"],
+  unvalidatedBranches: ["6.2.3.1"],
+};
+for (const [check, document, variables, subscribe, extra] of SUBSCRIPTIONS) {
+  const since = check === "sourceStreamError" || check === "sourceStreamArguments" ? "September2026" : undefined;
+  fresh("subscription", check, document, variables, { ...extra, schema: "subscription", subscribe, spec: SUBSCRIPTION_SPEC[check], since });
+}
+
+// §6.4.1 and §6.4.4 below the root (capability nested-fields): an argument
+// error on a field inside an object, a list, a Non-Null object or list,
+// with aliases. The execution error nulls the field's response position,
+// at its path, and propagates to the nearest nullable parent.
+const NESTED = [
+  ["argumentsBelowRoot", "{ nested { int(v: 1) } }", "{}"],
+  ["argumentsBelowRoot", "{ nested { intNN(v: null) } }", "{}"],
+  ["argumentsBelowRoot", "{ nested { strict(v: null) } }", "{}"],
+  ["argumentsBelowRoot", "{ nestedNN { strict(v: null) } }", "{}"],
+  ["argumentsBelowRoot", "{ items { intNN(v: null) } }", "{}"],
+  ["argumentsBelowRoot", "{ items { strict(v: null) } }", "{}"],
+  ["argumentsBelowRoot", "{ itemsNN { intNN(v: null) } }", "{}"],
+  ["argumentsBelowRoot", "{ items { int(v: 2) } }", "{}"],
+  ["argumentsBelowRoot", "{ a: nested { b: intNN(v: null) } }", "{}"],
+  ["argumentsBelowRoot", "{ a: items { b: strict(v: null) } }", "{}"],
+  ["argumentsBelowRoot", "{ nested { child { strict(v: null) } } }", "{}"],
+  ["argumentsBelowRoot", "{ nested { child { int(v: 3) } } }", "{}"],
+  ["argumentsBelowRoot", '{ nested { int(v: "a") } }', "{}"],
+  ["argumentsBelowRoot", "query($x: Int) { nested { intNN(v: $x) } }", '{"x": null}'],
+  ["argumentsBelowRoot", "query($x: Int) { items { strict(v: $x) } }", "{}"],
+  // Valid documents (a nullable variable with a default may be used where a
+  // Non-Null type is expected, §5.8.5), whose runtime null still fails.
+  ["argumentsBelowRoot", "query($x: Int = 1) { nested { intNN(v: $x) } }", '{"x": null}'],
+  ["argumentsBelowRoot", "query($x: Int = 1) { items { strict(v: $x) } }", '{"x": null}'],
+  ["variables", 'query($x: Int) { nested { int(v: $x) } }', '{"x": "a"}'],
+  ["variables", "query($x: Int!) { nested { int(v: $x) } }", "{}"],
+];
+for (const [check, document, variables] of NESTED) {
+  fresh("nested", check, document, variables, { schema: "nested", spec: check === "variables" ? ["6.4.4"] : [] });
+}
+
+// §6: a request's "extensions (optional): A map reserved for
+// implementation-specific additional information. ... If present,
+// extensions must be a map, but there are no additional restrictions on its
+// contents" (capability request-extensions). Each twin is the request
+// without them.
+const EXTENDED = [
+  ["query($x: Int) { int(v: $x) }", '{"x": 1}', '{"graphql-tla": {"probe": [1, null, {"a": "b"}]}}', "int"],
+  ["{ intNN(v: null) }", "{}", "{}", "nonNull"],
+  ["query($x: Int) { int(v: $x) }", '{"x": "a"}', '{"graphql-tla": true}', "int"],
+  ['query A { int(v: 1) } query B { string(v: "b") }', "{}", '{"graphql-tla-operationName": "B"}', "getOperation", "A"],
+  ['{ string(v: "s") }', "{}", '{"graphql-tla": {"variables": {"x": 1}, "query": "{ int }"}}', "string"],
+];
+for (const [document, variables, extensions, check, operationName] of EXTENDED) {
+  twinned("extensions", "requestExtensions", document, variables, { document, check }, { spec: [], extensions, operationName });
 }
 
 // ---------------------------------------------------------------------------
@@ -720,19 +1063,53 @@ const coercionSchema = () => {
   return `[types |-> ${types.join(" @@ ")},\n  fields |-> ${fields.join(" @@ ")}]`;
 };
 // A document as Coercion.tla's sequence of operations.
-const documentOps = (document) =>
-  seq(
-    document.definitions
-      .filter((d) => d.kind === "OperationDefinition")
-      .map((operation) => {
-        const field = operation.selectionSet.selections[0];
-        const variables = (operation.variableDefinitions ?? []).map((v) =>
-          defTla({ name: v.variable.name.value, type: typeRef(v.type), default: v.defaultValue }),
-        );
-        const args = (field.arguments ?? []).map((a) => entry(a.name.value, literal(a.value)));
-        return `NamedOp(${str(operation.operation)}, ${str(operation.name?.value ?? "")}, ${seq(variables)}, ${str(field.name.value)}, ${set(args)})`;
-      }),
+const ROOT_TYPES = { query: "Query", mutation: "Mutation", subscription: "Subscription" };
+const responseKey = (field) => field.alias?.value ?? field.name.value;
+// An operation as Coercion.tla's OpAt: the way down from the root to the
+// first field with no selection set, one Step per field on the way (each
+// with a single selection), that field, and the root selection set's other
+// selections, which only the invalid documents of the unvalidated family
+// have: a spread of a fragment the document doesn't define, a field the
+// root type doesn't define, or a subscription's second root field.
+const operationTla = (operation, fragments) => {
+  const rootType = ROOT_TYPES[operation.operation];
+  const [first, ...rest] = operation.selectionSet.selections;
+  const parents = [];
+  let field = first;
+  let typeName = rootType;
+  while (field.selectionSet) {
+    const type = outputs.get(typeName).get(field.name.value);
+    const nonNull = type.wrappers[0] === "nonNull";
+    const wrappers = nonNull ? type.wrappers.slice(1) : type.wrappers;
+    if (field.selectionSet.selections.length !== 1 || (field.arguments ?? []).length) throw new Error(`can't encode ${graphql.print(operation)}`);
+    parents.push(`Step(${str(responseKey(field))}, ${bool(nonNull)}, ${bool(wrappers[0] === "list")}, ${bool(wrappers[0] === "list" && wrappers[1] === "nonNull")})`);
+    typeName = type.name;
+    field = field.selectionSet.selections[0];
+  }
+  const returnType = outputs.get(typeName)?.get(field.name.value);
+  const others = rest.map((s) => {
+    if (s.kind === "FragmentSpread" && !fragments.has(s.name.value)) return `[kind |-> "spread", name |-> ${str(s.name.value)}]`;
+    if (s.kind === "Field" && (operation.operation === "subscription" || !outputs.get(rootType).has(s.name.value))) {
+      return `[kind |-> "field", name |-> ${str(s.name.value)}]`;
+    }
+    throw new Error(`Coercion.tla has no model of a second root selection that runs: ${graphql.print(operation)}`);
+  });
+  const variables = (operation.variableDefinitions ?? []).map((v) =>
+    defTla({ name: v.variable.name.value, type: typeRef(v.type), default: v.defaultValue }),
   );
+  const args = (field.arguments ?? []).map((a) => entry(a.name.value, literal(a.value)));
+  return `OpAt(${str(operation.operation)}, ${str(operation.name?.value ?? "")}, ${seq(variables)}, ${seq(parents)}, ${str(responseKey(field))}, ${str(field.name.value)}, ${bool(returnType?.wrappers[0] === "nonNull")}, ${set(args)}, ${seq(others)})`;
+};
+const EXECUTABLE = new Set(["OperationDefinition", "FragmentDefinition"]);
+// A request's source text as Coercion.tla's Given: whether it parses (null:
+// it doesn't), whether it holds a type system definition or extension, and
+// its operations.
+const givenTla = (document) => {
+  if (document === null) return "Given(FALSE, FALSE, <<>>)";
+  const fragments = new Set(document.definitions.filter((d) => d.kind === "FragmentDefinition").map((d) => d.name.value));
+  const operationsTla = document.definitions.filter((d) => d.kind === "OperationDefinition").map((d) => operationTla(d, fragments));
+  return `Given(TRUE, ${bool(document.definitions.some((d) => !EXECUTABLE.has(d.kind)))}, ${seq(operationsTla)})`;
+};
 
 // ---------------------------------------------------------------------------
 // TLA+ encodings for Validation.tla (as in differential-validation.mjs)
@@ -810,9 +1187,14 @@ const selectionToTla = (s) => {
   return `[kind |-> ${vstr(kind)}, name |-> ${vstr(s.name?.value ?? "")}, alias |-> ${vstr(s.alias?.value ?? "")}, arguments |-> ${argumentsToTla(s.arguments)}, directives |-> ${directivesToTla(s.directives)}, typeCondition |-> ${vstr(s.typeCondition?.name.value ?? "")}, hasSelectionSet |-> ${bool(Boolean(s.selectionSet))}, selectionSet |-> ${selectionSetToTla(s.selectionSet)}]`;
 };
 const selectionSetToTla = (selectionSet) => seq((selectionSet?.selections ?? []).map(selectionToTla));
+// A source that doesn't parse has no document to validate: the empty one
+// stands in, and the vector is invalid whatever Validation.tla says.
 const documentToTla = (doc) =>
   seq(
-    doc.definitions.map((d) => {
+    (doc?.definitions ?? []).map((d) => {
+      if (!EXECUTABLE.has(d.kind)) {
+        return `[kind |-> "typeSystem", operation |-> "", name |-> ${vstr(d.name?.value ?? "")}, variables |-> <<>>, typeCondition |-> "", directives |-> <<>>, selectionSet |-> <<>>]`;
+      }
       if (d.kind === "FragmentDefinition") {
         return `[kind |-> "fragment", operation |-> "", name |-> ${vstr(d.name.value)}, variables |-> <<>>, typeCondition |-> ${vstr(d.typeCondition.name.value)}, directives |-> ${directivesToTla(d.directives)}, selectionSet |-> ${selectionSetToTla(d.selectionSet)}]`;
       }
@@ -877,14 +1259,17 @@ LiteralsInRange(op) ==
   /\\ \\A e \\in op.arguments : \\A i \\in DOMAIN args : args[i].name = e.key => InRange(args[i].type, e.value)
   /\\ \\A i \\in DOMAIN op.variables : op.variables[i].hasDefault => InRange(op.variables[i].type, op.variables[i].default)
 
+\\* A response path as JSON text: names are strings, indices numbers.
+PathText(p) == "[" \\o Join([i \\in DOMAIN p |-> ToString(p[i])]) \\o "]"
+
 Policy(enumFromString, inputFieldDefaults) == [enumFromString |-> enumFromString, inputFieldDefaults |-> inputFieldDefaults]
 Answer(S, c, request) ==
-  LET outcome == ExecuteRequest(S, c.doc, c.name, request) IN
+  LET outcome == ExecuteSource(S, c.given, c.name, request, c.source) IN
   <<outcome.kind, IF outcome.kind = "resolved" THEN JsonOf(outcome.args) ELSE "">>
 
 ASSUME \\A i \\in DOMAIN Cases :
   LET c == Cases[i]
-      selected == GetOperation(c.doc, c.name)
+      selected == GetOperation(c.given.operations, c.name)
   IN PrintT(<<"vector", i, IF selected.ok THEN selected.operation.field ELSE "",
               Answer(Schema, c, c.request),
               Answer(WithPolicy(Schema, Policy(FALSE, TRUE)), c, c.request),
@@ -894,13 +1279,18 @@ ASSUME \\A i \\in DOMAIN Cases :
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.missingListItem = "drop"]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.floatRounded = TRUE]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.variableItemWrapped = TRUE]), c, c.request),
+              Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.sourceArgumentsFieldError = TRUE]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.coerceDefaults = FALSE]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.nestedListItems = FALSE]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.coerceDefaults = FALSE, !.nestedListItems = FALSE]), c, c.request),
               IF c.has64 THEN Answer(Schema, c, c.request64) ELSE <<"", "">>,
               IF c.hasLone THEN Answer(Schema, c, c.requestKept) ELSE <<"", "">>,
               IF c.hasLone THEN Answer(Schema, c, c.requestReplaced) ELSE <<"", "">>,
-              \\A j \\in DOMAIN c.doc : LiteralsInRange(c.doc[j])>>)
+              \\A j \\in DOMAIN c.given.operations : LiteralsInRange(c.given.operations[j]),
+              SourceCalled(Schema, c.given, c.name, c.request),
+              IF selected.ok THEN JsonOf(DataOf(selected.operation, TRUE)) ELSE "",
+              IF selected.ok THEN JsonOf(DataOf(selected.operation, FALSE)) ELSE "",
+              IF selected.ok THEN "[" \\o Join(SetToSeq({PathText(p) : p \\in Positions(selected.operation)})) \\o "]" ELSE "">>)
 ASSUME PrintT(<<"done", Len(Cases)>>)
 
 OneState == section = "scalar"
@@ -954,6 +1344,7 @@ const runJobs = async (jobs) => {
     cpSync(join(root, "specs/Coercion.tla"), join(dir, "Coercion.tla"));
     cpSync(join(root, "specs/Validation.tla"), join(dir, "Validation.tla"));
     cpSync(join(root, "specs/Lexer.tla"), join(dir, "Lexer.tla"));
+    cpSync(join(root, "specs/Parser.tla"), join(dir, "Parser.tla"));
     let next = 0;
     const worker = async () => {
       while (next < jobs.length) {
@@ -1002,21 +1393,33 @@ const POLICY_RUNS = [
   ["missingListItemDropped"],
   ["floatRounded"],
   ["variableItemWrapped"],
+  ["sourceArgumentsFieldError"],
 ];
-const ANSWER = String.raw`<<\s*"(\w*)",\s*"((?:[^"\\]|\\.)*)"\s*>>`;
+const TEXT = String.raw`"((?:[^"\\]|\\.)*)"`;
+const ANSWER = String.raw`<<\s*"(\w*)",\s*${TEXT}\s*>>`;
 // The field, then the answers: the default policy's, POLICY_RUNS', with
 // each of October 2021's rules and with both, the binary64 one, and with a
 // lone surrogate kept and replaced; then whether the literals coerce.
 const EDITION_RUNS = ["coerceDefaults", "nestedListItems", "both"];
 const ANSWERS = 1 + POLICY_RUNS.length + EDITION_RUNS.length + 3;
 const VECTOR = new RegExp(
-  String.raw`<<\s*"vector",\s*(\d+),\s*"(\w*)",\s*${Array(ANSWERS).fill(ANSWER).join(String.raw`,\s*`)},\s*(TRUE|FALSE)\s*>>`,
+  String.raw`<<\s*"vector",\s*(\d+),\s*"(\w*)",\s*${Array(ANSWERS).fill(ANSWER).join(String.raw`,\s*`)},\s*(TRUE|FALSE),\s*(TRUE|FALSE),\s*${Array(3).fill(TEXT).join(String.raw`,\s*`)}\s*>>`,
   "g",
 );
 // Every rule a coerce vector relies on that October 2021 doesn't have is in
 // September 2025: default value coercion (#793), OneOf Input Objects
 // (#825) and SourceCharacter as any Unicode scalar value (#849).
 const SINCE = "September2025";
+// Why a vector of the families added for September 2026 relies on a newer
+// edition.
+const FRESH_REASONS = {
+  September2025:
+    "descriptions on operations and variable definitions are new in September 2025 (§2.2, OperationDefinition and VariableDefinition take a Description): October 2021's grammar has none, so it can't read the document",
+  September2026:
+    "new in September 2026: ExecuteRequest runs CreateSourceEventStream before operation execution begins (§6.1, §6.2), §7.1.5 says the response to an error raised before then must be a request error result, and §7.1.6 counts a failure to establish a source event stream among request errors. September 2025 runs CreateSourceEventStream inside Subscribe, and its §7.1.6 doesn't name it",
+};
+// Response paths in a fixed order.
+const sortedPaths = (paths) => paths.map((p) => [JSON.stringify(p), p]).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([, p]) => p);
 const EDITION_REASON = "since September 2025, a default value is coerced (CoerceVariableValues, CoerceArgumentValues, §3.10); October 2021 uses it as it is";
 const ONEOF_REASON = "OneOf Input Objects (§3.10.1, @oneOf) are new in September 2025: under October 2021 the schema is invalid";
 const OUTCOMES = { requestError: "request-error", fieldError: "field-error", resolved: "value" };
@@ -1055,6 +1458,84 @@ const hasLoneSurrogate = (text) => {
 };
 const isIntegerInput = (v) => v?.kind === "IntValue" || (v?.[NUMBER] !== undefined && integerOf(v) !== undefined);
 
+// Whether each document of the families added for September 2026 parses
+// as an ExecutableDocument, and its tokens, from Parser.tla and Lexer.tla.
+const parserModule = (name, sources) => `---- MODULE ${name} ----
+EXTENDS Parser, TLC
+
+Sources == ${seq(sources.map((src) => seq([...src].map((c) => String(c.codePointAt(0))))))}
+
+ASSUME \\A i \\in DOMAIN Sources :
+  LET lexed == Lex(Sources[i]) IN
+  PrintT(<<"parsed", i, ParseExecutable(Sources[i]).ok,
+           [k \\in DOMAIN lexed.tokens |-> <<lexed.tokens[k].kind, lexed.tokens[k].value>>]>>)
+ASSUME PrintT(<<"done", Len(Sources)>>)
+
+OneState == vector = [group |-> "Parsed", n |-> 1]
+====
+`;
+
+// graphql-js 16's tokens for a document, as Lexer.tla names them; a
+// string's value is left out, since Lexer.tla gives its text, not its raw
+// source.
+const PUNCTUATOR_KINDS = new Set(["!", "$", "&", "(", ")", "...", ":", "=", "@", "[", "]", "{", "|", "}"]);
+const graphqlTokens = (text) => {
+  const lexer = new graphql.Lexer(new graphql.Source(text));
+  const tokens = [];
+  for (let t = lexer.advance(); t.kind !== "<EOF>"; t = lexer.advance()) {
+    if (PUNCTUATOR_KINDS.has(t.kind)) tokens.push(["Punctuator", t.kind]);
+    else tokens.push([{ Name: "Name", Int: "IntValue", Float: "FloatValue", String: "StringValue", BlockString: "BlockString" }[t.kind], t.kind === "String" || t.kind === "BlockString" ? "" : t.value]);
+  }
+  return tokens;
+};
+
+// Parser.tla's verdict on every document of the families added for
+// September 2026: the unparsable ones must not parse, and graphql-js must
+// not parse them either; every other one must parse, except a document
+// with type system definitions, which isn't an ExecutableDocument (a
+// service that permits only those refuses it too, and the answer is a
+// request error either way). For the lexing family, Lexer.tla's tokens
+// must be graphql-js's, so the literals the generator reads from graphql-js
+// are the reference's.
+const checkParsed = async () => {
+  const fresh = operations.filter((o) => o.fresh);
+  const sources = [...new Set(fresh.map((o) => o.document))];
+  const verdicts = new Map();
+  await runJobs([
+    {
+      name: "Parsed",
+      size: sources.length,
+      module: parserModule("Parsed", sources),
+      read: (flat) => {
+        const token = /<<\s*"(\w+)",\s*<<([\d,\s]*)>>\s*>>/g;
+        for (const m of flat.matchAll(/<<\s*"parsed",\s*(\d+),\s*(TRUE|FALSE),\s*<<((?:\s*<<\s*"\w+",\s*<<[\d,\s]*>>\s*>>\s*,?)*)\s*>>\s*>>/g)) {
+          const tokens = [...m[3].matchAll(token)].map(([, kind, points]) => [
+            kind,
+            String.fromCodePoint(...points.split(",").map((x) => x.trim()).filter(Boolean).map(Number)),
+          ]);
+          verdicts.set(sources[Number(m[1]) - 1], { parses: m[2] === "TRUE", tokens });
+        }
+        if (verdicts.size !== sources.length) throw new Error(`read ${verdicts.size} verdicts from Parser.tla, which has ${sources.length} documents`);
+      },
+    },
+  ]);
+  for (const o of fresh) {
+    const { parses, tokens } = verdicts.get(o.document);
+    const doc = docOf(o.document);
+    if (o.unparsable) {
+      if (parses || doc !== null) throw new Error(`expected a syntax error, but ${parses ? "Parser.tla" : "graphql-js"} parses ${JSON.stringify(o.document)}`);
+    } else if (!doc || (!parses && doc.definitions.every((d) => EXECUTABLE.has(d.kind)))) {
+      throw new Error(`${parses ? "graphql-js" : "Parser.tla"} doesn't parse ${JSON.stringify(o.document)}`);
+    }
+    if (o.family === "lexing") {
+      const ours = tokens.map(([kind, value]) => [kind, kind === "StringValue" || kind === "BlockString" ? "" : value]);
+      if (JSON.stringify(ours) !== JSON.stringify(graphqlTokens(o.document))) {
+        throw new Error(`Lexer.tla and graphql-js read different tokens in ${JSON.stringify(o.document)}: ${JSON.stringify(ours)}`);
+      }
+    }
+  }
+};
+
 const generate = async () => {
   // Every string literal's text first, from Lexer.tla: the coercion cases
   // hold it.
@@ -1066,7 +1547,10 @@ const generate = async () => {
       },
     });
   collect(sdl);
-  for (const o of operations) collect(graphql.parse(o.document));
+  for (const o of operations) {
+    const doc = docOf(o.document);
+    if (doc) collect(doc);
+  }
   const sourceList = [...sources];
   await runJobs([
     {
@@ -1087,9 +1571,10 @@ const generate = async () => {
   ]);
 
   const coercionSchemaTla = coercionSchema();
-  const validationSchemaTla = validationSchema(graphql.buildSchema(SDL_ONEOF));
+  const validationSchemaTla = validationSchema(graphql.buildSchema(SDL_ALL));
+  await checkParsed();
   const cases = operations.map((o) => {
-    const document = graphql.parse(o.document);
+    const document = docOf(o.document);
     const has64 = needsExactNumbers(o.variables);
     const request = set(Object.entries(parseExact(o.variables)).map(([k, v]) => entry(k, json(v))));
     const request64 = has64 ? set(Object.entries(JSON.parse(o.variables)).map(([k, v]) => entry(k, json64(v)))) : request;
@@ -1097,7 +1582,7 @@ const generate = async () => {
     const requestWith = (strings) => (hasLone ? set(Object.entries(parseExact(o.variables)).map(([k, v]) => entry(k, json(v, strings)))) : request);
     const name = o.operationName === null ? "NoName" : `Name(${str(o.operationName)})`;
     return {
-      coercion: `[doc |-> ${documentOps(document)}, name |-> ${name}, request |-> ${request}, has64 |-> ${bool(has64)}, request64 |-> ${request64}, hasLone |-> ${bool(hasLone)}, requestKept |-> ${requestWith("kept")}, requestReplaced |-> ${requestWith("replaced")}]`,
+      coercion: `[given |-> ${givenTla(document)}, name |-> ${name}, source |-> ${str(o.subscribe ?? "stream")}, request |-> ${request}, has64 |-> ${bool(has64)}, request64 |-> ${request64}, hasLone |-> ${bool(hasLone)}, requestKept |-> ${requestWith("kept")}, requestReplaced |-> ${requestWith("replaced")}]`,
       validation: documentToTla(document),
     };
   });
@@ -1124,6 +1609,12 @@ const generate = async () => {
           r.kept = at(ANSWERS - 2);
           r.replaced = at(ANSWERS - 1);
           r.inRange = m[3 + 2 * ANSWERS] === "TRUE";
+          // CreateSourceEventStream's resolver call, and for a field below
+          // the root, the data when its arguments raise and when they
+          // don't, and its response positions.
+          r.sourceCalled = m[4 + 2 * ANSWERS] === "TRUE";
+          const text = (j) => unescape(m[5 + 2 * ANSWERS + j]);
+          if (text(0) !== "") r.at = { error: JSON.parse(text(0)), value: JSON.parse(text(1)), paths: JSON.parse(text(2)) };
           n++;
         }
         if (n !== chunk.length) throw new Error(`read ${n} outcomes from Coerce${k}, which has ${chunk.length} cases`);
@@ -1165,7 +1656,9 @@ const generate = async () => {
     const oct2021 = r.oct2021.coerceDefaults;
     const newRule = answerKey(oct2021) !== answerKey(expected);
     if (newRule && !alternatives.some((x) => answerKey(x) === answerKey(oct2021))) alternatives.push({ ...oct2021, policy: ["oct2021"] });
-    const editionNote = o.schema === "oneOf"
+    const editionNote = o.since
+      ? FRESH_REASONS[o.since]
+      : o.schema === "oneOf"
       ? ONEOF_REASON
       : outsideOctoberSource(o.document)
         ? SOURCE_REASON
@@ -1200,11 +1693,16 @@ const generate = async () => {
     // before any operation was selected is GetOperation's, not
     // CoerceVariableValues'.
     const spec = [CHECKS.find((c) => c.id === typeCheck).spec[0]];
-    if (expected.outcome === "request-error" && r.field !== "" && check !== "variables") spec.push("6.1.2");
-    if (expected.outcome === "field-error" && check !== "arguments") spec.push("6.4.1");
-    // §3.12, where a null or a missing value at a Non-Null position is one
-    // of the rules the error rests on.
-    if (expected.outcome !== "value" && !spec.includes("3.12") && nonNullGap(o)) spec.push("3.12");
+    if (o.fresh) {
+      // The families added for September 2026 name their sections.
+      for (const x of o.spec ?? []) if (!spec.includes(x)) spec.push(x);
+    } else {
+      if (expected.outcome === "request-error" && r.field !== "" && check !== "variables") spec.push("6.1.2");
+      if (expected.outcome === "field-error" && check !== "arguments") spec.push("6.4.1");
+      // §3.12, where a null or a missing value at a Non-Null position is one
+      // of the rules the error rests on.
+      if (expected.outcome !== "value" && !spec.includes("3.12") && nonNullGap(o)) spec.push("3.12");
+    }
     return {
       id: `coerce-${String(i + 1).padStart(4, "0")}`,
       spec,
@@ -1217,14 +1715,43 @@ const generate = async () => {
       // Invalid by Validation.tla, or only because a literal doesn't coerce.
       valid: r.valid && r.inRange,
       literalOnly: r.valid && !r.inRange,
-      executionErrorRequired: expected.outcome === "field-error" && executionErrorRequired(o),
-      idFromInteger: expected.outcome === "value" && isIntegerInput(idInput(o)),
+      executionErrorRequired: !o.fresh && expected.outcome === "field-error" && executionErrorRequired(o),
+      idFromInteger: !o.fresh && expected.outcome === "value" && isIntegerInput(idInput(o)),
       expected,
       alternatives,
       binary64,
       loneSurrogate,
       editionNote,
+      since: o.since ?? (editionNote ? SINCE : undefined),
+      // October 2021 can't read the document: it has no descriptions on
+      // executable definitions.
+      newInput: o.since === "September2025",
+      unparsable: Boolean(o.unparsable),
+      subscribe: o.subscribe,
+      sourceCalled: o.schema === "subscription" ? r.sourceCalled : undefined,
+      typeCheck: o.typeCheck,
+      // Where the selected field is, for vectors whose field isn't a root
+      // field the response holds under its own name.
+      at: (o.schema === "nested" || o.schema === "subscription") && r.at ? { field: r.field, paths: sortedPaths(r.at.paths), value: canonical(r.at.value), error: canonical(r.at.error) } : undefined,
+      extensions: o.extensions,
+      fresh: o.fresh,
     };
+  });
+
+  // A twin: the request a vector must get the same answer as, which it
+  // rests on. Coercion.tla must give both the same answer: descriptions,
+  // comments, the order of arguments and fields, and the request's
+  // extensions don't enter its model.
+  operations.forEach((o, i) => {
+    if (!o.twin) return;
+    const j = operations.findIndex(
+      (x, k) => k !== i && !x.extensions && x.document === o.twin.document && x.variables === o.twin.variables && x.operationName === o.twin.operationName && x.schema === o.schema,
+    );
+    if (j < 0) throw new Error(`no twin for ${o.document}`);
+    if (answerKey(vectors[j].expected) !== answerKey(vectors[i].expected)) {
+      throw new Error(`${o.document} and its twin ${o.twin.document} get different answers`);
+    }
+    vectors[i].restsOn = [vectors[j].id];
   });
 
   // restsOn: for each vector, the `literal` or `variable` vectors that
@@ -1233,7 +1760,7 @@ const generate = async () => {
   // value that isn't null; the first such vector in file order is taken.
   const probes = new Map();
   const probeKey = (kind, type, value) => `${kind}\u0000${typeText(type)}\u0000${valueText(kind, value)}`;
-  const argumentsOf = operations.map(argumentOf);
+  const argumentsOf = operations.map((o) => (o.fresh ? undefined : argumentOf(o)));
   operations.forEach((o, i) => {
     const a = argumentsOf[i];
     if (!a || (o.family !== "literal" && o.family !== "variable")) return;
@@ -1261,7 +1788,7 @@ const generate = async () => {
       : Array.isArray(v)
         ? v.map(dropNulls)
         : Object.fromEntries(Object.entries(v).filter(([, x]) => x !== null).map(([k, x]) => [k, dropNulls(x)]));
-  const keyOf = (v) => `${v.expected.field} ${JSON.stringify(dropNulls(v.expected.arguments))}`;
+  const keyOf = (v) => `${v.schema ?? ""} ${v.expected.field} ${JSON.stringify(dropNulls(v.expected.arguments))}`;
   const answers = new Map();
   for (const v of vectors.filter((x) => x.expected.outcome === "value")) {
     answers.set(keyOf(v), (answers.get(keyOf(v)) ?? new Set()).add(JSON.stringify(v.expected.arguments)));
@@ -1270,6 +1797,11 @@ const generate = async () => {
   for (const v of vectors) {
     const requires = [];
     if (onlyNullVersusAbsent(v)) requires.push("absent-vs-null");
+    // What the request needs of the adapter beyond the coerce area: fields
+    // below the root, a subscription, the request's extensions.
+    if (v.schema === "nested") requires.push("nested-fields");
+    if (v.schema === "subscription") requires.push("subscription-source");
+    if (v.extensions !== undefined) requires.push("request-extensions");
     if (requires.length) v.requires = requires;
   }
 
@@ -1292,7 +1824,13 @@ const generate = async () => {
     ...(v.restsOn ? { restsOn: v.restsOn } : {}),
     ...(v.binary64 ? { binary64: v.binary64 } : {}),
     ...(v.loneSurrogate ? { loneSurrogate: v.loneSurrogate } : {}),
-    ...(v.editionNote ? { since: SINCE, editionNote: v.editionNote } : {}),
+    ...(v.since ? { since: v.since, editionNote: v.editionNote } : {}),
+    ...(v.newInput ? { newInput: true } : {}),
+    ...(v.unparsable ? { unparsable: true } : {}),
+    ...(v.subscribe ? { subscribe: v.subscribe, sourceCalled: v.sourceCalled } : {}),
+    ...(v.typeCheck ? { typeCheck: v.typeCheck } : {}),
+    ...(v.at ? { at: v.at } : {}),
+    ...(v.extensions !== undefined ? { extensions: v.extensions } : {}),
   }));
 
   // The argument and input field declarations, as type text, so the kit
@@ -1306,7 +1844,7 @@ const generate = async () => {
     "{\n" +
     `  "source": "Expected answers from specs/Coercion.tla (ExecuteRequest, GetOperation) and document validity from specs/Validation.tla (IsValid), evaluated by tla-ts. Regenerate with node scripts/generate-vectors-coerce.mjs.",\n` +
     `  "schema": ${JSON.stringify(SDL)},\n` +
-    `  "schemas": ${JSON.stringify({ oneOf: SDL_ONEOF })},\n` +
+    `  "schemas": ${JSON.stringify({ oneOf: SDL_ONEOF, nested: SDL_NESTED, subscription: SDL_SUBSCRIPTION })},\n` +
     `  "inputs": ${JSON.stringify(inputs)},\n` +
     `  "vectors": [\n${ordered.map((v) => `    ${JSON.stringify(v)}`).join(",\n")}\n  ]\n}\n`
   );

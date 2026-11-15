@@ -98,7 +98,15 @@ export const BASIS = {
   FragmentSpreadTargetDefined: { basis: FORMAL("For every namedSpread in the document: Let fragment be the target of namedSpread. fragment must be defined in the document.") },
   FragmentSpreadsMustNotFormCycles: { basis: FORMAL("For each fragmentDefinition in the document: ... DetectFragmentCycles(fragmentDefinition, visited).") + ' DetectFragmentCycles: "visited must not contain spread."' },
   FragmentSpreadIsPossible: { basis: FORMAL("Let applicableTypes be the intersection of GetPossibleTypes(fragmentType) and GetPossibleTypes(parentType). applicableTypes must not be empty.") },
-  ValuesOfCorrectType: { basis: FORMAL("For each literal Input Value value in the document: Let type be the type expected in the position value is found. value must be coercible to type") },
+  ValuesOfCorrectType: {
+    basis:
+      FORMAL("For each literal Input Value value in the document: Let type be the type expected in the position value is found. value must be coercible to type") +
+      ' For a Float, §3.5.2 (the same in every release): "If the input value otherwise represents a value not representable by finite IEEE 754 (e.g. NaN, Infinity, or a value outside the available precision), a request error must be raised." A literal too large for binary64, which rounds to Infinity (1e400), isn\'t coercible. A literal too small (1e-400) isn\'t graded: whether rounding it to 0 is "outside the available precision" the spec doesn\'t say.',
+  },
+  IntInputRange: {
+    basis:
+      '§3.5.1 Int, Input Coercion: "If the integer input value represents a value less than -2^31 or greater than or equal to 2^31, a request error should be raised." A SHOULD, the same in every release. §5.6.1 asks for a literal "coercible to type", so a service that follows the SHOULD rejects such a literal at validation. ID takes any integer, and Float has its own bound.',
+  },
   InputObjectFieldNames: { basis: FORMAL("For each Input Object Field inputField in the document: ... inputFieldDefinition must exist.") },
   InputObjectFieldUniqueness: { basis: FORMAL("For every inputField in inputObject: ... Let fields be all Input Object Fields named name in inputObject. fields must be the set containing only inputField.") },
   InputObjectRequiredFields: { basis: FORMAL("If type is Non-Null and defaultValue does not exist: ... field must exist. Let value be the value of field. value must not be the null literal.") },
@@ -113,6 +121,54 @@ export const BASIS = {
     basis:
       FORMAL("For each variableUsage in variableUsages: ... IsVariableUsageAllowed(variableDefinition, variableUsage) must be true.") +
       " IsNonNullPosition, and with it OneOf Input Objects, are new in September 2025: October 2021's IsVariableUsageAllowed has neither, so a variable in a OneOf Input Object's field isn't a Non-Null position there. The vectors that rest on it have since September 2025.",
+  },
+};
+
+// Levels, titles and sections where a check isn't just a §5 rule at MUST:
+// IntInputRange is §3.5.1's SHOULD, as it bears on §5.6.1, and
+// ValuesOfCorrectType also rests on §3.5.2 for Float literals too large for
+// binary64.
+const LEVEL = { IntInputRange: "SHOULD" };
+const TITLE = { IntInputRange: "Int literals out of 32-bit range are rejected" };
+const SPEC = { ValuesOfCorrectType: ["5.6.1", "3.5.2"], IntInputRange: ["3.5.1", "5.6.1"] };
+const levelOf = (rule) => LEVEL[rule] ?? "MUST";
+
+// Descriptions and comments: twins of vectors (`twinOf`) with a description
+// on every executable definition, or a comment after every line. A twin is
+// graded only here, and only when its original was answered right: then a
+// wrong answer on the twin is the description's or the comment's doing.
+export const DESCRIPTIONS_INERT = "descriptionsInert";
+const INERT = {
+  id: DESCRIPTIONS_INERT,
+  title: "Descriptions and comments don't change validation",
+  level: "MUST",
+  spec: ["2.2", "2.1.4"],
+  basis:
+    '§2.2 (since September 2025): "Descriptions in GraphQL executable documents are purely for documentation purposes. They MUST NOT affect the execution, validation, or response of a GraphQL document. It is safe to remove all descriptions and comments from executable documents without changing their behavior or results." §2.1.4 (every release): comments "have no significance to the semantic meaning of a GraphQL Document". Each twin is a vector of another check with a description on every operation, fragment and variable definition (since September 2025), or a comment after every line. It is graded only when the implementation answers its original right, so a failure here is the description\'s or the comment\'s doing; a parser without descriptions crashes on the first kind.',
+};
+
+// Where the spec's formal text and prose disagree, or it leaves a term
+// undefined, a vector is unspecified and isn't graded. Those with
+// `readings` are still asked: these INFO checks record which reading the
+// implementation's answers follow, and never fail.
+export const READING_CHECKS = {
+  fragmentSpreadReading: {
+    title: "Interface spreads where §5.5.2.3's formal text and prose disagree: which reading",
+    spec: ["5.5.2.3"],
+    basis:
+      'The formal text: "Let applicableTypes be the intersection of GetPossibleTypes(fragmentType) and GetPossibleTypes(parentType). applicableTypes must not be empty." An interface no object type implements has no possible types, so it rejects every spread of one. The prose: "an interface type fragment can always be spread into an interface scope which it implements", and it doesn\'t say whether an interface may be spread into its own scope. Where an object type implements both, the readings agree, and those vectors are graded under fragmentSpreadIsPossible.',
+  },
+  oneOfVariableReading: {
+    title: "Nullable variables with a default in a OneOf field, where §5.8.5's formal text and prose disagree: which reading",
+    spec: ["5.8.5"],
+    basis:
+      'The formal text allows a nullable variable in a non-null position when "a default value exists for variableDefinition and is not the value null", and IsNonNullPosition makes a OneOf Input Object\'s field such a position. The prose: "Variables used for OneOf Input Object fields must be non-nullable."',
+  },
+  identicalArgumentsReading: {
+    title: "Two fields of one response name whose arguments are identical under one reading of §5.3.2 only: which reading",
+    spec: ["5.3.2"],
+    basis:
+      'FieldsInSetCanMerge: "fieldA and fieldB must have identical sets of arguments", without defining identical. The arguments can be compared by their literal values (the reference), by their text, or by their coerced values (defaults included).',
   },
 };
 
@@ -133,7 +189,7 @@ const count = (counts, release) => void (counts[release] = (counts[release] ?? 0
 // document with an empty selection set (`syntax`), September 2025 for a
 // schema with a OneOf Input Object, none for any other.
 const inputSince = (data, vector) =>
-  vector.syntax !== undefined ? "September2026" : /@oneOf\b/.test(data.schemas[vector.schema]) ? "September2025" : undefined;
+  vector.syntax !== undefined ? (vector.syntaxSince ?? "September2026") : /@oneOf\b/.test(data.schemas[vector.schema]) ? "September2025" : undefined;
 // The release a failure counts toward, if any. A wrong verdict counts toward
 // the release the vector's verdict rests on. A crash is a failure in every
 // release that can take the input, so it counts toward the first of them.
@@ -158,17 +214,21 @@ const firstMessage = (answer) => {
 };
 
 // The vectors an adapter is graded on, and how many are left out and why.
+// `informational`: the unspecified vectors with `readings`, which are asked
+// but only recorded under an INFO check.
 export const gradedVectors = (data, capabilities = []) => {
   const has = new Set(capabilities);
   const graded = [];
+  const informational = [];
   const skipped = {};
   for (const vector of data.vectors) {
     const missing = (vector.requires ?? []).filter((c) => !has.has(c));
     const reasons = [...(vector.unspecified ? ["unspecified"] : []), ...missing];
     if (reasons.length === 0) graded.push(vector);
+    if (missing.length === 0 && vector.unspecified && vector.readings) informational.push(vector);
     for (const r of reasons) skipped[r] = (skipped[r] ?? 0) + 1;
   }
-  return { graded, skipped };
+  return { graded, informational, skipped };
 };
 
 // For each valid vector, the invalid vectors it is a sibling of, and the
@@ -215,16 +275,42 @@ const cite = (rule, rules) => `§${rules[rule]} ${section(rules[rule]).title}`;
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 // The report: the facts behind a conformance sheet (docs/kit-areas.md).
-export const buildReport = ({ data, judged, strict, selfTest, controls, implementation, capabilities, skipped = {} }) => {
+export const buildReport = ({ data, judged, informational = [], strict, selfTest, controls, implementation, capabilities, skipped = {} }) => {
   const { rules } = data;
   const { partners } = pairsOf(data);
+
+  // Twins (descriptions and comments): graded only where the original was
+  // answered right. `inert` holds the twins that count.
+  const byId = new Map(judged.map((j) => [j.vector.id, j]));
+  const inert = { cases: 0, failing: 0, failingSince: {}, counted: new Set() };
+  for (const j of judged) {
+    if (!j.vector.twinOf || j.status === "malformed") continue;
+    if (byId.get(j.vector.twinOf)?.status !== "pass") continue;
+    inert.cases++;
+    inert.counted.add(j);
+    if (j.status !== "pass") {
+      inert.failing++;
+      const since = failureSince(data, j);
+      if (since) count(inert.failingSince, since);
+    }
+  }
+
+  // The INFO checks: which reading each answer follows.
+  const readings = new Map(Object.keys(READING_CHECKS).map((id) => [id, { cases: 0, observed: {} }]));
+  for (const { vector, answer } of informational) {
+    const r = readings.get(vector.readings.check);
+    r.cases++;
+    const label =
+      answer instanceof Crash ? "crashed" : typeof answer?.valid !== "boolean" ? "malformed" : answer.valid ? `valid (${vector.readings.valid})` : `invalid (${vector.readings.invalid})`;
+    r.observed[label] = (r.observed[label] ?? 0) + 1;
+  }
 
   // Per rule: the invalid vectors that exercised it, how many of them break
   // it alone, and how many were accepted.
   const stats = new Map(Object.keys(rules).map((r) => [r, { cases: 0, alone: 0, failing: 0, failingSince: {} }]));
   const accepts = { cases: 0, failing: 0, failingSince: {} };
   for (const j of judged) {
-    if (j.status === "malformed") continue;
+    if (j.status === "malformed" || j.vector.twinOf) continue;
     if (j.vector.expected.valid) {
       accepts.cases++;
       if (j.status !== "pass") {
@@ -255,13 +341,16 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
   const findings = new Map();
   for (const j of judged) {
     if (j.status === "pass" || j.status === "malformed") continue;
-    const message = j.status === "rejected-valid" ? firstMessage(j.answer) : undefined;
-    const key =
-      message !== undefined
+    if (j.vector.twinOf && !inert.counted.has(j)) continue;
+    const twin = Boolean(j.vector.twinOf);
+    const message = j.status === "rejected-valid" && !twin ? firstMessage(j.answer) : undefined;
+    const key = twin
+      ? `twin\u0000${j.status === "crash" ? "crash" : "wrong"}\u0000${j.vector.family}`
+      : message !== undefined
         ? `${j.status}\u0000message\u0000${messagePattern(message)}`
         : `${j.status}\u0000${j.vector.expected.valid}\u0000${j.rules.join(",")}`;
     const f = findings.get(key) ?? {
-      kind: j.status, valid: j.vector.expected.valid, rules: j.rules, byMessage: message !== undefined,
+      kind: j.status, valid: j.vector.expected.valid, rules: j.rules, byMessage: message !== undefined, twin,
       hints: new Map(), cases: 0, since: {}, fixtures: {}, members: [], best: j,
     };
     f.cases++;
@@ -303,6 +392,12 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
     const names = f.rules.map((r) => cite(r, rules));
     const releases = Object.entries(f.since).map(([release, n]) => `${n === f.cases ? "all" : `${n} of ${f.cases}`} rely on rules since ${releaseName(release)}`);
     const byRelease = releases.length ? `; ${releases.join(", ")}` : "";
+    if (f.twin) {
+      const what = f.best.vector.family === "descriptions" ? "a description on each operation, fragment and variable definition" : "a comment after each line";
+      return f.kind === "crash"
+        ? `crashes on documents with ${what}, though it answers the same documents without them right${byRelease}`
+        : `answers documents with ${what} otherwise than the same documents without them${byRelease}`;
+    }
     if (f.kind === "crash") {
       return f.valid
         ? `crashes on valid documents instead of accepting them; hint: ${names.join(" or ")}, the rules their invalid siblings break${byRelease}`
@@ -367,9 +462,9 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
         const s = stats.get(rule);
         return {
           id: checkId(rule),
-          title: section(rules[rule]).title,
-          level: "MUST",
-          spec: [section(rules[rule])],
+          title: TITLE[rule] ?? section(rules[rule]).title,
+          level: levelOf(rule),
+          spec: (SPEC[rule] ?? [rules[rule]]).map(section),
           status: status(s),
           cases: s.cases,
           failing: s.failing,
@@ -390,12 +485,55 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
         basis:
           '§5 has no sentence that requires accepting; it only says "operation execution should only occur for valid requests". The requirement to go on comes from §6.1, which executes a request ("The result of the request is determined by the result of executing this operation"), and §6.1.1, which fails it only for validation errors: "If validation errors are known, they should be reported in the list of "errors" in the response and the request must fail without operation execution." A document that satisfies every rule of §5 has none, so rejecting it applies a rule the spec doesn\'t have.',
       },
+      {
+        id: INERT.id,
+        title: INERT.title,
+        level: INERT.level,
+        spec: INERT.spec.map(section),
+        status: inert.failing > 0 ? "fail" : inert.cases > 0 ? "pass" : "untested",
+        cases: inert.cases,
+        failing: inert.failing,
+        ...(Object.keys(inert.failingSince).length ? { failingSince: inert.failingSince } : {}),
+        basis: INERT.basis,
+      },
+      ...Object.entries(READING_CHECKS).map(([id, c]) => {
+        const r = readings.get(id);
+        const observed = Object.entries(r.observed);
+        return {
+          id,
+          title: c.title,
+          level: "INFO",
+          spec: c.spec.map(section),
+          status: r.cases > 0 ? "pass" : "untested",
+          cases: r.cases,
+          failing: 0,
+          ...(observed.length ? { observed: r.observed, note: observed.map(([label, n]) => `${label}: ${n}`).join("; ") } : {}),
+          basis: c.basis,
+        };
+      }),
     ],
     findings: [...findings.values()]
       .sort((a, b) => b.cases - a.cases)
       .map((f) => {
         const likely = f.kind === "rejected-valid" && evidence(f).likely;
         const crash = f.best.answer instanceof Crash;
+        if (f.twin) {
+          return {
+            ...(crash ? { kind: "crash" } : {}),
+            checks: [DESCRIPTIONS_INERT],
+            summary: summary(f),
+            cases: f.cases,
+            ...(Object.keys(f.since).length ? { since: f.since } : {}),
+            fixtures: f.fixtures,
+            fixture: f.best.vector.family,
+            ...(crash ? { problem: f.best.answer.message } : f.best.answer?.errors?.[0]?.message ? { problem: String(f.best.answer.errors[0].message) } : {}),
+            example: {
+              input: `${failureSince(data, f.best) ? `[since ${releaseName(failureSince(data, f.best))}] ` : ""}${f.best.vector.id}: ${oneLine(f.best.vector.document)}`,
+              response: crash ? crashResponse(f.best.answer) : f.best.answer,
+              expected: `${expected(f.best.vector)}, as for ${f.best.vector.twinOf}, which was answered right`,
+            },
+          };
+        }
         return {
           ...(crash ? { kind: "crash" } : {}),
           checks: f.valid ? [ACCEPTS_VALID] : f.rules.map(checkId),
@@ -512,9 +650,9 @@ export const selfTest = (data, vectors = gradedVectors(data).graded) => {
     // `since`.
     () => {
       const name = "crashes and wrong verdicts by release";
-      const syntax = vectors.find((v) => v.syntax !== undefined);
-      const oneOf = vectors.find((v) => v.syntax === undefined && inputSince(data, v) === "September2025");
-      const plain = vectors.find((v) => v.since && !inputSince(data, v));
+      const syntax = vectors.find((v) => v.syntax !== undefined && v.since && inputSince(data, v) === "September2026" && !v.twinOf);
+      const oneOf = vectors.find((v) => v.syntax === undefined && inputSince(data, v) === "September2025" && !v.twinOf);
+      const plain = vectors.find((v) => v.since && !inputSince(data, v) && !v.twinOf);
       const failingIn = (r) => Object.entries(r.since).filter(([, s]) => s.failing > 0).map(([release, s]) => `${release}:${s.failing}`).join(",");
       for (const [v, crash, want] of [
         [syntax, true, "September2026:1"],
@@ -565,7 +703,8 @@ export const selfTest = (data, vectors = gradedVectors(data).graded) => {
       const answers = vectors.map(() => ({ valid: true }));
       caught(answers, (v) => !v.expected.valid, name);
       const r = report(answers);
-      const spared = r.checks.filter((c) => c.id !== ACCEPTS_VALID && c.cases > 0 && c.status !== "fail");
+      const ruleChecks = new Set(Object.keys(data.rules).map(checkId));
+      const spared = r.checks.filter((c) => ruleChecks.has(c.id) && c.cases > 0 && c.status !== "fail");
       if (spared.length > 0) failures.push(`${name}: rule checks don't fail: ${spared.map((c) => c.id).join(", ")}`);
     },
     // One rejected valid vector is no evidence against its rule.
@@ -611,6 +750,57 @@ export const selfTest = (data, vectors = gradedVectors(data).graded) => {
       if (r.findings.some((f) => f.likelyOverStrict)) failures.push(`${name}: a finding names a rule as likely over-strict`);
     },
   ];
+  // Twins: a description or comment that changes the verdict fails
+  // descriptionsInert and nothing else; a twin answered wrong along with its
+  // original counts against the original's check only; a crash on a twin
+  // with a description counts toward September 2025.
+  const twins = vectors.filter((v) => v.twinOf && graded.has(v.twinOf));
+  controls.push(
+    () => {
+      const name = "descriptions and comments change the verdict";
+      if (twins.length === 0) return failures.push(`${name}: no twin to try`);
+      const answers = vectors.map((v, i) => (v.twinOf ? { valid: !v.expected.valid } : right[i]));
+      caught(answers, (v) => Boolean(v.twinOf), name);
+      const r = report(answers);
+      if (statusOf(r, DESCRIPTIONS_INERT) !== "fail") failures.push(`${name}: ${DESCRIPTIONS_INERT} doesn't fail`);
+      const blamed = r.checks.filter((c) => c.id !== DESCRIPTIONS_INERT && c.status === "fail");
+      if (blamed.length > 0) failures.push(`${name}: other checks fail: ${blamed.map((c) => c.id).join(", ")}`);
+      if (r.findings.some((f) => !f.checks.includes(DESCRIPTIONS_INERT))) failures.push(`${name}: a finding names another check`);
+    },
+    () => {
+      const name = "a twin answered wrong with its original";
+      const twin = twins.find((v) => !v.expected.valid);
+      if (!twin) return failures.push(`${name}: no twin of an invalid vector`);
+      const answers = vectors.map((v, i) => (v === twin || v.id === twin.twinOf ? { valid: true } : right[i]));
+      const r = report(answers);
+      if (statusOf(r, DESCRIPTIONS_INERT) === "fail") failures.push(`${name}: ${DESCRIPTIONS_INERT} fails`);
+      const failed = r.checks.filter((c) => c.status === "fail").map((c) => c.id).sort().join(",");
+      const want = brokenRules(twin).map(checkId).sort().join(",");
+      if (failed !== want) failures.push(`${name}: fails ${failed || "nothing"}, not ${want}`);
+    },
+    () => {
+      const name = "a crash on a twin with a description";
+      const twin = twins.find((v) => v.family === "descriptions" && v.syntaxSince === "September2025");
+      if (!twin) return;
+      const answers = vectors.map((v, i) => (v === twin ? new Crash("Syntax Error: Unexpected description") : right[i]));
+      const r = report(answers);
+      const inert = r.checks.find((c) => c.id === DESCRIPTIONS_INERT);
+      if (inert.status !== "fail" || inert.failingSince?.September2025 !== 1) failures.push(`${name}: ${DESCRIPTIONS_INERT} doesn't count it toward September 2025`);
+      if (r.findings.length !== 1 || r.findings[0].kind !== "crash") failures.push(`${name}: not one crash finding`);
+    },
+    // A SHOULD check that fails fails the run only with --strict.
+    () => {
+      const name = "a SHOULD check fails";
+      const should = Object.keys(data.rules).find((rule) => levelOf(rule) === "SHOULD");
+      const target = should && vectors.find((v) => !v.expected.valid && !v.twinOf && brokenRules(v).join() === should);
+      if (!target) return failures.push(`${name}: no vector of a SHOULD check`);
+      const answers = vectors.map((v, i) => (v === target ? { valid: true } : right[i]));
+      const judged = judge(data, vectors, answers);
+      const lax = buildReport({ data, judged, strict: false, selfTest: true, controls: 0, implementation: "self-test", capabilities: [] });
+      if (statusOf(lax, checkId(should)) !== "fail") failures.push(`${name}: ${checkId(should)} doesn't fail`);
+      if (!runOk(lax, false) || runOk(lax, true)) failures.push(`${name}: the run's verdict doesn't follow --strict`);
+    },
+  );
   for (const control of controls) control();
 
   // The reference's own answers: nothing flagged, and subsumed rules
@@ -623,12 +813,17 @@ export const selfTest = (data, vectors = gradedVectors(data).graded) => {
   return { ok: failures.length === 0, failures, controls: controls.length };
 };
 
+// Whether a report passes: no MUST check fails, nor, with --strict, a
+// SHOULD check. INFO checks never fail.
+const runOk = (report, strict) => report.checks.every((c) => c.status !== "fail" || c.level === "INFO" || (c.level === "SHOULD" && !strict));
+
 // Compares the answers to the graded vectors with the reference, and
-// reports.
-export const check = (data, vectors, answers, { strict = false, log = console.log, implementation = "unknown", capabilities = [], skipped = {} } = {}) => {
+// reports. `informational`: [{ vector, answer }] for the vectors with
+// readings.
+export const check = (data, vectors, answers, { strict = false, log = console.log, implementation = "unknown", capabilities = [], skipped = {}, informational = [] } = {}) => {
   const judged = judge(data, vectors, answers);
   const test = selfTest(data, vectors);
-  const report = buildReport({ data, judged, strict, selfTest: test.ok, controls: test.controls, implementation, capabilities, skipped });
+  const report = buildReport({ data, judged, informational, strict, selfTest: test.ok, controls: test.controls, implementation, capabilities, skipped });
 
   const invalid = judged.filter((j) => !j.vector.expected.valid).length;
   const skippedText = Object.entries(skipped).map(([r, n]) => (r === "unspecified" ? `${n} unspecified` : `${n} need ${r}`)).join(", ");
@@ -654,12 +849,13 @@ export const check = (data, vectors, answers, { strict = false, log = console.lo
   }
   const subsumed = report.checks.filter((c) => c.status === "subsumed");
   if (subsumed.length > 0) log(`~ subsumed, can't pass alone: ${subsumed.map((c) => c.id).join(", ")}`);
+  for (const c of report.checks.filter((x) => x.level === "SHOULD" && x.status === "fail")) log(`~ ${c.id} is a SHOULD: fails the run only with --strict`);
+  for (const c of report.checks.filter((x) => x.level === "INFO" && x.observed)) log(`  ${c.id} (INFO): ${c.note}`);
   const untested = report.checks.filter((c) => c.status === "untested");
   if (untested.length > 0) log(`! untested: ${untested.map((c) => c.id).join(", ")}`);
   if (test.ok) log(`✓ the checker catches all ${test.controls} negative controls`);
   else for (const f of test.failures) log(`✗ self-test: ${f}`);
 
-  // Every check is a MUST, so --strict changes nothing yet.
-  const ok = test.ok && malformed === 0 && report.checks.every((c) => c.status !== "fail");
+  const ok = test.ok && malformed === 0 && runOk(report, strict);
   return { ok, report };
 };

@@ -198,21 +198,61 @@ ${directive.map((f) => `      ${f}`).join("\n")}
 ${fragments(profile, inc, S, missing)}`;
 };
 
-// __type(name: "__Schema")'s fields, each with its type as the Wrapper
-// selection has it.
-export const wrappersQuery = (profile, missing = []) => `query IntrospectionWrappers {
-  wrappers: __type(name: "__Schema") {
+// __type(name: "__Schema")'s fields, or those of a type of the document's
+// (typeName), each with its type as the Wrapper selection has it, `depth`
+// levels of ofType deep.
+export const wrappersQuery = (profile, missing = [], typeName = "__Schema", depth = WRAPPER_DEPTH) => `query IntrospectionWrappers {
+  wrappers: __type(name: ${JSON.stringify(typeName)}) {
     fields {
       name
-      type { ${wrapper(selection(profile, missing), WRAPPER_DEPTH)} }
+      type { ${wrapper(selection(profile, missing), depth)} }
     }
   }
 }
 `;
 
 // [{ alias, name }] → a query with one aliased __type(name:) per lookup.
-export const lookupQuery = (profile, lookups, inc, missing = []) => `query TypeLookup {
-${lookups.map(({ alias, name }) => `  ${alias}: __type(name: ${JSON.stringify(name)}) { ...FullType }`).join("\n")}
+// With `on`, the name of the query root type, the lookups are made inside
+// fragments on it instead (§4.2: the meta-fields "are accessible from the
+// type of the root of a query operation"): the first half in an inline
+// fragment, the rest in a fragment spread.
+export const lookupQuery = (profile, lookups, inc, missing = [], on = undefined) => {
+  const line = ({ alias, name }) => `${alias}: __type(name: ${JSON.stringify(name)}) { ...FullType }`;
+  const half = Math.ceil(lookups.length / 2);
+  const body = on
+    ? `  ... on ${on} {
+${lookups.slice(0, half).map((l) => `    ${line(l)}`).join("\n")}
+  }
+  ...Lookups
 }
 
+fragment Lookups on ${on} {
+${lookups.slice(half).map((l) => `  ${line(l)}`).join("\n")}
+}`
+    : `${lookups.map((l) => `  ${line(l)}`).join("\n")}
+}`;
+  return `query TypeLookup {
+${body}
+
 ${fragments(profile, inc, selection(profile, missing), missing)}`;
+};
+
+// A request that uses the built-in directive `directive` ("skip" or
+// "include") on two aliases of the root's __typename, one it keeps and one
+// it leaves out, and asks for the directives' names in the same request
+// (data.mjs probeCaseOf). It selects nothing a release after October 2021
+// added, so every profile asks the same.
+export const probeQuery = (directive) => {
+  const [keep, drop] = directive === "skip" ? ["false", "true"] : ["true", "false"];
+  return `query DirectiveProbe {
+  __typename
+  kept: __typename @${directive}(if: ${keep})
+  dropped: __typename @${directive}(if: ${drop})
+  __schema {
+    directives {
+      name
+    }
+  }
+}
+`;
+};

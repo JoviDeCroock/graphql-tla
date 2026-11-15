@@ -61,6 +61,22 @@ export const CHECKS = [
       "§2.10.4's Static Semantics give a StringValue's Unicode text: each escape sequence's value, and for a block string BlockStringValue(), which removes the common indentation and the leading and trailing blank lines. They have no key word, but they are written as algorithm steps (\"Return the Unicode text by ...\"), which Appendix A gives the level of the algorithm, they define the value §3.5.3 then accepts, and September 2025 and September 2026 say \"Errors encountered during this evaluation ... must result in a parsing error\". The vectors use only escapes and block strings whose text is the same in every edition (no braced or surrogate pair escapes). One holds a raw U+1F600, which October 2021's SourceCharacter (U+0009, U+000A, U+000D, U+0020–U+FFFF), read literally as the parse area reads it, leaves out: that vector relies on September 2025's SourceCharacter, any Unicode scalar value (`since`). Expected texts come from Lexer.tla.",
   },
   {
+    id: "descriptionsInert",
+    title: "Descriptions and comments in an executable document don't change the response",
+    level: "MUST",
+    spec: ["2.2"],
+    basis:
+      "§2.2: \"Descriptions in GraphQL executable documents are purely for documentation purposes. They MUST NOT affect the execution, validation, or response of a GraphQL document. It is safe to remove all descriptions and comments from executable documents without changing their behavior or results.\" §6 repeats it in a Note. Each vector is the twin of the same request without the descriptions and comments, and must get the same answer; it rests on that twin (restsOn), so where both fail the same way the failure counts where the twin's does. Descriptions on operations and variable definitions are new in September 2025 (`since`): October 2021's grammar has no Description there, so it can't read those documents. Comments (§2.1.3) are in every edition.",
+  },
+  {
+    id: "syntacticOrder",
+    title: "Arguments and input object fields in another order mean the same",
+    level: "MUST",
+    spec: ["2.7", "2.10.8"],
+    basis:
+      "§2.7: \"Arguments may be provided in any syntactic order and maintain identical semantic meaning.\" §2.10.8: \"Input object fields may be provided in any syntactic order and maintain identical semantic meaning.\" Descriptive assertions, which Appendix A counts as requirements. A JSON variable's map is an unordered map (§3.10), so the order of its keys doesn't matter either. Each vector is the twin of the same request in the written order, and rests on it (restsOn). October 2021 says the same.",
+  },
+  {
     id: "boolean",
     title: "Boolean accepts only boolean input values",
     level: "MUST",
@@ -155,12 +171,73 @@ export const CHECKS = [
       "The input coercion rules call the failure a request error (§3.5: \"If an input value does not match a coercion rule, a request error must be raised\"; §3.12: \"... then a request error must be raised\"). CoerceArgumentValues says \"raise an execution error\", and September 2026 settles the conflict with a SHOULD (September 2025 has the same sentence): \"Any request error raised as a result of input coercion during CoerceArgumentValues() should be treated instead as an execution error.\" So a request error where the reference gives a field error fails only this SHOULD. Except where §3.10 or §3.10.1 itself says \"an execution error must be raised\" (a variable in an input object literal whose runtime value is null at a Non-Null field; a OneOf literal whose one entry is a variable with a null or no runtime value): those vectors (`executionErrorRequired`) fail their own check. October 2021's CoerceArgumentValues says \"raise a field error\" and has no such sentence, while its §3.5 and §3.12 still say a request error must be raised; the kit takes the weaker reading there too, the same SHOULD.",
   },
   {
+    id: "argumentsBelowRoot",
+    title: "An argument error below the root nulls the field's position and propagates",
+    level: "MUST",
+    requires: ["nested-fields"],
+    spec: ["6.4.4", "6.4.1", "7.1.4"],
+    basis:
+      "For the vectors with fields below the root (capability nested-fields). CoerceArgumentValues raises an execution error, and §6.4.4: \"If an execution error is raised while resolving a field (either directly or nested inside any lists), it is handled as though the response position at which the error occurred resolved to null, and the error must be added to the errors list\"; \"Since Non-Null response positions cannot be null, execution errors are propagated to be handled by the parent response position\"; \"If a List type wraps a Non-Null type, and one of the response position elements of that list resolves to null, then the entire list response position must resolve to null.\" So the data must show null at the field's position, or at its nearest nullable parent's, one error per position (each item of a list is one), and no call of the field's resolver. Where every position up to the root is Non-Null, \"the data entry in the execution result should be null\": the reference gives null there, and no other data can be right. The error's path is fieldErrorPath's (§7.1.6), including list indices and aliases (§7.1.4: \"If a path segment is associated with an aliased field it must use the aliased name\"). A value below the root is graded the same way: one call at each position, with the coerced arguments. October 2021 says the same with \"field error\".",
+  },
+  {
+    id: "sourceStream",
+    title: "CreateSourceEventStream: the source stream's resolver gets the field's coerced arguments",
+    level: "MUST",
+    requires: ["subscription-source"],
+    spec: ["6.2.3.1"],
+    basis:
+      "For the subscription vectors (capability subscription-source). CreateSourceEventStream: \"Let fieldName be the name of the first entry in fields. Note: This value is unaffected if an alias is used.\", \"Let argumentValues be the result of CoerceArgumentValues(subscriptionType, field, variableValues)\", and ResolveFieldEventStream: \"Return the result of calling resolver, providing rootValue and argumentValues.\" Then each event executes the root selection set (§6.2.3.2), so the response stream's first result holds the field under its response name, and the field's resolver gets the same coerced arguments. Algorithm steps have the algorithm's level (Appendix A). October 2021 says the same.",
+  },
+  {
+    id: "sourceStreamError",
+    title: "An error while establishing a subscription's source stream is a request error",
+    level: "MUST",
+    requires: ["subscription-source"],
+    spec: ["7.1.6", "6.2.3.1"],
+    basis:
+      "New in September 2026. §6.2: \"Operation execution begins when the execution algorithm for the operation type is invoked: ExecuteQuery() for query operations, ExecuteMutation() for mutation operations, and Subscribe() for subscription operations.\" ExecuteRequest runs CreateSourceEventStream before Subscribe, and §7.1.5: \"If an error was raised before operation execution begins, the response must be a request error result which will result in no response data.\" §7.1.6 lists among request errors a \"failure to establish a source event stream for a subscription operation\", and §6.2.3.1's Note says \"an error raised here will be a request error\". The vectors have the source stream's resolver raise (`subscribe: \"raise\"`). September 2025 runs CreateSourceEventStream inside Subscribe and doesn't list it, so these vectors have `since` September 2026.",
+  },
+  {
+    id: "sourceStreamArguments",
+    title: "A subscription root field's argument that can't be coerced: request error or execution error",
+    level: "INFO",
+    requires: ["subscription-source"],
+    spec: ["6.2.3.1", "6.4.1"],
+    basis:
+      "The text contradicts itself here. CoerceArgumentValues, which CreateSourceEventStream calls, says \"raise an execution error\", and §6.4.1: \"Any request error raised as a result of input coercion during CoerceArgumentValues() should be treated instead as an execution error.\" But it runs before operation execution begins, and §7.1.5 says \"If an error was raised before operation execution begins, the response must be a request error result\"; §6.2.3.1's Note: \"The call to CreateSourceEventStream() occurs before operation execution begins, and thus an error raised here will be a request error.\" Coercion.tla gives the request error by default and the execution error under its sourceArgumentsFieldError reading; both pass, and the report records which happened. Accepting the value fails the type's own check (`nonNull`, `int`). New in September 2026 (`since`).",
+  },
+  {
+    id: "unvalidatedBranches",
+    title: "Selections only an invalid document has: a missing fragment and an undefined field are skipped, a second subscription root field is a request error",
+    level: "MUST",
+    requires: ["unvalidated"],
+    spec: ["6.3.2", "6.3.3", "6.2.3.1"],
+    basis:
+      "For adapters with `unvalidated` (others get these as invalid documents, under invalidNotExecuted or onlyValidExecuted). CollectFields: \"If no such fragment exists, continue with the next selection in selectionSet.\" ExecuteCollectedFields: \"Let fieldType be the return type defined for the field fieldName of objectType. If fieldType is defined: ...\", so a field the type doesn't define has no entry in the result. CreateSourceEventStream: \"If collectedFieldsMap does not have exactly one entry, raise a request error.\" CollectFields collects every field selection, defined or not. Algorithm steps have the algorithm's level (Appendix A). October 2021 has the same steps.",
+  },
+  {
     id: "getOperation",
     title: "GetOperation: the operation operationName names, or the only one, else a request error",
     level: "MUST",
     spec: ["6.1"],
     basis:
       "GetOperation: \"If operationName is null: If document contains exactly one operation. Return the Operation contained in the document. Otherwise raise a request error requiring operationName.\" and \"Let operation be the Operation named operationName in document. If operation was not found, raise a request error.\" Includes a mutation running on the mutation root type, and only the selected operation's variables being coerced. Algorithm steps have the algorithm's level (Appendix A). October 2021 says the same.",
+  },
+  {
+    id: "notExecutable",
+    title: "A document with a type system definition isn't executed",
+    level: "MUST",
+    spec: ["2.3"],
+    basis:
+      "§2.3: \"Documents are only executable by a GraphQL service if they are ExecutableDocument and contain at least one OperationDefinition. A Document which contains TypeSystemDefinitionOrExtension must not be executed; GraphQL execution services which receive a Document containing these should return a descriptive error.\" and \"GraphQL services which only seek to execute GraphQL requests and not construct a new GraphQL schema may choose to only permit ExecutableDocument.\" So the answer is a request error, whether the service refuses the document at parsing, at validation (§5.1.1 Executable Definitions) or before executing it, and even where it also holds an operation that would run. Graded under this check for every adapter, validating or not: the sentence doesn't depend on validation. October 2021 says the same.",
+  },
+  {
+    id: "syntaxError",
+    title: "A document that doesn't parse is a request error",
+    level: "MUST",
+    spec: ["7.1.6", "6.1"],
+    basis:
+      "§6.1: \"To execute a request, the executor must have a parsed Document\". §7.1.6: \"Typically raised before operation execution begins, a request error may occur due to a parse grammar or validation error in the Document\", and \"If a request error is raised, the response must be a request error result. The data entry in this map must not be present, the errors entry must include the error, and request execution should be halted.\" Parser.tla says which documents don't parse. Graded for every adapter, validating or not: no answer but a request error passes. October 2021 says the same (§7.1.2: a request error \"is raised before execution begins\", and the data entry \"must not be present\").",
   },
   {
     id: "invalidNotExecuted",
@@ -227,6 +304,14 @@ export const CHECKS = [
       "The same check as execution's. September 2026, §7.1.1: \"If any errors are raised during operation execution, the execution result must contain an entry with key {\"errors\"}. The value of this entry must be a non-empty list ... If the request completed without raising any errors, this entry must not be present.\" October 2021, §7.1: \"If the request raised any errors, the response map must contain an entry with key errors. ... If the request completed without raising any errors, this entry must not be present.\" Its §7.1.2 also says \"should not be present\", but the §7.1 MUST is the sentence about the entry, so the check is a MUST in every edition, as in execution. September 2025 says the same (\"If execution raised any errors ...\"). A value with \"errors\": [] is still a value for the vector's own check, and fails this one. Every vector exercises it.",
   },
   {
+    id: "resultMap",
+    title: "The response is a map",
+    level: "MUST",
+    spec: ["7.1.1", "7.1.3"],
+    basis:
+      "§7.1.1: \"An execution result must be a map.\" §7.1.3: \"A request error result must be a map.\" A result whose `response` is a list, a string, a number, a boolean or null fails here, rather than being taken as an adapter that doesn't follow the result format. Execution's check of the same name. October 2021, §7.1: \"A response to a GraphQL request must be a map.\" Every vector exercises it.",
+  },
+  {
     id: "additionalEntries",
     title: "The result has no entries besides data, errors and extensions",
     level: "MUST",
@@ -258,6 +343,15 @@ export const CHECKS = [
     basis:
       "Not a GraphQL rule: RFC 8259 §6 lets a JSON parser limit the range and precision of numbers. Vectors whose answer depends on that count here, never against Float or ID, unless the adapter claims exact-numbers.",
   },
+  {
+    id: "requestExtensions",
+    title: "A request's extensions with keys of no meaning to the service leave the response as it is",
+    level: "INFO",
+    requires: ["request-extensions"],
+    spec: ["6.1"],
+    basis:
+      "§6: a request's \"extensions (optional): A map reserved for implementation-specific additional information.\" and \"If present, extensions must be a map, but there are no additional restrictions on its contents.\" The spec gives the entries no meaning and lets an implementation give them one, so it doesn't require a service to ignore them. The vectors (capability request-extensions) send keys under a prefix no service uses, each the twin of the same request without extensions, and record whether the answer stays the same. It never fails the run. October 2021 has no request extensions.",
+  },
 ];
 
 // What the spec leaves to the implementation (specs/Coercion.tla's
@@ -281,6 +375,11 @@ export const POLICIES = {
   // default reading uses the value as it is (§6.4.1's Note); this one
   // wraps it, as §3.11 wraps any other such value.
   variableItemWrapped: { level: "unspecified" },
+  // A subscription root field's argument that can't be coerced: the spec
+  // contradicts itself (sourceStreamArguments). The default reading is a
+  // request error (§7.1.5); this one, the execution error
+  // CoerceArgumentValues raises.
+  sourceArgumentsFieldError: { level: "unspecified" },
   // October 2021's answer to a vector whose rule is new since then
   // (`since`; Coercion.tla's coerceDefaults switch): recognised, but it
   // fails the vector's check, since such vectors are graded like any

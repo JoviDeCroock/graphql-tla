@@ -61,6 +61,35 @@ export default [
     property: "ResponseIsValid",
   },
   {
+    name: "merges only the first field's sub-selection into the collected subfields",
+    find: "collect(objectType, fields[i].selectionSet, 0, { groups, visited: new Set<string>() }).groups,",
+    replace: "collect(objectType, fields[0].selectionSet, 0, { groups, visited: new Set<string>() }).groups,",
+    module,
+    property: "ResponseIsValid",
+  },
+  {
+    name: "applies a fragment on a union to every object type",
+    find: "    : fx().schema.types.get(condition)!.possibleTypes.has(objectType);",
+    replace:
+      '    : fx().schema.types.get(condition)!.kind === "union" || fx().schema.types.get(condition)!.possibleTypes.has(objectType);',
+    module,
+    property: "ResponseIsValid",
+  },
+  {
+    name: "reads a variable in @skip or @include as false",
+    find: "condition.kind === \"literal\" ? condition.value : fx().variables.get(condition.variable)!;",
+    replace: "condition.kind === \"literal\" ? condition.value : false;",
+    module,
+    property: "ResponseIsValid",
+  },
+  {
+    name: "skips an inline fragment without a type condition",
+    find: "? selection.typeCondition !== \"\" && !applies(objectType, selection.typeCondition)",
+    replace: "? selection.typeCondition === \"\" || !applies(objectType, selection.typeCondition)",
+    module,
+    property: "ResponseIsValid",
+  },
+  {
     name: "gives a repeated response key a second entry instead of merging",
     find: "groups.some((g) => g.key === key)\n    ?",
     replace: "false\n    ?",

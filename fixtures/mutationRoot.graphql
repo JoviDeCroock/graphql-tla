@@ -1,0 +1,52 @@
+# A mutation's root selection set (§6.2.2, §6.3.2, §6.3.4). One field under
+# two response names, as in §6.3.4's changeTheNumber example: each is
+# executed once, serially, in order. `a` is selected again by a fragment
+# spread, and is still executed once. A root field returns a list, whose
+# items complete before the next root field starts. __typename at the
+# mutation root, aliased or not, names the mutation root type (§4.1). Root
+# fields that @skip and @include leave out must not be executed at all.
+# maxListLength: 1
+# spec: 6.2.2, 6.3.2, 6.3.4, 4.1, 6.4.4
+
+type Query {
+  ok: Boolean
+}
+
+type Mutation {
+  like: Payload
+  likeAll: [Int!]
+  unlike: Payload
+}
+
+type Payload {
+  likes: Int!
+}
+
+mutation {
+  a: like {
+    likes
+  }
+  b: like {
+    likes
+  }
+  __typename
+  root: __typename
+  ...M
+  unlike @skip(if: true) {
+    likes
+  }
+  ...Unlike @include(if: false)
+}
+
+fragment M on Mutation {
+  a: like {
+    likes
+  }
+  likeAll
+}
+
+fragment Unlike on Mutation {
+  unlike {
+    likes
+  }
+}

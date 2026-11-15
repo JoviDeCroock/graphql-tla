@@ -68,14 +68,17 @@ export const positions = (fixture, trace) => {
       }),
     );
 
-  // { type, kinds, names } for a path, or null if the operation doesn't
-  // select it. kinds[i] is "field" or "index"; names[i] is the field's name
-  // where the segment is a response name (an alias, say), and the segment
-  // itself otherwise. __typename has type String!.
+  // { type, kinds, names, nodes } for a path, or null if the operation
+  // doesn't select it. kinds[i] is "field" or "index"; names[i] is the
+  // field's name where the segment is a response name (an alias, say), and
+  // the segment itself otherwise. nodes are the field nodes of the path's
+  // last field segment (several when selections merge), whose `loc` is in
+  // the fixture's document as the kit sends it. __typename has type String!.
   return (path) => {
     let objectType = rootType;
     let sets = [operation.selectionSet];
     let type = null;
+    let fieldNodes = [];
     const kinds = [];
     const names = [];
     for (let i = 0; i < path.length; i++) {
@@ -94,6 +97,7 @@ export const positions = (fixture, trace) => {
       const nodes = fieldsFor(objectType, sets, String(path[i]));
       if (nodes.length === 0) return null;
       const name = nodes[0].name.value;
+      fieldNodes = nodes;
       kinds.push("field");
       names.push(name);
       if (name === "__typename") {
@@ -106,6 +110,13 @@ export const positions = (fixture, trace) => {
       type = field.type;
       sets = nodes.map((n) => n.selectionSet).filter(Boolean);
     }
-    return { type, kinds, names };
+    return { type, kinds, names, nodes: fieldNodes };
   };
+};
+
+// Where a node starts in the document it was parsed from, as §7.1.6
+// locations give it: { line, column }, both from 1.
+export const startOf = (node) => {
+  const { line, column } = graphql.getLocation(node.loc.source, node.loc.start);
+  return { line, column };
 };

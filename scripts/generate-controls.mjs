@@ -8,7 +8,8 @@
 // shortest passing cases its predicates pick, and the cases it makes from
 // them are stored after checking that their report is right. The corpus is
 // committed, so the controls don't depend on the implementation under
-// test. Fixtures outside the spec (error propagation off) give no bases for
+// test. The corpus also keeps the bases kit/execution/protocol-controls.mjs
+// derives its controls from (KEPT_BASES). Fixtures outside the spec (error propagation off) give no bases for
 // controls, since their failures are only informational, but report
 // controls use them.
 //
@@ -43,13 +44,15 @@ adapter.close();
 // Well-formed, passing, distinct cases, shortest first.
 const prepare = (raw) => {
   const result = normalize(byId.get(raw.fixture), raw);
-  return result.problems ? result : { ...result, tla: caseToTla(byId.get(raw.fixture), result.case) };
+  return result.problems || !result.case ? result : { ...result, tla: caseToTla(byId.get(raw.fixture), result.case) };
 };
 const seen = new Set();
 const candidates = recorded
   .map((r) => ({ v: CASE_FORMAT, ...r, implementation: undefined }))
   .map((raw) => ({ raw, prepared: prepare(raw) }))
-  .filter(({ prepared }) => !prepared.problems && !seen.has(prepared.tla) && seen.add(prepared.tla))
+  // A subscription stream's lifecycle case has no response for the
+  // reference, so it is no base.
+  .filter(({ prepared }) => !prepared.problems && prepared.tla && !seen.has(prepared.tla) && seen.add(prepared.tla))
   .sort((a, b) => a.raw.trace.length - b.raw.trace.length);
 const verdicts = await evaluate(candidates.map((c) => c.prepared.tla));
 const passingAll = candidates.filter((_, i) => verdicts[i].failures.length === 0).map((c) => c.raw);
@@ -63,7 +66,7 @@ for (const control of CONTROLS) {
     .flatMap((base) => control.make(base, byId.get(base.fixture)).map((variant) => ({ base, broken: { ...base, ...variant } })))
     .slice(0, 40);
   const prepared = tries.map((t) => prepare(t.broken));
-  const evaluated = prepared.filter((p) => !p.problems);
+  const evaluated = prepared.filter((p) => !p.problems && p.tla);
   const results = await evaluate(evaluated.map((p) => p.tla));
   const resultOf = new Map(evaluated.map((p, i) => [p, results[i]]));
   const index = prepared.findIndex((p) => controlCaught(control, p, resultOf.get(p)));
@@ -82,6 +85,30 @@ for (const control of CONTROLS) {
     case: broken,
   });
   console.log(`✓ ${control.name} (${control.clause}), from a ${base.fixture} case`);
+}
+
+// kit/execution/protocol-controls.mjs derives its controls from the
+// corpus's bases, so the corpus keeps a base of each kind it needs, the
+// shortest passing one, if no control's base already is one.
+const isIndex = (segment) => /^(0|[1-9]\d*)$/.test(String(segment));
+const KEPT_BASES = [
+  ["a base whose errors all have locations", (raw) => raw.response.errors?.length > 0 && raw.response.errors.every((e) => e.locations?.length > 0)],
+  [
+    "a query base with a field below the root",
+    (raw, fixture) => fixture.operationType === "query" && raw.trace.some((e) => e.call?.length > 1 && !isIndex(e.call.at(-1))),
+  ],
+  ["a subscription base", (raw, fixture) => fixture.operationType === "subscription" && raw.trace.some((e) => e.call?.length === 1)],
+];
+for (const [name, predicate] of KEPT_BASES) {
+  if (bases.some((raw) => predicate(raw, byId.get(raw.fixture)))) continue;
+  const base = passing.find((raw) => raw.response && predicate(raw, byId.get(raw.fixture)));
+  if (!base) {
+    console.log(`✗ no passing case for ${name} (kit/execution/protocol-controls.mjs)`);
+    process.exitCode = 1;
+    continue;
+  }
+  bases.push(base);
+  console.log(`✓ kept ${name}, from a ${base.fixture} case`);
 }
 
 const reportControls = [];

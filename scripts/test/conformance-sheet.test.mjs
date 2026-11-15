@@ -13,7 +13,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  FORMAT, GRADED, cell, editionName, failsFrom, findingLabels, findingSinceText, fixtureCell, levelText, profileText, reportSinceText, sectionVerdict, sinceText,
+  FORMAT, GRADED, areaChecks, areaOrder, cell, editionName, failsFrom, findingLabels, findingSinceText, fixtureCell, levelText, missingCapabilities, profileText,
+  reportSinceText, sectionVerdict, sinceText,
 } from "../conformance-sheet.mjs";
 
 const check = (id, level, status, extra = {}) => ({ id, level, status, cases: 10, failing: status === "fail" ? 4 : 0, spec: [], ...extra });
@@ -233,6 +234,80 @@ test("the sheet refuses to build from a format 1 report", () => {
     assert.equal(run.status, 1);
     assert.match(run.stderr, /a\.parse\.json: format 1/);
     assert.match(run.stderr, /npm run conformance/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("an untested check names the capabilities it needs that the adapter lacks", () => {
+  const gated = check("streams", "MUST", "untested", { cases: 0, requires: ["subscription-stream"] });
+  assert.equal(cell(gated, { capabilities: ["subscription"] }), "– needs `subscription-stream`");
+  assert.equal(cell(gated, { capabilities: ["subscription-stream"] }), "–");
+  assert.equal(cell(gated), "–");
+  assert.equal(cell(check("p", "MUST", "pass", { requires: ["x"] }), { capabilities: [] }), "✓ 10");
+  assert.deepEqual(missingCapabilities(gated, { capabilities: [] }), ["subscription-stream"]);
+  assert.deepEqual(missingCapabilities({ ...gated, status: "pass" }, { capabilities: [] }), []);
+});
+
+test("an area's checks are every report's, so a check only a newer report has isn't dropped", () => {
+  const older = { checks: [check("a", "MUST", "pass"), check("b", "MUST", "pass")] };
+  const newer = { checks: [check("a", "MUST", "pass"), check("c", "SHOULD", "untested")] };
+  assert.deepEqual(areaChecks([older, newer]).map((c) => c.id), ["a", "b", "c"]);
+  assert.deepEqual(areaChecks([]), []);
+});
+
+test("areas follow kit/areas.mjs, and an area it doesn't list comes last", () => {
+  assert.ok(areaOrder("execution") < areaOrder("parse"));
+  assert.ok(areaOrder("introspect") < areaOrder("coordinate"));
+  assert.equal(areaOrder("not-an-area"), areaOrder("also-not-an-area"));
+  assert.ok(areaOrder("coordinate") < areaOrder("not-an-area"));
+});
+
+// A coordinate report written by the kit's own run, with an adapter that
+// gives the reference's answers, or none for coordinates it can't resolve.
+const coordinateReport = async (answer) => {
+  const { run, loadVectors } = await import("../../kit/coordinate/run.mjs");
+  const { schemas, vectors } = loadVectors();
+  const byRequest = new Map(vectors.map((v) => [`${schemas[v.schema]}\u0000${v.coordinate}`, v]));
+  let pending;
+  const adapter = {
+    name: "Fake coordinates",
+    capabilities: new Set(["coordinate"]),
+    send: (m) => (pending = { type: "result", id: m.id, ...answer(byRequest.get(`${m.sdl}\u0000${m.coordinate}`)) }),
+    next: async () => pending,
+  };
+  return run({ adapter, strict: true, log: () => {} });
+};
+const reference = (v) => (!v.expected.ok ? { ok: false } : v.expected.error ? { ok: true, error: "raised" } : { ok: true, resolved: v.expected.resolved ?? null });
+
+test("a new area flows from the kit's report into the sheet, and an implementation without it shows n/a", async () => {
+  const right = await coordinateReport(reference);
+  assert.equal(right.ok, true);
+  assert.equal(right.report.area, "coordinate");
+  assert.ok(right.report.checks.every((c) => c.status === "pass" && c.since === "September2025"));
+  // An implementation that never raises: missingContainers fails, and the
+  // informational containerKind passes with "no element".
+  const lenient = await coordinateReport((v) => (v.expected.error ? { ok: true, resolved: null } : reference(v)));
+  assert.equal(lenient.ok, false);
+  const failing = lenient.report.checks.find((c) => c.id === "missingContainers");
+  assert.equal(failing.status, "fail");
+  assert.deepEqual(failing.failingSince, { September2025: failing.failing });
+  assert.equal(lenient.report.checks.find((c) => c.id === "containerKind").status, "pass");
+  const dir = sheetDir([
+    ["a.coordinate.json", { ...lenient.report, ok: lenient.ok }],
+    ["a.parse.json", report("a", "parse", { checks: [{ ...check("names", "MUST", "pass"), spec: [section("2.1.8", "Names")] }] })],
+    ["b.parse.json", report("b", "parse", { checks: [{ ...check("names", "MUST", "pass"), spec: [section("2.1.8", "Names")] }] })],
+  ]);
+  try {
+    const built = build(dir);
+    assert.equal(built.status, 0, built.stderr);
+    const sheet = readFileSync(join(dir, "README.md"), "utf8");
+    const page = readFileSync(join(dir, "a.md"), "utf8");
+    assert.ok(sheet.indexOf("## Parse: each check") < sheet.indexOf("## Coordinate: each check"));
+    assert.match(sheet, /\| A coordinate whose type, field or directive isn't in the schema raises an error \(`missingContainers`\) \| MUST \(since September 2025\) \| \[§2\.14\]\([^)]+\) \| ✗ \d+\/\d+ \(all since September 2025\) \| n\/a \|/);
+    assert.match(sheet, /✗ \(since September 2025\) `missingContainers`/);
+    assert.match(page, /## Coordinate/);
+    assert.match(page, /input: {4}\[since September 2025\] /);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

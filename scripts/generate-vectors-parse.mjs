@@ -91,6 +91,21 @@ const byNumber = (a, b) => {
 };
 const bySize = (a, b) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0);
 
+// A candidate is read as one of Parser.tla's four document grammars. Its key
+// is its source for an ExecutableDocument, and "\0<grammar>\0<source>" for
+// the others. No source of an executable candidate starts with U+0000.
+const GRAMMARS = ["executable", "typeSystem", "typeSystemExtension", "document"];
+const keyOf = (source, grammar = "executable") => {
+  if (!GRAMMARS.includes(grammar)) throw new Error(`no grammar ${grammar}`);
+  if (source.startsWith("\u0000")) throw new Error(`a source starts with U+0000: ${JSON.stringify(source)}`);
+  return grammar === "executable" ? source : `\u0000${grammar}\u0000${source}`;
+};
+const unkey = (key) => {
+  if (!key.startsWith("\u0000")) return { source: key, grammar: "executable" };
+  const end = key.indexOf("\u0000", 1);
+  return { grammar: key.slice(1, end), source: key.slice(end + 1) };
+};
+
 // ---------------------------------------------------------------------------
 // Alphabets, from the differential
 
@@ -190,7 +205,7 @@ const wordFamily = (name, atoms, maxLength, render, options) => ({
   atoms,
   candidates: [...words(atoms, maxLength), ...(options.extra ?? [])]
     .filter((units) => !options.keep || options.keep(units))
-    .map((units) => ({ units, source: render(units.join(options.joiner ?? "")) })),
+    .map((units) => ({ units, source: keyOf(render(units.join(options.joiner ?? "")), options.grammar) })),
   ...options,
 });
 
@@ -430,7 +445,7 @@ const ownerOf = (doc, path) => {
 const deletedOf = (doc, path) => {
   for (let i = path.length - 1; i >= 0; i--) {
     const n = doc.nodes[path[i]];
-    if (n.section === "2.2" && n.size === 1) return ownerOf(doc, path.slice(0, i));
+    if (isDescriptionSection(n.section) && n.size === 1) return ownerOf(doc, path.slice(0, i));
     if (n.keep || n.size > 1) return n.section;
   }
   return "2.3";
@@ -443,7 +458,10 @@ const commonOf = (doc, a, b) => {
 };
 
 // The differential's one-token mutations, with the section each is about.
-const mutate = ({ int, pick }, doc) => {
+// A type system document (below) has its own pool of tokens, and a string
+// inserted before one of its definitions is a description of §3.2.
+const isDescriptionSection = (s) => s === "2.2" || s === "3.2";
+const mutate = ({ int, pick }, doc, { pool = TOKEN_POOL, descriptionAt = () => "2.2", documentSection = "2.3" } = {}) => {
   const tokens = doc.tokens.map((t) => ({ ...t }));
   const i = int(tokens.length);
   const insert = (at, text) => {
@@ -455,12 +473,12 @@ const mutate = ({ int, pick }, doc) => {
   // the end: as in `"d" {a}`, the query shorthand takes none.
   const isString = (text) => text.startsWith('"');
   const definitionAt = (j) => j === doc.tokens.length || j === 0 || doc.tokens[j - 1].path[1] !== doc.tokens[j].path[1];
-  const afterDescription = (j) => j > 0 && doc.nodes[doc.tokens[j - 1].path.at(-1)].section === "2.2";
+  const afterDescription = (j) => j > 0 && isDescriptionSection(doc.nodes[doc.tokens[j - 1].path.at(-1)].section);
   const between = (j, text) =>
     isString(text) && (definitionAt(j) || afterDescription(j))
-      ? "2.2"
+      ? descriptionAt(j)
       : j === 0 || j === doc.tokens.length
-        ? "2.3"
+        ? documentSection
         : commonOf(doc, doc.tokens[j - 1], doc.tokens[j]);
   switch (int(5)) {
     case 0: {
@@ -478,12 +496,12 @@ const mutate = ({ int, pick }, doc) => {
       return { tokens, section: commonOf(doc, doc.tokens[i], doc.tokens[i + 1]), kind: "swap", unit: `${doc.tokens[i].text} ${doc.tokens[i + 1].text}` };
     }
     case 3: {
-      const text = pick(TOKEN_POOL);
+      const text = pick(pool);
       insert(i, text);
       return { tokens, section: between(i, text), kind: "insert", unit: text };
     }
     default: {
-      const text = pick(TOKEN_POOL);
+      const text = pick(pool);
       if (text === tokens[i].text) return null;
       const unit = `${tokens[i].text} -> ${text}`;
       tokens[i].text = text;
@@ -493,6 +511,7 @@ const mutate = ({ int, pick }, doc) => {
 };
 
 const DOCUMENTS = 3000;
+const SDL_PAIRS_PER_SECTION = 5;
 const MUTATIONS = 3;
 // Longer documents make pairs that are hard to read.
 const MAX_TOKENS = 24;
@@ -514,6 +533,290 @@ const randomDocuments = () => {
   }
   return out;
 };
+
+// ---------------------------------------------------------------------------
+// Type system documents (§3), read as the grammar each names: a
+// TypeSystemDocument ("typeSystem"), a TypeSystemExtensionDocument
+// ("typeSystemExtension") or a Document ("document"). Random ones, with each
+// token tagged with its productions as above, and one-token mutations of
+// them.
+
+const SDL_NAMES = ["T", "a", "type", "on", "query", "extend", "implements", "repeatable", "schema", "input", "Int"];
+const ENUM_VALUES = ["A", "B", "on", "type", "TRUE", "extend"];
+const LOCATIONS = ["FIELD", "QUERY", "OBJECT", "FIELD_DEFINITION", "ENUM_VALUE", "SCHEMA", "INPUT_OBJECT", "ARGUMENT_DEFINITION"];
+const SDL_POOL = [
+  "{", "}", "(", ")", ":", "@", "=", "|", "&", "!", "[", "]", "$", "type", "extend", "implements", "on", "repeatable",
+  "FIELD", "T", '"s"', "1", "true", "null", "schema", "query", "directive", "scalar", "enum", "input", "union", "interface",
+];
+// No Byte Order Mark: its pairs are the executable documents'.
+const SDL_SEPARATORS = [" ", " ", " ", ",", "\n", "\t", " #c\n", "\r\n"];
+const SDL_GRAMMARS = ["typeSystem", "typeSystem", "typeSystemExtension", "typeSystemExtension", "document"];
+
+const sdlDocument = ({ int, pick, chance }, grammar) => {
+  const nodes = [];
+  const node = (sectionNumber, keep, parts) => {
+    const id = nodes.push({ section: sectionNumber, keep, size: 0 }) - 1;
+    const tokens = parts.flatMap((p) => (typeof p === "string" ? [{ text: p, path: [] }] : p));
+    for (const t of tokens) t.path.unshift(id);
+    nodes[id].size = tokens.length;
+    return tokens;
+  };
+  const T = (s, ...parts) => node(s, false, parts);
+  const K = (s, ...parts) => node(s, true, parts);
+  const name = () => pick(SDL_NAMES);
+  const optional = (p, make) => (chance(p) ? make() : []);
+  // Values and directives are [Const] throughout the type system.
+  const value = (depth) => {
+    const kinds = ["int", "float", "string", "bool", "null", "enum"];
+    if (depth < 2) kinds.push("list", "object");
+    const inner = (() => {
+      switch (pick(kinds)) {
+        case "int": return T("2.10.1", pick(["0", "-1", "42"]));
+        case "float": return T("2.10.2", pick(["1.5", "1e3"]));
+        case "string": return T("2.10.4", pick(STRINGS));
+        case "bool": return T("2.10.3", pick(["true", "false"]));
+        case "null": return T("2.10.5", "null");
+        case "enum": return T("2.10.6", pick(["RED", "on", "type"]));
+        case "list": return T("2.10.7", "[", ...range(int(3)).map(() => value(depth + 1)), "]");
+        default: return T("2.10.8", "{", ...range(int(3)).map(() => T("2.10.8", name(), ":", value(depth + 1))), "}");
+      }
+    })();
+    return K("2.10", inner);
+  };
+  const args = () => optional(0.3, () => T("2.7", "(", ...range(1 + int(2)).map(() => T("2.7", name(), ":", value(0))), ")"));
+  const directive = () => T("2.13", "@", name(), args());
+  const directives = () => range(chance(0.3) ? 1 + int(2) : 0).flatMap(directive);
+  const someDirectives = () => range(1 + int(2)).flatMap(directive);
+  const type = (depth) => {
+    const base = depth < 2 && chance(0.3) ? T("2.12", "[", type(depth + 1), "]") : T("2.12", pick(["Int", "T", "on"]));
+    return chance(0.4) ? T("2.12", base, "!") : base;
+  };
+  const description = () => optional(0.25, () => K("3.2", pick(STRINGS)));
+  const inputValue = (s) => T(s, description(), name(), ":", K("2.12", type(0)), optional(0.3, () => T(s, "=", value(0))), directives());
+  const argumentsDefinition = () => optional(0.3, () => T("3.6.1", "(", ...range(1 + int(2)).map(() => inputValue("3.6.1")), ")"));
+  const fields = (s) =>
+    T(s, "{", ...range(1 + int(2)).map(() => T(s, description(), name(), argumentsDefinition(), ":", K("2.12", type(0)), directives())), "}");
+  const implementsInterfaces = (s) => T(s, "implements", chance(0.3) ? "&" : [], name(), ...range(int(2)).flatMap(() => ["&", name()]));
+  const roots = (s) => T(s, "{", ...range(1 + int(2)).map(() => T(s, pick(["query", "mutation", "subscription"]), ":", name())), "}");
+  const members = (s) => T(s, "=", chance(0.3) ? "|" : [], name(), ...range(int(3)).flatMap(() => ["|", name()]));
+  const enumValues = (s) => T(s, "{", ...range(1 + int(2)).map(() => T(s, description(), pick(ENUM_VALUES), directives())), "}");
+  const inputFields = (s) => T(s, "{", ...range(1 + int(2)).map(() => inputValue(s)), "}");
+  const locations = () => T("3.13", chance(0.3) ? "|" : [], pick(LOCATIONS), ...range(int(3)).flatMap(() => ["|", pick(LOCATIONS)]));
+  const definition = () => {
+    switch (int(8)) {
+      case 0: return T("3.3", description(), "schema", directives(), roots("3.3"));
+      case 1: return T("3.5", description(), "scalar", name(), directives());
+      case 2: return T("3.6", description(), "type", name(), optional(0.4, () => implementsInterfaces("3.6")), directives(), optional(0.7, () => fields("3.6")));
+      case 3: return T("3.7", description(), "interface", name(), optional(0.3, () => implementsInterfaces("3.7")), directives(), optional(0.7, () => fields("3.7")));
+      case 4: return T("3.8", description(), "union", name(), directives(), optional(0.8, () => members("3.8")));
+      case 5: return T("3.9", description(), "enum", name(), directives(), optional(0.8, () => enumValues("3.9")));
+      case 6: return T("3.10", description(), "input", name(), directives(), optional(0.8, () => inputFields("3.10")));
+      // Directives on a directive definition are new in September 2026.
+      default:
+        return T("3.13", description(), "directive", "@", name(), argumentsDefinition(), optional(0.1, someDirectives), chance(0.3) ? "repeatable" : [], "on", locations());
+    }
+  };
+  // Each extension adds something: the alternatives without directives or
+  // a body require the other.
+  const extension = () => {
+    const k = int(8);
+    if (k === 0) {
+      const withRoots = chance(0.5);
+      return T("3.3.2", "extend", "schema", withRoots ? directives() : someDirectives(), withRoots ? roots("3.3.2") : []);
+    }
+    if (k === 1) return T("3.5.6", "extend", "scalar", name(), someDirectives());
+    if (k === 2 || k === 3) {
+      const s = k === 2 ? "3.6.3" : "3.7.1";
+      const adds = [chance(0.4), chance(0.4), chance(0.5)];
+      if (!adds.some(Boolean)) adds[int(3)] = true;
+      return T(s, "extend", k === 2 ? "type" : "interface", name(), adds[0] ? implementsInterfaces(s) : [], adds[1] ? someDirectives() : [], adds[2] ? fields(s) : []);
+    }
+    if (k === 7) return T("3.13.6", "extend", "directive", "@", name(), someDirectives());
+    const [s, keyword, body] = [
+      ["3.8.1", "union", members],
+      ["3.9.1", "enum", enumValues],
+      ["3.10.2", "input", inputFields],
+    ][k - 4];
+    const withBody = chance(0.6);
+    return T(s, "extend", keyword, name(), withBody ? directives() : someDirectives(), withBody ? body(s) : []);
+  };
+  // Executable definitions in a Document always start with a keyword, so
+  // none is a query shorthand after a definition without its body, which
+  // [lookahead != {] rules out.
+  const executable = () =>
+    chance(0.5)
+      ? T("2.4", "query", T("2.5", "{", name(), "}"))
+      : T("2.9", "fragment", pick(["F", "type"]), T("2.9.1", "on", "T"), T("2.5", "{", name(), "}"));
+  const tokens = T(
+    grammar === "document" ? "2.3" : "3.1",
+    ...range(1 + int(3)).map(() => {
+      if (grammar === "document" && chance(0.3)) return executable();
+      if (grammar !== "typeSystem" && chance(0.4)) return extension();
+      return definition();
+    }),
+  );
+  tokens.forEach((t, i) => (t.sep = i === 0 ? "" : pick(SDL_SEPARATORS)));
+  return { tokens, nodes };
+};
+
+const SDL_DOCUMENTS = 1500;
+const SDL_MAX_TOKENS = 30;
+
+// A string inserted before a definition of a type system document is a
+// description of §3.2, and before an operation or fragment one of §2.2.
+const sdlDescriptionAt = (doc) => (j) => {
+  const next = doc.tokens[j];
+  return next && ["2.4", "2.9"].includes(doc.nodes[next.path[1]].section) ? "2.2" : "3.2";
+};
+
+const sdlDocuments = () => {
+  const rng = random(2);
+  const out = [];
+  while (out.length < SDL_DOCUMENTS) {
+    const grammar = rng.pick(SDL_GRAMMARS);
+    const doc = sdlDocument(rng, grammar);
+    if (doc.tokens.length > SDL_MAX_TOKENS) continue;
+    const base = render(doc.tokens);
+    const mutants = new Map();
+    for (let n = 0; n < MUTATIONS; n++) {
+      const m = mutate(rng, doc, { pool: SDL_POOL, descriptionAt: sdlDescriptionAt(doc), documentSection: grammar === "document" ? "2.3" : "3.1" });
+      if (m) mutants.set(render(m.tokens), m);
+    }
+    mutants.delete(base);
+    out.push({ base: keyOf(base, grammar), mutants: [...mutants].map(([source, m]) => ({ ...m, source: keyOf(source, grammar) })) });
+  }
+  return out;
+};
+
+// Short sequences over a few alphabets of the type system grammar, as for
+// executable documents: where a production has optional and repeated
+// parts, every arrangement of up to a few of them.
+const definitionSection = (key) => {
+  const words = unkey(key).source.split(/\s+/);
+  const keyword = words[0] === "extend" ? words[1] : words[0];
+  const sections = { schema: "3.3", scalar: "3.5", type: "3.6", interface: "3.7", union: "3.8", enum: "3.9", input: "3.10", directive: "3.13" };
+  const extensions = { schema: "3.3.2", scalar: "3.5.6", type: "3.6.3", interface: "3.7.1", union: "3.8.1", enum: "3.9.1", input: "3.10.2", directive: "3.13.6" };
+  return (words[0] === "extend" ? extensions : sections)[keyword] ?? (words[0] === "extend" ? "3.4.3" : "3.1");
+};
+
+const sdlWordFamilies = () => [
+  wordFamily("union-members", ["=", "|", "A", "B", "@", "d"], 4, (w) => `union U ${w}`, {
+    grammar: "typeSystem",
+    joiner: " ",
+    tags: (unit) => ({ "@": ["2.13"], d: ["2.13"] })[unit],
+    fallback: "3.8",
+    positives: 1,
+    positive: (units, unit) => ({ "=": ["3.8"], "|": ["3.8"], "@": ["2.13"] })[unit],
+    pairs: 25,
+    perKey: 3,
+  }),
+  wordFamily("implements-interfaces", ["implements", "&", "I", "J", "@", "d", ","], 3, (w) => `type T ${w} { f: Int }`, {
+    grammar: "typeSystem",
+    joiner: " ",
+    tags: (unit) => ({ "@": ["2.13"], d: ["2.13"], ",": ["2.1.4"] })[unit],
+    fallback: "3.6",
+    positives: 1,
+    positive: (units, unit) => ({ implements: ["3.6"], "&": ["3.6"], "@": ["2.13"], ",": ["2.1.4"] })[unit],
+    pairs: 30,
+    perKey: 3,
+  }),
+  // Directives on a directive definition and DIRECTIVE_DEFINITION are new
+  // in September 2026.
+  wordFamily("directive-definitions", ["@", "x", "repeatable", "on", "|", "QUERY", "FOO", "DIRECTIVE_DEFINITION"], 3, (w) => `directive @d ${w} FIELD`, {
+    grammar: "typeSystem",
+    joiner: " ",
+    fallback: "3.13",
+    positives: 1,
+    positive: (units, unit) => ({ "@": ["3.13"], repeatable: ["3.13"], "|": ["3.13"], DIRECTIVE_DEFINITION: ["3.13"] })[unit],
+    pairs: 30,
+    perKey: 3,
+  }),
+  wordFamily("extensions", ["schema", "type", "union", "directive", "T", "@d", "= A", "{ f: Int }", "{}", "implements I"], 3, (w) => `extend ${w}`, {
+    grammar: "typeSystemExtension",
+    joiner: " ",
+    classify: (key) => [definitionSection(key)],
+    positives: 1,
+    positive: (units) => [definitionSection(keyOf(`extend ${units.join(" ")}`, "typeSystemExtension"))],
+    pairs: 40,
+    perKey: 2,
+  }),
+  wordFamily("enum-values", ["A", "true", "false", "null", "@", "d", '"s"'], 3, (w) => `enum E { ${w} }`, {
+    grammar: "typeSystem",
+    joiner: " ",
+    // EnumValue : Name but not true, false or null (§2.10.6)
+    classify: (key) => [/\b(true|false|null)\b/.test(unkey(key).source) ? "2.10.6" : "3.9"],
+    positives: 1,
+    positive: (units, unit) => ({ A: ["3.9"], "@": ["2.13"], '"s"': ["3.2"] })[unit],
+    pairs: 25,
+    perKey: 3,
+  }),
+];
+
+// ---------------------------------------------------------------------------
+// Raw characters in strings and comments (§2.1 Source Text: any Unicode
+// scalar value is a SourceCharacter): control characters, noncharacters,
+// U+2028, a Byte Order Mark, the last code point. Each is valid inside "…",
+// """…""" and a comment, and starts no token outside them.
+
+const RAW_CHARACTERS = [
+  "\u0000", "\u0001", "\u0008", "\u000B", "\u000C", "\u001F", "\u007F", "\u0080", "\u0085", "\u009F", "­",
+  " ", " ", "", "﷐", "﻿", "￾", "￿", "\u{10FFFF}",
+];
+// Since September 2025: October 2021's SourceCharacter has no control
+// character but tab, LF and CR, and nothing above U+FFFF. Those rest on
+// §2.1 first, where the editions differ.
+const rawSection = (c) => (c.codePointAt(0) < 0x20 || c.codePointAt(0) > 0xffff ? ["2.1", "2.10.4"] : ["2.10.4", "2.1"]);
+const rawCharacters = () =>
+  RAW_CHARACTERS.flatMap((c) => [
+    { accepted: inValue(`"${c}"`), spec: rawSection(c), rejected: c === BOM ? undefined : inValue(c) },
+    { accepted: inValue(`"""${c}"""`), spec: rawSection(c) },
+    { accepted: `{a #${c}\n}`, spec: c.codePointAt(0) < 0x20 || c.codePointAt(0) > 0xffff ? ["2.1", "2.1.3"] : ["2.1.3", "2.1"] },
+  ]);
+
+// A Byte Order Mark at the start of the source, where files have one, and
+// at the end; a comment at the end.
+const BOM_EXAMPLES = [
+  [`${BOM}{a}`, ["2.1.6"]],
+  [`${BOM}# c\n{a}`, ["2.1.6", "2.1.3"]],
+  [`${BOM}${BOM}query {a}`, ["2.1.6"]],
+  [`{a}${BOM}`, ["2.1.6"]],
+  [`${BOM}`, ["2.3", "2.1.6"]],
+  [`${BOM}#{a}`, ["2.1.3", "2.1.6"]],
+  [keyOf(`${BOM}type T`, "typeSystem"), ["2.1.6", "3.6"]],
+];
+
+// ---------------------------------------------------------------------------
+// Crash probes: deep nesting and long tokens. The spec sets no limit on
+// either, and a service may refuse such a document, so these are graded
+// for crashes only: any verdict passes, and an `error` answer fails the
+// check of the section they exercise. Each is one source, with the
+// reference's verdict for the record.
+
+const DEPTH = 1000;
+const LONG = 4000;
+const MANY = 2000;
+const PROBES = [
+  ["2.5", `{${"a{".repeat(DEPTH)}a${"}".repeat(DEPTH)}}`],
+  ["2.5", `{${"a{".repeat(DEPTH)}a`],
+  ["2.9.2", `{${"...{".repeat(DEPTH)}a${"}".repeat(DEPTH)}}`],
+  ["2.10.7", `{a(x: ${"[".repeat(DEPTH)}${"]".repeat(DEPTH)})}`],
+  ["2.10.7", `{a(x: ${"[".repeat(DEPTH)})}`],
+  ["2.10.8", `{a(x: ${"{a: ".repeat(DEPTH)}1${"}".repeat(DEPTH)})}`],
+  ["2.12", `query ($a: ${"[".repeat(DEPTH)}Int${"]".repeat(DEPTH)}) {a}`],
+  ["2.6", `{${"a ".repeat(MANY)}}`],
+  ["2.4", "{a} ".repeat(MANY)],
+  ["2.1.8", `{${"a".repeat(LONG)}}`],
+  ["2.10.4", `{a(x: "${"a".repeat(LONG)}")}`],
+  ["2.10.4", `{a(x: """${"a\n".repeat(LONG / 2)}""")}`],
+  ["2.10.4", `{a(x: "${"\\u0041".repeat(LONG / 6)}")}`],
+  ["2.10.4", `{a(x: "${"a".repeat(LONG)})}`],
+  ["2.1.3", `#${"c".repeat(LONG)}\n{a}`],
+  ["2.10.1", `{a(x: 1${"0".repeat(1000)})}`],
+  ["2.10.2", `{a(x: 1.${"5".repeat(1000)}e${"9".repeat(1000)})}`],
+  ["3.6", keyOf(`type T { ${"f: Int ".repeat(MANY)}}`, "typeSystem")],
+  ["2.12", keyOf(`type T { f: ${"[".repeat(DEPTH)}Int${"]".repeat(DEPTH)} }`, "typeSystem")],
+  ["3.8", keyOf(`union U = ${Array.from({ length: MANY }, () => "A").join(" | ")}`, "typeSystem")],
+];
 
 // ---------------------------------------------------------------------------
 // The hand-written vectors in Lexer.tla and Parser.tla
@@ -582,6 +885,90 @@ const parserExamples = () =>
     })),
   );
 
+
+// Parser.tla's vectors of the other document grammars, and its EdgeVectors,
+// with the section each rests on. A type system vector rests on the section
+// of its definition's keyword (for an extension, of the extended kind),
+// unless listed here, by grammar and source.
+const GRAMMAR_BLOCKS = ["TypeSystemVectors", "ExtensionVectors", "DocumentGrammarVectors"];
+const listed = (section, grammar, sources) => sources.map((source) => [`${grammar}|${source}`, section]);
+const GRAMMAR_SECTIONS = new Map([
+  // TypeSystemDocument : TypeSystemDefinition+ (§3); TypeSystemExtensionDocument (§3.1)
+  ...listed("3.1", "typeSystem", [
+    "scalar S type T { f: S } schema { query: T } directive @d on FIELD", "", "# only a comment", "extend type T @d",
+    "type T extend type T @d", "extend scalar S @d", "type T query {a}",
+  ]),
+  ...listed("3.1", "typeSystemExtension", [
+    "type T { f: Int } extend type T @d scalar S extend scalar S @d", '"d" directive @d on FIELD extend directive @d @x', "",
+    "{a}", "extend type T @d query {a}", "fragment F on T {a}",
+  ]),
+  // Document : Definition+ (§2.3)
+  ...listed("2.3", "document", ["type T { f: Int } query {a}", "{a} type T", "extend type T @d fragment F on T {a} schema { query: T }", '"d" query {a} "e" type T', ""]),
+  ...listed("2.3", "executable", ["type T { f: Int } query {a}"]),
+  // Description : StringValue, on definitions only (§3.2)
+  ...listed("3.2", "typeSystem", [
+    '"d" type T { "e" f("g" a: Int): Int }', '"""d""" interface I "e" union U "f" enum E "g" input In', '"d" "e" scalar S', '"d"',
+    'scalar S "d"', 'type T { f: Int "d" }', 'type T "d" { f: Int }', 'enum E { A "d" }',
+  ]),
+  ...listed("3.2", "typeSystemExtension", ['"d" extend type T @d', '"d" extend schema @d', '"""d""" extend directive @d @x']),
+  ...listed("3.2", "document", ['"d" extend type T @d']),
+  // ArgumentsDefinition : ( InputValueDefinition+ ) (§3.6.1)
+  ...listed("3.6.1", "typeSystem", [
+    "type T { f(): Int }", "type T { f(a): Int }", "type T { f(a: Int =): Int }", 'type T { f(a: Int = 1 @x, b: [String!]! = ["s"]): Int @y }',
+    "type T { f(a: Boolean = true, b: Int = null, c: E = RED, d: I = {k: [1]}): Int }",
+  ]),
+  // Value[Const]: no variables in the type system (§2.10)
+  ...listed("2.10", "typeSystem", [
+    "type T { f(a: Int = $v): Int }", "type T { f(a: [Int] = [$v]): Int }", "type T { f: Int @d(a: $v) }", "type T @d(a: {k: $v})",
+    "input I { a: Int = $v }", "directive @d(a: Int = $v) on FIELD", "scalar S @d(a: $v)", "directive @d @x(b: $v) on FIELD",
+  ]),
+  ...listed("2.10", "typeSystemExtension", ["extend input I { b: Int = $v }", "extend directive @d @x(a: $v)"]),
+  // EnumValue : Name but not true, false or null (§2.10.6)
+  ...listed("2.10.6", "typeSystem", [
+    "enum E { true }", "enum E { false }", "enum E { null }", "enum E { A null }", "enum E { TRUE }", "enum E { True Null FALSE }",
+    "enum E { on extend type query }",
+  ]),
+  ...listed("2.10.6", "typeSystemExtension", ["extend enum E { true }"]),
+  // Type references (§2.12), commas (§2.1.4)
+  ...listed("2.12", "typeSystem", ["type T { f: Int!! }", "type T { f: [Int }"]),
+  ...listed("2.1.4", "typeSystem", ["type T implements I, J { f: Int }", "union U = A, B"]),
+]);
+const EDGE_SECTIONS = new Map([
+  ...["{a} # end", "{a}#", "# c\n{a}\n# d"].map((s) => [s, "2.1.3"]),
+  ...["{a(,)}", "{a @d(,)}", "query (,) {a}", "{a(x: [,], y: {,})}", "{,a,,b,}", "query (,$a: Int,) {a(,x: $a,)}"].map((s) => [s, "2.1.4"]),
+  ["query ($on: Int, $true: Boolean, $null: Int, $query: Int, $fragment: Int) {a(x: $on, y: $true, z: $null)}", "2.11"],
+  ...["{a(x: [true false], y: [null null])}", "{a(x: true false)}", "query ($a: Boolean = true false) {a}"].map((s) => [s, "2.10.3"]),
+  ...["{a(x: null null)}", "query ($a: Int = null, $b: Boolean = false) {a}"].map((s) => [s, "2.10.5"]),
+  ...["{a(x: nul, y: True, z: NULL, w: falsey)}", "{a(x: RED BLUE)}"].map((s) => [s, "2.10.6"]),
+  ["{a(x: {true: false, null: null, on: on})}", "2.10.8"],
+  ...[
+    "scalar S", "enum E { A }", "input I { a: Int }", "union U = A", "interface I", "schema { query: Q }", "directive @d on FIELD",
+    "extend schema @d", "extend directive @d @x", "{a} scalar S",
+  ].map((s) => [s, "2.3"]),
+]);
+
+const grammarExamples = () => {
+  const out = GRAMMAR_BLOCKS.flatMap((name) =>
+    [...block("Parser.tla", name).matchAll(/(?:Accepts|Refuses)\("(\w+)", "((?:[^"\\]|\\.)*)"/g)].map(([, grammar, literal]) => {
+      const [source] = literals(`"${literal}"`, /"((?:[^"\\]|\\.)*)"/g);
+      const key = keyOf(source, grammar);
+      return { key, section: GRAMMAR_SECTIONS.get(`${grammar}|${source}`) ?? definitionSection(key) };
+    }),
+  );
+  const used = new Set(out.map((e) => { const { source, grammar } = unkey(e.key); return `${grammar}|${source}`; }));
+  const stale = [...GRAMMAR_SECTIONS.keys()].filter((k) => !used.has(k));
+  if (stale.length) throw new Error(`GRAMMAR_SECTIONS lists sources Parser.tla doesn't have: ${stale.map((k) => JSON.stringify(k)).join(", ")}`);
+  return out;
+};
+const edgeExamples = () => {
+  const out = literals(block("Parser.tla", "EdgeVectors"), /(?:Parses|Rejects)\("((?:[^"\\]|\\.)*)"/g).map((source) => {
+    if (!EDGE_SECTIONS.has(source)) throw new Error(`no section for Parser.tla's EdgeVectors source ${JSON.stringify(source)}`);
+    return { key: source, section: EDGE_SECTIONS.get(source) };
+  });
+  if (out.length !== EDGE_SECTIONS.size) throw new Error("EDGE_SECTIONS lists sources Parser.tla's EdgeVectors doesn't have");
+  return out;
+};
+
 // ---------------------------------------------------------------------------
 // Evaluating the reference
 
@@ -590,12 +977,17 @@ const text = (s) => `<<${codePoints(s).join(",")}>>`;
 
 // For a lexical rejection, also the index where the failing token starts,
 // found the way LexFrom scans. For a document, whether its tree has an
-// empty selection set or a description, and whether a variable's type names
-// a keyword, such as `$a: on`.
-const moduleFor = (sources) => `---- MODULE ParseVectors ----
+// empty selection set or a description, whether a variable's type names
+// a keyword, such as `$a: on`, and whether it uses the type system grammar
+// new in September 2026: directives on a directive definition or the
+// DIRECTIVE_DEFINITION location, and a directive extension.
+const moduleFor = (keys) => `---- MODULE ParseVectors ----
 EXTENDS Parser, TLC
 
-Sources == <<${sources.map(text).join(",\n")}>>
+Sources == <<${keys
+  .map(unkey)
+  .map(({ source, grammar }) => `[src |-> ${text(source)}, g |-> "${grammar}"]`)
+  .join(",\n")}>>
 
 RECURSIVE FailingToken(_, _)
 FailingToken(src, i) ==
@@ -627,30 +1019,56 @@ HasKeywordType(n) ==
   \\/ n.kind = "VariableDefinition" /\\ NamesKeyword(n.children[3])
   \\/ \\E k \\in DOMAIN n.children : HasKeywordType(n.children[k])
 
+\\* The third child of a DirectiveDefinition is its Directives.
+RECURSIVE HasDirectiveDirectives(_)
+HasDirectiveDirectives(n) ==
+  \\/ n.kind = "DirectiveDefinition" /\\ n.children[3].children # <<>>
+  \\/ n.kind = "DirectiveLocations" /\\ \\E k \\in DOMAIN n.children : n.children[k].text = Text("DIRECTIVE_DEFINITION")
+  \\/ \\E k \\in DOMAIN n.children : HasDirectiveDirectives(n.children[k])
+
+RECURSIVE HasDirectiveExtension(_)
+HasDirectiveExtension(n) ==
+  n.kind = "DirectiveExtension" \\/ \\E k \\in DOMAIN n.children : HasDirectiveExtension(n.children[k])
+
 ASSUME \\A i \\in DOMAIN Sources :
-  LET lexed == Lex(Sources[i])
-      parsed == ParseExecutable(Sources[i])
+  LET lexed == Lex(Sources[i].src)
+      parsed == ParseDocument(Sources[i].src, Sources[i].g)
   IN PrintT(<<"verdict", i, parsed.ok, lexed.ok, lexed.pos,
-              IF lexed.ok THEN 0 ELSE FailingToken(Sources[i], 1),
+              IF lexed.ok THEN 0 ELSE FailingToken(Sources[i].src, 1),
               parsed.ok /\\ HasEmptySelectionSet(parsed.node), parsed.ok /\\ HasDescription(parsed.node),
-              parsed.ok /\\ HasKeywordType(parsed.node)>>)
+              parsed.ok /\\ HasKeywordType(parsed.node), parsed.ok /\\ HasDirectiveDirectives(parsed.node),
+              parsed.ok /\\ HasDirectiveExtension(parsed.node)>>)
 ASSUME PrintT(<<"checked", Len(Sources)>>)
 
 VectorsInit == vector = 0
 ====
 `;
 
-const runTla = (dir) =>
+// A few sources (the crash probes) nest a thousand levels deep or run to
+// tens of thousands of characters, deeper than tla-ts's recursion goes on
+// Node's default stack. They are evaluated in a worker thread with a larger
+// one.
+const BIG_STACK = `
+import { Worker } from "node:worker_threads";
+const [cli, ...args] = process.argv.slice(1);
+const worker = new Worker(cli, { argv: args, execArgv: [], resourceLimits: { stackSizeMb: 1024, maxOldGenerationSizeMb: 8192 } });
+worker.on("exit", (code) => process.exit(code));
+worker.on("error", (error) => { console.error(error); process.exit(1); });
+`;
+
+const runTla = (dir, bigStack) =>
   new Promise((done) => {
-    const child = spawn(process.execPath, [cli, "-workers", "1", "-config", "ParseVectors.cfg", "ParseVectors.tla"], { cwd: dir });
+    const args = [cli, "-workers", "1", "-config", "ParseVectors.cfg", "ParseVectors.tla"];
+    const child = spawn(process.execPath, bigStack ? ["--input-type=module", "-e", BIG_STACK, ...args] : args, { cwd: dir });
     let output = "";
     child.stdout.on("data", (d) => (output += d));
     child.stderr.on("data", (d) => (output += d));
     child.on("close", (status) => done({ status, output }));
   });
 
-// The reference's verdict on each source: { ok, lexOk, lexPos, failingToken }.
-const evaluate = async (sources) => {
+// The reference's verdict on each candidate (a key): { ok, lexOk, lexPos,
+// failingToken, newer, keywordType, typeSystem2026 }.
+const evaluate = async (sources, { bigStack = false } = {}) => {
   const chunks = [];
   for (let i = 0; i < sources.length; i += CHUNK) chunks.push(sources.slice(i, i + CHUNK));
   const results = new Map();
@@ -667,7 +1085,7 @@ const evaluate = async (sources) => {
         cpSync(join(root, "specs/Parser.tla"), join(dir, "Parser.tla"));
         writeFileSync(join(dir, "ParseVectors.tla"), moduleFor(chunk));
         writeFileSync(join(dir, "ParseVectors.cfg"), "INIT VectorsInit\nNEXT Next\n");
-        const { status, output } = await runTla(dir);
+        const { status, output } = await runTla(dir, bigStack);
         // tla-ts wraps long values across lines.
         const flat = output.replace(/\s*\n\s*/g, " ");
         if (status !== 0 || !new RegExp(`<<\\s*"checked",\\s*${chunk.length}\\s*>>`).test(flat)) {
@@ -675,12 +1093,14 @@ const evaluate = async (sources) => {
           throw new Error(`tla-ts failed on chunk ${index}:\n${lines.map((l) => l.slice(0, 300)).join("\n")}`);
         }
         const verdicts = [
-          ...flat.matchAll(/<<\s*"verdict",\s*(\d+),\s*(TRUE|FALSE),\s*(TRUE|FALSE),\s*(\d+),\s*(\d+),\s*(TRUE|FALSE),\s*(TRUE|FALSE),\s*(TRUE|FALSE)\s*>>/g),
+          ...flat.matchAll(
+            /<<\s*"verdict",\s*(\d+),\s*(TRUE|FALSE),\s*(TRUE|FALSE),\s*(\d+),\s*(\d+),\s*(TRUE|FALSE),\s*(TRUE|FALSE),\s*(TRUE|FALSE),\s*(TRUE|FALSE),\s*(TRUE|FALSE)\s*>>/g,
+          ),
         ];
         if (new Set(verdicts.map((m) => m[1])).size !== chunk.length) {
           throw new Error(`read ${verdicts.length} verdicts from chunk ${index}, which has ${chunk.length} sources`);
         }
-        for (const [, i, ok, lexOk, lexPos, failing, empty, description, keywordType] of verdicts) {
+        for (const [, i, ok, lexOk, lexPos, failing, empty, description, keywordType, directiveDirectives, directiveExtension] of verdicts) {
           results.set(chunk[Number(i) - 1], {
             ok: ok === "TRUE",
             lexOk: lexOk === "TRUE",
@@ -688,6 +1108,9 @@ const evaluate = async (sources) => {
             failingToken: Number(failing),
             newer: [...(empty === "TRUE" ? ["2.5"] : []), ...(description === "TRUE" ? ["2.2"] : [])],
             keywordType: keywordType === "TRUE",
+            // The type system grammar new in September 2026, by the section
+            // it is in.
+            typeSystem2026: [...(directiveDirectives === "TRUE" ? ["3.13"] : []), ...(directiveExtension === "TRUE" ? ["3.13.6"] : [])],
           });
         }
       }
@@ -734,8 +1157,8 @@ const isDigit = (c) => c >= 48 && c <= 57;
 
 // The section of a lexical rejection, from where Lex fails: a code point
 // that is not a SourceCharacter, or the token that starts at FailingToken.
-const lexicalSection = (source, verdict) => {
-  const cps = codePoints(source);
+const lexicalSection = (key, verdict) => {
+  const cps = codePoints(unkey(key).source);
   if (!isScalar(cps[verdict.lexPos - 1] ?? 0)) return "2.1";
   const start = verdict.failingToken - 1;
   const c = cps[start];
@@ -765,10 +1188,16 @@ const lexicalSection = (source, verdict) => {
 //     September 2025 adds one to each (§2.4, §2.9, §2.11).
 //   - SelectionSet is { Selection+ }. September 2025 still has that;
 //     September 2026 (§2.5) has { Selection* }.
+//   - The type system grammar (§3) is the same in October 2021 and
+//     September 2025. September 2026 adds Directives[Const]? to
+//     DirectiveDefinition, the DIRECTIVE_DEFINITION location (§3.13), and
+//     DirectiveExtension : extend directive @ Name Directives[Const]
+//     (§3.13.6).
 //
-// So September 2025 is September 2026 without empty selection sets. Its
-// grammar is a subset of September 2026's, so a source September 2026
-// rejects, September 2025 rejects too.
+// So September 2025 is September 2026 without empty selection sets and
+// those three. Its grammar is a subset of September 2026's, in each of the
+// four document grammars, so a source September 2026 rejects, September
+// 2025 rejects too.
 //
 // asOctober splits a source into comments, block strings and strings the
 // way every release does, and returns a source that October 2021 reads
@@ -845,11 +1274,18 @@ const RELEASES = ["September2025", "September2026"];
 // source September 2026 rejects and October 2021 accepts holds a surrogate
 // October 2021 lets in; September 2025 rejects it already, being a subset
 // of September 2026.
-const octoberEdition = (source, verdictOf) => {
-  const latest = verdictOf(source).ok;
+const octoberEdition = (key, verdictOf) => {
+  const latest = verdictOf(key).ok;
+  const { source, grammar } = unkey(key);
   const october = asOctober(source);
-  const v = verdictOf(october.source);
+  const v = verdictOf(keyOf(october.source, grammar));
   const rejects = [
+    ...(v.typeSystem2026.includes("3.13")
+      ? [["September2026", "directives on a directive definition and the DIRECTIVE_DEFINITION location are new in September 2026 (§3.13); September 2025 and October 2021 have neither"]]
+      : []),
+    ...(v.typeSystem2026.includes("3.13.6")
+      ? [["September2026", "directive extensions (extend directive) are new in September 2026 (§3.13.6); September 2025 and October 2021 have none"]]
+      : []),
     ...(v.newer.includes("2.5")
       ? [["September2026", "empty selection sets are new in September 2026 (§2.5 SelectionSet : { Selection* }); October 2021 and September 2025 have { Selection+ }"]]
       : []),
@@ -989,6 +1425,11 @@ const build = async () => {
   const documents = randomDocuments();
   const lexer = lexerExamples();
   const parser = parserExamples();
+  const edges = edgeExamples();
+  const raw = rawCharacters();
+  const grammars = grammarExamples();
+  const sdlFamilies = sdlWordFamilies();
+  const sdlDocs = sdlDocuments();
   const sources = [
     ...new Set([
       ...lexer.map((e) => e.source),
@@ -996,19 +1437,29 @@ const build = async () => {
       ...RANGE_EXAMPLES,
       ...families.flatMap((f) => f.candidates.map((c) => c.source)),
       ...documents.flatMap((d) => [d.base, ...d.mutants.map((m) => m.source)]).flatMap((s) => (s.includes(BOM) ? [s, withoutBom(s)] : [s])),
+      ...edges.map((e) => e.key),
+      ...BOM_EXAMPLES.map(([key]) => key),
+      ...raw.flatMap((r) => [r.accepted, ...(r.rejected ? [r.rejected] : [])]),
+      ...grammars.map((e) => e.key),
+      ...sdlFamilies.flatMap((f) => f.candidates.map((c) => c.source)),
+      ...sdlDocs.flatMap((d) => [d.base, ...d.mutants.map((m) => m.source)]),
     ]),
   ];
   const started = Date.now();
-  const verdicts = await evaluate(sources);
-  console.log(`  evaluated ${sources.length} candidates with tla-ts in ${((Date.now() - started) / 1000).toFixed(1)}s`);
+  const [verdicts, probed] = await Promise.all([evaluate(sources), evaluate(PROBES.map(([, key]) => key), { bigStack: true })]);
+  for (const [key, v] of probed) verdicts.set(key, v);
+  console.log(`  evaluated ${sources.length + PROBES.length} candidates with tla-ts in ${((Date.now() - started) / 1000).toFixed(1)}s`);
 
+  // Vectors by key. A vector read as another grammar than
+  // ExecutableDocument names it.
   const vectors = new Map();
-  const add = (source, family, spec) => {
-    const ok = verdicts.get(source).ok;
-    let v = vectors.get(source);
+  const add = (key, family, spec, extra = {}) => {
+    const ok = verdicts.get(key).ok;
+    let v = vectors.get(key);
     if (!v) {
-      v = { id: vectors.size + 1, spec: [], family, source, expected: { ok } };
-      vectors.set(source, v);
+      const { source, grammar } = unkey(key);
+      v = { id: vectors.size + 1, spec: [], family, source, ...(grammar === "executable" ? {} : { grammar }), expected: { ok }, ...extra };
+      vectors.set(key, v);
     }
     for (const s of spec) if (!v.spec.includes(s)) v.spec.push(s);
     return v;
@@ -1067,6 +1518,37 @@ const build = async () => {
     add(q.accepted, "random-documents", p.spec);
   }
 
+  // Parser.tla's other vectors, then the rest of the families. They come
+  // after those above, which keeps the ids of those as they were.
+  for (const e of edges) add(e.key, "parser-examples", [e.section]);
+  for (const [key, spec] of BOM_EXAMPLES) add(key, "byte-order-marks", spec);
+  for (const r of raw) {
+    if (!verdicts.get(r.accepted).ok) throw new Error(`the reference rejects ${JSON.stringify(r.accepted)}`);
+    if (!r.rejected) add(r.accepted, "raw-characters", r.spec);
+    else {
+      const verdict = verdicts.get(r.rejected);
+      if (verdict.ok || verdict.lexOk) throw new Error(`the reference doesn't reject ${JSON.stringify(r.rejected)} at a token`);
+      addPair("raw-characters", { rejected: r.rejected, accepted: r.accepted, spec: [lexicalSection(r.rejected, verdict)], acceptedSpec: r.spec });
+    }
+  }
+  for (const e of grammars) add(e.key, "grammar-examples", [e.section]);
+  for (const family of sdlFamilies) {
+    for (const pair of choose(familyPairs(family, verdicts), { perKey: family.perKey, cap: family.pairs })) addPair(family.name, pair);
+    for (const p of familyPositives(family, verdicts)) add(p.source, family.name, p.spec);
+  }
+  const sdlPairs = [];
+  const sdlPositives = [];
+  for (const d of sdlDocs) {
+    if (!verdicts.get(d.base).ok) throw new Error(`the reference rejects the random type system document ${JSON.stringify(d.base)}`);
+    for (const m of d.mutants) {
+      const item = { rejected: m.source, accepted: d.base, spec: [m.section], section: m.section, key: `${m.section}|${m.kind}|${JSON.stringify(m.unit)}`, size: m.source };
+      (verdicts.get(m.source).ok ? sdlPositives : sdlPairs).push(item);
+    }
+  }
+  for (const pair of choose(sdlPairs, { perKey: 2, perSection: SDL_PAIRS_PER_SECTION })) addPair("type-system-documents", pair);
+  for (const p of choose(sdlPositives, { perKey: 1, perSection: 2 })) add(p.rejected, "type-system-documents", p.spec);
+  for (const [section, key] of PROBES) add(key, "crash-probes", [section], { probe: true });
+
   // Some accepted documents use grammar that an implementation can lack
   // whatever edit the vector was chosen for. An implementation that rejects
   // such a document most likely lacks that grammar, so the vector rests on
@@ -1081,13 +1563,18 @@ const build = async () => {
   //   - a Byte Order Mark between tokens (§2.1.6): "a Byte Order Mark may
   //     appear before or after any lexical token and is Ignored".
   //
+  //   - the type system grammar new in September 2026: directives on a
+  //     directive definition or DIRECTIVE_DEFINITION (§3.13), and a
+  //     directive extension (§3.13.6).
+  //
   // In that order: a document with more than one rests on the first, and
   // its other sections follow.
   const list = [...vectors.values()];
+  const keyOfVector = (v) => keyOf(v.source, v.grammar);
   for (const v of list) {
-    const verdict = verdicts.get(v.source);
+    const verdict = verdicts.get(keyOfVector(v));
     const first = verdict.ok
-      ? [...verdict.newer, ...(verdict.keywordType ? ["2.12"] : []), ...(hasIgnoredBom(v.source) ? ["2.1.6"] : [])]
+      ? [...verdict.newer, ...verdict.typeSystem2026, ...(verdict.keywordType ? ["2.12"] : []), ...(hasIgnoredBom(v.source) ? ["2.1.6"] : [])]
       : [];
     if (first.length > 0) v.spec = [...first, ...v.spec.filter((s) => !first.includes(s))];
     v.spec.forEach(section);
@@ -1095,16 +1582,19 @@ const build = async () => {
 
   // Editions: the sources October 2021 reads like the vectors, where they
   // differ from the vectors themselves.
-  const octoberSources = [...new Set(list.map((v) => asOctober(v.source).source))].filter((s) => !verdicts.has(s));
+  // The crash probes have no older reading: a crash fails in every release,
+  // and they are graded for nothing else.
+  const editioned = list.filter((v) => !v.probe);
+  const octoberSources = [...new Set(editioned.map((v) => keyOf(asOctober(v.source).source, v.grammar)))].filter((s) => !verdicts.has(s));
   if (octoberSources.length > 0) for (const [s, v] of await evaluate(octoberSources)) verdicts.set(s, v);
-  for (const v of list) Object.assign(v, octoberEdition(v.source, (s) => verdicts.get(s)));
+  for (const v of editioned) Object.assign(v, octoberEdition(keyOfVector(v), (s) => verdicts.get(s)));
   return list;
 };
 
 // ---------------------------------------------------------------------------
 
 const serialize = (vectors) =>
-  `{"source": "specs/Lexer.tla and specs/Parser.tla (ParseExecutable), evaluated by tla-ts; scripts/generate-vectors-parse.mjs",\n"vectors": [\n${vectors
+  `{"source": "specs/Lexer.tla and specs/Parser.tla (ParseExecutable, and ParseDocument for the vectors that name a grammar), evaluated by tla-ts; scripts/generate-vectors-parse.mjs",\n"vectors": [\n${vectors
     .map((v) => JSON.stringify(v))
     .join(",\n")}\n]}\n`;
 
@@ -1114,6 +1604,11 @@ const out = serialize(vectors);
 const accepted = vectors.filter((v) => v.expected.ok).length;
 const paired = vectors.filter((v) => v.sibling).length;
 console.log(`  ${vectors.length} vectors: ${accepted} accepted, ${vectors.length - accepted} rejected, ${paired} in minimal pairs`);
+for (const grammar of GRAMMARS.slice(1)) {
+  const read = vectors.filter((v) => v.grammar === grammar);
+  console.log(`  as ${grammar}: ${read.length} (${read.filter((v) => v.expected.ok).length} accepted)`);
+}
+console.log(`  crash probes: ${vectors.filter((v) => v.probe).length}`);
 for (const release of RELEASES) {
   const since = vectors.filter((v) => v.since === release);
   console.log(`  since ${release}: ${since.length} (${since.filter((v) => v.expected.ok).length} accepted, ${since.filter((v) => !v.expected.ok).length} rejected)`);

@@ -7,6 +7,26 @@
 import { parseDefault } from "../schema/tla.mjs";
 import { PRIMARY, SELECTED, TYPE_REF_DEPTH, WRAPPER_DEPTH, isArgument, selection } from "./query.mjs";
 
+// Strings as TLA+ text. kit/schema/tla.mjs writes a string as JSON, whose
+// \u escapes TLA+ doesn't read, and reads printed values back as JSON,
+// which can't hold a raw control character; tla-ts prints a supplementary
+// character as two halves. So every string the introspect area hands
+// tla-ts is in an ASCII form: printable ASCII but % as it is, and any
+// other code point as %<hex>; (% itself as %25;). The reference only
+// compares strings for equality, which the form keeps; printed defaults
+// that it lexes go as code points (codePoints) instead.
+const encodeText = (text) => Array.from(text, (c) => (c >= " " && c <= "~" && c !== "%" ? c : `%${c.codePointAt(0).toString(16).toUpperCase()};`)).join("");
+const decodeText = (text) => text.replace(/%([0-9A-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)));
+const deep = (f) => {
+  const go = (v) =>
+    typeof v === "string" ? f(v) : v instanceof Set ? new Set([...v].map(go)) : Array.isArray(v) ? v.map(go) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, go(x)])) : v;
+  return go;
+};
+// A value with every string in the ASCII form, for tla().
+export const toTla = deep(encodeText);
+// A value tla-ts printed, with every string back as it was.
+export const fromTla = deep(decodeText);
+
 export const BUILTIN_DIRECTIVES = ["skip", "include", "deprecated", "specifiedBy", "oneOf"];
 // The built-in directives of each edition: October 2021 has no @oneOf, so
 // a service that answers its query and returns @oneOf has a directive of
@@ -107,13 +127,20 @@ const refOf = (t, path, depth = TYPE_REF_DEPTH) => {
   }
 };
 
+// A string's code points, for the reference's lexer.
+export const codePoints = (text) => Array.from(text, (c) => c.codePointAt(0));
+
 const inputValueOf = (v, path, S) => {
   object(v, path, S.inputValue);
+  const printed = selected(S, "inputValue", "defaultValue", v, path, isOptString, null);
   return {
     name: value(v, "name", path, isString),
     description: opt(selected(S, "inputValue", "description", v, path, isOptString, null)),
     type: refOf(v.type, `${path}.type`),
-    defaultValue: selected(S, "inputValue", "defaultValue", v, path, isOptString, null) === null ? [] : [parseDefault(v.defaultValue)],
+    defaultValue: printed === null ? [] : [parseDefault(printed)],
+    // The default as the service printed it, as code points, for
+    // IntrospectChecks!PrintingProblems (§2.10.4).
+    printed: printed === null ? [] : codePoints(printed),
     isDeprecated: selected(S, "inputValue", "isDeprecated", v, path, isBool, false),
     deprecationReason: opt(selected(S, "inputValue", "deprecationReason", v, path, isOptString, null)),
   };
@@ -174,9 +201,10 @@ const directiveOf = (d, i, S) => {
   };
 };
 
-// __type(name: "__Schema")'s answer (wrappersQuery): its fields, each with
-// its type as a ref (fields, for Introspection!SchemaFieldsMatch), and the
-// List and Non-Null types among those types (levels), each as
+// __type(name:)'s answer to wrappersQuery, for __Schema or a type of the
+// document's (typeName), its type refs `depth` levels deep: its fields,
+// each with its type as a ref (fields, for Introspection!TypeFieldsMatch),
+// and the List and Non-Null types among those types (levels), each as
 // Introspection!WrapperMatches reads it: where it is, its kind, and its
 // other fields, a list field as the names of its items. A null answer has
 // no fields.
@@ -190,7 +218,7 @@ const namesOf = (v, path) => {
     }),
   ];
 };
-const wrappersOf = (w, S) => {
+const wrappersOf = (w, S, typeName, depth) => {
   const levels = [];
   const fields = [];
   if (w === null) return { levels, fields };
@@ -200,10 +228,10 @@ const wrappersOf = (w, S) => {
     const p = `wrappers.fields[${j}]`;
     object(f, p, ["name", "type"]);
     const fieldName = value(f, "name", p, isString);
-    const where = `__Schema.${fieldName}`;
+    const where = `${typeName}.${fieldName}`;
     const ref = [];
     fields.push({ name: fieldName, type: ref });
-    for (let node = f.type, q = `${p}.type`, d = WRAPPER_DEPTH; ; node = node.ofType, q += ".ofType", d--) {
+    for (let node = f.type, q = `${p}.type`, d = depth; ; node = node.ofType, q += ".ofType", d--) {
       object(node, q, d > 0 ? S.wrapper : ["kind", "name"]);
       const kind = value(node, "kind", q, isString);
       const name = opt(value(node, "name", q, isOptString));
@@ -314,11 +342,52 @@ export const caseOf = (response, documentDirectives, documentTypes, profile = PR
 };
 
 // The case for the answer to wrappersQuery.
-export const wrappersCaseOf = (response, profile = PRIMARY, missing = []) => {
+export const wrappersCaseOf = (response, profile = PRIMARY, missing = [], typeName = "__Schema", depth = WRAPPER_DEPTH) => {
   const S = selection(profile, missing);
   const data = object(dataOf(response), "data", ["wrappers"]);
-  const { levels, fields } = wrappersOf(data.wrappers, S);
+  const { levels, fields } = wrappersOf(data.wrappers, S, typeName, depth);
   return { actual: { wrappers: levels, wrapperFields: fields } };
+};
+
+// The fields of probeQuery's answer: the root's __typename, `kept` (the
+// field the directive keeps), and __schema's directives. The field it
+// leaves out, `dropped`, must not be there.
+export const PROBE_KEPT = "kept";
+export const PROBE_DROPPED = "dropped";
+
+// The case for the answer to probeQuery(directive): whether the request
+// was executed as the directive says (honored), and the names of the
+// directives the same response returned. A response with errors didn't
+// honour it: the service doesn't provide the directive (or rejected the
+// request for another reason, which the kit can't tell apart). One without
+// errors must have exactly the fields the directive leaves selected, or
+// it is Malformed.
+export const probeCaseOf = (response, directive) => {
+  if (isMap(response) && Array.isArray(response.errors) && response.errors.length > 0) {
+    return { actual: { directive, honored: false, returned: new Set() } };
+  }
+  const data = object(dataOf(response), "data", ["__typename", PROBE_KEPT, "__schema"]);
+  value(data, "__typename", "data", isString);
+  value(data, PROBE_KEPT, "data", isString);
+  const s = object(data.__schema, "__schema", ["directives"]);
+  const names = value(s, "directives", "__schema", isList).map((d, i) => {
+    object(d, `directives[${i}]`, ["name"]);
+    return value(d, "name", `directives[${i}]`, isString);
+  });
+  return { actual: { directive, honored: true, returned: new Set(names) } };
+};
+
+// What is wrong with the answer to a vector whose whole answer the
+// reference gives (exact): a message, or undefined if it is that answer.
+export const exactProblem = (response, expected) => {
+  const data = dataOf(response);
+  const same = (a, b) =>
+    isMap(a) && isMap(b)
+      ? Object.keys(a).length === Object.keys(b).length && Object.keys(b).every((k) => k in a && same(a[k], b[k]))
+      : Array.isArray(a) && Array.isArray(b)
+        ? a.length === b.length && a.every((x, i) => same(x, b[i]))
+        : a === b;
+  return same(data, expected.data) ? undefined : `the data is ${JSON.stringify(data)?.slice(0, 200)}, not ${JSON.stringify(expected.data)}`;
 };
 
 // The case for one response to __type(name:) lookups: [name, result] per
@@ -351,7 +420,9 @@ const printValue = (v) => {
     case "null":
       return "null";
     case "string":
-      return JSON.stringify(v.text);
+      // JSON's escapes are GraphQL's, but JSON leaves U+007F to U+009F as
+      // they are, where §2.10.4 says they should be escaped.
+      return JSON.stringify(v.text).replace(/[\u007f-\u009f]/g, (c) => `\\u00${c.charCodeAt(0).toString(16).toUpperCase()}`);
     case "list":
       return `[${v.items.map(printValue).join(", ")}]`;
     case "object":
@@ -470,7 +541,7 @@ export const directiveFor = (profile, d) =>
 // The expected `wrappers`: __Schema's fields, each with its type as the
 // Wrapper fragment selects it. Wrappers have only kind and ofType; a named
 // type has its fields, as names.
-const wrappersJson = (builtins, profile) => {
+export const wrappersJson = (builtins, profile, typeName = "__Schema", depth = WRAPPER_DEPTH) => {
   const named = (name) => builtins.types.find((t) => t.name === name);
   const level = (ref, depth) => {
     if (depth === 0) return { kind: ref.kind, name: ref.name };
@@ -491,7 +562,7 @@ const wrappersJson = (builtins, profile) => {
     };
     return out;
   };
-  return { fields: named("__Schema").fields.map((f) => ({ name: f.name, type: level(f.type, WRAPPER_DEPTH) })) };
+  return { fields: named(typeName).fields.map((f) => ({ name: f.name, type: level(f.type, depth) })) };
 };
 
 // A vector's full expected response under a profile: its own part plus
@@ -499,8 +570,24 @@ const wrappersJson = (builtins, profile) => {
 // profile's shape), for a __schema vector, its lookups' types, or for the
 // wrappers vector, __Schema's fields as the profile's built-ins have them.
 export const fullResponse = (vector, builtins, profile = PRIMARY) => {
-  if (vector.wrappers) return { data: { wrappers: wrappersJson(builtins[profile], profile) } };
+  if (vector.exact) return vector.expected.response;
+  if (vector.wrappers) {
+    if (!vector.wrapperType) return { data: { wrappers: wrappersJson(builtins[profile], profile) } };
+    // A type of the document's: its answer as September 2026's query has
+    // it, without isOneOf where the profile doesn't select it.
+    const strip = (node) =>
+      node === null || typeof node !== "object"
+        ? node
+        : Array.isArray(node)
+          ? node.map(strip)
+          : Object.fromEntries(Object.entries(node).filter(([k]) => k !== "isOneOf" || SELECTED[profile].wrapper.includes(k)).map(([k, x]) => [k, strip(x)]));
+    return strip(vector.expected.response);
+  }
   const d = vector.expected.response.data;
+  if (vector.probe) {
+    const s = d.__schema;
+    return { data: { ...d, __schema: { directives: [...s.directives, ...builtins[profile].directives.map((x) => ({ name: x.name }))] } } };
+  }
   if (vector.lookups) return { data: Object.fromEntries(Object.entries(d).map(([k, t]) => [k, typeFor(profile, t)])) };
   const s = d.__schema;
   const b = builtins[profile];

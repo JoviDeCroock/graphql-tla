@@ -106,10 +106,16 @@ CollectFrom(fx, objectType, selections, i, acc) ==
                       IF selection.name \in acc.visited THEN acc
                       ELSE
                         LET visited == [acc EXCEPT !.visited = @ \cup {selection.name}]
-                            fragment == fx.fragments[selection.name]
-                        IN IF ~DoesFragmentTypeApply(fx, objectType, fragment.typeCondition)
-                           THEN visited
-                           ELSE CollectFrom(fx, objectType, fragment.selectionSet, 1, visited)
+                        IN \* "If no such fragment exists, continue with the next
+                           \* selection in selectionSet." Only a document that
+                           \* breaks §5.5.2.1 (Fragment Spread Target Defined)
+                           \* gets here, and every fixture is valid.
+                           IF selection.name \notin DOMAIN fx.fragments THEN visited
+                           ELSE
+                             LET fragment == fx.fragments[selection.name] IN
+                             IF ~DoesFragmentTypeApply(fx, objectType, fragment.typeCondition)
+                             THEN visited
+                             ELSE CollectFrom(fx, objectType, fragment.selectionSet, 1, visited)
                  [] OTHER ->
                       IF /\ selection.typeCondition # ""
                          /\ ~DoesFragmentTypeApply(fx, objectType, selection.typeCondition)
@@ -131,6 +137,20 @@ CollectSubfieldsFrom(fx, objectType, fields, i, grouped) ==
 
 CollectSubfields(fx, objectType, fields) ==
   CollectSubfieldsFrom(fx, objectType, fields, 1, <<>>)
+
+\* ExecuteCollectedFields (§6.3.3) executes an entry, and gives it a place in
+\* the result map, only "If fieldType is defined": if objectType has a field
+\* named like the entry's first field. __typename is defined on every
+\* object type (§4.1). An undefined field only gets here in a document that
+\* breaks §5.3.1 (Field Selections), and every fixture is valid. (Fixtures
+\* don't select __schema or __type; the introspect area covers those.)
+IsTypename(group) == group.fields[1].name = "__typename"
+IsDefined(fx, objectType, group) ==
+  IsTypename(group) \/ group.fields[1].name \in DOMAIN TypeDef(fx, objectType).fields
+
+\* The entries of a collected fields map that ExecuteCollectedFields
+\* executes, in order.
+Executed(fx, objectType, grouped) == SelectSeq(grouped, LAMBDA g : IsDefined(fx, objectType, g))
 
 -----------------------------------------------------------------------------
 (* §6.4 Executing Fields, over an oracle *)
@@ -251,7 +271,7 @@ CompleteNullable(fx, O, path, type, fields) ==
       [] OTHER ->
            \* CompleteValue for an object: collect the subfields for the
            \* runtime type and execute them (ExecuteCollectedFields).
-           LET grouped == CollectSubfields(fx, outcome.type, fields)
+           LET grouped == Executed(fx, outcome.type, CollectSubfields(fx, outcome.type, fields))
                children == CompleteFields(fx, O, path, outcome.type, grouped)
            IN Combine(path, children, ObjectJson(grouped, children))
 
@@ -262,7 +282,7 @@ CompleteNullable(fx, O, path, type, fields) ==
 \* "nulled" position at path <<>> for the purposes of `nulls`. Serial and
 \* normal execution complete to the same value; SeriallyExecuted below is
 \* what tells them apart.
-RootGroups(fx) == CollectFields(fx, RootType(fx), fx.operation)
+RootGroups(fx) == Executed(fx, RootType(fx), CollectFields(fx, RootType(fx), fx.operation))
 
 ExecuteQuery(fx, O) ==
   LET grouped == RootGroups(fx)

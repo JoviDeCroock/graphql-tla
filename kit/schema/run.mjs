@@ -26,25 +26,55 @@
 // implementation of an older one can tell those apart.
 //
 // Vectors marked `unspecified` rest on a reading the spec's formal text
-// doesn't settle. They aren't sent to the adapter or graded.
+// doesn't settle. They aren't sent to the adapter or graded. Vectors whose
+// SDL has type system extensions `require` the schema-extensions
+// capability, and are asked only of adapters that claim it.
+//
+// Every check is a MUST but two INFO ones (kit/schema/rules.mjs), which
+// record what an implementation does where §3 states no rule and never
+// fail the run.
 
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Crash, answerOrCrash, crashResponse } from "../areas.mjs";
 import { REPORT_FORMAT, provenance, section } from "../report.mjs";
-import { RELEASES, RULE, RULES, UNWRITABLE, releaseName } from "./rules.mjs";
+import { RELEASES, RULE, RULES, UNGRADED, UNWRITABLE, releaseName } from "./rules.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
 
 export const loadVectors = () => JSON.parse(readFileSync(join(root, "kit/schema/vectors.json"), "utf8")).vectors;
 
-// The vectors an adapter is graded on, and how many are left out and why.
-export const gradedVectors = (vectors) => {
-  const graded = vectors.filter((v) => !v.unspecified);
-  const skipped = vectors.length > graded.length ? { unspecified: vectors.length - graded.length } : {};
+// The vectors an adapter is graded on, and how many are left out and why:
+// `unspecified`, or a capability the adapter doesn't claim. A vector left
+// out for several reasons counts under each.
+export const gradedVectors = (vectors, capabilities = []) => {
+  const has = new Set(capabilities);
+  const graded = [];
+  const skipped = {};
+  for (const v of vectors) {
+    const reasons = [...(v.unspecified ? ["unspecified"] : []), ...(v.requires ?? []).filter((c) => !has.has(c))];
+    if (reasons.length === 0) graded.push(v);
+    for (const r of reasons) skipped[r] = (skipped[r] ?? 0) + 1;
+  }
   return { graded, skipped };
 };
+
+// The capabilities every vector of a rule needs: a check whose vectors all
+// need one is untested for that reason, not unreached, for an adapter
+// without it (docs/kit-areas.md, "requires").
+export const ruleRequires = (vectors) => {
+  const out = new Map();
+  for (const v of vectors) {
+    const needs = v.requires ?? [];
+    out.set(v.rule, out.has(v.rule) ? out.get(v.rule).filter((c) => needs.includes(c)) : needs);
+  }
+  return out;
+};
+
+// Whether a failing check fails the run: a MUST, or a SHOULD with --strict.
+// INFO checks never do.
+export const fatal = (level, strict) => level === "MUST" || (strict && level === "SHOULD");
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
@@ -114,7 +144,8 @@ export const messageShape = (message, sdl) => {
 };
 
 const SUMMARY = {
-  "not enforced": (r) => `${r.rule} not enforced: accepts a schema that breaks only this rule`,
+  "not enforced": (r) =>
+    `${r.rule} not enforced: accepts a schema that breaks only this rule${r.level === "INFO" ? " (informational: §3 states no such rule)" : ""}`,
   "crash invalid": (r) => `${r.rule}: crashes on a schema that breaks only this rule, instead of rejecting it`,
 };
 
@@ -197,6 +228,18 @@ const selfTest = (vectors) => {
     control(check(r, ACCEPTS_VALID).status !== "fail", `${what} ${valid.id} didn't fail ${ACCEPTS_VALID}`);
     control(r.findings.some((f) => f.likelyOverStrict), `${what} the single ${valid.id} called a rule likely over-strict`);
   }
+  // A failing informational check doesn't fail the run; a failing MUST does.
+  const info = vectors.find((v) => !v.expected.valid && RULE.get(v.rule).level === "INFO");
+  if (info) {
+    const answers = right();
+    answers[vectors.indexOf(info)] = { valid: true };
+    const c = check(report(answers), RULE.get(info.rule).id);
+    control(c.status !== "fail" || fatal(c.level, true), `accepting ${info.id} failed the run`);
+  }
+  const must = vectors.find((v) => !v.expected.valid && RULE.get(v.rule).level === "MUST");
+  control(!fatal(RULE.get(must.rule).level, false), `accepting ${must.id} didn't fail the run`);
+  // A vector that needs a capability isn't asked of an adapter without it.
+  control(gradedVectors(vectors, []).graded.some((v) => (v.requires ?? []).length > 0), "a vector that needs a capability was graded without it");
   // One error message on valid siblings of different rules is one finding,
   // and names no rule as likely over-strict.
   const two = [];
@@ -211,7 +254,7 @@ const selfTest = (vectors) => {
   return { problems, controls };
 };
 
-export const buildReport = ({ vectors, answers, strict, implementation, capabilities, selfTestText, total = vectors.length, skipped = {} }) => {
+export const buildReport = ({ vectors, answers, strict, implementation, capabilities, selfTestText, total = vectors.length, skipped = {}, requires = new Map() }) => {
   const stats = new Map(RULES.map((r) => [r.rule, { cases: 0, failing: 0, failingSince: {} }]));
   const accepts = { cases: 0, failing: 0, failingSince: {} };
   const findings = new Map();
@@ -333,6 +376,7 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
             ? [`New in ${releaseName(r.since)}: October 2021 doesn't have ${r.feature}${crashes > 0 ? `. ${plural(crashes, "failing case")} ${crashes === 1 ? "is a crash, which fails" : "are crashes, which fail"} under October 2021 too` : ""}`]
             : []),
           ...(UNWRITABLE[r.rule] ? [UNWRITABLE[r.rule]] : []),
+          ...(UNGRADED[r.rule] ? [`Never graded: ${UNGRADED[r.rule]}`] : []),
         ];
         return {
           id: r.id,
@@ -346,6 +390,7 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
           ...(r.since ? { since: r.since } : {}),
           ...(notes.length ? { note: notes.join(". ") } : {}),
           basis: r.basis,
+          ...(requires.get(r.rule)?.length ? { requires: requires.get(r.rule) } : {}),
         };
       }),
       {
@@ -368,7 +413,7 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
 
 export const run = async ({ adapter, strict, log = console.log }) => {
   const all = loadVectors();
-  const { graded: vectors, skipped } = gradedVectors(all);
+  const { graded: vectors, skipped } = gradedVectors(all, adapter.capabilities);
   const answers = [];
   for (const v of vectors) answers.push(await answer(adapter, v.sdl));
 
@@ -384,19 +429,22 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     selfTestText,
     total: all.length,
     skipped,
+    requires: ruleRequires(all),
   });
 
   const failingChecks = report.checks.filter((c) => c.status === "fail");
   const passed = vectors.length - report.findings.reduce((n, f) => n + f.cases, 0);
   const crashes = answers.filter((a) => a instanceof Crash).length;
-  const notGraded = skipped.unspecified ? `; ${skipped.unspecified} unspecified not graded` : "";
+  const notGraded = Object.entries(skipped)
+    .map(([why, n]) => `; ${n} ${why === "unspecified" ? "unspecified" : `need ${why}, which the adapter doesn't claim,`} not graded`)
+    .join("");
   log(`${passed === vectors.length ? "✓" : "✗"} ${passed} of ${vectors.length} schemas judged as TypeSystem.tla judges them${crashes ? ` (${crashes} crashed)` : ""}${notGraded}`);
   const since = (f) => (f.since ? `, ${sinceText(f.since)}` : "");
   for (const f of report.findings) log(`  ✗ ${f.summary} (${plural(f.cases, "schema")}${since(f)}, e.g. ${f.fixture}: ${f.example.input})`);
   const tested = report.checks.filter((c) => c.status !== "untested").length;
-  log(`  ${tested - failingChecks.length} of ${tested} checks pass; ${report.checks.length - tested} untested`);
+  const informational = failingChecks.filter((c) => !fatal(c.level, strict)).length;
+  log(`  ${tested - failingChecks.length} of ${tested} checks pass${informational ? ` (${informational} failing ${informational === 1 ? "check is" : "checks are"} informational)` : ""}; ${report.checks.length - tested} untested`);
   if (test.problems.length === 0) log(`✓ the checker catches all ${test.controls} negative controls`);
-  // Every check is a MUST.
-  const ok = test.problems.length === 0 && report.adapterProblems === 0 && failingChecks.length === 0;
+  const ok = test.problems.length === 0 && report.adapterProblems === 0 && failingChecks.every((c) => !fatal(c.level, strict));
   return { ok, report };
 };

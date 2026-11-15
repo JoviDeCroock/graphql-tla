@@ -1,0 +1,33 @@
+# Response names (§2.8, §6.3.2, §6.3.3, §7.1.4): an alias names a field's
+# entry in the response and in error paths, and the field executed is the
+# one named, "unaffected if an alias is used". Two aliases swap the names of
+# two root fields, and two more swap two leaves. An aliased list inside one
+# of them has an aliased Non-Null field in its items, so an error there has
+# the path ["second", "list", 0, "key"]. `old` is deprecated, which doesn't
+# stop it from being selected and executed (§3.6.2).
+# maxListLength: 1
+# spec: 2.8, 3.6.2, 6.3.2, 6.3.3, 7.1.4
+
+type Item {
+  id: ID!
+  name: String
+  old: String @deprecated(reason: "Use name.")
+  items: [Item!]
+}
+
+type Query {
+  first: Item
+  second: Item
+}
+
+query {
+  second: first {
+    list: items {
+      key: id
+    }
+  }
+  first: second {
+    name: old
+    old: name
+  }
+}

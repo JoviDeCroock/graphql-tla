@@ -205,6 +205,12 @@ AsNumber(n) == [n EXCEPT !.kind = "number"]
 (*                       (§6.4.1's Note: variable values are already       *)
 (*                       coerced). TRUE: §3.11's "list of size one" is     *)
 (*                       applied to it, as to any other item               *)
+(*   sourceArgumentsFieldError  what a subscription root field's argument  *)
+(*                       that can't be coerced raises, which the spec      *)
+(*                       contradicts itself on (see RespondFrom). FALSE: a *)
+(*                       request error, as §7.1.5 says of any error raised *)
+(*                       before operation execution begins. TRUE: an       *)
+(*                       execution error, as CoerceArgumentValues says     *)
 (*                                                                         *)
 (* Two more switches aren't choices the spec leaves open but editions:     *)
 (*                                                                         *)
@@ -225,7 +231,7 @@ AsNumber(n) == [n EXCEPT !.kind = "number"]
 (* September 2026. A schema without a policy field uses it, and a policy   *)
 (* without a switch takes that switch's default.                           *)
 
-DefaultPolicy == [enumFromString |-> TRUE, inputFieldDefaults |-> TRUE, missingListItem |-> "null", floatRounded |-> FALSE, variableItemWrapped |-> FALSE, coerceDefaults |-> TRUE, nestedListItems |-> TRUE]
+DefaultPolicy == [enumFromString |-> TRUE, inputFieldDefaults |-> TRUE, missingListItem |-> "null", floatRounded |-> FALSE, variableItemWrapped |-> FALSE, coerceDefaults |-> TRUE, nestedListItems |-> TRUE, sourceArgumentsFieldError |-> FALSE]
 PolicyOf(S) == IF "policy" \in DOMAIN S THEN S.policy ELSE DefaultPolicy
 WithPolicy(S, policy) == [types |-> S.types, fields |-> S.fields, policy |-> policy]
 Switch(S, name) == IF name \in DOMAIN PolicyOf(S) THEN PolicyOf(S)[name] ELSE DefaultPolicy[name]
@@ -593,15 +599,34 @@ CoerceArgumentValues(S, fieldName, argumentValues, vars) ==
   CoerceArgumentsFrom(S, S.fields[fieldName], argumentValues, vars, 1, {})
 
 -----------------------------------------------------------------------------
-(* §6.1 ExecuteRequest, up to the root field's resolver                    *)
+(* §6.1 ExecuteRequest, up to the field's resolver                        *)
 (*                                                                         *)
 (* An outcome is [kind, args]: "requestError", "fieldError", or "resolved" *)
 (* with args the coerced argument map the resolver receives.               *)
 
 Outcome(kind, args) == [kind |-> kind, args |-> args]
 
+\* An operation is [type, name, variables, parents, key, field, nonNull,
+\* arguments, others]:
+\*   type       "query", "mutation" or "subscription"
+\*   parents    the fields on the way from the root down to the field with
+\*              the arguments, each a Step below (<<>> for a root field)
+\*   key        that field's response key: its alias, or else its name
+\*   field      its name; nonNull, whether its return type is Non-Null
+\*   arguments  its arguments, as entries
+\*   others     the root selection set's other selections, only in an
+\*              invalid document: [kind, name], kind "field" for a field
+\*              selection the root type doesn't define (or, for a
+\*              subscription, any second root field), "spread" for a spread
+\*              of a fragment the document doesn't define
+\* A step is a field that returns an object, or a list of objects. The
+\* resolver of a list field returns two objects (docs/kit/coerce.md).
+Step(key, nonNull, list, itemNonNull) == [key |-> key, nonNull |-> nonNull, list |-> list, itemNonNull |-> itemNonNull]
+OpAt(type, name, variables, parents, key, field, nonNull, arguments, others) ==
+  [type |-> type, name |-> name, variables |-> variables, parents |-> parents, key |-> key,
+   field |-> field, nonNull |-> nonNull, arguments |-> arguments, others |-> others]
 NamedOp(type, name, variables, field, arguments) ==
-  [type |-> type, name |-> name, variables |-> variables, field |-> field, arguments |-> arguments]
+  OpAt(type, name, variables, <<>>, field, field, FALSE, arguments, <<>>)
 \* An anonymous query.
 Op(variables, field, arguments) == NamedOp("query", "", variables, field, arguments)
 
@@ -627,26 +652,147 @@ GetOperation(document, operationName) ==
     LET named == {i \in DOMAIN document : document[i].name # "" /\ document[i].name = operationName.name}
     IN IF named = {} THEN NotSelected ELSE Selected(document[CHOOSE i \in named : TRUE])
 
+\* §6.3.2 CollectFields over the root selection set: the number of entries
+\* in collectedFieldsMap. Every field selection is collected, whether the
+\* root type defines it or not (CollectFields doesn't look); a spread of a
+\* fragment the document doesn't define adds nothing ("If no such fragment
+\* exists, continue"). The other selections' keys differ from the field's.
+RootEntries(operation) ==
+  1 + Cardinality({i \in DOMAIN operation.others : operation.others[i].kind = "field"})
+
 \* §6.1.2: "If a request error is encountered during input coercion of
 \* variable values, then the request fails without operation execution."
-\* Otherwise the root field executes, and ExecuteField calls
-\* CoerceArgumentValues before the resolver.
-Respond(S, operation, request) ==
+\* For a query or a mutation, the root selection set then executes, and
+\* ExecuteField calls CoerceArgumentValues before the resolver. A field the
+\* root type doesn't define is skipped ("If fieldType is defined", §6.3.3),
+\* so the others don't change the outcome.
+\*
+\* For a subscription (§6.2.3.1), ExecuteRequest runs
+\* CreateSourceEventStream first: "If collectedFieldsMap does not have
+\* exactly one entry, raise a request error", then CoerceArgumentValues for
+\* the root field, then ResolveFieldEventStream, whose resolver may raise
+\* (source = "raise") or return a source stream (source = "stream"). All of
+\* this happens before operation execution, which "begins when the execution
+\* algorithm for the operation type is invoked: ... Subscribe() for
+\* subscription operations" (§6.2), so "If an error was raised before
+\* operation execution begins, the response must be a request error result"
+\* (§7.1.5). The source stream then emits one event, whose execution
+\* coerces the same arguments again and calls the field's resolver.
+\*
+\* CoerceArgumentValues itself says "raise an execution error" for an
+\* argument it can't coerce, and §6.4.1 "Any request error raised as a
+\* result of input coercion during CoerceArgumentValues() should be treated
+\* instead as an execution error"; §6.2.3.1's Note says "an error raised here
+\* will be a request error". The text contradicts itself for such an
+\* argument, so policy.sourceArgumentsFieldError gives the other reading.
+RespondFrom(S, operation, request, source) ==
   LET coercedVariableValues == CoerceVariableValues(S, operation, request) IN
   IF ~coercedVariableValues.ok THEN Outcome("requestError", NullV)
   ELSE
     LET args == CoerceArgumentValues(S, operation.field, operation.arguments,
                                      coercedVariableValues.value.entries)
-    IN IF args.ok THEN Outcome("resolved", args.value) ELSE Outcome("fieldError", NullV)
+    IN IF operation.type = "subscription"
+       THEN IF RootEntries(operation) # 1 THEN Outcome("requestError", NullV)
+            ELSE IF ~args.ok
+            THEN IF Switch(S, "sourceArgumentsFieldError")
+                 THEN Outcome("fieldError", NullV) ELSE Outcome("requestError", NullV)
+            ELSE IF source = "raise" THEN Outcome("requestError", NullV)
+            ELSE Outcome("resolved", args.value)
+       ELSE IF args.ok THEN Outcome("resolved", args.value) ELSE Outcome("fieldError", NullV)
+
+Respond(S, operation, request) == RespondFrom(S, operation, request, "stream")
 
 \* ExecuteRequest: GetOperation, then the selected operation. A mutation
 \* runs on the mutation root type; root field names are unique, so the
 \* field's name says which root type ran. Only the selected operation's
 \* variables are coerced.
-ExecuteRequest(S, document, operationName, request) ==
+ExecuteRequestFrom(S, document, operationName, request, source) ==
   LET selected == GetOperation(document, operationName) IN
   IF ~selected.ok THEN Outcome("requestError", NullV)
-  ELSE Respond(S, selected.operation, request)
+  ELSE RespondFrom(S, selected.operation, request, source)
+
+ExecuteRequest(S, document, operationName, request) ==
+  ExecuteRequestFrom(S, document, operationName, request, "stream")
+
+\* The request's source text, as [parsed, typeSystem, operations]: whether
+\* it parses as a Document (Parser.tla decides), whether it holds a
+\* TypeSystemDefinitionOrExtension, and its operations.
+\*   §6: "To execute a request, the executor must have a parsed Document";
+\*   a source that doesn't parse raises a request error (§7.1.6: "a request
+\*   error may occur due to a parse grammar or validation error in the
+\*   Document").
+\*   §2.3: "A Document which contains TypeSystemDefinitionOrExtension must
+\*   not be executed; GraphQL execution services which receive a Document
+\*   containing these should return a descriptive error."
+Given(parsed, typeSystem, operations) == [parsed |-> parsed, typeSystem |-> typeSystem, operations |-> operations]
+ExecuteSource(S, given, operationName, request, source) ==
+  IF ~given.parsed \/ given.typeSystem THEN Outcome("requestError", NullV)
+  ELSE ExecuteRequestFrom(S, given.operations, operationName, request, source)
+
+\* Whether ResolveFieldEventStream calls the subscription field's resolver:
+\* only after CoerceArgumentValues succeeded for it.
+SourceCalled(S, given, operationName, request) ==
+  LET selected == GetOperation(given.operations, operationName)
+      vars == CoerceVariableValues(S, selected.operation, request)
+  IN /\ given.parsed /\ ~given.typeSystem /\ selected.ok
+     /\ selected.operation.type = "subscription"
+     /\ RootEntries(selected.operation) = 1
+     /\ vars.ok
+     /\ CoerceArgumentValues(S, selected.operation.field, selected.operation.arguments, vars.value.entries).ok
+
+-----------------------------------------------------------------------------
+(* §6.4.4 Handling Execution Errors, for a field below the root             *)
+(*                                                                         *)
+(* An execution error raised for a field's arguments: "it is handled as   *)
+(* though the response position at which the error occurred resolved to   *)
+(* null, and the error must be added to the "errors" list". "Since         *)
+(* Non-Null response positions cannot be null, execution errors are        *)
+(* propagated to be handled by the parent response position", and "If a    *)
+(* List type wraps a Non-Null type, and one of the response position       *)
+(* elements of that list resolves to null, then the entire list response   *)
+(* position must resolve to null." The data is a value; a leaf the         *)
+(* resolver returns is Str("ok").                                          *)
+
+\* The field's response positions, as response paths (§7.1.4): one for each
+\* item of each list on the way, with "path segments (response names or
+\* list indices)".
+RECURSIVE PathsBelow(_, _)
+PathsBelow(steps, key) ==
+  IF steps = <<>> THEN {<<key>>}
+  ELSE LET s == Head(steps)
+           rest == PathsBelow(Tail(steps), key)
+       IN IF s.list THEN {<<s.key, i>> \o p : i \in {0, 1}, p \in rest}
+          ELSE {<<s.key>> \o p : p \in rest}
+Positions(operation) == PathsBelow(operation.parents, operation.key)
+
+\* A position whose value is r: null where r failed, unless the position is
+\* Non-Null, in which case the failure goes on to the parent.
+AtPosition(nonNull, r) == IF r.ok THEN r ELSE IF nonNull THEN Fail ELSE Ok(NullV)
+
+\* The value of an object's selection set holding the steps down to the
+\* field, or Fail where a null at a Non-Null position in it propagates to
+\* the object's own position. failed: whether the field raised.
+RECURSIVE SelectionData(_, _, _, _)
+SelectionData(steps, key, nonNull, failed) ==
+  IF steps = <<>>
+  THEN LET v == IF failed THEN AtPosition(nonNull, Fail) ELSE Ok(Str("ok"))
+       IN IF v.ok THEN Ok(ObjV({Entry(key, v.value)})) ELSE Fail
+  ELSE
+    LET s == Head(steps)
+        inner == SelectionData(Tail(steps), key, nonNull, failed)
+        item == AtPosition(IF s.list THEN s.itemNonNull ELSE s.nonNull, inner)
+        v == IF ~s.list THEN item
+             ELSE AtPosition(s.nonNull, IF item.ok THEN Ok(ListV(<<item.value, item.value>>)) ELSE Fail)
+    IN IF v.ok THEN Ok(ObjV({Entry(s.key, v.value)})) ELSE Fail
+
+\* The "data" entry: the root object, or null where every position from the
+\* field up to the root is Non-Null (§6.4.4: "If every response position
+\* from the root of the request to the source of the execution error has a
+\* Non-Null type, then the "data" entry in the execution result should be
+\* null").
+DataOf(operation, failed) ==
+  LET d == SelectionData(operation.parents, operation.key, operation.nonNull, failed)
+  IN IF d.ok THEN d.value ELSE NullV
 
 -----------------------------------------------------------------------------
 (* §7.1 Response                                                           *)
@@ -988,9 +1134,91 @@ ResponseCases == <<
   Case(Valid(ExampleSchema, Fine, {}, Response(TRUE, FALSE, <<>>, TRUE, ObjV({Entry("v", N(2))}))), FALSE)
 >>
 
+\* §6.4.4 below the root: the positions and the data of a field with an
+\* argument that raises, as in `{ nested { strict(v: null) } }`.
+Nested == Step("nested", FALSE, FALSE, FALSE)
+NestedNN == Step("nestedNN", TRUE, FALSE, FALSE)
+Items == Step("items", FALSE, TRUE, FALSE)
+ItemsNN == Step("itemsNN", FALSE, TRUE, TRUE)
+Below(parents, key, nonNull) == OpAt("query", "", <<>>, parents, key, "intNN", nonNull, {Entry("v", NullV)}, <<>>)
+O1(key, v) == ObjV({Entry(key, v)})
+Leaf == Str("ok")
+PathCases == <<
+  Case(Positions(Below(<<Nested>>, "intNN", FALSE)), {<<"nested", "intNN">>}),
+  Case(Positions(Below(<<Items, Nested>>, "x", FALSE)), {<<"items", 0, "nested", "x">>, <<"items", 1, "nested", "x">>}),
+  Case(Positions(Op(<<>>, "intNN", {})), {<<"intNN">>}),
+  \* The field itself is nullable: only it is null.
+  Case(DataOf(Below(<<Nested>>, "intNN", FALSE), TRUE), O1("nested", O1("intNN", NullV))),
+  Case(DataOf(Op(<<>>, "intNN", {}), TRUE), O1("intNN", NullV)),
+  \* Non-Null: the nearest nullable parent is null.
+  Case(DataOf(Below(<<Nested>>, "strict", TRUE), TRUE), O1("nested", NullV)),
+  Case(DataOf(Below(<<NestedNN, Nested>>, "strict", TRUE), TRUE), O1("nestedNN", O1("nested", NullV))),
+  \* No nullable position up to the root: data is null.
+  Case(DataOf(Below(<<NestedNN>>, "strict", TRUE), TRUE), NullV),
+  \* List items: each item's position.
+  Case(DataOf(Below(<<Items>>, "strict", TRUE), TRUE), O1("items", ListV(<<NullV, NullV>>))),
+  Case(DataOf(Below(<<ItemsNN>>, "intNN", FALSE), TRUE), O1("itemsNN", ListV(<<O1("intNN", NullV), O1("intNN", NullV)>>))),
+  \* A Non-Null item: the whole list; a Non-Null list too: its parent.
+  Case(DataOf(Below(<<ItemsNN>>, "strict", TRUE), TRUE), O1("itemsNN", NullV)),
+  Case(DataOf(Below(<<Step("all", TRUE, TRUE, TRUE)>>, "strict", TRUE), TRUE), NullV),
+  \* No error: the leaf the resolver returns.
+  Case(DataOf(Below(<<Items>>, "strict", TRUE), FALSE), O1("items", ListV(<<O1("strict", Leaf), O1("strict", Leaf)>>)))
+>>
+
+\* §6.2.3.1 CreateSourceEventStream, and §6.3.2, §6.3.3 for selections an
+\* invalid document has at the root.
+Sub(variables, key, field, arguments, others) == OpAt("subscription", "", variables, <<>>, key, field, FALSE, arguments, others)
+Other(kind, name) == [kind |-> kind, name |-> name]
+Doc(operations) == Given(TRUE, FALSE, operations)
+OneV == {Entry("v", I(1))}
+SourceRead == WithPolicy(ExampleSchema, [DefaultPolicy EXCEPT !.sourceArgumentsFieldError = TRUE])
+SubscriptionCases == <<
+  Case(RespondFrom(ExampleSchema, Sub(<<>>, "int", "int", OneV, <<>>), {}, "stream"), Resolved({Entry("v", N(1))})),
+  \* "This value is unaffected if an alias is used."
+  Case(RespondFrom(ExampleSchema, Sub(<<>>, "a", "int", {Entry("v", I(2))}, <<>>), {}, "stream"), Resolved({Entry("v", N(2))})),
+  \* The source stream's resolver raises: a request error.
+  Case(RespondFrom(ExampleSchema, Sub(<<>>, "int", "int", OneV, <<>>), {}, "raise"), RequestError),
+  \* An argument that can't be coerced: a request error, where a query's
+  \* field gets an execution error.
+  Case(RespondFrom(ExampleSchema, Sub(<<>>, "intNN", "intNN", {Entry("v", NullV)}, <<>>), {}, "stream"), RequestError),
+  Case(RespondFrom(ExampleSchema, Sub(X(IntT, FALSE, NullV), "intNN", "intNN", {Entry("v", VarV("x"))}, <<>>), {Entry("x", NullV)}, "stream"),
+       RequestError),
+  Case(Respond(ExampleSchema, Op(X(IntT, FALSE, NullV), "intNN", {Entry("v", VarV("x"))}), {Entry("x", NullV)}), FieldError),
+  \* ... and an execution error under the other reading, which leaves a
+  \* variable that can't be coerced a request error.
+  Case(RespondFrom(SourceRead, Sub(<<>>, "intNN", "intNN", {Entry("v", NullV)}, <<>>), {}, "stream"), FieldError),
+  Case(RespondFrom(SourceRead, Sub(X(IntT, FALSE, NullV), "int", "int", {Entry("v", VarV("x"))}, <<>>), {Entry("x", Str("a"))}, "stream"),
+       RequestError),
+  \* Two root fields, defined or not: a request error. A spread of a
+  \* fragment the document doesn't define adds nothing.
+  Case(RespondFrom(ExampleSchema, Sub(<<>>, "int", "int", OneV, <<Other("field", "intNN")>>), {}, "stream"), RequestError),
+  Case(RespondFrom(ExampleSchema, Sub(<<>>, "int", "int", OneV, <<Other("field", "nope")>>), {}, "stream"), RequestError),
+  Case(RespondFrom(ExampleSchema, Sub(<<>>, "int", "int", OneV, <<Other("spread", "Missing")>>), {}, "stream"), Resolved({Entry("v", N(1))})),
+  \* A query skips a field its root type doesn't define, and a spread of a
+  \* fragment that doesn't exist.
+  Case(Respond(ExampleSchema, OpAt("query", "", <<>>, <<>>, "int", "int", FALSE, OneV, <<Other("field", "nope"), Other("spread", "Missing")>>), {}),
+       Resolved({Entry("v", N(1))})),
+  \* The source stream's resolver runs only once the arguments are coerced.
+  Case(SourceCalled(ExampleSchema, Doc(<<Sub(<<>>, "int", "int", OneV, <<>>)>>), NoName, {}), TRUE),
+  Case(SourceCalled(ExampleSchema, Doc(<<Sub(<<>>, "intNN", "intNN", {Entry("v", NullV)}, <<>>)>>), NoName, {}), FALSE),
+  Case(SourceCalled(ExampleSchema, Doc(<<Sub(<<>>, "int", "int", OneV, <<Other("field", "intNN")>>)>>), NoName, {}), FALSE),
+  Case(SourceCalled(ExampleSchema, Doc(<<Op(<<>>, "int", OneV)>>), NoName, {}), FALSE)
+>>
+
+\* §6 and §2.3: a source that doesn't parse, or holds a type system
+\* definition, isn't executed.
+SourceCases == <<
+  Case(ExecuteSource(ExampleSchema, Given(FALSE, FALSE, <<>>), NoName, {}, "stream"), RequestError),
+  \* Even where the part before the syntax error would select an operation.
+  Case(ExecuteSource(ExampleSchema, Given(FALSE, FALSE, <<Fine>>), NoName, {}, "stream"), RequestError),
+  Case(ExecuteSource(ExampleSchema, Given(TRUE, TRUE, <<Fine>>), NoName, {}, "stream"), RequestError),
+  Case(ExecuteSource(ExampleSchema, Given(TRUE, TRUE, <<>>), NoName, {}, "stream"), RequestError),
+  Case(ExecuteSource(ExampleSchema, Doc(<<Fine>>), NoName, {}, "stream"), Resolved({Entry("v", N(1))}))
+>>
+
 \* Each initial state checks one section of examples.
 VARIABLE section
-Sections == {"scalar", "enum", "list", "inputObject", "oneOf", "variables", "arguments", "operation", "response"}
+Sections == {"scalar", "enum", "list", "inputObject", "oneOf", "variables", "arguments", "operation", "response", "path", "subscription", "source"}
 Init == section \in Sections
 Next == UNCHANGED section
 
@@ -1003,4 +1231,7 @@ VariableExamples == section = "variables" => Failing(VariableCases) = {}
 ArgumentExamples == section = "arguments" => Failing(ArgumentCases) = {}
 OperationExamples == section = "operation" => Failing(OperationCases) = {}
 ResponseExamples == section = "response" => Failing(ResponseCases) = {}
+PathExamples == section = "path" => Failing(PathCases) = {}
+SubscriptionExamples == section = "subscription" => Failing(SubscriptionCases) = {}
+SourceExamples == section = "source" => Failing(SourceCases) = {}
 ====

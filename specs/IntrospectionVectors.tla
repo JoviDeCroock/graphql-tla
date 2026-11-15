@@ -331,6 +331,11 @@ SchemaFieldsOf(B0) ==
   LET fs == TypeNamed(B0, "__Schema").fields IN
   [i \in DOMAIN fs |-> [name |-> fs[i].name, type |-> RefResult(B0, fs[i].type)]]
 
+\* A type's fields as the answer has them, with includeDeprecated inc.
+FieldsOfType(inc, name) ==
+  LET fs == TypeOf(inc, name).fields[1] IN
+  [i \in DOMAIN fs |-> [name |-> fs[i].name, type |-> fs[i].type]]
+
 SchemaFieldsAreAnswered == ~done =>
   /\ SchemaFieldsMatch(B, SchemaFieldsOf(B))
   /\ SchemaFieldsMatch(Sep2025Builtins, SchemaFieldsOf(Sep2025Builtins))
@@ -343,6 +348,29 @@ SchemaFieldsAreAnswered == ~done =>
   /\ ~SchemaFieldsMatch(B, Tail(SchemaFieldsOf(B)))
   /\ ~SchemaFieldsMatch(B, Append(SchemaFieldsOf(B), SchemaFieldsOf(B)[2]))
   /\ ~SchemaFieldsMatch(B, [SchemaFieldsOf(B) EXCEPT ![2].type = NamedChain("OBJECT", "__Type")])
+  \* The same for a type of the document's: the fields it returns by
+  \* default, each once with its type. Query's deprecated field old may be
+  \* there or not.
+  /\ TypeFieldsMatch(FS, "Query", FieldsOfType(FALSE, "Query"))
+  /\ TypeFieldsMatch(FS, "Query", FieldsOfType(TRUE, "Query"))
+  /\ ~TypeFieldsMatch(FS, "Query", Tail(FieldsOfType(FALSE, "Query")))
+  /\ ~TypeFieldsMatch(FS, "Query", [FieldsOfType(FALSE, "Query") EXCEPT ![1].type = NamedChain("SCALAR", "Float")])
+
+-----------------------------------------------------------------------------
+(* §3.13: "all provided directives, including any built-in directive, must *)
+(* be included in the set of returned directives", where a request shows  *)
+(* @skip or @include is provided                                          *)
+
+HonouredDirectivesAreReturned == ~done =>
+  /\ HonoredDirectivesMatch({"skip"}, {"skip", "include", "deprecated"})
+  /\ HonoredDirectivesMatch({"skip", "include"}, {"skip", "include"})
+  \* A service that doesn't honour a directive needn't return it.
+  /\ HonoredDirectivesMatch({}, {})
+  /\ HonoredDirectivesMatch({"include"}, {"include"})
+  /\ ~HonoredDirectivesMatch({"skip"}, {"include"})
+  /\ ~HonoredDirectivesMatch({"skip", "include"}, {"skip"})
+  \* Only built-in directives are judged this way.
+  /\ HonoredDirectiveNames({"skip", "label"}) = {"skip"}
 
 -----------------------------------------------------------------------------
 (* The September 2025 edition *)
@@ -393,6 +421,13 @@ Sep2025ProfileIsSound == ~done =>
   \* definition, puts a schema out of reach.
   /\ ~IsSep2025Schema([S EXCEPT !.directives[1].deprecated = <<"x">>])
   /\ ~IsSep2025Schema([S EXCEPT !.directives[1].directives = {"d"}])
+  \* But not @deprecated on one of its arguments (d's s), which September
+  \* 2025's ArgumentsDefinition allows.
+  /\ IsSep2025Schema([S EXCEPT !.directives[1].directives = {"deprecated"}])
+  /\ ~IsSep2025Schema([S EXCEPT !.directives[1].directives = {"deprecated"},
+                                !.directives[1].args[2].deprecated = <<>>])
+  \* So does a directive that names the location DIRECTIVE_DEFINITION.
+  /\ ~IsSep2025Schema([S EXCEPT !.directives[1].locations = Append(@, "DIRECTIVE_DEFINITION")])
   \* For such a schema the fields only September 2026 has are fixed, and
   \* the document's types are September 2026's, so a query that doesn't
   \* select them loses nothing.
@@ -463,6 +498,9 @@ Oct2021ProfileIsSound == ~done =>
   /\ ~IsOct2021Schema([S21 EXCEPT !.types[1].fields[3].args[2].deprecated = <<"x">>])
   /\ ~IsOct2021Schema([S21 EXCEPT !.directives[1].args[2].deprecated = <<"x">>])
   /\ ~IsOct2021Schema([S21 EXCEPT !.directives[1].deprecated = <<"x">>])
+  \* So does anything September 2025 can't express.
+  /\ ~IsOct2021Schema([S21 EXCEPT !.directives[1].directives = {"d"}])
+  /\ ~IsOct2021Schema([S21 EXCEPT !.directives[1].locations = Append(@, "DIRECTIVE_DEFINITION")])
   \* For such a schema the fields only later editions have are fixed, so a
   \* query that doesn't select them loses nothing.
   /\ \A inc \in BOOLEAN :

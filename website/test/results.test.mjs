@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import {
-  collectReports, summarize, selectChecks, selectFindings, verdict, areasOf, sinceLabel, sinceText, sinceSentence, levelText,
+  collectReports, summarize, selectChecks, selectFindings, verdict, areasOf, areaOrder, areaRows, missingCapabilities, sinceLabel, sinceText, sinceSentence, levelText,
   exampleLines, profileText, sinceReportText, noteParts, findingSeverity, editionName, GRADED, GRADED_TEXT, VERDICT_LABELS,
 } from '../src/results.mjs';
 const dir = new URL('../../conformance/reports/', import.meta.url);
@@ -174,4 +174,35 @@ test('unreported areas remain absent, not invented as passes', () => {
   assert.ok(selected.length > 0);
   assert.deepEqual(selectChecks(selected, 'parse', 'all', ''), []);
   assert.deepEqual(selectFindings(selected, 'parse', 'all', ''), []);
+});
+
+test('areas come in kit/areas.mjs order, with any area it does not list last', () => {
+  const order = areasOf(reports);
+  assert.deepEqual(order, [...order].sort((a, b) => areaOrder(a) - areaOrder(b)));
+  const synthetic = collectReports({ 'x.zz.json': { area: 'zz' }, 'x.coordinate.json': { area: 'coordinate' }, 'x.json': { area: 'execution' } });
+  assert.deepEqual(synthetic.map(r => r.area), ['execution', 'coordinate', 'zz']);
+  assert.deepEqual(areasOf(synthetic), ['execution', 'coordinate', 'zz']);
+});
+test('every area some implementation reports is a row for each, absent where its adapter does not take part', () => {
+  const all = collectReports({ 'a.json': { area: 'execution' }, 'a.coordinate.json': { area: 'coordinate' }, 'b.json': { area: 'execution' } });
+  const rows = areaRows(all, all.filter(r => r.key === 'b'));
+  assert.deepEqual(rows.map(r => [r.area, r.report?.key ?? null]), [['execution', 'b'], ['coordinate', null]]);
+  for (const key of new Set(reports.map(r => r.key))) {
+    const own = areaRows(reports, selectedFor(key));
+    assert.equal(own.length, areasOf(reports).length);
+    assert.equal(own.filter(r => r.report).length, selectedFor(key).length);
+  }
+});
+test('an untested check names the capabilities it needs that the adapter lacks', () => {
+  const report = {
+    area: 'execution', capabilities: ['subscription'], cases: { distinct: 1 }, adapterProblems: 0, findings: [],
+    checks: [
+      { id: 'stream', title: 'Streams', level: 'MUST', status: 'untested', cases: 0, failing: 0, requires: ['subscription-stream'] },
+      { id: 'sub', title: 'Subscriptions', level: 'MUST', status: 'untested', cases: 0, failing: 0, requires: ['subscription'] },
+      { id: 'p', title: 'Passes', level: 'MUST', status: 'pass', cases: 1, failing: 0, requires: ['x'] },
+    ],
+  };
+  assert.deepEqual(selectChecks([report], 'all', 'all', '').map(c => c.needs), [['subscription-stream'], [], []]);
+  assert.deepEqual(missingCapabilities(report.checks[0], null), []);
+  assert.deepEqual(selectChecks([report], 'all', 'untested', '').map(c => c.id), ['stream', 'sub']);
 });

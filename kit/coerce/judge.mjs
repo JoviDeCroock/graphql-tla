@@ -8,13 +8,23 @@ import { POLICIES, checkById, sectionOf } from "./checks.mjs";
 
 const isMap = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 
-// Why a result isn't in the result format, or undefined if it is.
+// Why a result isn't in the result format, or undefined if it is. A
+// response that is there but isn't a map (a list, a string, null) is in
+// the format: it fails resultMap (§7.1.1). `sourceCalls`, for a vector
+// with `subscribe`, may be left out (no call).
 export const malformed = (result) => {
-  if (!isMap(result?.response)) return "a result needs a response object: the execution result";
+  if (result === null || typeof result !== "object" || !Object.hasOwn(result, "response")) return "a result needs a response: the execution result";
+  if (!isMap(result.response)) return undefined;
   if ("errors" in result.response && !Array.isArray(result.response.errors)) return "response.errors must be a list";
   if (!Array.isArray(result.calls)) return "a result needs a calls list";
   for (const call of result.calls) {
     if (!isMap(call) || !Array.isArray(call.path) || !isMap(call.arguments)) return "each call needs a path list and an arguments object";
+  }
+  if (result.sourceCalls !== undefined) {
+    if (!Array.isArray(result.sourceCalls)) return "sourceCalls must be a list";
+    for (const call of result.sourceCalls) {
+      if (!isMap(call) || typeof call.field !== "string" || !isMap(call.arguments)) return "each source call needs a field name and an arguments object";
+    }
   }
   return undefined;
 };
@@ -53,14 +63,20 @@ export const sameJson = (a, b) => {
 // entry, when present, is a non-empty list). A result with a top-level
 // entry other than data, errors and extensions is flagged extraEntries
 // (additionalEntries, §7.1.8), and one whose extensions isn't a map
-// badExtensions (extensions, §7.1.7).
+// badExtensions (extensions, §7.1.7). A response that isn't a map is
+// "other", flagged notMap, which resultMap grades (§7.1.1).
+//
+// A vector with `at` (fields below the root, subscriptions) is classified
+// by classifyAt, below.
 export const NO_RESPONSE = { outcome: "no-response" };
 
 const wellFormedError = (e) => isMap(e) && typeof e.message === "string";
 
 const RESULT_ENTRIES = new Set(["data", "errors", "extensions"]);
 
-export const classify = ({ response, calls }) => {
+export const classify = (result, vector = {}) => {
+  const { response, calls } = result;
+  if (!isMap(response)) return { outcome: "other", notMap: true };
   const errors = response.errors ?? [];
   const extra = Object.keys(response).filter((k) => !RESULT_ENTRIES.has(k));
   const shape = (outcome) => ({
@@ -69,6 +85,7 @@ export const classify = ({ response, calls }) => {
     ...(Object.hasOwn(response, "extensions") && !isMap(response.extensions) ? { badExtensions: true } : {}),
   });
   const flag = (outcome) => shape(errors.every(wellFormedError) ? outcome : { ...outcome, badErrors: true });
+  if (vector.at) return classifyAt(response, calls, vector, errors, shape, flag, result.sourceCalls ?? []);
   if (!Object.hasOwn(response, "data") || response.data === null) {
     if (errors.length === 0 || calls.length > 0) return { outcome: "other" };
     return flag(Object.hasOwn(response, "data") ? { outcome: "request-error", dataNull: true } : { outcome: "request-error" });
@@ -82,6 +99,69 @@ export const classify = ({ response, calls }) => {
   }
   if (calls.length === 1 && errors.length === 0 && data[field] !== null && sameJson(calls[0].path, [field])) {
     const value = { outcome: "value", field, arguments: calls[0].arguments };
+    return shape(Object.hasOwn(response, "errors") ? { ...value, emptyErrors: true } : value);
+  }
+  return { outcome: "other" };
+};
+
+// Whether data has the shape of `pattern`: the same maps and lists, null
+// where it is null, and any value but null and maps and lists at its
+// other leaves (the field's own value, which the service's resolver
+// gives).
+const shaped = (pattern, data) => {
+  if (pattern === null) return data === null;
+  if (Array.isArray(pattern)) return Array.isArray(data) && data.length === pattern.length && pattern.every((p, i) => shaped(p, data[i]));
+  if (isMap(pattern)) {
+    const keys = Object.keys(pattern);
+    return isMap(data) && Object.keys(data).length === keys.length && keys.every((k) => Object.hasOwn(data, k) && shaped(pattern[k], data[k]));
+  }
+  return data !== null && data !== undefined && typeof data !== "object";
+};
+
+// For a vector whose field is below the root, or a subscription's
+// (`at`): the field's response positions (paths), and the data when its
+// arguments raise (error) or don't (value).
+//   request-error  as above: no "data" entry, an error, no resolver called;
+//   field-error    data shaped as at.error, one error for each position,
+//                  and no call of the field's resolver at any of them
+//                  (its parents' resolvers ran). Error paths other than
+//                  the positions are flagged wrongPath. Where the error
+//                  reaches the root, at.error is null: "data": null with
+//                  one error per position, each with a path, is this
+//                  outcome;
+//   value          data shaped as at.value, no errors, and exactly one
+//                  call at each position, all with the same arguments.
+//                  For a subscription whose source stream the reference
+//                  creates (sourceCalled), exactly one source call of the
+//                  field with those arguments too, else flagged
+//                  sourceMismatch, which sourceStream grades.
+const classifyAt = (response, calls, vector, errors, shape, flag, sourceCalls) => {
+  const { at } = vector;
+  const positions = new Set(at.paths.map((p) => JSON.stringify(p)));
+  const atField = calls.filter((c) => positions.has(JSON.stringify(c.path)));
+  const hasData = Object.hasOwn(response, "data");
+  if (!hasData || (response.data === null && at.error !== null)) {
+    if (errors.length === 0 || calls.length > 0) return { outcome: "other" };
+    return flag(hasData ? { outcome: "request-error", dataNull: true } : { outcome: "request-error" });
+  }
+  const { data } = response;
+  // With "data": null, only errors that all have a path are the field's:
+  // others make a request error with "data": null.
+  const pathed = data !== null || errors.every((e) => isMap(e) && Array.isArray(e.path));
+  if (atField.length === 0 && errors.length === at.paths.length && pathed && shaped(at.error, data)) {
+    const paths = errors.map((e) => JSON.stringify(isMap(e) ? e.path : undefined));
+    const right = new Set(paths).size === positions.size && paths.every((p) => positions.has(p));
+    const outcome = { outcome: "field-error", field: at.field };
+    return flag(right ? outcome : { ...outcome, wrongPath: true, path: isMap(errors[0]) ? errors[0].path ?? null : null });
+  }
+  if (data === null) return errors.length > 0 && calls.length === 0 ? flag({ outcome: "request-error", dataNull: true }) : { outcome: "other" };
+  if (errors.length === 0 && atField.length === positions.size && new Set(atField.map((c) => JSON.stringify(c.path))).size === positions.size && shaped(at.value, data)) {
+    const [first] = atField;
+    if (!atField.every((c) => sameJson(c.arguments, first.arguments))) return { outcome: "other" };
+    let value = { outcome: "value", field: at.field, arguments: first.arguments };
+    if (vector.sourceCalled && !(sourceCalls.length === 1 && sourceCalls[0].field === at.field && sameJson(sourceCalls[0].arguments, first.arguments))) {
+      value = { ...value, sourceMismatch: true };
+    }
     return shape(Object.hasOwn(response, "errors") ? { ...value, emptyErrors: true } : value);
   }
   return { outcome: "other" };
@@ -221,8 +301,9 @@ export const sameAnswer = (ctx, expected, got) => {
 // A vector that accepts a field error also exercises fieldErrorPath, and,
 // where it doesn't accept a request error, argumentErrorKind unless
 // §3.10 or §3.10.1 itself requires the execution error. Every vector
-// exercises responds, errorFormat, errorsList, additionalEntries and
-// extensions.
+// exercises responds, resultMap, errorFormat, errorsList,
+// additionalEntries and extensions, and a subscription vector whose
+// answer is a value, sourceStream.
 //
 // known: for an invalid vector, whether the implementation's own validator
 // rejects the document (true), accepts it (false), or the kit can't tell
@@ -239,8 +320,9 @@ export const planFor = (vector, capabilities, { known, validator = false } = {})
     plan.exercises.push("fieldErrorPath");
     if (!plan.accept.some((a) => a.outcome === "request-error")) plan.exercises.push(fieldErrorKindCheck(vector, plan));
   }
-  if (validator && vector.valid !== false && !capabilities.has("unvalidated")) plan.exercises.push("acceptsValid");
-  plan.exercises.push("responds", "errorFormat", "errorsList", "additionalEntries", "extensions");
+  if (validator && vector.valid !== false && !vector.unparsable && !capabilities.has("unvalidated")) plan.exercises.push("acceptsValid");
+  if (plan.accept.some((a) => a.outcome === "value") && vector.sourceCalled) plan.exercises.push("sourceStream");
+  plan.exercises.push("responds", "resultMap", "errorFormat", "errorsList", "additionalEntries", "extensions");
   plan.exercises = [...new Set(plan.exercises)];
   return plan;
 };
@@ -283,8 +365,24 @@ const basePlan = (vector, capabilities, known) => {
 const floatPrecisionLabel = (answer) =>
   answer.policy?.includes("floatRounded") ? "rounded to the nearest double" : answer.outcome === "value" ? "as the reference" : "refused";
 
+// Capabilities a vector needs to be sent at all, valid or not: the
+// adapter couldn't take its schema, request or result otherwise.
+const PROTOCOL = new Set(["nested-fields", "subscription-source", "request-extensions"]);
+
+const LABELS = {
+  floatPrecision: (accept) => accept.map(floatPrecisionLabel),
+  sourceStreamArguments: (accept) => accept.map((a) => (a.outcome === "request-error" ? "request error" : "execution error")),
+  requestExtensions: (accept) => accept.map(() => "the same answer as without extensions"),
+};
+
 const gradedPlan = (vector, capabilities, known) => {
   const only = (check, accept, labels) => ({ check, accept, labels, deviations: [], editions: [], examples: [], exercises: [check] });
+  if (vector.requires?.some((c) => PROTOCOL.has(c) && !capabilities.has(c))) return undefined;
+  // A document that doesn't parse: a request error, for every adapter.
+  if (vector.unparsable) return only("syntaxError", [{ outcome: "request-error" }]);
+  // A document with a type system definition: a request error, for every
+  // adapter (§2.3 doesn't depend on validation).
+  if (vector.check === "notExecutable") return only("notExecutable", [{ outcome: "request-error" }]);
   if (!capabilities.has("unvalidated")) {
     if (vector.requires?.includes("unvalidated")) return undefined;
     if (vector.valid === false && !vector.literalOnly) return only(known ? "invalidNotExecuted" : "onlyValidExecuted", [{ outcome: "request-error" }]);
@@ -329,8 +427,9 @@ const gradedPlan = (vector, capabilities, known) => {
   return {
     check: vector.check,
     accept,
-    // floatPrecision is informational: which reading the result follows.
-    labels: vector.check === "floatPrecision" ? accept.map(floatPrecisionLabel) : undefined,
+    // floatPrecision, sourceStreamArguments and requestExtensions are
+    // informational: which reading the result follows.
+    labels: LABELS[vector.check]?.(accept),
     deviations,
     withoutDefaults,
     editions: alternatives.filter(edition),
@@ -363,6 +462,7 @@ export const contextFor = (vector, inputs, capabilities, rejectedByValidator) =>
 export const judge = (vector, plan, got, ctx) => {
   // No response: responds, with the vector's own check as the hint.
   if (got.outcome === "no-response") return { kind: "no-response", check: noResponseCheck(plan), hint: plan.check };
+  if (got.notMap) return { kind: "not-a-map", check: "resultMap" };
   // The answer October 2021's §3.11 table gives: named as such, before the
   // validator is blamed for refusing what the table refuses.
   if (plan.examples.some((a) => sameAnswer(ctx, a, got))) return { kind: "example-table", check: plan.check };
@@ -378,6 +478,7 @@ export const judge = (vector, plan, got, ctx) => {
     if (got.extraEntries) return { kind: "additional-entries", check: "additionalEntries" };
     if (got.badExtensions) return { kind: "extensions-not-map", check: "extensions" };
     if (got.wrongPath) return { kind: "field-error-path", check: "fieldErrorPath" };
+    if (got.sourceMismatch) return { kind: "source-stream", check: "sourceStream" };
     return undefined;
   }
   const deviation = plan.deviations.find((d) => sameAnswer(ctx, d.answer, got));
@@ -393,6 +494,10 @@ export const judge = (vector, plan, got, ctx) => {
     return { kind: "json-number", check };
   }
   if (check === "loneSurrogates") return { kind: "lone-surrogate", check };
+  if (check === "syntaxError") return { kind: got.outcome === "other" ? "other" : "executes-unparsable", check };
+  // A subscription argument that doesn't coerce, resolved anyway: the
+  // type's own check, whichever error the spec means.
+  if (check === "sourceStreamArguments" && got.outcome === "value") return { kind: "accepts", check: vector.typeCheck };
   const want = plan.accept[0].outcome;
   if (got.outcome === "other") return { kind: "other", check };
   if (want === got.outcome) return { kind: want !== "request-error" && got.field !== plan.accept[0].field ? "wrong-field" : "wrong-value", check };
@@ -434,6 +539,9 @@ export const summary = ({ kind, check, hint, since }) => {
     case "extensions-not-map": return `answers with a top-level extensions entry that isn't a map, which ${at} requires`;
     case "field-error-path": return `raises the field error with a path other than the field's response path, which ${at} requires`;
     case "data-with-request-error": return `answers a request error with a "data" entry, which ${at} says it must not have`;
+    case "not-a-map": return `answers with a response that isn't a map, which ${at} requires`;
+    case "source-stream": return `creates the subscription's source stream with other arguments than the field's, or not exactly once, though ${at} gives the source stream's resolver the field's coerced arguments`;
+    case "executes-unparsable": return `answers a document that doesn't parse with something other than a request error, which ${at} requires`;
     case "lone-surrogate": return "treats a JSON string with a lone surrogate in a way that neither keeping it, replacing it with U+FFFD, nor a refusal explains";
     case "json-number": return "reads a JSON number a double can't hold in a way that neither exact nor binary64 parsing, nor a refusal, explains";
     default: return `answers with none of the three outcomes, under ${at}`;

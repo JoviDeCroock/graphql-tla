@@ -127,4 +127,18 @@ export default [
     file,
     property: "BlockStringsLex",
   },
+  {
+    name: "a printer may leave C1 controls (U+007F to U+009F) unescaped",
+    find: "IsNonPrintableControl(c) == (0 <= c /\\ c <= 31) \\/ (127 <= c /\\ c <= 159)",
+    replace: "IsNonPrintableControl(c) == (0 <= c /\\ c <= 31)",
+    file,
+    property: "StringsPrintWell",
+  },
+  {
+    name: "a printer may escape a supplementary character as a surrogate pair",
+    find: "  /\\ (~IsBlockStringAt(src, i) => ~PairEscapeFrom(src, i + 1))",
+    replace: "  /\\ TRUE",
+    file,
+    property: "StringsPrintWell",
+  },
 ];

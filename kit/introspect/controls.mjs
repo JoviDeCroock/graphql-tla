@@ -174,6 +174,7 @@ const BROKEN = [
     (s) => {
       dropDirectives("specifiedBy")(s);
       type(s, "Date").specifiedByURL = null;
+      type(s, "Odd").specifiedByURL = null;
     },
     { only: true },
   ],
@@ -187,7 +188,7 @@ const BROKEN = [
     },
     { only: true },
   ],
-  ["scalars.lookup", "doesn't provide @specifiedBy, and so reports no URL, for __type(name:)", "pass", (s, d) => (d.t0.specifiedByURL = null), { provided: ["skip", "include", "deprecated", "oneOf"] }],
+  ["scalars.lookup", "doesn't provide @specifiedBy, and so reports no URL, for __type(name:)", "pass", (s, d) => (d.t0.specifiedByURL = d.t2.specifiedByURL = null), { provided: ["skip", "include", "deprecated", "oneOf"] }],
   // A lookup's URL shows @specifiedBy is provided, whatever the __schema
   // answer returned: it is graded against the document.
   ["scalars.lookup", "reports Date's URL for __type(name:), though the __schema answer has no @specifiedBy", "pass", () => {}, { provided: ["skip", "include", "deprecated", "oneOf"] }],
@@ -440,6 +441,86 @@ const BROKEN = [
     },
     { only: true },
   ],
+  // The wrapper types of a field of the document's own (__type(name:
+  // "Resource")).
+  ["wrappers.user", 'answers no fields for __type(name: "Resource")', "typeKinds", (s, d) => (d.wrappers.fields = []), { only: true }],
+  ["wrappers.user", "leaves out Resource.url", "typeKinds", (s, d) => d.wrappers.fields.splice(d.wrappers.fields.findIndex((f) => f.name === "url"), 1), { only: true }],
+  [
+    "wrappers.user",
+    "loses the Non-Null wrapper of Resource.id",
+    "typeKinds",
+    (s, d) => {
+      const f = d.wrappers.fields.find((x) => x.name === "id");
+      f.type = f.type.ofType;
+    },
+    { only: true },
+  ],
+  // A request that uses @skip or @include (§3.13): whether the service
+  // honours it, and returns the directive it honours.
+  ["probe.skip", "honours @skip but doesn't return it from __schema.directives", "directives", (s) => (s.directives = s.directives.filter((x) => x.name !== "skip")), { only: true }],
+  ["probe.include", "honours @include but doesn't return it from __schema.directives", "directives", (s) => (s.directives = s.directives.filter((x) => x.name !== "include")), { only: true }],
+  ["probe.skip", "rejects a request that uses @skip", "builtinDirectives", rejected, { only: true }],
+  ["probe.include", "rejects a request that uses @include", "builtinDirectives", rejected, { only: true }],
+  ["probe.skip", "doesn't skip the field @skip(if: true) is on", "executes", (s, d) => (d.dropped = "Query"), { only: true }],
+  ["probe.include", "skips the field @include(if: true) is on", "executes", (s, d) => delete d.kept, { only: true }],
+  ["probe.skip", "returns a directive of its own besides the built-in ones", "pass", (s) => s.directives.push({ name: "extra" })],
+  // Deprecation of interface fields and of every argument, input field or
+  // enum value of an item.
+  ["interfaceDeprecation.inc", "reports an interface's deprecated field as not deprecated", "deprecation", (s) => Object.assign(field(s, "Named", "name"), { isDeprecated: false, deprecationReason: null }), { only: true }],
+  [
+    "interfaceDeprecation.defaults",
+    "returns an interface's deprecated field when includeDeprecated is false",
+    "deprecation",
+    (s) => type(s, "Gone").fields.push({ name: "old", description: null, args: [], type: named("Int"), isDeprecated: true, deprecationReason: "No longer supported" }),
+  ],
+  ["interfaceDeprecation.lookup", "reports another reason for an interface's deprecated field", "deprecation", (s, d) => (d.t0.fields.find((f) => f.name === "name").deprecationReason = "Use name"), { only: true, since: null }],
+  ["inputDeprecationAll.inc", "reports an interface field's deprecated argument as not deprecated", "deprecation", (s) => Object.assign(field(s, "Node", "f").args[0], { isDeprecated: false, deprecationReason: null }), { only: true, since: "September2025" }],
+  ["inputDeprecationAll.defaults", "returns a deprecated input field when includeDeprecated is false", "deprecation", (s) => type(s, "AllOld").inputFields.push({ ...inputValue("p", named("Int")), isDeprecated: true, deprecationReason: "No longer supported" }), { since: "September2025" }],
+  ["directiveArgDeprecation.inc", "reports a directive's deprecated argument as not deprecated", "deprecation", (s) => Object.assign(directive(s, "d").args[0], { isDeprecated: false, deprecationReason: null }), { only: true, since: "September2025" }],
+  ["directiveArgDeprecation.defaults", "returns a directive's deprecated argument when includeDeprecated is false", "deprecation", (s) => directive(s, "e").args.push({ ...inputValue("x", named("Int")), isDeprecated: true, deprecationReason: "No longer supported" }), { since: "September2025" }],
+  // Source order of input fields, directives and directive arguments.
+  ["order.inc", "reorders an input object's fields", "order", (s) => type(s, "In").inputFields.reverse(), { only: true, since: "September2025" }],
+  ["locations.inc", "reorders a directive's arguments", "order", (s) => directive(s, "m").args.reverse(), { only: true, since: "September2025" }],
+  [
+    "locations.inc",
+    "returns the document's directives out of order",
+    "order",
+    (s) => {
+      const z = s.directives.findIndex((x) => x.name === "z");
+      s.directives.push(...s.directives.splice(z, 1));
+    },
+    { only: true, since: "September2025" },
+  ],
+  ["locations.inc", "reorders a directive's locations, which have no source order to keep", "pass", (s) => directive(s, "z").locations.reverse()],
+  // Directive locations
+  ["locations.inc", "leaves a location out of a directive of its own", "directives", (s) => directive(s, "z").locations.splice(9, 1), { only: true }],
+  ["locations.inc", "makes a directive of its own repeatable", "directives", (s) => (directive(s, "a").isRepeatable = true), { only: true }],
+  ["directiveDefinitionLocation.inc", "leaves DIRECTIVE_DEFINITION out of a directive's locations", "directives", (s) => directive(s, "every").locations.pop(), { only: true }],
+  // Descriptions: a block string's text is BlockStringValue's.
+  ["descriptions.inc", "doesn't remove a block description's common indentation", "descriptions", (s) => (field(s, "Query", "f").description = "    A field with\n  a block description"), { only: true }],
+  ["descriptions.inc", "keeps a block description's leading blank line", "descriptions", (s) => (type(s, "Query").description = "\nA query root.\n\n  Indented second paragraph."), { only: true }],
+  ["descriptions.inc", "doesn't normalise CRLF in a block description", "descriptions", (s) => (type(s, "I").description = "An interface\r\nover x"), { only: true }],
+  ["descriptions.lookup", "leaves \\\"\"\" escaped in a block description", "descriptions", (s, d) => (d.t5.description = 'A scalar with \\""" in it'), { only: true }],
+  ["descriptions.inc", "drops the schema's description", "descriptions", (s) => (s.description = null), { only: true }],
+  ["descriptionText.inc", "decodes a surrogate pair escape into two characters", "descriptions", (s) => (type(s, "Query").description = type(s, "Query").description.replace("a pair \u{1F600}", "a pair \uFFFD\uFFFD")), { only: true, since: "September2025" }],
+  ["descriptionText.lookup", "drops a raw control character", "descriptions", (s, d) => (d.t0.fields[0].description = d.t0.fields[0].description.replace("\u0001", "")), { only: true, since: "September2025" }],
+  // How a default value's strings are printed (§2.10.4, a SHOULD since
+  // September 2025).
+  ["printing.inc", "prints a control character unescaped", "defaultValuePrinting", (s) => (field(s, "Query", "f").args[0].defaultValue = field(s, "Query", "f").args[0].defaultValue.replace("\\u0001", "\u0001")), { only: true, since: "September2025" }],
+  ["printing.inc", "prints a control character in a block string, which can't escape it", "defaultValuePrinting", (s) => (type(s, "In").inputFields[0].defaultValue = '"""\u0003"""'), { only: true, since: "September2025" }],
+  ["printing.inc", "escapes a supplementary character as a surrogate pair", "defaultValuePrinting", (s) => (field(s, "Query", "f").args[1].defaultValue = '"\\uD83D\\uDE00 é"'), { only: true, since: "September2025" }],
+  ["printing.lookup", "prints a control character in an input field's default unescaped", "defaultValuePrinting", (s, d) => (d.t1.inputFields[0].defaultValue = '"\u0003"'), { only: true, since: "September2025" }],
+  ["printing.inc", "escapes a supplementary character as \\u{…} and é as \\u00E9", "pass", (s) => (field(s, "Query", "f").args[1].defaultValue = '"\\u{1F600} \\u00E9"')],
+  ["printing.inc", "prints a string list item as a block string", "pass", (s) => (type(s, "In").inputFields[1].defaultValue = '["""\u{1F600}"""]')],
+  ["printing.inc", "escapes control characters in another form with the same value", "pass", (s) => (field(s, "Query", "f").args[0].defaultValue = '"\\u0000\\u0001\\u0009\\u000A\\u001F\\u007f\\u0080\\u0085\\u009f"')],
+  ["printing.inc", "prints another value, without a printing problem", "defaultValue", (s) => (field(s, "Query", "f").args[1].defaultValue = '"x"'), { only: true }],
+  // Meta-fields in fragments on the query root (§4.2).
+  ["roots.lookup.fragments", "answers null for __type(name:) in a fragment", "typeByName", (s, d) => (d.t2 = null), { only: true }],
+  // An empty selection set on the root and on the meta-fields (§2.5, new
+  // in September 2026).
+  ["emptySelection.root", "answers data: null", "executes", (s, d, r) => (r.data = null), { only: true }],
+  ["emptySelection.meta", "selects __schema's fields anyway", "executes", (s, d) => (d.__schema = { queryType: { name: "Query" } }), { only: true }],
+  ["emptySelection.meta", "answers an object for an unknown type", "executes", (s, d) => (d.t1 = {}), { only: true }],
   // The September 2025 profile
   ...[
     // A built-in that is as September 2026 defines it is informational.
@@ -517,6 +598,13 @@ const BROKEN = [
     ["wrappers", "gives a List type a specifiedByURL", "typeKinds", (s, d) => (wrapperOf(d, "types").ofType.specifiedByURL = "u"), { only: true }],
     ["rich.lookup", "answers null for a type the schema has", "typeByName", (s, d) => (d.t1 = null)],
     ["deprecation.lookup.defaults", "returns a deprecated value when includeDeprecated is false", "deprecation", (s, d) => d.t2.enumValues.push({ name: "B", description: null, isDeprecated: true, deprecationReason: "Gone" })],
+    // October 2021 has no rule on producing a StringValue.
+    ["printing.inc", "prints a control character unescaped, which October 2021 doesn't grade", "pass", (s) => (field(s, "Query", "f").args[0].defaultValue = field(s, "Query", "f").args[0].defaultValue.replace("\\u0001", "\u0001"))],
+    ["printing.inc", "escapes a supplementary character as a surrogate pair, which October 2021 doesn't grade", "pass", (s) => (field(s, "Query", "f").args[1].defaultValue = '"\\uD83D\\uDE00 \u00e9"')],
+    ["probe.skip", "rejects a request that uses @skip", "builtinDirectives", rejected, { only: true }],
+    ["probe.include", "honours @include but doesn't return it", "directives", (s) => (s.directives = s.directives.filter((x) => x.name !== "include")), { only: true }],
+    ["interfaceDeprecation.inc", "reports an interface's deprecated field as not deprecated", "deprecation", (s) => Object.assign(field(s, "Named", "name"), { isDeprecated: false, deprecationReason: null })],
+    ["locations.inc", "reorders a directive's arguments, which October 2021 doesn't grade", "pass", (s) => directive(s, "m").args.reverse()],
   ].map(([id, name, check, change, options = {}]) => [id, `October 2021: ${name}`, check, change, { ...options, profile: "October2021" }]),
 ];
 

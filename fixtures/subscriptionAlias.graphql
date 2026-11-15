@@ -1,0 +1,34 @@
+# A second subscription event (§6.2.3.1, §6.2.3.2): an aliased, nullable
+# root field, selected twice under one response name, once through a
+# fragment spread. CreateSourceEventStream collects one root field;
+# ExecuteSubscriptionEvent merges both selections and keys the result by the
+# alias.
+# maxListLength: 0
+# spec: 6.2.3, 6.2.3.1, 6.2.3.2, 6.3.2
+
+type Query {
+  ok: Boolean
+}
+
+type Subscription {
+  postLiked: Post
+}
+
+type Post {
+  likes: Int!
+  title: String
+}
+
+subscription {
+  liked: postLiked {
+    likes
+  }
+  ...Liked
+}
+
+fragment Liked on Subscription {
+  liked: postLiked {
+    title
+    __typename
+  }
+}

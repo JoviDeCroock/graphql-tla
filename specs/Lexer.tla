@@ -433,6 +433,67 @@ Lex(src) ==
   ELSE LexFrom(src, 1, <<>>)
 
 -----------------------------------------------------------------------------
+(* §2.10.4 String Value: producing one *)
+
+\* "When producing a StringValue, implementations should use escape
+\* sequences to represent non-printable control characters (U+0000 to
+\* U+001F and U+007F to U+009F). Other escape sequences are not necessary,
+\* however an implementation may use escape sequences to represent any
+\* other range of code points (for example, when producing ASCII-only
+\* output). If an implementation chooses to escape a supplementary
+\* character, it should only use a variable-width unicode escape sequence."
+IsNonPrintableControl(c) == (0 <= c /\ c <= 31) \/ (127 <= c /\ c <= 159)
+
+\* Whether the "..." string whose characters start at k escapes a
+\* supplementary character with the legacy pair of fixed-width escapes
+\* (\uD83D\uDE00) instead of a variable-width one (\u{1F600}). The only
+\* fixed-width escape that stands for a supplementary character is a pair.
+RECURSIVE PairEscapeFrom(_, _)
+PairEscapeFrom(src, k) ==
+  LET c == Ch(src, k) IN
+  CASE c = None \/ c = Quote -> FALSE
+    [] c = Backslash ->
+         LET escape == EscapeAt(src, k) IN
+         IF ~escape.ok THEN FALSE
+         ELSE \/ Ch(src, k + 1) = LowerU /\ Ch(src, k + 2) # LBrace /\ escape.value[1] >= 65536
+              \/ PairEscapeFrom(src, escape.end)
+    [] OTHER -> PairEscapeFrom(src, k + 1)
+
+\* The StringValue that starts at i is valid and follows both SHOULDs: no
+\* code point in it, between its quotes included, is a non-printable
+\* control character, and it escapes no supplementary character with a
+\* pair. A block string has no escapes, so one that holds a control
+\* character, a line feed among them, can't follow the first.
+WellPrintedStringAt(src, i) ==
+  LET scan == StringValueAt(src, i) IN
+  /\ Ch(src, i) = Quote
+  /\ scan.ok
+  /\ \A k \in i..(scan.end - 1) : ~IsNonPrintableControl(src[k])
+  /\ (~IsBlockStringAt(src, i) => ~PairEscapeFrom(src, i + 1))
+
+\* printed is one StringValue, and nothing else, whose value is text and
+\* which follows both SHOULDs.
+IsWellPrintedString(text, printed) ==
+  LET scan == StringValueAt(printed, 1) IN
+  /\ Ch(printed, 1) = Quote
+  /\ scan.ok /\ scan.end = Len(printed) + 1 /\ scan.value = text
+  /\ WellPrintedStringAt(printed, 1)
+
+\* Every StringValue in src, which lexes, follows both SHOULDs: for a
+\* printed value that holds strings, such as a list or an input object.
+\* Ignored tokens between them, line feeds included, don't count.
+RECURSIVE StringsWellPrintedFrom(_, _)
+StringsWellPrintedFrom(src, i) ==
+  IF i > Len(src) THEN TRUE
+  ELSE IF IgnoredLength(src, i) > 0 THEN StringsWellPrintedFrom(src, i + IgnoredLength(src, i))
+  ELSE LET next == TokenAt(src, i) IN
+       /\ next.scan.ok
+       /\ next.kind \in {"StringValue", "BlockString"} => WellPrintedStringAt(src, i)
+       /\ StringsWellPrintedFrom(src, next.scan.end)
+
+StringsWellPrinted(src) == Lex(src).ok /\ StringsWellPrintedFrom(src, 1)
+
+-----------------------------------------------------------------------------
 (* Hand-written vectors, checked by Lexer.cfg *)
 
 \* Text("...") is the code points of an ASCII TLA+ string, so vectors can
@@ -609,6 +670,47 @@ BlockStringVectors == <<
   V(Text("\"\"\"") \o <<56320>> \o Text("\"\"\""), SyntaxError)
 >>
 
+\* Printing: whether printed is a well-printed StringValue of text
+\* (IsWellPrintedString), or, for a whole value, whether every string in it
+\* is (StringsWellPrinted, with text <<>>).
+W(text, printed, well) == [whole |-> FALSE, text |-> text, printed |-> printed, well |-> well]
+WAll(printed, well) == [whole |-> TRUE, text |-> <<>>, printed |-> printed, well |-> well]
+
+PrintedWell(v) ==
+  (IF v.whole THEN StringsWellPrinted(v.printed) ELSE IsWellPrintedString(v.text, v.printed)) = v.well
+
+PrintingVectors == <<
+  W(Text("abc"), Text("\"abc\""), TRUE),
+  W(<<>>, Text("\"\""), TRUE),
+  W(<<1, 31>>, Text("\"\\u0001\\u001F\""), TRUE),
+  W(<<1>>, <<Quote, 1, Quote>>, FALSE),
+  W(<<10>>, Text("\"\\n\""), TRUE),
+  W(<<9>>, Text("\"\t\""), FALSE),
+  W(<<127, 133, 159>>, Text("\"\\u007F\\u0085\\u009f\""), TRUE),
+  W(<<133>>, <<Quote, 133, Quote>>, FALSE),
+  W(<<127>>, <<Quote, 127, Quote>>, FALSE),
+  W(<<160, 233>>, <<Quote, 160, 233, Quote>>, TRUE),
+  W(<<233>>, Text("\"\\u00E9\""), TRUE),
+  W(<<128512>>, <<Quote, 128512, Quote>>, TRUE),
+  W(<<128512>>, Text("\"\\u{1F600}\""), TRUE),
+  W(<<128512>>, Text("\"\\uD83D\\uDE00\""), FALSE),
+  W(<<65, 128512>>, Text("\"A\\uD83D\\uDE00\""), FALSE),
+  \* An escaped backslash: the text is the six characters \uD83D.
+  W(Text("\\uD83D"), Text("\"\\\\uD83D\""), TRUE),
+  W(Text("ab"), Text("\"\"\"ab\"\"\""), TRUE),
+  W(Text("a\nb"), Text("\"\"\"a\nb\"\"\""), FALSE),
+  W(Text("a"), Text("\"b\""), FALSE),
+  W(Text("a"), Text("\"a\" "), FALSE),
+  W(Text("a"), Text(" \"a\""), FALSE),
+  W(Text("a"), Text("a"), FALSE),
+  WAll(Text("[\"a\", \"\\u{1F600}\", \"\"\"b\"\"\"]"), TRUE),
+  WAll(Text("[\n  \"a\",\n  \"b\"\n]"), TRUE),
+  WAll(Text("{s: \"\\uD83D\\uDE00\"}"), FALSE),
+  WAll(Text("{s: \"") \o <<1>> \o Text("\"}"), FALSE),
+  WAll(Text("[\"a\""), TRUE),
+  WAll(Text("\"a"), FALSE)
+>>
+
 Vectors == [Ignored |-> IgnoredVectors, PunctuatorsAndNames |-> PunctuatorAndNameVectors,
             Numbers |-> NumberVectors, Strings |-> StringVectors, BlockStrings |-> BlockStringVectors]
 
@@ -618,6 +720,13 @@ Init == vector \in UNION {{[group |-> g, n |-> n] : n \in DOMAIN Vectors[g]} : g
 Next == UNCHANGED vector
 
 VectorPasses(group) == vector.group = group => Passes(Vectors[group][vector.n])
+
+\* The printing vectors as well, each initial state one vector.
+LexerInit ==
+  \/ Init
+  \/ vector \in {[group |-> "Printing", n |-> n] : n \in DOMAIN PrintingVectors}
+
+StringsPrintWell == vector.group = "Printing" => PrintedWell(PrintingVectors[vector.n])
 
 IgnoredTokensLex == VectorPasses("Ignored")
 PunctuatorsAndNamesLex == VectorPasses("PunctuatorsAndNames")

@@ -33,12 +33,15 @@ const registry = JSON.parse(readFileSync(join(dir, "implementations.json"), "utf
 // format 1 report ("draft only") can't be read that way, so the sheet
 // refuses to build from one.
 export const FORMAT = 2;
+// Areas in kit/areas.mjs's order; an area it doesn't list (a report from a
+// newer kit) comes last, so every report is shown.
+export const areaOrder = (area) => (AREAS.includes(area) ? AREAS.indexOf(area) : AREAS.length);
 const reports = readdirSync(join(dir, "reports"))
   .filter((f) => f.endsWith(".json"))
   .sort()
   // <key>.json for execution, <key>.<area>.json for the other areas.
   .map((f) => ({ file: f, key: basename(f, ".json").split(".")[0], ...JSON.parse(readFileSync(join(dir, "reports", f), "utf8")) }))
-  .sort((a, b) => AREAS.indexOf(a.area) - AREAS.indexOf(b.area));
+  .sort((a, b) => areaOrder(a.area) - areaOrder(b.area));
 const keys = [...new Set(reports.map((r) => r.key))].sort(
   (a, b) => registry.findIndex((x) => x.key === a) - registry.findIndex((x) => x.key === b),
 );
@@ -92,17 +95,33 @@ export const sinceText = (since, total) => {
 };
 const sinceNote = (c) => (sinceEntries(c.failingSince).length ? ` (${sinceText(c.failingSince, c.failing)})` : "");
 
+// The capabilities an untested check needs (its `requires`) that the
+// report's adapter doesn't claim.
+export const missingCapabilities = (check, report) =>
+  check?.status === "untested" && report ? (check.requires ?? []).filter((c) => !(report.capabilities ?? []).includes(c)) : [];
+
 // A check's cell: ✓ N (passed in all N cases), ✗ n/N (broke a MUST in n of
 // N), ! n/N (a SHOULD), i n/N (an informational check differed), each with
 // how many of the n rely on rules introduced after October 2021, by
-// release; ~ inconclusive, ⊂ subsumed by another check, – not exercised.
-export const cell = (check) => {
+// release; ~ inconclusive, ⊂ subsumed by another check, – not exercised
+// ("– needs `x`" when the adapter lacks a capability the check requires).
+export const cell = (check, report) => {
   if (!check) return "n/a";
   if (check.status === "fail") return `${SYMBOL[severity(check.level)]} ${check.failing}/${check.cases}${sinceNote(check)}`;
   if (check.status === "pass") return `✓ ${check.cases}`;
   if (check.status === "inconclusive") return `~ ${check.cases}`;
   if (check.status === "subsumed") return "⊂";
-  return "–";
+  const missing = missingCapabilities(check, report);
+  return missing.length ? `– needs ${missing.map((c) => `\`${c}\``).join(", ")}` : "–";
+};
+
+// Every check of an area, in the order its reports list them: the first
+// report's, then any that only later reports have (a check another report
+// predates), so no report's check is dropped from the matrix.
+export const areaChecks = (areaReports) => {
+  const seen = new Map();
+  for (const r of areaReports) for (const c of r.checks) if (!seen.has(c.id)) seen.set(c.id, c);
+  return [...seen.values()];
 };
 
 // A check's level: September 2026's, then the release that introduced the
@@ -125,8 +144,8 @@ const legend = [
   "- **(k since September 2025, j new in September 2026), (all …):** k of the n failing cases rely on grammar or rules introduced in September 2025, and j on ones introduced in September 2026; none of them is in the October 2021 edition. The symbol still gives the check's level.",
   "- **~:** inconclusive (see the implementation's page).",
   "- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).",
-  "- **–:** never exercised: the adapter lacks the capability, or no case reached it.",
-  "- **n/a:** the adapter doesn't take part in this area.",
+  "- **–:** never exercised: the adapter lacks the capability, or no case reached it. **– needs `x`:** the adapter doesn't claim capability `x`, which the check needs.",
+  "- **n/a:** the adapter doesn't take part in this area, or its report predates the check.",
 ].join("\n");
 
 // A section's verdict, from the checks that cite it (fixtures only say a
@@ -257,10 +276,10 @@ const matrix = () => {
   for (const area of areas) {
     const first = reports.find((r) => r.area === area);
     lines.push(`## ${cap(area)}: each check`, "", legend, "", ...header(["Check", "Level", "Spec", ...keys.map(nameOf)]));
-    for (const check of first.checks) {
+    for (const check of areaChecks(reports.filter((r) => r.area === area))) {
       const level = levelText(check);
       lines.push(
-        `| ${check.title} (\`${check.id}\`) | ${level} | ${check.spec.map(link).join(" ") || "—"} | ${keys.map((k) => cell(reportFor(k, area)?.checks.find((c) => c.id === check.id))).join(" | ")} |`,
+        `| ${check.title} (\`${check.id}\`) | ${level} | ${check.spec.map(link).join(" ") || "—"} | ${keys.map((k) => cell(reportFor(k, area)?.checks.find((c) => c.id === check.id), reportFor(k, area))).join(" | ")} |`,
       );
     }
     lines.push("");
@@ -373,7 +392,7 @@ const page = (key) => {
     for (const c of r.checks) {
       const level = levelText(c);
       const observed = c.observed === undefined ? "" : `. Observed: ${typeof c.observed === "string" ? c.observed : Object.entries(c.observed).map(([k, v]) => `${k} ${v}`).join(", ")}`;
-      lines.push(`| ${c.title} (\`${c.id}\`)${c.note ? `. ${c.note}` : ""}${observed} | ${level} | ${c.spec.map(link).join(" ") || "—"} | ${cell(c)} |`);
+      lines.push(`| ${c.title} (\`${c.id}\`)${c.note ? `. ${c.note}` : ""}${observed} | ${level} | ${c.spec.map(link).join(" ") || "—"} | ${cell(c, r)} |`);
     }
     const based = r.checks.filter((c) => c.basis);
     if (based.length) lines.push("", ...based.map((c) => `- **Basis for \`${c.id}\`:** ${c.basis}`));

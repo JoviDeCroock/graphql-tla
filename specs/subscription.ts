@@ -2,9 +2,10 @@
  * GraphQL subscription execution: a source stream mapped to a response stream.
  *
  * Models GraphQL spec §6.2.3 (Subscription): CreateSourceEventStream,
- * MapSourceToResponseEvent, ExecuteSubscriptionEvent and Unsubscribe, the way
- * graphql-js 17 implements them (`subscribe`, `mapSourceToResponseEvent`,
- * `mapAsyncIterable` and `withConcurrentAbruptClose`) for one operation:
+ * MapSourceToResponseEvent, ExecuteSubscriptionEvent and Unsubscribe, as
+ * September 2026 states them, in the shape graphql-js 17 implements them
+ * (`subscribe`, `mapSourceToResponseEvent`, `mapAsyncIterable` and
+ * `withConcurrentAbruptClose`) for one operation:
  *
  *   type Subscription { postLiked: Post! }
  *   type Post { likes: Int!   title: String }
@@ -27,11 +28,25 @@
  * response is delivered and the stream continues.
  *
  * When the source throws, the error is rethrown to the client and the
- * response stream ends. When the client unsubscribes, withConcurrentAbruptClose
- * calls the source's return() at once, even if the generator is parked on
- * source.next(). The generator's own return() is queued behind an in-flight
- * event, so that event's response is still delivered, before return()
- * resolves. Nothing is delivered after that.
+ * response stream ends. When the client unsubscribes, the source is cancelled
+ * at once, even if the mapper is parked on source.next()
+ * (withConcurrentAbruptClose), and the response stream completes normally:
+ * "When {responseStream} is cancelled: Cancel {sourceStream}. Complete
+ * {responseStream} normally." (§6.2.3.2). An event still executing then
+ * yields nothing. graphql-js 17 differs there: its generator's return() is
+ * queued behind the in-flight event, whose response is still delivered
+ * before the stream completes (a mutant below, caught by
+ * nothingNewAfterUnsubscribe). The kit grades that as a SHOULD
+ * (nothingAfterCancel in kit/execution/checks.mjs), since the algorithm
+ * doesn't say what becomes of an event already executing.
+ *
+ * The kit's subscription-stream checks (kit/execution/checks.mjs) grade
+ * implementations on what this model states: eventPerSourceEvent
+ * (responsesInSourceOrder, everyEventIsAnswered), streamEndsOnlyForCause
+ * (closesOnlyForCause), completesWithSource (completesOnceSourceEnds),
+ * failsWithSource (sourceErrorIsRethrown), cancelCompletes
+ * (cancelCompletesNormally, completesOnceCancelled), cancelCancelsSource
+ * (sourceIsCleanedUp) and nothingAfterCancel (nothingNewAfterUnsubscribe).
  */
 
 type Event = 1 | 2 | 3;
@@ -85,9 +100,10 @@ let delivered: number[] = [];
 let rethrown = false;
 let closed: "open" | "done" | "error" = "open";
 
-// Whether the client called return(), and how many events had been pulled then.
+// Whether the client called return(), and how many responses it had
+// received then.
 let returnRequested = false;
-let pulledAtUnsubscribe = 0;
+let deliveredAtUnsubscribe = 0;
 
 // ---------------------------------------------------------------------------
 // CreateSourceEventStream
@@ -155,7 +171,9 @@ export const executeEvent = (k: Event, postLiked: Outcome, likes: Outcome, title
   } else {
     response[k] = "object";
   }
-  delivered.push(k);
+  // Once the client has cancelled the response stream, it is complete, and
+  // an event that was executing yields nothing.
+  if (!returnRequested) delivered.push(k);
 };
 
 // The source has nothing more: its next() resolved `done` or rejected. The
@@ -182,7 +200,7 @@ export const reachEndOfSource = () => {
 export const unsubscribe = () => {
   if (subscribeResult !== "stream" || closed !== "open" || returnRequested) return;
   returnRequested = true;
-  pulledAtUnsubscribe = pulled;
+  deliveredAtUnsubscribe = delivered.length;
 };
 
 // withConcurrentAbruptClose calls the source's return() right away.
@@ -192,12 +210,11 @@ export const returnSource = () => {
   sourceReturned = true;
 };
 
-// The generator's return() is queued behind the in-flight next(), so return()
-// resolves `done` only after the in-flight event's response was yielded.
+// "When {responseStream} is cancelled: Cancel {sourceStream}. Complete
+// {responseStream} normally." Nothing waits for an event in flight.
 /** @fair */
 export const finishReturn = () => {
   if (!returnRequested || !sourceReturned || closed !== "open") return;
-  if (executing.size > 0) return; // generator.return() waits for the in-flight next()
   closed = "done";
 };
 
@@ -248,15 +265,19 @@ export const closesOnlyForCause = () =>
 export const sourceErrorIsRethrown = () =>
   closed !== "done" || source !== "threw" || returnRequested;
 
-// After the client unsubscribes, the only response it can still receive is
-// for the event that was already in flight.
-// This is graphql-js's behaviour, not the spec's. Since September 2025,
-// §6.2.3.2 says: "When {responseStream} is cancelled: Cancel {sourceStream}.
-// Complete {responseStream} normally." It doesn't allow an in-flight event's
-// result to be delivered after the cancel. October 2021 says only "Cancel
-// {responseStream}".
+// After the client unsubscribes, it receives no further response, not even
+// for an event that was in flight. Since September 2025, §6.2.3.2 says:
+// "When {responseStream} is cancelled: Cancel {sourceStream}. Complete
+// {responseStream} normally." October 2021's §6.2.3: after cancelling, an
+// observer "must receive no more events from that event stream".
+// graphql-js 17 still delivers the in-flight event's response.
 export const nothingNewAfterUnsubscribe = () =>
-  !returnRequested || delivered.every((k) => k <= pulledAtUnsubscribe);
+  !returnRequested || delivered.length === deliveredAtUnsubscribe;
+
+// A cancelled response stream completes normally, never with an error, even
+// if the source failed before it was cancelled ("Complete {responseStream}
+// normally", §6.2.3.2).
+export const cancelCompletesNormally = () => !returnRequested || closed !== "error";
 
 // Nothing reaches the client after the stream closed.
 /** @always */
@@ -267,9 +288,9 @@ export const nothingAfterClose = (previous: {
 }) => previous.closed === "open" || (delivered === previous.delivered && rethrown === previous.rethrown);
 
 // Liveness: every event the source produced eventually yields a response,
-// unless the client unsubscribed before the executor pulled it.
+// unless the client unsubscribed before it was delivered.
 const isAnswered = (k: Event) =>
-  delivered.includes(k) || (returnRequested && pulledAtUnsubscribe < k);
+  delivered.includes(k) || (returnRequested && deliveredAtUnsubscribe < k);
 
 /** @leadsTo isAnswered */
 export const everyEventIsAnswered = (k: Event) => arrived >= k;
@@ -286,3 +307,9 @@ const isSourceReturned = () => sourceReturned;
 
 /** @leadsTo isSourceReturned */
 export const sourceIsCleanedUp = () => returnRequested;
+
+// Liveness: after the client unsubscribes, the response stream completes
+// (§6.2.3: "When an event stream is cancelled, it must complete"), even if
+// the source never ends.
+/** @leadsTo isClosed */
+export const completesOnceCancelled = () => returnRequested;

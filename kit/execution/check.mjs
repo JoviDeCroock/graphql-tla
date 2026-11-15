@@ -18,7 +18,8 @@ import * as graphql from "graphql17";
 import { REPORT_FORMAT, provenance, section } from "../report.mjs";
 import { CHECKS } from "./checks.mjs";
 import { REPORT_CONTROLS } from "./controls.mjs";
-import { positions } from "./positions.mjs";
+import { protocolControls } from "./protocol-controls.mjs";
+import { positions, startOf } from "./positions.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
 const cli = join(root, "node_modules/tla-ts/dist/cli.js");
@@ -40,7 +41,7 @@ const isFatal = (id, strict) => LEVEL.get(id) === "MUST" || LEVEL.get(id) === "A
 // problems and the checks on resolver calls don't depend on propagation,
 // and keep their own checks and levels.
 export const OUTSIDE_SPEC = "disabledPropagation";
-const KEEP_OUTSIDE_SPEC = new Set(["protocol", "callsOnce", "callsSelected", "callsReachable", "mutationFieldsOnce", "calledSerially"]);
+const KEEP_OUTSIDE_SPEC = new Set(["protocol", "callsOnce", "callsSelected", "callsReachable", "mutationFieldsOnce", "calledSerially", "parentValue"]);
 const outsideSpec = (fixture) => fixture?.errorPropagation === false;
 const gradedAs = (fixture, id) => (outsideSpec(fixture) && !KEEP_OUTSIDE_SPEC.has(id) ? OUTSIDE_SPEC : id);
 
@@ -69,7 +70,9 @@ const nullable = (type) => (graphql.isNonNullType(type) ? type.ofType : type);
 // propagated to. (The kit doesn't send runtime types that aren't possible
 // types; see drive.mjs.)
 const raises = (schema, type, outcome) => {
-  if (outcome.kind === "error" || outcome.kind === "uncoercible") return true;
+  // A built-in scalar's internal value of another type or range
+  // (scalar-results) may raise, and must for an Int outside 32 bits.
+  if (outcome.kind === "error" || outcome.kind === "uncoercible" || (outcome.kind === "leaf" && "value" in outcome)) return true;
   if (outcome.kind === "null") return graphql.isNonNullType(type);
   const named = graphql.getNamedType(type);
   const expected = graphql.isListType(nullable(type)) ? "list" : graphql.isLeafType(named) ? "leaf" : "object";
@@ -177,12 +180,107 @@ const causalProblems = (trace, add) => {
   }
 };
 
+// With parent-values (the case has the `initialValue` the kit gave): each
+// field's resolver reports the token of the value it was called on, which
+// must be its parent position's object (§6.3.3, §6.4.2, §6.4.3), the
+// initial value at the root (§6.2.1), or for a subscription the event's
+// value (§6.2.3.2). A list item has no resolver of its own, and a call
+// whose parent hadn't settled to an object is callsReachable's.
+const isIndex = (segment) => /^(0|[1-9]\d*)$/.test(segment ?? "");
+const parentProblems = (fixture, c, add) => {
+  if (c.initialValue === undefined) return;
+  const subscription = fixture.operationType === "subscription";
+  const settled = new Map();
+  for (const event of c.trace) {
+    if (Array.isArray(event.settle)) {
+      settled.set(pathKey(event.settle.map(String)), event.outcome);
+      continue;
+    }
+    if (!Array.isArray(event.call)) continue;
+    const path = event.call.map(String);
+    if (isIndex(path.at(-1))) continue;
+    const root = path.length === 1;
+    const expected = root ? (subscription ? c.event : c.initialValue) : settled.get(pathKey(path.slice(0, -1)))?.token;
+    if (expected === undefined) continue;
+    const whose = root ? (subscription ? "the event's value" : "the initial value") : `the value of ${path.slice(0, -1).join(".")}`;
+    if (!("parent" in event)) add("parentValue", `the call at ${path.join(".")} doesn't say which value its resolver was given`);
+    else if (event.parent !== expected) {
+      add("parentValue", `the resolver at ${path.join(".")} was given ${JSON.stringify(event.parent)}, not ${JSON.stringify(expected)}, ${whose}`);
+    }
+  }
+};
+
+// A subscription run as a stream (drive.mjs runStream): its lifecycle
+// case's log, of what the kit's source did ({kit: "emit" | "complete" |
+// "fail" | "cancel"}) and what the adapter reported ({adapter: "response" |
+// "no-response" | "done" | "stream-error" | "source-cancelled"}), in order.
+// Each event's result is a case of its own. Every problem here is a
+// lifecycle check's (streamOnly in checks.mjs); SHOULDs fail only with
+// --strict, as everywhere.
+const streamProblems = (c) => {
+  const problems = [];
+  const ids = [];
+  const once = new Set();
+  const add = (id, text) => {
+    if (once.has(id)) return;
+    once.add(id);
+    ids.push(id);
+    problems.push(text);
+  };
+  const log = c.stream?.log;
+  if (!Array.isArray(log)) return { problems: ["a stream case without a log"], ids: ["protocol"] };
+  // The first of complete, fail and cancel the kit sent; how and when the
+  // response stream completed; the events still waiting for a result.
+  let cause = null;
+  let completion = null;
+  let sourceCancelled = false;
+  const unanswered = [];
+  for (const entry of log) {
+    if (entry?.kit === "emit") {
+      unanswered.push(entry.event);
+    } else if (entry?.kit) {
+      cause ??= entry.kit;
+    } else if (entry?.adapter === "response") {
+      if (cause === "cancel") add("nothingAfterCancel", "a result arrived after the client cancelled the response stream");
+      else if (completion) add("eventPerSourceEvent", "a result arrived after the response stream completed");
+      else if (!unanswered.includes(entry.event)) add("eventPerSourceEvent", "a result arrived for no source event");
+      else unanswered.splice(unanswered.indexOf(entry.event), 1);
+    } else if (entry?.adapter === "done" || entry?.adapter === "stream-error") {
+      if (completion) {
+        add("protocol", "the response stream completed twice");
+        continue;
+      }
+      const how = entry.adapter === "done" ? "normally" : "with an error";
+      completion = { how: entry.adapter, early: cause === null };
+      if (cause !== null) continue;
+      if (unanswered.length > 0) add("eventPerSourceEvent", `the response stream completed ${how} instead of yielding the result of event ${unanswered[0]}`);
+      else add("streamEndsOnlyForCause", `the response stream completed ${how} though its source hadn't completed or failed and the client hadn't cancelled it`);
+    } else if (entry?.adapter === "source-cancelled") {
+      sourceCancelled = true;
+    } else if (entry?.adapter !== "no-response") {
+      add("protocol", `an entry the kit doesn't know in a stream's log: ${JSON.stringify(entry)}`);
+    }
+  }
+  if (!completion?.early) {
+    // An event still executing when the client cancelled needn't yield one.
+    if (cause !== "cancel" && unanswered.length > 0) add("eventPerSourceEvent", `event ${unanswered[0]} yielded no result before the response stream completed`);
+    const ended = completion ? `completed ${completion.how === "done" ? "normally" : "with an error"}` : "never completed";
+    if (cause === "complete" && completion?.how !== "done") add("completesWithSource", `the source completed, and the response stream ${ended}`);
+    if (cause === "fail" && completion?.how !== "stream-error") add("failsWithSource", `the source failed, and the response stream ${ended}`);
+    if (cause === "cancel") {
+      if (completion?.how !== "done") add("cancelCompletes", `the client cancelled the response stream, which then ${ended}`);
+      if (!sourceCancelled) add("cancelCancelsSource", "the client cancelled the response stream, and the source stream wasn't cancelled");
+    }
+  }
+  return problems.length > 0 ? { problems, ids } : { lifecycle: true, warnings: [], warningIds: [] };
+};
+
 // The checks on the trace itself. When the adapter broke the protocol, only
 // these count (countedProblems). A case that breaks only the checks on
 // calls still goes to the reference: an extra call doesn't change what the
 // resolvers produced, unless a position settled twice with different
 // outcomes, or the adapter broke the protocol.
-const TRACE_CHECKS = new Set(["protocol", "callsOnce", "callsSelected", "callsReachable", "mutationFieldsOnce"]);
+const TRACE_CHECKS = new Set(["protocol", "callsOnce", "callsSelected", "callsReachable", "mutationFieldsOnce", "parentValue"]);
 // The checks that make a response's error paths unusable, as does an error
 // that isn't a map or has no list for a path. The reference still sees such
 // a case, but only its clauses on data and calls count.
@@ -192,8 +290,9 @@ export const DATA_CLAUSES = new Set(["complete", "dataMatches", "keyOrder", "cal
 
 // The case in the shape the TLA+ side reads. `outcomes` replaces the
 // outcome of a settle, by path key.
-const referenceCase = (c, data, errorPaths, outcomes = new Map()) => ({
+const referenceCase = (c, data, errorPaths, outcomes = new Map(), typenames = new Set()) => ({
   fixture: c.fixture,
+  typenames,
   trace: c.trace.map((e) =>
     e.call
       ? { call: e.call.map(String), type: e.type, ...(Number.isInteger(e.after) ? { after: e.after } : {}), ...(e.inline ? { inline: true } : {}) }
@@ -236,15 +335,20 @@ export const normalize = (fixture, c) => {
     warningIds.push(id);
     warnings.push(text);
   };
+  if (c.stream !== undefined) return streamProblems(c);
   if (!Array.isArray(c.trace)) return { problems: ["the case has no trace"], ids: ["protocol"] };
   const at = positions(fixture, c.trace);
   const uncoercible = c.trace.filter((e) => Array.isArray(e.settle) && e.outcome?.kind === "uncoercible");
+  // scalar-results: a built-in scalar's resolver returned an internal value
+  // of another type or range.
+  const valued = c.trace.filter((e) => Array.isArray(e.settle) && e.outcome?.kind === "leaf" && "value" in e.outcome);
   // The trace comes first, whatever the response: a call the fixture
   // doesn't select, or with the wrong type, is the root cause of whatever
   // follows from it, so it must not be blamed on the response.
   const consistent = traceProblems(fixture, c.trace, add);
   causalProblems(c.trace, add);
   callProblems(fixture, c.trace, at, add);
+  parentProblems(fixture, c, add);
   // A subscription whose response stream failed instead of yielding the
   // event's execution result (§6.2.3.2 ExecuteSubscriptionEvent always
   // produces one). The envelope checks don't apply: there is no response.
@@ -275,6 +379,14 @@ export const normalize = (fixture, c) => {
   if (!isMap(response)) {
     add("resultMap", "the response isn't a map (§7.1.1)");
     return { problems, ids };
+  }
+
+  // Appendix B: each entry of a map has a unique key. JSON.parse keeps the
+  // last of a repeated key, so the kit reads the adapter's raw line for it
+  // (drive.mjs records `duplicateKeys`).
+  if (Array.isArray(c.duplicateKeys) && c.duplicateKeys.length > 0) {
+    const [first] = c.duplicateKeys;
+    add("uniqueKeys", `the response repeats the key ${JSON.stringify(String(first.at(-1)))} in one map${first.length > 1 ? ` at ${first.slice(0, -1).join(".")}` : ""}`);
   }
 
   // §7.1: the response is a map of data, errors and extensions only.
@@ -394,6 +506,30 @@ export const normalize = (fixture, c) => {
     });
   }
 
+  // §7.1.6: an error associated with a point in the document should have
+  // locations, at the beginning of an associated syntax element. Every
+  // error the kit's resolvers cause is raised at a field, or a list item of
+  // one, whose selection is that element: any of its field nodes (several
+  // when selections merge), or its name after an alias. Accuracy is only
+  // judged for an error at the very path where an outcome raised it, with
+  // well-formed locations (errorLocations judges their shape).
+  for (const error of errors) {
+    if (!isMap(error)) continue;
+    if (!Array.isArray(error.locations) || error.locations.length === 0) {
+      warn("errorLocationsPresent", "execution errors raised at a field have no locations (§7.1.6: should)");
+      continue;
+    }
+    if (!Array.isArray(error.path) || !raised.has(pathKey(error.path.map(String)))) continue;
+    if (!error.locations.every((l) => isMap(l) && Number.isInteger(l.line) && Number.isInteger(l.column))) continue;
+    const nodes = at(error.path)?.nodes ?? [];
+    const starts = new Set(
+      nodes.flatMap((n) => [n, ...(n.alias ? [n.name] : [])]).map((n) => startOf(n)).map((l) => `${l.line}:${l.column}`),
+    );
+    if (nodes.length > 0 && error.locations.some((l) => !starts.has(`${l.line}:${l.column}`))) {
+      warn("errorLocationsAccurate", "execution errors have locations that aren't where the field they were raised at begins (§7.1.6: should)");
+    }
+  }
+
   // §3.5.1, §3.5.2, §3.9: a leaf value the type can't represent must raise
   // an execution error, so the position can't hold a value (intFraction for
   // an Int, resultCoercion otherwise), and if it is null, an error must say
@@ -416,18 +552,49 @@ export const normalize = (fixture, c) => {
     }
   }
 
+  // §3.5.1: an Int outside 32 bits "should" raise an execution error, and
+  // §3.5.5: an ID, "while it is often numeric, it must always serialize as
+  // a String" (an ID service may also raise, if it can't coerce it). Either
+  // way the position must not be null without an error. The reference is
+  // given the position as the implementation completed it: a leaf if it
+  // holds a value, an error if an error is at its path, null otherwise.
+  for (const event of valued) {
+    const k = pathKey(event.settle.map(String));
+    const value = valueAt(event.settle.map((s) => (/^\d+$/.test(s) ? Number(s) : s)));
+    const named = graphql.getNamedType(at(event.settle)?.type ?? graphql.GraphQLString).name;
+    if (errorAt.has(k)) {
+      coerced.set(k, { kind: "error" });
+    } else if (value === null) {
+      coerced.set(k, { kind: "null" });
+      add("coercionErrorReported", `${event.settle.join(".")} is null without an error, though its resolver returned ${JSON.stringify(event.outcome.value)}, which must be coerced to a valid value or raise an execution error`);
+    } else if (value !== undefined) {
+      coerced.set(k, { kind: "leaf" });
+      if (named === "Int") {
+        add("intRange", `${event.settle.join(".")} is ${JSON.stringify(value)}, though its resolver returned ${event.outcome.value}, outside 32 bits (§3.5.1: should raise an execution error)`);
+      } else if (named === "ID" && value !== String(event.outcome.value)) {
+        add(
+          value === event.outcome.value ? "idAsString" : "leafValues",
+          `${event.settle.join(".")} is ${JSON.stringify(value)}, though its resolver returned the integer ${event.outcome.value}, which an ID serializes as ${JSON.stringify(String(event.outcome.value))}`,
+        );
+      }
+    }
+  }
+
   // Leaf values: the reference abstracts them away, so check them here
   // against the canonical value for the position's type in the fixture.
   // A position whose resolver returned an uncoercible value is graded above
   // only, by intFraction, resultCoercion or coercionErrorReported.
-  const skipLeaf = new Set(uncoercible.map((e) => pathKey(e.settle.map(String))));
+  const skipLeaf = new Set([...uncoercible, ...valued].map((e) => pathKey(e.settle.map(String))));
+  // The positions that are __typename, aliased or not: the reference
+  // compares their values (jsonToTla).
+  const typenames = new Set();
   const walk = (value, path) => {
     if (value === null) return;
     if (Array.isArray(value)) return value.forEach((v, i) => walk(v, [...path, i]));
     if (isMap(value)) return Object.entries(value).forEach(([k, v]) => walk(v, [...path, k]));
     const position = at(path);
     if (!position) return add("dataShape", `data has a value at ${path.join(".")}, which the operation doesn't select`);
-    if (path.length > 0 && path[path.length - 1] === "__typename") return;
+    if (path.length > 0 && position.names.at(-1) === "__typename") return void typenames.add(pathKey(path.map(String)));
     if (skipLeaf.has(pathKey(path.map(String)))) return;
     const canonical = leafValue(position.type);
     if (value === canonical) return;
@@ -441,7 +608,7 @@ export const normalize = (fixture, c) => {
   };
   walk(response.data ?? null, []);
 
-  if (problems.length === 0) return { warnings, warningIds, case: referenceCase(c, response.data, errors.map((e) => e.path)) };
+  if (problems.length === 0) return { warnings, warningIds, case: referenceCase(c, response.data, errors.map((e) => e.path), coerced, typenames) };
   // What the reference can still check of a malformed case: nothing if the
   // adapter broke the protocol, a position settled twice with different
   // outcomes, there is no data, or data holds a position the operation
@@ -453,7 +620,7 @@ export const normalize = (fixture, c) => {
   const usable = errors.every((e) => isMap(e) && Array.isArray(e.path)) && !ids.some((id) => ERROR_PATH_CHECKS.has(id));
   const clauses = usable ? "all" : "data";
   const paths = clauses === "all" ? errors.map((e) => e.path) : [];
-  return { problems, ids, clauses, case: referenceCase(c, response.data, paths, coerced) };
+  return { problems, ids, clauses, case: referenceCase(c, response.data, paths, coerced, typenames) };
 };
 
 // ---------------------------------------------------------------------------
@@ -465,19 +632,21 @@ const NO_OUTCOME = { kind: "", type: "", length: 0 };
 const outcomeToTla = (o) =>
   `[kind |-> ${str(o.kind)}, type |-> ${str(o.type ?? "")}, length |-> ${Number(o.length ?? 0)}]`;
 
-const jsonToTla = (value, key = "") => {
+// `typenames` holds the path keys of the positions that are __typename,
+// aliased or not (normalize); without it, the key "__typename" says so.
+const jsonToTla = (value, typenames, path = []) => {
   if (value === null) return `[kind |-> "null", value |-> "", entries |-> <<>>, items |-> <<>>]`;
   if (Array.isArray(value)) {
-    return `[kind |-> "list", value |-> "", entries |-> <<>>, items |-> ${seq(value.map((v) => jsonToTla(v)))}]`;
+    return `[kind |-> "list", value |-> "", entries |-> <<>>, items |-> ${seq(value.map((v, i) => jsonToTla(v, typenames, [...path, String(i)])))}]`;
   }
   if (typeof value === "object") {
     return `[kind |-> "object", value |-> "", items |-> <<>>, entries |-> ${seq(
-      Object.entries(value).map(([k, v]) => `[key |-> ${str(k)}, value |-> ${jsonToTla(v, k)}]`),
+      Object.entries(value).map(([k, v]) => `[key |-> ${str(k)}, value |-> ${jsonToTla(v, typenames, [...path, k])}]`),
     )}]`;
   }
-  // Leaf values are abstracted away, except __typename's. Fixtures don't
-  // alias __typename, so the key identifies it.
-  return `[kind |-> "leaf", value |-> ${key === "__typename" ? str(value) : '""'}, entries |-> <<>>, items |-> <<>>]`;
+  // Leaf values are abstracted away, except __typename's.
+  const typename = typenames ? typenames.has(pathKey(path)) : path.at(-1) === "__typename";
+  return `[kind |-> "leaf", value |-> ${typename ? str(value) : '""'}, entries |-> <<>>, items |-> <<>>]`;
 };
 
 // Whether every call in a trace carries the adapter's `after` stamp.
@@ -523,6 +692,7 @@ export const caseToTla = (fixture, c) => {
   );
   return `[fixture |-> ${str(c.fixture)}, outcomes |-> ${outcomes}, trace |-> ${trace}, data |-> ${jsonToTla(
     c.data,
+    c.typenames,
   )}, errors |-> ${seq(c.errors.map((p) => seq(p.map(str))))}]`;
 };
 
@@ -645,13 +815,35 @@ const problemKind = (problem) =>
     .replace(/ \(§[^)]*\)$/, "")
     .replace(/^[\w.]+ is .*, not the canonical .*/, "a leaf isn't the canonical value")
     .replace(/\[.*?\]|\S+\.\S+|"[^"]*"/g, "…");
+// A streamed subscription's log, one step after another.
+export const describeLog = (stream) =>
+  `${stream?.scenario ?? "a stream"}: ` +
+  (stream?.log ?? [])
+    .map((e) =>
+      e.kit === "emit"
+        ? `kit emits event ${e.event}`
+        : e.kit
+          ? `kit ${e.kit === "cancel" ? "cancels the response stream" : `${e.kit === "fail" ? "fails" : "completes"} the source`}`
+          : e.adapter === "response"
+            ? `result${e.event ? ` for event ${e.event}` : ""}`
+            : e.adapter === "stream-error"
+              ? "the response stream completes with an error"
+              : e.adapter === "done"
+                ? "the response stream completes"
+                : e.adapter === "source-cancelled"
+                  ? "the source is cancelled"
+                  : String(e.adapter),
+    )
+    .join("; ");
 const responseText = (raw) =>
-  "streamError" in raw
-    ? `the response stream failed: ${JSON.stringify(raw.streamError)}`
-    : "noResponse" in raw
-      ? `no response: ${JSON.stringify(raw.noResponse)}`
-      : JSON.stringify(raw.response);
-const answered = (raw) => !("streamError" in raw) && !("noResponse" in raw);
+  "stream" in raw
+    ? describeLog(raw.stream)
+    : "streamError" in raw
+      ? `the response stream failed: ${JSON.stringify(raw.streamError)}`
+      : "noResponse" in raw
+        ? `no response: ${JSON.stringify(raw.noResponse)}`
+        : JSON.stringify(raw.response);
+const answered = (raw) => !("streamError" in raw) && !("noResponse" in raw) && !("stream" in raw);
 
 // Sorts cases for checking and reporting: the malformed ones with their
 // problems; the warnings, one per case for each check and text, graded by
@@ -679,6 +871,8 @@ const collect = (byId, rawCases, prepare) => {
       malformed.push({ raw, problems: prepared.problems, ids: prepared.ids, partial });
       continue;
     }
+    // A stream's lifecycle with nothing wrong: nothing for the reference.
+    if (prepared.lifecycle) continue;
     tlaOf.set(raw, prepared.tla);
     const seen = new Set();
     prepared.warnings.forEach((text, i) => {
@@ -748,16 +942,26 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
   const { malformed, warnings: warned, cases } = collected;
 
   // The corpus: bases must pass, controls must be caught, and each report
-  // control's report must show what it says.
+  // control's report must show what it says. The protocol controls
+  // (protocol-controls.mjs) are made here, from the corpus's bases and by
+  // hand, for the checks that need a capability the recorded cases don't
+  // have: parent values, streams, custom scalars, locations, repeated keys.
   const corpus = loadCorpus();
-  const bases = corpus.bases.map(prepare);
-  const controls = corpus.controls.map((control) => ({ ...control, prepared: prepare(control.case) }));
+  const extra = protocolControls(corpus, fixtures);
+  const prepareExtra = preparer(new Map([...byId, ...extra.fixtures.map((f) => [f.id, f])]));
+  const bases = [...corpus.bases.map(prepare), ...extra.bases.map(({ case: c }) => prepareExtra(c))];
+  const baseCases = [...corpus.bases, ...extra.bases.map((b) => b.case)];
+  const quiet = [...corpus.bases.map(() => []), ...extra.bases.map((b) => b.quiet ?? [])];
+  const controls = [
+    ...corpus.controls.map((control) => ({ ...control, prepared: prepare(control.case) })),
+    ...extra.controls.map((control) => ({ ...control, prepared: prepareExtra(control.case) })),
+  ];
   const reportControls = (corpus.reportControls ?? []).map((stored) => ({
     ...stored,
     control: REPORT_CONTROLS.find((c) => c.name === stored.name),
     collected: collect(byId, stored.cases, prepare),
   }));
-  const evaluated = [...bases, ...controls.map((c) => c.prepared)].filter((p) => !p.problems);
+  const evaluated = [...bases, ...controls.map((c) => c.prepared)].filter((p) => !p.problems && p.tla);
   const all = await evaluate([
     ...collected.tla,
     ...evaluated.map((p) => p.tla),
@@ -772,7 +976,8 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
   }
 
   let ok = true;
-  log(`  ${plural(rawCases.length, "case")}, ${cases.length} distinct`);
+  const streams = rawCases.filter((c) => "stream" in c).length;
+  log(`  ${plural(rawCases.length, "case")}, ${cases.length} distinct${streams ? `, ${plural(streams, "subscription stream")}` : ""}`);
   if (rawCases.length === 0) {
     ok = false;
     log("✗ no cases to check");
@@ -872,17 +1077,19 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
   // The checker's self-test.
   let selfTest = true;
   bases.forEach((base, i) => {
-    const failures = base.problems ?? resultOf.get(base).failures;
+    // A base must pass, and have none of the SHOULD warnings its own
+    // controls are caught by (`quiet`), or they'd prove nothing.
+    const failures = base.problems ?? [...(resultOf.get(base)?.failures ?? []), ...base.warningIds.filter((id) => quiet[i].includes(id))];
     if (failures.length > 0) {
       selfTest = false;
-      log(`✗ control base ${i} (${corpus.bases[i].fixture}) doesn't pass: ${failures.join("; ")}`);
+      log(`✗ control base ${i} (${baseCases[i].fixture}) doesn't pass: ${failures.join("; ")}`);
     }
   });
   for (const control of controls) {
     const caught = controlCaught(control, control.prepared, resultOf.get(control.prepared));
     if (!caught) {
       selfTest = false;
-      const got = control.prepared.problems ?? [...control.prepared.warningIds, ...resultOf.get(control.prepared).failures];
+      const got = control.prepared.problems ?? [...control.prepared.warningIds, ...(resultOf.get(control.prepared)?.failures ?? [])];
       log(`✗ control "${control.name}" wasn't caught by ${control.check ?? control.clause} (got: ${got.join("; ") || "nothing"})`);
     }
   }
@@ -952,6 +1159,16 @@ const APPLIES = {
   leafEncoding: (raw) => raw.response?.data != null,
   errorFormat: (raw) => hasErrors(raw.response),
   errorLocations: (raw) => hasErrors(raw.response) && raw.response.errors.some((e) => isMap(e) && "locations" in e),
+  errorLocationsPresent: (raw) => hasErrors(raw.response),
+  errorLocationsAccurate: (raw) => hasErrors(raw.response) && raw.response.errors.some((e) => isMap(e) && Array.isArray(e.locations) && e.locations.length > 0),
+  uniqueKeys: answered,
+  parentValue: (raw) => raw.initialValue !== undefined,
+  // A stream's lifecycle checks apply to the scenarios that exercise them.
+  completesWithSource: (raw) => streamDid(raw, "complete"),
+  failsWithSource: (raw) => streamDid(raw, "fail"),
+  cancelCompletes: (raw) => streamDid(raw, "cancel"),
+  cancelCancelsSource: (raw) => streamDid(raw, "cancel"),
+  nothingAfterCancel: (raw) => streamDid(raw, "cancel"),
   errorPath: (raw) => hasErrors(raw.response),
   errorEntries: (raw) => hasErrors(raw.response),
   responsePosition: (raw) => hasErrors(raw.response),
@@ -963,11 +1180,22 @@ const APPLIES = {
   // resultCoercion, either for coercionErrorReported.
   resultCoercion: (raw, fixture) => uncoercibleChecks(raw, fixture).has("resultCoercion"),
   intFraction: (raw, fixture) => uncoercibleChecks(raw, fixture).has("intFraction"),
-  coercionErrorReported: (raw, fixture) => answered(raw) && uncoercibleChecks(raw, fixture).size > 0,
+  coercionErrorReported: (raw, fixture) => answered(raw) && (uncoercibleChecks(raw, fixture).size > 0 || valuedLeaves(raw).length > 0),
+  intRange: (raw, fixture) => answered(raw) && valuedLeaves(raw, fixture, "Int").length > 0,
+  idAsString: (raw, fixture) => answered(raw) && valuedLeaves(raw, fixture, "ID").length > 0,
   additionalEntries: (raw) => answered(raw) && isMap(raw.response),
   errorsList: (raw) => answered(raw) && isMap(raw.response),
   extensions: (raw) => isMap(raw.response) && "extensions" in raw.response,
 };
+// The settles where a built-in scalar's resolver returned an internal value
+// of another type or range (scalar-results), of the named type if given.
+const valuedLeaves = (raw, fixture, named) => {
+  const settles = (raw.trace ?? []).filter((e) => Array.isArray(e.settle) && e.outcome?.kind === "leaf" && "value" in e.outcome);
+  if (!named || settles.length === 0) return settles;
+  const at = positions(fixture, raw.trace);
+  return settles.filter((e) => graphql.getNamedType(at(e.settle)?.type ?? graphql.GraphQLString).name === named);
+};
+const streamDid = (raw, action) => (raw.stream?.log ?? []).some((e) => e?.kit === action);
 const uncoercibleChecks = (raw, fixture) => {
   const settles = (raw.trace ?? []).filter((e) => Array.isArray(e.settle) && e.outcome?.kind === "uncoercible");
   if (!fixture || settles.length === 0) return new Set();
@@ -1010,7 +1238,13 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, partials = []
   };
   const example = (raw, extra = {}) => ({
     trace: raw.trace ?? [],
-    ...("streamError" in raw ? { streamError: raw.streamError } : "noResponse" in raw ? { noResponse: raw.noResponse } : { response: raw.response }),
+    ...("stream" in raw
+      ? { stream: describeLog(raw.stream) }
+      : "streamError" in raw
+        ? { streamError: raw.streamError }
+        : "noResponse" in raw
+          ? { noResponse: raw.noResponse }
+          : { response: raw.response }),
     ...extra,
   });
 
@@ -1038,6 +1272,9 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, partials = []
       if (check.reference || check.id === OUTSIDE_SPEC) continue;
       if (gradedAs(fixture, check.id) !== check.id) continue;
       if (check.subscriptionOnly && fixture?.operationType !== "subscription") continue;
+      // A stream's lifecycle case has only the lifecycle checks; every other
+      // case has none of them.
+      if (Boolean(check.streamOnly) !== ("stream" in raw)) continue;
       if (check.mutationOnly && fixture?.operationType !== "mutation") continue;
       if (APPLIES[check.id] && !APPLIES[check.id](raw, fixture)) continue;
       stats.get(check.id).cases++;
@@ -1125,15 +1362,22 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, partials = []
     adapterProblems: stats.get("protocol").failing.size,
     checks: CHECKS.map((check) => {
       const s = stats.get(check.id);
-      const note = check.id === "calledSerially" && unstamped ? "without `after` stamps: can catch a non-serial engine, can't prove a serial one" : undefined;
+      const note =
+        check.id === "calledSerially" && unstamped
+          ? "without `after` stamps: can catch a non-serial engine, can't prove a serial one"
+          : check.id === "extensions" && s.cases === 0
+            ? "no response had an extensions entry, so there was nothing to grade (§7.1.7: the entry is a may)"
+            : undefined;
       return {
         id: check.id,
         title: check.title,
         level: check.level,
         ...(check.levels ? { levels: check.levels } : {}),
+        ...(check.since ? { since: check.since } : {}),
+        ...(check.requires ? { requires: check.requires } : {}),
         spec: check.spec.map(section),
         ...(check.basis ? { basis: check.basis } : {}),
-        status: s.failing.size > 0 ? "fail" : s.cases > 0 ? (note ? "inconclusive" : "pass") : "untested",
+        status: s.failing.size > 0 ? "fail" : s.cases > 0 ? (note && check.id === "calledSerially" ? "inconclusive" : "pass") : "untested",
         cases: s.cases,
         failing: s.failing.size,
         ...(note ? { note } : {}),

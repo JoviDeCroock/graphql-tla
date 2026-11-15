@@ -25,9 +25,6 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Adapter } from "./adapter.mjs";
 import { AREAS } from "./areas.mjs";
-import { CASE_FORMAT, check } from "./execution/check.mjs";
-import { Driver, exhaustive, random } from "./execution/drive.mjs";
-import { loadFixtures } from "./fixtures.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
 const argv = process.argv.slice(2);
@@ -46,8 +43,14 @@ const usage = () => {
 };
 if (!AREAS.includes(area) || !["run", "check"].includes(command) || (command === "check" && area !== "execution")) usage();
 
+// The execution modules load only for execution, so that another area runs
+// without them.
+const { CASE_FORMAT, check } = area === "execution" ? await import("./execution/check.mjs") : {};
+const { Driver, exhaustive, random } = area === "execution" ? await import("./execution/drive.mjs") : {};
+const { loadFixtures } = area === "execution" ? await import("./fixtures.mjs") : {};
+
 const only = option("--fixtures", "")?.split(",").filter(Boolean);
-const allFixtures = loadFixtures(join(root, "fixtures"));
+const allFixtures = area === "execution" ? loadFixtures(join(root, "fixtures")) : [];
 const fixtures = allFixtures.filter((f) => !only?.length || only.includes(f.id));
 const strict = flag("--strict");
 // The report records the run's verdict, so a reader (and
@@ -157,7 +160,7 @@ try {
   const out = option("--out");
   if (out) writeFileSync(out, cases.map((c) => JSON.stringify(c)).join("\n") + "\n");
   if (cases.length === 0) console.log("✗ no fixture ran");
-  for (const [reason, n] of driver.withheld) console.log(`- not sent, as the adapter asked: ${reason}, at ${n} settles`);
+  for (const [reason, n] of driver.withheld) console.log(`- not sent: ${reason}, at ${n} settles`);
   const result = await check(allFixtures, cases, {
     strict,
     implementation: adapter.name,

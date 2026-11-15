@@ -1,0 +1,120 @@
+// Bugs planted in the schema coordinate reference (SchemaCoordinates.tla),
+// each caught by one of the properties SchemaCoordinates.cfg checks.
+// scripts/check.mjs checks each one with only its property enabled.
+
+const file = "SchemaCoordinates.tla";
+
+export default [
+  {
+    name: "skips Ignored between tokens, as a document's lexer does",
+    find: "ELSE LET next == CoordinateTokenAt(src, i) IN\n       IF next.ok",
+    replace: "ELSE IF L!IgnoredLength(src, i) > 0 THEN CoordinateTokens(src, i + L!IgnoredLength(src, i), tokens)\n  ELSE LET next == CoordinateTokenAt(src, i) IN\n       IF next.ok",
+    file,
+    property: "CoordinatesHaveOneLexicalForm",
+  },
+  {
+    name: "skips a byte order mark at the start, as some lexers do",
+    find: "  ELSE LET lexed == CoordinateTokens(src, 1, <<>>) IN",
+    replace: "  ELSE LET lexed == CoordinateTokens(src, IF src # <<>> /\\ src[1] = L!BOM THEN 2 ELSE 1, <<>>) IN",
+    file,
+    property: "SyntaxVectorsPass",
+  },
+  {
+    name: "lets a Name start with a digit",
+    find: "ELSE IF L!IsNameStart(c)\n",
+    replace: "ELSE IF L!IsNameContinue(c)\n",
+    file,
+    property: "SyntaxVectorsPass",
+  },
+  {
+    name: "accepts an argument coordinate without the colon (Query.f(x))",
+    find: '[] kind = "argument" -> <<"N", ".", "N", "(", "N", ":", ")">>',
+    replace: '[] kind = "argument" -> <<"N", ".", "N", "(", "N", ")">>',
+    file,
+    property: "SyntaxVectorsPass",
+  },
+  {
+    name: "a missing field in an argument coordinate yields nothing instead of raising",
+    find: 'ELSE IF ~TS!HasField(T, fieldName) THEN Raise("field")',
+    replace: "ELSE IF ~TS!HasField(T, fieldName) THEN Nothing",
+    file,
+    property: "MissingContainersRaise",
+  },
+  {
+    name: "a missing directive in a directive argument coordinate yields nothing instead of raising",
+    find: 'IF ~DirectiveExists(S, directiveName) THEN Raise("directive")',
+    replace: "IF ~DirectiveExists(S, directiveName) THEN Nothing",
+    file,
+    property: "MissingContainersRaise",
+  },
+  {
+    name: "a missing type yields nothing instead of raising, as for a type coordinate",
+    find: '  ELSE IF ~TypeExists(S, typeName) THEN Raise("type")\n  ELSE LET T == TS!TypeNamed(S, typeName) IN\n  IF IsMetaField(S, T, memberName)',
+    replace: "  ELSE IF ~TypeExists(S, typeName) THEN Nothing\n  ELSE LET T == TS!TypeNamed(S, typeName) IN\n  IF IsMetaField(S, T, memberName)",
+    file,
+    property: "MissingContainersRaise",
+  },
+  {
+    name: "a missing argument raises instead of yielding nothing",
+    find: '  THEN Found("argument", <<typeName, fieldName, argumentName>>)\n  ELSE Nothing',
+    replace: '  THEN Found("argument", <<typeName, fieldName, argumentName>>)\n  ELSE Raise("argument")',
+    file,
+    property: "MissingLeavesYieldNothing",
+  },
+  {
+    name: "a missing type raises for a type coordinate too",
+    find: '  ELSE IF TypeExists(S, typeName) THEN Found("type", <<typeName>>)\n  ELSE Nothing',
+    replace: '  ELSE IF TypeExists(S, typeName) THEN Found("type", <<typeName>>)\n  ELSE Raise("type")',
+    file,
+    property: "MissingLeavesYieldNothing",
+  },
+  {
+    name: "looks an enum's members up among its fields, so no enum value resolves",
+    find: "THEN IF memberName \\in TS!Range(TS!NamesOf(T.values))",
+    replace: "THEN IF TS!HasField(T, memberName)",
+    file,
+    property: "EveryElementResolvesFromItsCoordinate",
+  },
+  {
+    name: "forgets the built-in directives",
+    find: "DirectiveExists(S, name) == TS!DefinesDirective(S, name) \\/ name \\in DOMAIN BuiltinDirectiveArgs",
+    replace: "DirectiveExists(S, name) == TS!DefinesDirective(S, name)",
+    file,
+    property: "EveryElementResolvesFromItsCoordinate",
+  },
+  {
+    name: "forgets the built-in scalars the schema refers to",
+    find: "  DefinesType(S, name) \\/ (name \\in TS!BuiltinScalarNames /\\ name \\in ReferencedTypeNames(S))",
+    replace: "  DefinesType(S, name)",
+    file,
+    property: "ResolutionVectorsPass",
+  },
+  {
+    name: "a coordinate names an argument by its field alone, as Query.searchBusiness",
+    find: '[] e.kind = "argument" -> e.path[1] \\o "." \\o e.path[2] \\o "(" \\o e.path[3] \\o ":)"',
+    replace: '[] e.kind = "argument" -> e.path[1] \\o "." \\o e.path[2]',
+    file,
+    property: "CoordinatesAreUnique",
+  },
+  {
+    name: "a member coordinate looks into any type, so a scalar's member is none instead of an error",
+    find: 'ELSE IF T.kind \\notin {"ENUM", "INPUT_OBJECT", "OBJECT", "INTERFACE"} THEN Raise("kind")',
+    replace: 'ELSE IF FALSE THEN Raise("kind")',
+    file,
+    property: "ResolutionVectorsPass",
+  },
+  {
+    name: "an argument coordinate looks into input objects, so SearchCriteria.filter(x:) is none",
+    find: 'ELSE IF T.kind \\notin {"OBJECT", "INTERFACE"} THEN Raise("kind")',
+    replace: 'ELSE IF T.kind \\notin {"OBJECT", "INTERFACE", "INPUT_OBJECT", "ENUM"} THEN Raise("kind")\n  ELSE IF T.kind \\in {"INPUT_OBJECT", "ENUM"} THEN Nothing',
+    file,
+    property: "ResolutionVectorsPass",
+  },
+  {
+    name: "resolves meta-fields as fields",
+    find: '  IF IsMetaField(S, T, memberName) THEN Undefined("meta-field")',
+    replace: '  IF FALSE THEN Undefined("meta-field")',
+    file,
+    property: "ResolutionVectorsPass",
+  },
+];
