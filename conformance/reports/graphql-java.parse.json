@@ -1,0 +1,642 @@
+{
+  "format": 1,
+  "area": "parse",
+  "implementation": "graphql-java 26.2",
+  "capabilities": [
+    "absent-vs-null",
+    "coerce",
+    "custom-scalar-literals",
+    "error-propagation-off",
+    "idle",
+    "introspect",
+    "invalid-results",
+    "mutation",
+    "parse",
+    "schema",
+    "subscription",
+    "uncoercible-results",
+    "validate"
+  ],
+  "provenance": {
+    "kit": "ea0905982bf7",
+    "date": "2026-11-15",
+    "strict": true,
+    "vectors": 1983
+  },
+  "checkerSelfTest": "passed (3 negative controls)",
+  "cases": {
+    "submitted": 1983,
+    "distinct": 1983,
+    "malformed": 0
+  },
+  "adapterProblems": 0,
+  "draftOnly": {
+    "vectors": 105,
+    "failing": 81
+  },
+  "checks": [
+    {
+      "id": "sourceText",
+      "title": "Source text is a sequence of SourceCharacter",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1",
+          "title": "Source Text",
+          "url": "https://spec.graphql.org/draft/#sec-Source-Text"
+        }
+      ],
+      "status": "pass",
+      "cases": 33,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "whiteSpace",
+      "title": "White space is tab and space only",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.1",
+          "title": "White Space",
+          "url": "https://spec.graphql.org/draft/#sec-White-Space"
+        }
+      ],
+      "status": "pass",
+      "cases": 28,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "lineTerminators",
+      "title": "Line terminators are LF, CR and CR LF only",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.2",
+          "title": "Line Terminators",
+          "url": "https://spec.graphql.org/draft/#sec-Line-Terminators"
+        }
+      ],
+      "status": "fail",
+      "cases": 31,
+      "failing": 3,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "comments",
+      "title": "A comment runs to the end of its line",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.3",
+          "title": "Comments",
+          "url": "https://spec.graphql.org/draft/#sec-Comments"
+        }
+      ],
+      "status": "pass",
+      "cases": 17,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "insignificantCommas",
+      "title": "Commas are insignificant",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.4",
+          "title": "Insignificant Commas",
+          "url": "https://spec.graphql.org/draft/#sec-Insignificant-Commas"
+        }
+      ],
+      "status": "pass",
+      "cases": 5,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "lexicalTokens",
+      "title": "Every character outside ignored tokens is part of a token",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.5",
+          "title": "Lexical Tokens",
+          "url": "https://spec.graphql.org/draft/#sec-Lexical-Tokens"
+        }
+      ],
+      "status": "pass",
+      "cases": 43,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "ignoredTokens",
+      "title": "Ignored tokens may appear before and after every token",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.6",
+          "title": "Ignored Tokens",
+          "url": "https://spec.graphql.org/draft/#sec-Ignored-Tokens"
+        }
+      ],
+      "status": "pass",
+      "cases": 81,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "punctuators",
+      "title": "Punctuators, and `...` only as a whole",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.7",
+          "title": "Punctuators",
+          "url": "https://spec.graphql.org/draft/#sec-Punctuators"
+        }
+      ],
+      "status": "pass",
+      "cases": 40,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "names",
+      "title": "Names",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.8",
+          "title": "Names",
+          "url": "https://spec.graphql.org/draft/#sec-Names"
+        }
+      ],
+      "status": "pass",
+      "cases": 14,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "descriptions",
+      "title": "Descriptions on operations, fragments and variables, not on the query shorthand",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.2",
+          "title": "Descriptions",
+          "url": "https://spec.graphql.org/draft/#sec-Descriptions"
+        }
+      ],
+      "status": "fail",
+      "cases": 100,
+      "failing": 73,
+      "failingDraftOnly": 73
+    },
+    {
+      "id": "document",
+      "title": "A document is one or more executable definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.3",
+          "title": "Document",
+          "url": "https://spec.graphql.org/draft/#sec-Document"
+        }
+      ],
+      "status": "pass",
+      "cases": 99,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "operations",
+      "title": "Operation definitions and the query shorthand",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.4",
+          "title": "Operations",
+          "url": "https://spec.graphql.org/draft/#sec-Operations"
+        }
+      ],
+      "status": "pass",
+      "cases": 100,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "selectionSets",
+      "title": "Selection sets, including empty ones",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.5",
+          "title": "Selection Sets",
+          "url": "https://spec.graphql.org/draft/#sec-Selection-Sets"
+        }
+      ],
+      "status": "fail",
+      "cases": 95,
+      "failing": 8,
+      "failingDraftOnly": 8
+    },
+    {
+      "id": "fields",
+      "title": "Fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.6",
+          "title": "Fields",
+          "url": "https://spec.graphql.org/draft/#sec-Fields"
+        }
+      ],
+      "status": "pass",
+      "cases": 96,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "arguments",
+      "title": "Arguments",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.7",
+          "title": "Arguments",
+          "url": "https://spec.graphql.org/draft/#sec-Arguments"
+        }
+      ],
+      "status": "pass",
+      "cases": 110,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "fieldAlias",
+      "title": "Field aliases",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.8",
+          "title": "Field Alias",
+          "url": "https://spec.graphql.org/draft/#sec-Field-Alias"
+        }
+      ],
+      "status": "pass",
+      "cases": 94,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "fragments",
+      "title": "Fragment definitions and fragment spreads",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.9",
+          "title": "Fragments",
+          "url": "https://spec.graphql.org/draft/#sec-Fragments"
+        }
+      ],
+      "status": "pass",
+      "cases": 117,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "typeConditions",
+      "title": "Type conditions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.9.1",
+          "title": "Type Conditions",
+          "url": "https://spec.graphql.org/draft/#sec-Type-Conditions"
+        }
+      ],
+      "status": "pass",
+      "cases": 112,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "inlineFragments",
+      "title": "Inline fragments",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.9.2",
+          "title": "Inline Fragments",
+          "url": "https://spec.graphql.org/draft/#sec-Inline-Fragments"
+        }
+      ],
+      "status": "pass",
+      "cases": 100,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "inputValues",
+      "title": "Input values, and no variables in constant values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10",
+          "title": "Input Values",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Values"
+        }
+      ],
+      "status": "pass",
+      "cases": 122,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "intValue",
+      "title": "Int values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.1",
+          "title": "Int Value",
+          "url": "https://spec.graphql.org/draft/#sec-Int-Value"
+        }
+      ],
+      "status": "pass",
+      "cases": 42,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "floatValue",
+      "title": "Float values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.2",
+          "title": "Float Value",
+          "url": "https://spec.graphql.org/draft/#sec-Float-Value"
+        }
+      ],
+      "status": "pass",
+      "cases": 35,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "booleanValue",
+      "title": "Boolean values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.3",
+          "title": "Boolean Value",
+          "url": "https://spec.graphql.org/draft/#sec-Boolean-Value"
+        }
+      ],
+      "status": "pass",
+      "cases": 3,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "stringValue",
+      "title": "String values and block strings",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.4",
+          "title": "String Value",
+          "url": "https://spec.graphql.org/draft/#sec-String-Value"
+        }
+      ],
+      "status": "fail",
+      "cases": 146,
+      "failing": 4,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "nullValue",
+      "title": "Null value",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.5",
+          "title": "Null Value",
+          "url": "https://spec.graphql.org/draft/#sec-Null-Value"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "enumValue",
+      "title": "Enum values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.6",
+          "title": "Enum Value",
+          "url": "https://spec.graphql.org/draft/#sec-Enum-Value"
+        }
+      ],
+      "status": "pass",
+      "cases": 10,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "listValue",
+      "title": "List values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.7",
+          "title": "List Value",
+          "url": "https://spec.graphql.org/draft/#sec-List-Value"
+        }
+      ],
+      "status": "pass",
+      "cases": 101,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "inputObjectValues",
+      "title": "Input object values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.8",
+          "title": "Input Object Values",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Object-Values"
+        }
+      ],
+      "status": "pass",
+      "cases": 107,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "variables",
+      "title": "Variables and variable definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.11",
+          "title": "Variables",
+          "url": "https://spec.graphql.org/draft/#sec-Variables"
+        }
+      ],
+      "status": "fail",
+      "cases": 157,
+      "failing": 1,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "typeReferences",
+      "title": "Type references",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.12",
+          "title": "Type References",
+          "url": "https://spec.graphql.org/draft/#sec-Type-References"
+        }
+      ],
+      "status": "pass",
+      "cases": 102,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "directives",
+      "title": "Directives",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        }
+      ],
+      "status": "pass",
+      "cases": 113,
+      "failing": 0,
+      "failingDraftOnly": 0
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "descriptions"
+      ],
+      "summary": "rejects what §2.2 Descriptions accepts",
+      "cases": 73,
+      "fixtures": {
+        "parser-examples": 3,
+        "variable-definitions": 1,
+        "random-documents": 69
+      },
+      "draftOnly": 73,
+      "fixture": "parser-examples",
+      "example": {
+        "input": "[draft] \"\\\"d\\\" query {a}\"",
+        "response": {
+          "ok": false,
+          "error": "Invalid syntax with offending token '\"d\"' at line 1 column 1"
+        },
+        "expected": "{\"ok\":true}"
+      },
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "selectionSets"
+      ],
+      "summary": "rejects what §2.5 Selection Sets accepts",
+      "cases": 8,
+      "fixtures": {
+        "parser-examples": 3,
+        "field-suffixes": 1,
+        "random-documents": 4
+      },
+      "draftOnly": 8,
+      "fixture": "parser-examples",
+      "example": {
+        "input": "[draft] \"{}\"",
+        "response": {
+          "ok": false,
+          "error": "Invalid syntax with offending token '}' at line 1 column 2"
+        },
+        "expected": "{\"ok\":true}"
+      },
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "stringValue"
+      ],
+      "summary": "accepts what §2.10.4 String Value rejects",
+      "cases": 4,
+      "fixtures": {
+        "lexer-examples": 2,
+        "block-strings": 2
+      },
+      "fixture": "lexer-examples",
+      "example": {
+        "input": "\"{a(x: \\\"\\\"\\\"\\\\\\\"\\\"\\\")}\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}",
+        "sibling": "\"{a(x: \\\"\\\"\\\"\\\"\\\"\\\")}\", which the reference accepts"
+      }
+    },
+    {
+      "checks": [
+        "lineTerminators"
+      ],
+      "summary": "accepts what §2.1.2 Line Terminators rejects",
+      "cases": 3,
+      "fixtures": {
+        "ignored": 3
+      },
+      "fixture": "ignored",
+      "example": {
+        "input": "\"{a b}\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}",
+        "sibling": "\"{ab}\", which the reference accepts"
+      }
+    },
+    {
+      "checks": [
+        "variables"
+      ],
+      "summary": "accepts what §2.11 Variables rejects",
+      "cases": 1,
+      "fixtures": {
+        "parser-examples": 1
+      },
+      "fixture": "parser-examples",
+      "example": {
+        "input": "\"query ($a: Int @d(x: $b)) {a}\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}"
+      }
+    }
+  ],
+  "fixtures": [],
+  "ok": false
+}

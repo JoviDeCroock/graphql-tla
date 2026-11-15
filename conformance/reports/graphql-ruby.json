@@ -10,14 +10,14 @@
     "uncoercible-results"
   ],
   "provenance": {
-    "kit": "e67bcb49db84",
+    "kit": "0bbe05428474",
     "date": "2026-11-15",
     "strict": true,
     "random": 1500,
     "seed": 1,
     "exhaustive": true
   },
-  "checkerSelfTest": "passed (30 negative controls)",
+  "checkerSelfTest": "passed (35 negative controls)",
   "cases": {
     "submitted": 11864,
     "distinct": 1929,
@@ -333,7 +333,7 @@
     {
       "id": "intFraction",
       "title": "A fraction returned for an Int (1.2) raises an execution error instead of being truncated",
-      "level": "MUST",
+      "level": "SHOULD",
       "spec": [
         {
           "number": "3.5.1",
@@ -346,7 +346,7 @@
           "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
         }
       ],
-      "basis": "§3.5.1 states the rule: services \"may coerce non-integer internal values to integers when reasonable without losing information, otherwise they must raise an execution error\". Its example applies it to this case: \"a floating-point number 1.2 should raise an execution error instead of being truncated to 1\". Truncating 1.2 loses information, so the rule's must applies. October 2021 has the same sentences, with \"field error\".",
+      "basis": "The level is contested. §3.5.1 states a rule with must: services \"may coerce non-integer internal values to integers when reasonable without losing information, otherwise they must raise an execution error\". Truncating 1.2 loses information, so on that reading the must applies. But the example that applies the rule to this very case says should: \"a floating-point number 1.2 should raise an execution error instead of being truncated to 1\". Where the level is in doubt, the kit takes the weaker one, so this is a SHOULD. October 2021 has the same sentences, with \"field error\".",
       "status": "fail",
       "cases": 385,
       "failing": 385
@@ -532,7 +532,7 @@
       "title": "With error propagation off, an error nulls the position where it happened (graphql-js 17's @experimental_disableErrorPropagation)",
       "level": "INFO",
       "spec": [],
-      "basis": "Not a GraphQL rule: neither edition has execution without error propagation. §6.4.4 says: \"Since Non-Null response positions cannot be null, execution errors are propagated to be handled by the parent response position.\" Every failure in the noPropagation fixture counts here, never against a spec section, and never fails the run. Adapter protocol problems still count as protocol.",
+      "basis": "Not a GraphQL rule: neither edition has execution without error propagation. §6.4.4 says: \"Since Non-Null response positions cannot be null, execution errors are propagated to be handled by the parent response position.\" Every failure of the noPropagation fixture's response (its data and errors) counts here, never against a spec section, and never fails the run. Turning propagation off doesn't change which resolvers run, so protocol problems and the checks on calls (callsOnce, callsSelected, callsReachable, calledSerially) keep their own checks.",
       "status": "untested",
       "cases": 0,
       "failing": 0
@@ -543,9 +543,9 @@
       "checks": [
         "intFraction"
       ],
-      "summary": "count is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
+      "summary": "count is 1, though its resolver returned a value its type can't represent, which should raise an execution error",
       "fixture": "leaves",
-      "problem": "count is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
+      "problem": "count is 1, though its resolver returned a value its type can't represent, which should raise an execution error",
       "example": {
         "trace": "call count; call ratio; call color; settle count = uncoercible; settle ratio = null; settle color = null",
         "response": {
@@ -565,9 +565,9 @@
       "checks": [
         "intFraction"
       ],
-      "summary": "… is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
+      "summary": "… is 1, though its resolver returned a value its type can't represent, which should raise an execution error",
       "fixture": "unions",
-      "problem": "matrix.0.0 is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
+      "problem": "matrix.0.0 is 1, though its resolver returned a value its type can't represent, which should raise an execution error",
       "example": {
         "trace": "call search; call matrix; settle search = null; settle matrix = list(1); call matrix.0; settle matrix.0 = list(1); call matrix.0.0; settle matrix.0.0 = uncoercible",
         "response": {
@@ -708,7 +708,7 @@
       "cases": 0,
       "failing": 0,
       "informational": 0,
-      "note": "outside the spec (graphql-js 17's @experimental_disableErrorPropagation): its failures are informational, under disabledPropagation"
+      "note": "outside the spec (graphql-js 17's @experimental_disableErrorPropagation): its failures are informational, under disabledPropagation, except protocol problems and the checks on resolver calls"
     },
     {
       "id": "nullPropagation",

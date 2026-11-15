@@ -1,0 +1,1254 @@
+{
+  "format": 1,
+  "area": "schema",
+  "implementation": "Hot Chocolate 15.1.21",
+  "capabilities": [
+    "coerce",
+    "custom-scalar-literals",
+    "exact-numbers",
+    "idle",
+    "introspect",
+    "invalid-results",
+    "mutation",
+    "parse",
+    "schema",
+    "subscription",
+    "uncoercible-results",
+    "validate"
+  ],
+  "provenance": {
+    "kit": "0bbe05428474",
+    "date": "2026-11-15",
+    "strict": true,
+    "vectors": 168,
+    "graded": 165,
+    "skipped": {
+      "unspecified": 3
+    }
+  },
+  "checkerSelfTest": "passed (330 negative controls)",
+  "cases": {
+    "submitted": 165,
+    "distinct": 165,
+    "malformed": 0
+  },
+  "adapterProblems": 0,
+  "draftOnly": {
+    "vectors": 37,
+    "failing": 18
+  },
+  "checks": [
+    {
+      "id": "typeNamesUnique",
+      "title": "No two types have the same name",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3",
+          "title": "Schema",
+          "url": "https://spec.graphql.org/draft/#sec-Schema"
+        }
+      ],
+      "status": "fail",
+      "cases": 2,
+      "failing": 1,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "typeNameNotBuiltin",
+      "title": "No type is named like a built-in type",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3",
+          "title": "Schema",
+          "url": "https://spec.graphql.org/draft/#sec-Schema"
+        }
+      ],
+      "status": "fail",
+      "cases": 3,
+      "failing": 1,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "typeNameReserved",
+      "title": "No type name begins with __",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3",
+          "title": "Schema",
+          "url": "https://spec.graphql.org/draft/#sec-Schema"
+        }
+      ],
+      "status": "fail",
+      "cases": 2,
+      "failing": 1,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "directiveNamesUnique",
+      "title": "No two directives have the same name",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3",
+          "title": "Schema",
+          "url": "https://spec.graphql.org/draft/#sec-Schema"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "directiveNameReserved",
+      "title": "No directive name begins with __",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3",
+          "title": "Schema",
+          "url": "https://spec.graphql.org/draft/#sec-Schema"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "queryRootProvided",
+      "title": "The query root operation type is provided",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3.1",
+          "title": "Root Operation Types",
+          "url": "https://spec.graphql.org/draft/#sec-Root-Operation-Types"
+        }
+      ],
+      "status": "pass",
+      "cases": 4,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "rootTypesAreObjects",
+      "title": "Root operation types are object types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3.1",
+          "title": "Root Operation Types",
+          "url": "https://spec.graphql.org/draft/#sec-Root-Operation-Types"
+        }
+      ],
+      "status": "pass",
+      "cases": 6,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "rootTypesDifferent",
+      "title": "Root operation types are all different",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3.1",
+          "title": "Root Operation Types",
+          "url": "https://spec.graphql.org/draft/#sec-Root-Operation-Types"
+        }
+      ],
+      "status": "fail",
+      "cases": 4,
+      "failing": 2,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "fieldsDefined",
+      "title": "An object or interface type defines one or more fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/draft/#sec-Interfaces"
+        }
+      ],
+      "status": "pass",
+      "cases": 4,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "fieldNamesUnique",
+      "title": "Field names are unique within a type",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/draft/#sec-Interfaces"
+        }
+      ],
+      "status": "fail",
+      "cases": 4,
+      "failing": 1,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "fieldNameReserved",
+      "title": "No field name begins with __",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/draft/#sec-Interfaces"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "fieldOutputType",
+      "title": "Fields return output types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        },
+        {
+          "number": "3.4.2",
+          "title": "Input and Output Types",
+          "url": "https://spec.graphql.org/draft/#sec-Input-and-Output-Types"
+        }
+      ],
+      "status": "pass",
+      "cases": 4,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "argNameReserved",
+      "title": "No argument name begins with __",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        }
+      ],
+      "status": "pass",
+      "cases": 4,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "argNamesUnique",
+      "title": "Argument names are unique within a field or directive",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        }
+      ],
+      "status": "pass",
+      "cases": 4,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have argument name uniqueness."
+    },
+    {
+      "id": "argInputType",
+      "title": "Arguments accept input types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        },
+        {
+          "number": "3.4.2",
+          "title": "Input and Output Types",
+          "url": "https://spec.graphql.org/draft/#sec-Input-and-Output-Types"
+        }
+      ],
+      "status": "pass",
+      "cases": 6,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "requiredArgNotDeprecated",
+      "title": "A required argument isn't deprecated",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        },
+        {
+          "number": "3.13.3",
+          "title": "@deprecated",
+          "url": "https://spec.graphql.org/draft/#sec-deprecated"
+        }
+      ],
+      "status": "fail",
+      "cases": 8,
+      "failing": 1,
+      "failingDraftOnly": 1,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have deprecated arguments."
+    },
+    {
+      "id": "argDefaultCompatible",
+      "title": "An object field argument's default value coerces to its type",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        }
+      ],
+      "status": "fail",
+      "cases": 20,
+      "failing": 10,
+      "failingDraftOnly": 10,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have default value validation."
+    },
+    {
+      "id": "implementsUnique",
+      "title": "A type implements each interface once",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/draft/#sec-Interfaces"
+        }
+      ],
+      "status": "fail",
+      "cases": 2,
+      "failing": 1,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "implementsInterfaces",
+      "title": "A type implements only interface types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/draft/#sec-Interfaces"
+        }
+      ],
+      "status": "fail",
+      "cases": 2,
+      "failing": 1,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "implementsItself",
+      "title": "An interface doesn't implement itself",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/draft/#sec-Interfaces"
+        }
+      ],
+      "status": "fail",
+      "cases": 2,
+      "failing": 1,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "implTransitive",
+      "title": "A type also implements the interfaces its interfaces implement",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        }
+      ],
+      "status": "fail",
+      "cases": 4,
+      "failing": 2,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "implFieldProvided",
+      "title": "An implementation has every field of the interface",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "implArgProvided",
+      "title": "An implementation's field has every argument of the interface field",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "implArgInvariant",
+      "title": "An implementation's field arguments have the interface's argument types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        }
+      ],
+      "status": "pass",
+      "cases": 4,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "implExtraArgOptional",
+      "title": "An implementation's additional arguments aren't required",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "implFieldCovariant",
+      "title": "An implementation's field returns a subtype of the interface field's type",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        }
+      ],
+      "status": "pass",
+      "cases": 8,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "implDeprecation",
+      "title": "A deprecated implementation field implements a deprecated field",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Objects"
+        }
+      ],
+      "status": "fail",
+      "cases": 2,
+      "failing": 1,
+      "failingDraftOnly": 1,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have deprecation of implementing fields."
+    },
+    {
+      "id": "unionMembersDefined",
+      "title": "A union has one or more member types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.8",
+          "title": "Unions",
+          "url": "https://spec.graphql.org/draft/#sec-Unions"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "unionMembersUnique",
+      "title": "A union's member types are unique",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.8",
+          "title": "Unions",
+          "url": "https://spec.graphql.org/draft/#sec-Unions"
+        }
+      ],
+      "status": "fail",
+      "cases": 2,
+      "failing": 1,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "unionMembersObjects",
+      "title": "A union's member types are object types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.8",
+          "title": "Unions",
+          "url": "https://spec.graphql.org/draft/#sec-Unions"
+        }
+      ],
+      "status": "pass",
+      "cases": 6,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "enumValuesDefined",
+      "title": "An enum has one or more values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.9",
+          "title": "Enums",
+          "url": "https://spec.graphql.org/draft/#sec-Enums"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "enumValuesUnique",
+      "title": "An enum's values are unique",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.9",
+          "title": "Enums",
+          "url": "https://spec.graphql.org/draft/#sec-Enums"
+        }
+      ],
+      "status": "fail",
+      "cases": 2,
+      "failing": 1,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "enumValueNameReserved",
+      "title": "No enum value begins with __",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4",
+          "title": "Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Introspection"
+        }
+      ],
+      "status": "fail",
+      "cases": 2,
+      "failing": 1,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "inputFieldsDefined",
+      "title": "An input object has one or more fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10",
+          "title": "Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "inputFieldNamesUnique",
+      "title": "Input field names are unique within an input object",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10",
+          "title": "Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "inputFieldNameReserved",
+      "title": "No input field name begins with __",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10",
+          "title": "Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "inputFieldInputType",
+      "title": "Input fields accept input types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10",
+          "title": "Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+        },
+        {
+          "number": "3.4.2",
+          "title": "Input and Output Types",
+          "url": "https://spec.graphql.org/draft/#sec-Input-and-Output-Types"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "requiredInputFieldNotDeprecated",
+      "title": "A required input field isn't deprecated",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10",
+          "title": "Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+        },
+        {
+          "number": "3.13.3",
+          "title": "@deprecated",
+          "url": "https://spec.graphql.org/draft/#sec-deprecated"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have deprecated input fields."
+    },
+    {
+      "id": "oneOfFieldNullable",
+      "title": "A OneOf input object's fields are nullable",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10",
+          "title": "Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+        },
+        {
+          "number": "3.10.1",
+          "title": "OneOf Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have OneOf input objects."
+    },
+    {
+      "id": "oneOfFieldNoDefault",
+      "title": "A OneOf input object's fields have no default value",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10",
+          "title": "Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+        },
+        {
+          "number": "3.10.1",
+          "title": "OneOf Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have OneOf input objects."
+    },
+    {
+      "id": "inputObjectUnbreakableCycle",
+      "title": "An input object can be given a finite value",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10",
+          "title": "Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+        }
+      ],
+      "status": "fail",
+      "cases": 10,
+      "failing": 2,
+      "failingDraftOnly": 2
+    },
+    {
+      "id": "inputObjectDefaultValueCycle",
+      "title": "Input object default values don't form a cycle",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10",
+          "title": "Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+        }
+      ],
+      "status": "fail",
+      "cases": 8,
+      "failing": 4,
+      "failingDraftOnly": 4,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have default value validation."
+    },
+    {
+      "id": "directiveLocationsDefined",
+      "title": "A directive has one or more locations",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "note": "SDL can't write a directive without locations, so no vector breaks this rule"
+    },
+    {
+      "id": "directiveUsesItself",
+      "title": "A directive definition doesn't use itself",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        }
+      ],
+      "status": "fail",
+      "cases": 2,
+      "failing": 1,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "directiveReferencesItselfIndirectly",
+      "title": "A directive definition doesn't reference itself through a type or directive",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        }
+      ],
+      "status": "fail",
+      "cases": 4,
+      "failing": 1,
+      "failingDraftOnly": 0
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "argDefaultCompatible"
+      ],
+      "kind": "not enforced",
+      "summary": "ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule",
+      "cases": 10,
+      "fixtures": {
+        "defaults": 10
+      },
+      "fixture": "argDefaultCompatible.1.invalid",
+      "example": {
+        "input": "[draft] type Query { f(x: Int = \"1\"): Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks ARG_DEFAULT_COMPATIBLE and no other rule"
+      },
+      "draftOnly": 10,
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "inputObjectDefaultValueCycle"
+      ],
+      "kind": "not enforced",
+      "summary": "INPUT_OBJECT_DEFAULT_VALUE_CYCLE not enforced: accepts a schema that breaks only this rule",
+      "cases": 4,
+      "fixtures": {
+        "input": 4
+      },
+      "fixture": "inputObjectDefaultValueCycle.1.invalid",
+      "example": {
+        "input": "[draft] input I { i: I = {} } type Query { f(i: I): Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks INPUT_OBJECT_DEFAULT_VALUE_CYCLE and no other rule"
+      },
+      "draftOnly": 4,
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "rootTypesDifferent"
+      ],
+      "kind": "not enforced",
+      "summary": "ROOT_TYPES_DIFFERENT not enforced: accepts a schema that breaks only this rule",
+      "cases": 2,
+      "fixtures": {
+        "root": 2
+      },
+      "fixture": "rootTypesDifferent.2.invalid",
+      "example": {
+        "input": "schema { query: Q subscription: Q } type Q { a: Int } type S { a: Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks ROOT_TYPES_DIFFERENT and no other rule"
+      }
+    },
+    {
+      "checks": [
+        "inputObjectUnbreakableCycle"
+      ],
+      "kind": "not enforced",
+      "summary": "INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule",
+      "cases": 2,
+      "fixtures": {
+        "input": 2
+      },
+      "fixture": "inputObjectUnbreakableCycle.5.invalid",
+      "example": {
+        "input": "[draft] input A @oneOf { b: B } input B @oneOf { a: A } type Query { f(a: A): Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks INPUT_OBJECT_UNBREAKABLE_CYCLE and no other rule"
+      },
+      "draftOnly": 2,
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "typeNamesUnique"
+      ],
+      "kind": "not enforced",
+      "summary": "TYPE_NAMES_UNIQUE not enforced: accepts a schema that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "names": 1
+      },
+      "fixture": "typeNamesUnique.1.invalid",
+      "example": {
+        "input": "scalar A scalar A type Query { a: A }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks TYPE_NAMES_UNIQUE and no other rule"
+      }
+    },
+    {
+      "checks": [
+        "typeNameNotBuiltin"
+      ],
+      "kind": "not enforced",
+      "summary": "TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "names": 1
+      },
+      "fixture": "typeNameNotBuiltin.2.invalid",
+      "example": {
+        "input": "type Int { a: String } type Query { a: String }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks TYPE_NAME_NOT_BUILTIN and no other rule"
+      }
+    },
+    {
+      "checks": [
+        "typeNameReserved"
+      ],
+      "kind": "not enforced",
+      "summary": "TYPE_NAME_RESERVED not enforced: accepts a schema that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "names": 1
+      },
+      "fixture": "typeNameReserved.1.invalid",
+      "example": {
+        "input": "type __T { a: Int } type Query { t: __T }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks TYPE_NAME_RESERVED and no other rule"
+      }
+    },
+    {
+      "checks": [
+        "fieldNamesUnique"
+      ],
+      "kind": "over-strict",
+      "summary": "FIELD_NAMES_UNIQUE over-strict: rejects a valid schema one small edit away from one that breaks it",
+      "cases": 1,
+      "fixtures": {
+        "names": 1
+      },
+      "fixture": "fieldNamesUnique.2.valid",
+      "example": {
+        "input": "type Query { a: I } interface I { x: Int y: String }",
+        "response": {
+          "valid": false,
+          "errors": [
+            "There is no object type implementing interface `I`."
+          ]
+        },
+        "expected": "valid (TypeSystem!Verdict is empty)"
+      }
+    },
+    {
+      "checks": [
+        "requiredArgNotDeprecated"
+      ],
+      "kind": "over-strict",
+      "summary": "REQUIRED_ARG_NOT_DEPRECATED over-strict: rejects a valid schema one small edit away from one that breaks it",
+      "cases": 1,
+      "fixtures": {
+        "typeUse": 1
+      },
+      "fixture": "requiredArgNotDeprecated.3.valid",
+      "example": {
+        "input": "[draft] type Query { a: I } interface I { f(x: Int @deprecated): Int }",
+        "response": {
+          "valid": false,
+          "errors": [
+            "There is no object type implementing interface `I`."
+          ]
+        },
+        "expected": "valid (TypeSystem!Verdict is empty)"
+      },
+      "draftOnly": 1,
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "implementsUnique"
+      ],
+      "kind": "not enforced",
+      "summary": "IMPLEMENTS_UNIQUE not enforced: accepts a schema that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "implementation": 1
+      },
+      "fixture": "implementsUnique.1.invalid",
+      "example": {
+        "input": "interface I { a: Int } type Query implements I & I { a: Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks IMPLEMENTS_UNIQUE and no other rule"
+      }
+    },
+    {
+      "checks": [
+        "implementsInterfaces"
+      ],
+      "kind": "crash",
+      "summary": "IMPLEMENTS_INTERFACES: crashes on a schema that breaks only this rule, instead of rejecting it",
+      "cases": 1,
+      "fixtures": {
+        "implementation": 1
+      },
+      "fixture": "implementsInterfaces.1.invalid",
+      "problem": "NullReferenceException: Object reference not set to an instance of an object.",
+      "example": {
+        "input": "type O { a: Int } type Query implements O { a: Int }",
+        "response": "the adapter answered with an error: NullReferenceException: Object reference not set to an instance of an object.",
+        "expected": "invalid: breaks IMPLEMENTS_INTERFACES and no other rule"
+      }
+    },
+    {
+      "checks": [
+        "implementsItself"
+      ],
+      "kind": "over-strict",
+      "summary": "IMPLEMENTS_ITSELF over-strict: rejects a valid schema one small edit away from one that breaks it",
+      "cases": 1,
+      "fixtures": {
+        "implementation": 1
+      },
+      "fixture": "implementsItself.1.valid",
+      "example": {
+        "input": "interface A { x: Int } type Query { a: A }",
+        "response": {
+          "valid": false,
+          "errors": [
+            "There is no object type implementing interface `A`."
+          ]
+        },
+        "expected": "valid (TypeSystem!Verdict is empty)"
+      }
+    },
+    {
+      "checks": [
+        "implTransitive"
+      ],
+      "kind": "not enforced",
+      "summary": "IMPL_TRANSITIVE not enforced: accepts a schema that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "implementation": 1
+      },
+      "fixture": "implTransitive.1.invalid",
+      "example": {
+        "input": "interface Node { id: ID } interface Resource implements Node { id: ID url: String } type Image implements Resource { id: ID url: String } type Query { i: Image }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks IMPL_TRANSITIVE and no other rule"
+      }
+    },
+    {
+      "checks": [
+        "implTransitive"
+      ],
+      "kind": "over-strict",
+      "summary": "IMPL_TRANSITIVE over-strict: rejects a valid schema one small edit away from one that breaks it",
+      "cases": 1,
+      "fixtures": {
+        "implementation": 1
+      },
+      "fixture": "implTransitive.2.valid",
+      "example": {
+        "input": "interface A implements B { x: Int } interface B { x: Int } type Query { a: A }",
+        "response": {
+          "valid": false,
+          "errors": [
+            "There is no object type implementing interface `A`."
+          ]
+        },
+        "expected": "valid (TypeSystem!Verdict is empty)"
+      }
+    },
+    {
+      "checks": [
+        "implDeprecation"
+      ],
+      "kind": "not enforced",
+      "summary": "IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "implementation": 1
+      },
+      "fixture": "implDeprecation.1.invalid",
+      "example": {
+        "input": "[draft] interface I { f: Int } type Query implements I { f: Int @deprecated }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks IMPL_DEPRECATION and no other rule"
+      },
+      "draftOnly": 1,
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "unionMembersUnique"
+      ],
+      "kind": "not enforced",
+      "summary": "UNION_MEMBERS_UNIQUE not enforced: accepts a schema that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "union": 1
+      },
+      "fixture": "unionMembersUnique.1.invalid",
+      "example": {
+        "input": "union U = Query | Query type Query { u: U }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks UNION_MEMBERS_UNIQUE and no other rule"
+      }
+    },
+    {
+      "checks": [
+        "enumValuesUnique"
+      ],
+      "kind": "not enforced",
+      "summary": "ENUM_VALUES_UNIQUE not enforced: accepts a schema that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "enum": 1
+      },
+      "fixture": "enumValuesUnique.1.invalid",
+      "example": {
+        "input": "enum E { A A } type Query { e: E }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks ENUM_VALUES_UNIQUE and no other rule"
+      }
+    },
+    {
+      "checks": [
+        "enumValueNameReserved"
+      ],
+      "kind": "not enforced",
+      "summary": "ENUM_VALUE_NAME_RESERVED not enforced: accepts a schema that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "enum": 1
+      },
+      "fixture": "enumValueNameReserved.1.invalid",
+      "example": {
+        "input": "enum E { __A } type Query { e: E }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks ENUM_VALUE_NAME_RESERVED and no other rule"
+      }
+    },
+    {
+      "checks": [
+        "directiveUsesItself"
+      ],
+      "kind": "not enforced",
+      "summary": "DIRECTIVE_USES_ITSELF not enforced: accepts a schema that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "directive": 1
+      },
+      "fixture": "directiveUsesItself.1.invalid",
+      "example": {
+        "input": "directive @invalidExample(arg: String @invalidExample) on ARGUMENT_DEFINITION type Query { a: Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks DIRECTIVE_USES_ITSELF and no other rule"
+      }
+    },
+    {
+      "checks": [
+        "directiveReferencesItselfIndirectly"
+      ],
+      "kind": "not enforced",
+      "summary": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "directive": 1
+      },
+      "fixture": "directiveReferencesItselfIndirectly.2.invalid",
+      "example": {
+        "input": "directive @d(a: Int @e) on ARGUMENT_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION type Query { a: Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule"
+      }
+    }
+  ],
+  "fixtures": [],
+  "ok": false
+}

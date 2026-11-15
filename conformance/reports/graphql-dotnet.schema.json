@@ -16,24 +16,24 @@
     "validate"
   ],
   "provenance": {
-    "kit": "e67bcb49db84",
+    "kit": "0bbe05428474",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 168,
-    "graded": 166,
+    "graded": 165,
     "skipped": {
-      "unspecified": 2
+      "unspecified": 3
     }
   },
-  "checkerSelfTest": "passed (333 negative controls)",
+  "checkerSelfTest": "passed (330 negative controls)",
   "cases": {
-    "submitted": 166,
-    "distinct": 166,
+    "submitted": 165,
+    "distinct": 165,
     "malformed": 0
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 52,
+    "vectors": 37,
     "failing": 8
   },
   "checks": [
@@ -50,7 +50,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "typeNameNotBuiltin",
@@ -64,8 +65,9 @@
         }
       ],
       "status": "fail",
-      "cases": 4,
-      "failing": 2
+      "cases": 3,
+      "failing": 1,
+      "failingDraftOnly": 0
     },
     {
       "id": "typeNameReserved",
@@ -80,7 +82,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "directiveNamesUnique",
@@ -95,7 +98,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "directiveNameReserved",
@@ -110,7 +114,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "queryRootProvided",
@@ -125,7 +130,8 @@
       ],
       "status": "pass",
       "cases": 4,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "rootTypesAreObjects",
@@ -140,7 +146,8 @@
       ],
       "status": "fail",
       "cases": 6,
-      "failing": 2
+      "failing": 2,
+      "failingDraftOnly": 0
     },
     {
       "id": "rootTypesDifferent",
@@ -155,7 +162,8 @@
       ],
       "status": "pass",
       "cases": 4,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fieldsDefined",
@@ -175,7 +183,8 @@
       ],
       "status": "pass",
       "cases": 4,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fieldNamesUnique",
@@ -195,7 +204,8 @@
       ],
       "status": "pass",
       "cases": 4,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fieldNameReserved",
@@ -215,7 +225,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fieldOutputType",
@@ -235,7 +246,8 @@
       ],
       "status": "pass",
       "cases": 4,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "argNameReserved",
@@ -255,7 +267,8 @@
       ],
       "status": "pass",
       "cases": 4,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "argNamesUnique",
@@ -276,6 +289,7 @@
       "status": "pass",
       "cases": 4,
       "failing": 0,
+      "failingDraftOnly": 0,
       "edition": "draft",
       "note": "Draft only: the October 2021 edition doesn't have argument name uniqueness."
     },
@@ -297,7 +311,8 @@
       ],
       "status": "pass",
       "cases": 6,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "requiredArgNotDeprecated",
@@ -318,6 +333,7 @@
       "status": "fail",
       "cases": 8,
       "failing": 1,
+      "failingDraftOnly": 1,
       "edition": "draft",
       "note": "Draft only: the October 2021 edition doesn't have deprecated arguments."
     },
@@ -335,6 +351,7 @@
       "status": "fail",
       "cases": 20,
       "failing": 4,
+      "failingDraftOnly": 4,
       "edition": "draft",
       "note": "Draft only: the October 2021 edition doesn't have default value validation."
     },
@@ -356,7 +373,8 @@
       ],
       "status": "fail",
       "cases": 2,
-      "failing": 1
+      "failing": 1,
+      "failingDraftOnly": 0
     },
     {
       "id": "implementsInterfaces",
@@ -376,7 +394,8 @@
       ],
       "status": "fail",
       "cases": 2,
-      "failing": 1
+      "failing": 1,
+      "failingDraftOnly": 0
     },
     {
       "id": "implementsItself",
@@ -391,7 +410,8 @@
       ],
       "status": "fail",
       "cases": 2,
-      "failing": 1
+      "failing": 1,
+      "failingDraftOnly": 0
     },
     {
       "id": "implTransitive",
@@ -406,7 +426,8 @@
       ],
       "status": "fail",
       "cases": 4,
-      "failing": 1
+      "failing": 1,
+      "failingDraftOnly": 0
     },
     {
       "id": "implFieldProvided",
@@ -421,7 +442,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "implArgProvided",
@@ -436,7 +458,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "implArgInvariant",
@@ -451,7 +474,8 @@
       ],
       "status": "fail",
       "cases": 4,
-      "failing": 2
+      "failing": 2,
+      "failingDraftOnly": 0
     },
     {
       "id": "implExtraArgOptional",
@@ -466,7 +490,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "implFieldCovariant",
@@ -481,7 +506,8 @@
       ],
       "status": "fail",
       "cases": 8,
-      "failing": 1
+      "failing": 1,
+      "failingDraftOnly": 0
     },
     {
       "id": "implDeprecation",
@@ -497,6 +523,7 @@
       "status": "fail",
       "cases": 2,
       "failing": 1,
+      "failingDraftOnly": 1,
       "edition": "draft",
       "note": "Draft only: the October 2021 edition doesn't have deprecation of implementing fields."
     },
@@ -513,7 +540,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "unionMembersUnique",
@@ -528,7 +556,8 @@
       ],
       "status": "fail",
       "cases": 2,
-      "failing": 1
+      "failing": 1,
+      "failingDraftOnly": 0
     },
     {
       "id": "unionMembersObjects",
@@ -543,7 +572,8 @@
       ],
       "status": "fail",
       "cases": 6,
-      "failing": 2
+      "failing": 2,
+      "failingDraftOnly": 0
     },
     {
       "id": "enumValuesDefined",
@@ -558,7 +588,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "enumValuesUnique",
@@ -573,7 +604,8 @@
       ],
       "status": "fail",
       "cases": 2,
-      "failing": 1
+      "failing": 1,
+      "failingDraftOnly": 0
     },
     {
       "id": "enumValueNameReserved",
@@ -588,7 +620,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "inputFieldsDefined",
@@ -603,7 +636,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "inputFieldNamesUnique",
@@ -618,7 +652,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "inputFieldNameReserved",
@@ -633,7 +668,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "inputFieldInputType",
@@ -653,7 +689,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "requiredInputFieldNotDeprecated",
@@ -674,6 +711,7 @@
       "status": "pass",
       "cases": 2,
       "failing": 0,
+      "failingDraftOnly": 0,
       "edition": "draft",
       "note": "Draft only: the October 2021 edition doesn't have deprecated input fields."
     },
@@ -696,6 +734,7 @@
       "status": "pass",
       "cases": 2,
       "failing": 0,
+      "failingDraftOnly": 0,
       "edition": "draft",
       "note": "Draft only: the October 2021 edition doesn't have OneOf input objects."
     },
@@ -718,6 +757,7 @@
       "status": "pass",
       "cases": 2,
       "failing": 0,
+      "failingDraftOnly": 0,
       "edition": "draft",
       "note": "Draft only: the October 2021 edition doesn't have OneOf input objects."
     },
@@ -734,7 +774,8 @@
       ],
       "status": "fail",
       "cases": 10,
-      "failing": 5
+      "failing": 5,
+      "failingDraftOnly": 2
     },
     {
       "id": "inputObjectDefaultValueCycle",
@@ -750,6 +791,7 @@
       "status": "pass",
       "cases": 8,
       "failing": 0,
+      "failingDraftOnly": 0,
       "edition": "draft",
       "note": "Draft only: the October 2021 edition doesn't have default value validation."
     },
@@ -767,6 +809,7 @@
       "status": "untested",
       "cases": 0,
       "failing": 0,
+      "failingDraftOnly": 0,
       "note": "SDL can't write a directive without locations, so no vector breaks this rule"
     },
     {
@@ -782,7 +825,8 @@
       ],
       "status": "fail",
       "cases": 2,
-      "failing": 1
+      "failing": 1,
+      "failingDraftOnly": 0
     },
     {
       "id": "directiveReferencesItselfIndirectly",
@@ -797,7 +841,8 @@
       ],
       "status": "fail",
       "cases": 4,
-      "failing": 1
+      "failing": 1,
+      "failingDraftOnly": 0
     }
   ],
   "findings": [
@@ -841,25 +886,6 @@
       },
       "draftOnly": 4,
       "edition": "draft"
-    },
-    {
-      "checks": [
-        "typeNameNotBuiltin"
-      ],
-      "kind": "not enforced",
-      "summary": "TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule",
-      "cases": 2,
-      "fixtures": {
-        "names": 2
-      },
-      "fixture": "typeNameNotBuiltin.1.invalid",
-      "example": {
-        "input": "scalar String type Query { a: Int }",
-        "response": {
-          "valid": true
-        },
-        "expected": "invalid: breaks TYPE_NAME_NOT_BUILTIN and no other rule"
-      }
     },
     {
       "checks": [
@@ -915,6 +941,25 @@
         "input": "union U = Int type Query { u: U }",
         "response": "the adapter answered with an error: NullReferenceException: Object reference not set to an instance of an object.",
         "expected": "invalid: breaks UNION_MEMBERS_OBJECTS and no other rule"
+      }
+    },
+    {
+      "checks": [
+        "typeNameNotBuiltin"
+      ],
+      "kind": "not enforced",
+      "summary": "TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "names": 1
+      },
+      "fixture": "typeNameNotBuiltin.2.invalid",
+      "example": {
+        "input": "type Int { a: String } type Query { a: String }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks TYPE_NAME_NOT_BUILTIN and no other rule"
       }
     },
     {

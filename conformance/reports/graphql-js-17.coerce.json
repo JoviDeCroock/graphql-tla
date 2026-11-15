@@ -20,7 +20,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "e67bcb49db84",
+    "kit": "ea0905982bf7",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 2036,
@@ -32,7 +32,7 @@
       "big JSON numbers graded under jsonNumbers"
     ]
   },
-  "checkerSelfTest": "passed (11673 negative controls)",
+  "checkerSelfTest": "passed (11732 negative controls)",
   "cases": {
     "submitted": 2036,
     "distinct": 2036,
@@ -40,7 +40,7 @@
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 25,
+    "vectors": 36,
     "failing": 0
   },
   "checks": [
@@ -57,7 +57,8 @@
       ],
       "status": "pass",
       "cases": 342,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "intRange",
@@ -73,7 +74,8 @@
       "basis": "\"If the integer input value represents a value less than -2^31 or greater than or equal to 2^31, a request error should be raised.\"",
       "status": "pass",
       "cases": 32,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "float",
@@ -89,7 +91,8 @@
       "basis": "A fractional value is kept as its decimal, which the vectors only use with at most 15 significant digits. Integers a double can't hold exactly are floatPrecision's.",
       "status": "fail",
       "cases": 92,
-      "failing": 1
+      "failing": 1,
+      "failingDraftOnly": 0
     },
     {
       "id": "floatPrecision",
@@ -105,11 +108,12 @@
       "basis": "The sentence says a request error \"must be raised\" for \"a value outside the available precision\", but which values that covers is Coercion.tla's reading (an integral value must be exactly representable), so the check takes the weaker level.",
       "status": "fail",
       "cases": 1,
-      "failing": 1
+      "failing": 1,
+      "failingDraftOnly": 0
     },
     {
       "id": "string",
-      "title": "String accepts only valid Unicode string input values",
+      "title": "String accepts only string input values",
       "level": "MUST",
       "spec": [
         {
@@ -118,9 +122,11 @@
           "url": "https://spec.graphql.org/draft/#sec-String"
         }
       ],
-      "status": "fail",
-      "cases": 94,
-      "failing": 1
+      "basis": "A JSON string with a lone surrogate is graded under loneSurrogates, not here.",
+      "status": "pass",
+      "cases": 93,
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "boolean",
@@ -135,7 +141,8 @@
       ],
       "status": "pass",
       "cases": 94,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "idCoerced",
@@ -151,7 +158,8 @@
       "basis": "\"any string (such as \\\"4\\\") or integer (such as 4 or -4) input value should be coerced to ID\". The format of an ID made from an integer is the service's: any string that writes the integer's exact value passes, such as \"1e+21\" for 10^21.",
       "status": "pass",
       "cases": 27,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "id",
@@ -164,9 +172,10 @@
           "url": "https://spec.graphql.org/draft/#sec-ID"
         }
       ],
-      "status": "fail",
-      "cases": 65,
-      "failing": 1
+      "status": "pass",
+      "cases": 64,
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "enum",
@@ -182,7 +191,8 @@
       "basis": "String literals must be rejected. For JSON variables, \"strings may be interpreted as the enum input value with the same name\": a MAY, so taking the string and rejecting it both pass.",
       "status": "pass",
       "cases": 188,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "inputObject",
@@ -198,7 +208,8 @@
       "basis": "The \"must\" sentences: the value must be an object without undefined fields, a variable's runtime value must be used, and §3.12 makes a missing Non-Null field an error that must be raised. Field defaults are a \"should\", graded by inputFieldDefaults.",
       "status": "pass",
       "cases": 413,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "inputFieldDefaults",
@@ -211,10 +222,11 @@
           "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
         }
       ],
-      "basis": "\"If no value is provided for a defined input object field and that field definition provides a default value, the result of coercing the default value ... should be used.\" A result that is right except that it leaves such defaults out fails this check, not inputObject.",
+      "basis": "\"If no value is provided for a defined input object field and that field definition provides a default value, the result of coercing the default value ... should be used.\" The SHOULD applies to each field: a result that is right except that it leaves out some or all of such defaults fails this check, not inputObject.",
       "status": "pass",
       "cases": 59,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "oneOf",
@@ -230,6 +242,7 @@
       "status": "untested",
       "cases": 0,
       "failing": 0,
+      "failingDraftOnly": 0,
       "note": "Coercion.tla doesn't model OneOf input objects, so there are no vectors for them."
     },
     {
@@ -243,9 +256,11 @@
           "url": "https://spec.graphql.org/draft/#sec-List"
         }
       ],
+      "basis": "An item that isn't a list, where the item type is a list, is coerced as a list of one, as the draft's table gives [[1], [2], [3]] for [1, 2, 3] as [[Int]]. October 2021's table says \"Error: Incorrect item value\", so those vectors are draft-only.",
       "status": "pass",
       "cases": 489,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "nonNull",
@@ -260,7 +275,8 @@
       ],
       "status": "pass",
       "cases": 4,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "variables",
@@ -274,8 +290,9 @@
         }
       ],
       "status": "pass",
-      "cases": 898,
-      "failing": 0
+      "cases": 896,
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "arguments",
@@ -290,7 +307,8 @@
       ],
       "status": "pass",
       "cases": 820,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "getOperation",
@@ -306,7 +324,8 @@
       "basis": "Includes a mutation running on the mutation root type, and only the selected operation's variables being coerced.",
       "status": "pass",
       "cases": 22,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "invalidNotExecuted",
@@ -322,7 +341,41 @@
       "basis": "\"If validation errors are known, they should be reported in the list of \\\"errors\\\" in the response and the request must fail without operation execution.\" Graded for adapters without `unvalidated`, on vectors Validation.tla rejects: a request error, no data, no resolver called.",
       "status": "untested",
       "cases": 0,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "requestErrorNoData",
+      "title": "A request error result has no data entry",
+      "level": "MUST",
+      "oct2021": "SHOULD",
+      "spec": [
+        {
+          "number": "7.1.3",
+          "title": "Request Error Result",
+          "url": "https://spec.graphql.org/draft/#sec-Request-Error-Result"
+        }
+      ],
+      "basis": "The draft: \"The request error result map must not contain an entry with key {\"data\"}.\" October 2021 (§7.1.1): \"If an error was raised before execution begins, the data entry should not be present in the result.\" A request error with \"data\": null is still a request error for the vector's own check, and fails this one.",
+      "status": "pass",
+      "cases": 801,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "loneSurrogates",
+      "title": "JSON strings with a lone surrogate: kept as sent, replaced with U+FFFD, or refused",
+      "level": "INFO",
+      "spec": [],
+      "basis": "§3.5.3 accepts \"only valid Unicode string input values\" without defining one, and calls a String \"a sequence of Unicode code points\", which a lone surrogate is. §3.5.5 says nothing about Unicode. RFC 8259 §8.2 calls the behaviour of software that receives such a string unpredictable. Coercion.tla refuses it, but the check also passes the value kept as sent and the value with U+FFFD, and records which happened. It never fails the run.",
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "observed": {
+        "kept as sent": 2
+      },
+      "note": "kept as sent: 2"
     },
     {
       "id": "jsonNumbers",
@@ -332,7 +385,8 @@
       "basis": "Not a GraphQL rule: RFC 8259 §6 lets a JSON parser limit the range and precision of numbers. Vectors whose answer depends on that count here, never against Float or ID, unless the adapter claims exact-numbers.",
       "status": "pass",
       "cases": 3,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     }
   ],
   "findings": [
@@ -416,88 +470,6 @@
           }
         },
         "expected": "a field error at float"
-      }
-    },
-    {
-      "checks": [
-        "string"
-      ],
-      "summary": "accepts what §3.5.3 (String) rejects",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "variable": 1
-      },
-      "fixture": "variable",
-      "example": {
-        "vector": "coerce-0584",
-        "input": "query($x: String) { string(v: $x) }  variables: {\"x\": \"\\ud800\"}",
-        "response": {
-          "response": {
-            "data": {
-              "string": "ok"
-            }
-          },
-          "calls": [
-            {
-              "path": [
-                "string"
-              ],
-              "arguments": {
-                "v": "\ud800"
-              }
-            }
-          ]
-        },
-        "outcome": {
-          "outcome": "value",
-          "field": "string",
-          "arguments": {
-            "v": "\ud800"
-          }
-        },
-        "expected": "a request error"
-      }
-    },
-    {
-      "checks": [
-        "id"
-      ],
-      "summary": "accepts what §3.5.5 (ID) rejects",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "variable": 1
-      },
-      "fixture": "variable",
-      "example": {
-        "vector": "coerce-0786",
-        "input": "query($x: ID) { id(v: $x) }  variables: {\"x\": \"\\ud800\"}",
-        "response": {
-          "response": {
-            "data": {
-              "id": "ok"
-            }
-          },
-          "calls": [
-            {
-              "path": [
-                "id"
-              ],
-              "arguments": {
-                "v": "\ud800"
-              }
-            }
-          ]
-        },
-        "outcome": {
-          "outcome": "value",
-          "field": "id",
-          "arguments": {
-            "v": "\ud800"
-          }
-        },
-        "expected": "a request error"
       }
     }
   ],

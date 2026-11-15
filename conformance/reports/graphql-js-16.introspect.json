@@ -19,13 +19,13 @@
     "validate"
   ],
   "provenance": {
-    "kit": "e67bcb49db84",
+    "kit": "ea0905982bf7",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 38
   },
   "profile": "draft",
-  "checkerSelfTest": "passed (130 negative controls)",
+  "checkerSelfTest": "passed (148 negative controls)",
   "cases": {
     "submitted": 38,
     "distinct": 38,
@@ -56,7 +56,8 @@
       ],
       "status": "pass",
       "cases": 38,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "executes",
@@ -71,7 +72,8 @@
       ],
       "status": "fail",
       "cases": 38,
-      "failing": 3
+      "failing": 3,
+      "failingDraftOnly": 3
     },
     {
       "id": "roots",
@@ -91,7 +93,8 @@
       ],
       "status": "pass",
       "cases": 22,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "types",
@@ -106,7 +109,8 @@
       ],
       "status": "pass",
       "cases": 22,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "builtinScalars",
@@ -126,7 +130,8 @@
       ],
       "status": "pass",
       "cases": 22,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "typeByName",
@@ -141,7 +146,8 @@
       ],
       "status": "pass",
       "cases": 13,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "typeKinds",
@@ -156,7 +162,8 @@
       ],
       "status": "pass",
       "cases": 35,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fields",
@@ -176,7 +183,8 @@
       ],
       "status": "pass",
       "cases": 35,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "arguments",
@@ -201,7 +209,8 @@
       ],
       "status": "pass",
       "cases": 35,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "defaultValue",
@@ -216,7 +225,8 @@
       ],
       "status": "pass",
       "cases": 35,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "inputFields",
@@ -236,7 +246,8 @@
       ],
       "status": "pass",
       "cases": 35,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "enumValues",
@@ -256,7 +267,8 @@
       ],
       "status": "pass",
       "cases": 35,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "interfaces",
@@ -271,7 +283,8 @@
       ],
       "status": "pass",
       "cases": 35,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "deprecation",
@@ -312,6 +325,7 @@
       "status": "pass",
       "cases": 35,
       "failing": 0,
+      "failingDraftOnly": 0,
       "oct2021": "fields and enum values only"
     },
     {
@@ -337,7 +351,8 @@
       ],
       "status": "pass",
       "cases": 35,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "isOneOf",
@@ -363,6 +378,7 @@
       "status": "pass",
       "cases": 35,
       "failing": 0,
+      "failingDraftOnly": 0,
       "edition": "draft",
       "note": "Draft only: October 2021 has no OneOf input objects."
     },
@@ -384,7 +400,8 @@
       ],
       "status": "pass",
       "cases": 35,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "directives",
@@ -409,7 +426,8 @@
       ],
       "status": "pass",
       "cases": 22,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "builtinDirectives",
@@ -444,11 +462,12 @@
       ],
       "status": "pass",
       "cases": 22,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "builtinDefinitions",
-      "title": "The introspection types and built-in directives are as the spec defines them",
+      "title": "The introspection types and built-in directives are as the spec defines them, with nothing left out or changed",
       "level": "MUST",
       "spec": [
         {
@@ -464,7 +483,25 @@
       ],
       "status": "fail",
       "cases": 35,
-      "failing": 22
+      "failing": 22,
+      "failingDraftOnly": 4
+    },
+    {
+      "id": "builtinAdditions",
+      "title": "The introspection types have no field, argument, enum value or type the spec doesn't define",
+      "level": "INFO",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "pass",
+      "cases": 35,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "basis": "No sentence of §4 forbids extending the introspection types. The nearest is \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", which uses no key word, and Appendix A says \"A conforming implementation of GraphQL may provide additional functionality, but must not do so where explicitly disallowed\". Leaving out or changing a definition stays a MUST, under builtinDefinitions."
     },
     {
       "id": "typename",
@@ -479,7 +516,8 @@
       ],
       "status": "pass",
       "cases": 35,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "order",
@@ -495,6 +533,7 @@
       "status": "pass",
       "cases": 35,
       "failing": 0,
+      "failingDraftOnly": 0,
       "edition": "draft",
       "note": "Draft only: October 2021 has no Stable Ordering."
     },
@@ -511,7 +550,8 @@
       ],
       "status": "pass",
       "cases": 35,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     }
   ],
   "findings": [

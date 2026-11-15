@@ -20,7 +20,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "e67bcb49db84",
+    "kit": "ea0905982bf7",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 1983
@@ -50,7 +50,8 @@
       ],
       "status": "pass",
       "cases": 33,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "whiteSpace",
@@ -65,7 +66,8 @@
       ],
       "status": "pass",
       "cases": 28,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "lineTerminators",
@@ -80,7 +82,8 @@
       ],
       "status": "pass",
       "cases": 31,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "comments",
@@ -95,7 +98,8 @@
       ],
       "status": "pass",
       "cases": 17,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "insignificantCommas",
@@ -110,7 +114,8 @@
       ],
       "status": "pass",
       "cases": 5,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "lexicalTokens",
@@ -125,7 +130,8 @@
       ],
       "status": "pass",
       "cases": 43,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "ignoredTokens",
@@ -140,7 +146,8 @@
       ],
       "status": "pass",
       "cases": 81,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "punctuators",
@@ -155,7 +162,8 @@
       ],
       "status": "pass",
       "cases": 40,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "names",
@@ -170,7 +178,8 @@
       ],
       "status": "pass",
       "cases": 14,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "descriptions",
@@ -185,7 +194,8 @@
       ],
       "status": "pass",
       "cases": 100,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "document",
@@ -200,7 +210,8 @@
       ],
       "status": "pass",
       "cases": 99,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "operations",
@@ -215,7 +226,8 @@
       ],
       "status": "pass",
       "cases": 100,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "selectionSets",
@@ -230,7 +242,8 @@
       ],
       "status": "pass",
       "cases": 95,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fields",
@@ -245,7 +258,8 @@
       ],
       "status": "pass",
       "cases": 96,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "arguments",
@@ -260,7 +274,8 @@
       ],
       "status": "pass",
       "cases": 110,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fieldAlias",
@@ -275,7 +290,8 @@
       ],
       "status": "pass",
       "cases": 94,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fragments",
@@ -290,7 +306,8 @@
       ],
       "status": "pass",
       "cases": 117,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "typeConditions",
@@ -305,7 +322,8 @@
       ],
       "status": "pass",
       "cases": 112,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "inlineFragments",
@@ -320,7 +338,8 @@
       ],
       "status": "pass",
       "cases": 100,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "inputValues",
@@ -335,7 +354,8 @@
       ],
       "status": "pass",
       "cases": 122,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "intValue",
@@ -350,7 +370,8 @@
       ],
       "status": "pass",
       "cases": 42,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "floatValue",
@@ -365,7 +386,8 @@
       ],
       "status": "pass",
       "cases": 35,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "booleanValue",
@@ -380,7 +402,8 @@
       ],
       "status": "pass",
       "cases": 3,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "stringValue",
@@ -395,7 +418,8 @@
       ],
       "status": "fail",
       "cases": 146,
-      "failing": 2
+      "failing": 2,
+      "failingDraftOnly": 2
     },
     {
       "id": "nullValue",
@@ -410,7 +434,8 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "enumValue",
@@ -425,7 +450,8 @@
       ],
       "status": "pass",
       "cases": 10,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "listValue",
@@ -440,7 +466,8 @@
       ],
       "status": "pass",
       "cases": 101,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "inputObjectValues",
@@ -455,7 +482,8 @@
       ],
       "status": "pass",
       "cases": 107,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "variables",
@@ -470,7 +498,8 @@
       ],
       "status": "pass",
       "cases": 157,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "typeReferences",
@@ -485,7 +514,8 @@
       ],
       "status": "pass",
       "cases": 102,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "directives",
@@ -500,7 +530,8 @@
       ],
       "status": "pass",
       "cases": 113,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     }
   ],
   "findings": [

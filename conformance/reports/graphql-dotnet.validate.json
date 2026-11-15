@@ -16,7 +16,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "e67bcb49db84",
+    "kit": "0bbe05428474",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 3100,
@@ -50,7 +50,8 @@
       ],
       "status": "fail",
       "cases": 4,
-      "failing": 4
+      "failing": 4,
+      "failingDraftOnly": 0
     },
     {
       "id": "operationTypeExistence",
@@ -65,7 +66,8 @@
       ],
       "status": "fail",
       "cases": 12,
-      "failing": 9
+      "failing": 9,
+      "failingDraftOnly": 9
     },
     {
       "id": "operationNameUniqueness",
@@ -80,7 +82,8 @@
       ],
       "status": "pass",
       "cases": 6,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "loneAnonymousOperation",
@@ -95,7 +98,8 @@
       ],
       "status": "pass",
       "cases": 21,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "singleRootField",
@@ -110,7 +114,8 @@
       ],
       "status": "fail",
       "cases": 59,
-      "failing": 15
+      "failing": 15,
+      "failingDraftOnly": 15
     },
     {
       "id": "fieldSelections",
@@ -125,7 +130,8 @@
       ],
       "status": "pass",
       "cases": 25,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fieldSelectionMerging",
@@ -140,7 +146,8 @@
       ],
       "status": "fail",
       "cases": 674,
-      "failing": 22
+      "failing": 22,
+      "failingDraftOnly": 0
     },
     {
       "id": "leafFieldSelections",
@@ -155,7 +162,8 @@
       ],
       "status": "pass",
       "cases": 39,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "argumentNames",
@@ -170,7 +178,8 @@
       ],
       "status": "pass",
       "cases": 8,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "argumentUniqueness",
@@ -185,7 +194,8 @@
       ],
       "status": "pass",
       "cases": 6,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "requiredArguments",
@@ -200,7 +210,8 @@
       ],
       "status": "pass",
       "cases": 11,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fragmentNameUniqueness",
@@ -215,7 +226,8 @@
       ],
       "status": "pass",
       "cases": 10,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fragmentSpreadTypeExistence",
@@ -230,7 +242,8 @@
       ],
       "status": "pass",
       "cases": 12,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fragmentsOnObjectInterfaceOrUnionTypes",
@@ -245,7 +258,8 @@
       ],
       "status": "pass",
       "cases": 14,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fragmentsMustBeUsed",
@@ -260,7 +274,8 @@
       ],
       "status": "pass",
       "cases": 78,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fragmentSpreadTargetDefined",
@@ -275,7 +290,8 @@
       ],
       "status": "pass",
       "cases": 9,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fragmentSpreadsMustNotFormCycles",
@@ -290,7 +306,8 @@
       ],
       "status": "pass",
       "cases": 54,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "fragmentSpreadIsPossible",
@@ -305,7 +322,8 @@
       ],
       "status": "pass",
       "cases": 36,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "valuesOfCorrectType",
@@ -320,7 +338,8 @@
       ],
       "status": "pass",
       "cases": 282,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "inputObjectFieldNames",
@@ -336,6 +355,7 @@
       "status": "subsumed",
       "cases": 11,
       "failing": 0,
+      "failingDraftOnly": 0,
       "note": "every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it, so a rejection can't be credited to this rule; accepting one fails both"
     },
     {
@@ -351,7 +371,8 @@
       ],
       "status": "pass",
       "cases": 6,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "inputObjectRequiredFields",
@@ -367,6 +388,7 @@
       "status": "subsumed",
       "cases": 8,
       "failing": 0,
+      "failingDraftOnly": 0,
       "note": "every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it, so a rejection can't be credited to this rule; accepting one fails both"
     },
     {
@@ -382,7 +404,8 @@
       ],
       "status": "pass",
       "cases": 24,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "directivesAreInValidLocations",
@@ -397,7 +420,8 @@
       ],
       "status": "pass",
       "cases": 27,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "directivesAreUniquePerLocation",
@@ -412,7 +436,8 @@
       ],
       "status": "pass",
       "cases": 10,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "variableUniqueness",
@@ -427,7 +452,8 @@
       ],
       "status": "pass",
       "cases": 6,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "variablesAreInputTypes",
@@ -442,7 +468,8 @@
       ],
       "status": "pass",
       "cases": 4,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "allVariableUsesDefined",
@@ -457,7 +484,8 @@
       ],
       "status": "pass",
       "cases": 15,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "allVariablesUsed",
@@ -472,7 +500,8 @@
       ],
       "status": "pass",
       "cases": 18,
-      "failing": 0
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "allVariableUsagesAreAllowed",
@@ -487,7 +516,8 @@
       ],
       "status": "fail",
       "cases": 636,
-      "failing": 71
+      "failing": 71,
+      "failingDraftOnly": 0
     },
     {
       "id": "acceptsValid",
@@ -503,6 +533,7 @@
       "status": "fail",
       "cases": 984,
       "failing": 40,
+      "failingDraftOnly": 0,
       "basis": "a document is valid when it satisfies every rule of §5, and only invalid requests are kept from execution (§6.1.1); rejecting a valid document applies a rule the spec doesn't have"
     }
   ],

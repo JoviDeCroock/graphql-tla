@@ -1,0 +1,1053 @@
+{
+  "format": 1,
+  "area": "parse",
+  "implementation": "Hot Chocolate 15.1.21",
+  "capabilities": [
+    "coerce",
+    "custom-scalar-literals",
+    "exact-numbers",
+    "idle",
+    "introspect",
+    "invalid-results",
+    "mutation",
+    "parse",
+    "schema",
+    "subscription",
+    "uncoercible-results",
+    "validate"
+  ],
+  "provenance": {
+    "kit": "0bbe05428474",
+    "date": "2026-11-15",
+    "strict": true,
+    "vectors": 1983
+  },
+  "checkerSelfTest": "passed (3 negative controls)",
+  "cases": {
+    "submitted": 1983,
+    "distinct": 1983,
+    "malformed": 0
+  },
+  "adapterProblems": 0,
+  "draftOnly": {
+    "vectors": 105,
+    "failing": 61
+  },
+  "checks": [
+    {
+      "id": "sourceText",
+      "title": "Source text is a sequence of SourceCharacter",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1",
+          "title": "Source Text",
+          "url": "https://spec.graphql.org/draft/#sec-Source-Text"
+        }
+      ],
+      "status": "fail",
+      "cases": 33,
+      "failing": 3,
+      "failingDraftOnly": 3
+    },
+    {
+      "id": "whiteSpace",
+      "title": "White space is tab and space only",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.1",
+          "title": "White Space",
+          "url": "https://spec.graphql.org/draft/#sec-White-Space"
+        }
+      ],
+      "status": "fail",
+      "cases": 28,
+      "failing": 1,
+      "failingDraftOnly": 1
+    },
+    {
+      "id": "lineTerminators",
+      "title": "Line terminators are LF, CR and CR LF only",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.2",
+          "title": "Line Terminators",
+          "url": "https://spec.graphql.org/draft/#sec-Line-Terminators"
+        }
+      ],
+      "status": "pass",
+      "cases": 31,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "comments",
+      "title": "A comment runs to the end of its line",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.3",
+          "title": "Comments",
+          "url": "https://spec.graphql.org/draft/#sec-Comments"
+        }
+      ],
+      "status": "pass",
+      "cases": 17,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "insignificantCommas",
+      "title": "Commas are insignificant",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.4",
+          "title": "Insignificant Commas",
+          "url": "https://spec.graphql.org/draft/#sec-Insignificant-Commas"
+        }
+      ],
+      "status": "pass",
+      "cases": 5,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "lexicalTokens",
+      "title": "Every character outside ignored tokens is part of a token",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.5",
+          "title": "Lexical Tokens",
+          "url": "https://spec.graphql.org/draft/#sec-Lexical-Tokens"
+        }
+      ],
+      "status": "pass",
+      "cases": 43,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "ignoredTokens",
+      "title": "Ignored tokens may appear before and after every token",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.6",
+          "title": "Ignored Tokens",
+          "url": "https://spec.graphql.org/draft/#sec-Ignored-Tokens"
+        }
+      ],
+      "status": "fail",
+      "cases": 81,
+      "failing": 4,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "punctuators",
+      "title": "Punctuators, and `...` only as a whole",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.7",
+          "title": "Punctuators",
+          "url": "https://spec.graphql.org/draft/#sec-Punctuators"
+        }
+      ],
+      "status": "pass",
+      "cases": 40,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "names",
+      "title": "Names",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.8",
+          "title": "Names",
+          "url": "https://spec.graphql.org/draft/#sec-Names"
+        }
+      ],
+      "status": "pass",
+      "cases": 14,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "descriptions",
+      "title": "Descriptions on operations, fragments and variables, not on the query shorthand",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.2",
+          "title": "Descriptions",
+          "url": "https://spec.graphql.org/draft/#sec-Descriptions"
+        }
+      ],
+      "status": "fail",
+      "cases": 100,
+      "failing": 58,
+      "failingDraftOnly": 54
+    },
+    {
+      "id": "document",
+      "title": "A document is one or more executable definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.3",
+          "title": "Document",
+          "url": "https://spec.graphql.org/draft/#sec-Document"
+        }
+      ],
+      "status": "fail",
+      "cases": 99,
+      "failing": 12,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "operations",
+      "title": "Operation definitions and the query shorthand",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.4",
+          "title": "Operations",
+          "url": "https://spec.graphql.org/draft/#sec-Operations"
+        }
+      ],
+      "status": "fail",
+      "cases": 100,
+      "failing": 18,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "selectionSets",
+      "title": "Selection sets, including empty ones",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.5",
+          "title": "Selection Sets",
+          "url": "https://spec.graphql.org/draft/#sec-Selection-Sets"
+        }
+      ],
+      "status": "fail",
+      "cases": 95,
+      "failing": 6,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "fields",
+      "title": "Fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.6",
+          "title": "Fields",
+          "url": "https://spec.graphql.org/draft/#sec-Fields"
+        }
+      ],
+      "status": "fail",
+      "cases": 96,
+      "failing": 15,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "arguments",
+      "title": "Arguments",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.7",
+          "title": "Arguments",
+          "url": "https://spec.graphql.org/draft/#sec-Arguments"
+        }
+      ],
+      "status": "fail",
+      "cases": 110,
+      "failing": 30,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "fieldAlias",
+      "title": "Field aliases",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.8",
+          "title": "Field Alias",
+          "url": "https://spec.graphql.org/draft/#sec-Field-Alias"
+        }
+      ],
+      "status": "fail",
+      "cases": 94,
+      "failing": 21,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "fragments",
+      "title": "Fragment definitions and fragment spreads",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.9",
+          "title": "Fragments",
+          "url": "https://spec.graphql.org/draft/#sec-Fragments"
+        }
+      ],
+      "status": "fail",
+      "cases": 117,
+      "failing": 18,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "typeConditions",
+      "title": "Type conditions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.9.1",
+          "title": "Type Conditions",
+          "url": "https://spec.graphql.org/draft/#sec-Type-Conditions"
+        }
+      ],
+      "status": "fail",
+      "cases": 112,
+      "failing": 24,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "inlineFragments",
+      "title": "Inline fragments",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.9.2",
+          "title": "Inline Fragments",
+          "url": "https://spec.graphql.org/draft/#sec-Inline-Fragments"
+        }
+      ],
+      "status": "fail",
+      "cases": 100,
+      "failing": 42,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "inputValues",
+      "title": "Input values, and no variables in constant values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10",
+          "title": "Input Values",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Values"
+        }
+      ],
+      "status": "fail",
+      "cases": 122,
+      "failing": 36,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "intValue",
+      "title": "Int values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.1",
+          "title": "Int Value",
+          "url": "https://spec.graphql.org/draft/#sec-Int-Value"
+        }
+      ],
+      "status": "pass",
+      "cases": 42,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "floatValue",
+      "title": "Float values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.2",
+          "title": "Float Value",
+          "url": "https://spec.graphql.org/draft/#sec-Float-Value"
+        }
+      ],
+      "status": "pass",
+      "cases": 35,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "booleanValue",
+      "title": "Boolean values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.3",
+          "title": "Boolean Value",
+          "url": "https://spec.graphql.org/draft/#sec-Boolean-Value"
+        }
+      ],
+      "status": "pass",
+      "cases": 3,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "stringValue",
+      "title": "String values and block strings",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.4",
+          "title": "String Value",
+          "url": "https://spec.graphql.org/draft/#sec-String-Value"
+        }
+      ],
+      "status": "fail",
+      "cases": 146,
+      "failing": 12,
+      "failingDraftOnly": 3
+    },
+    {
+      "id": "nullValue",
+      "title": "Null value",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.5",
+          "title": "Null Value",
+          "url": "https://spec.graphql.org/draft/#sec-Null-Value"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "enumValue",
+      "title": "Enum values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.6",
+          "title": "Enum Value",
+          "url": "https://spec.graphql.org/draft/#sec-Enum-Value"
+        }
+      ],
+      "status": "pass",
+      "cases": 10,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "listValue",
+      "title": "List values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.7",
+          "title": "List Value",
+          "url": "https://spec.graphql.org/draft/#sec-List-Value"
+        }
+      ],
+      "status": "fail",
+      "cases": 101,
+      "failing": 35,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "inputObjectValues",
+      "title": "Input object values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.8",
+          "title": "Input Object Values",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Object-Values"
+        }
+      ],
+      "status": "fail",
+      "cases": 107,
+      "failing": 35,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "variables",
+      "title": "Variables and variable definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.11",
+          "title": "Variables",
+          "url": "https://spec.graphql.org/draft/#sec-Variables"
+        }
+      ],
+      "status": "fail",
+      "cases": 157,
+      "failing": 26,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "typeReferences",
+      "title": "Type references",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.12",
+          "title": "Type References",
+          "url": "https://spec.graphql.org/draft/#sec-Type-References"
+        }
+      ],
+      "status": "fail",
+      "cases": 102,
+      "failing": 21,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "directives",
+      "title": "Directives",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        }
+      ],
+      "status": "fail",
+      "cases": 113,
+      "failing": 28,
+      "failingDraftOnly": 0
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "descriptions"
+      ],
+      "summary": "rejects what §2.2 Descriptions accepts",
+      "cases": 57,
+      "fixtures": {
+        "parser-examples": 1,
+        "variable-definitions": 1,
+        "random-documents": 55
+      },
+      "draftOnly": 54,
+      "fixture": "random-documents",
+      "example": {
+        "input": "[draft] \"\\\"\\\"\\\"\\\"\\\"\\\" mutation {﻿x1 }\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\"\\\"\\\"\\\"\\\"\\\"\\\" { {﻿x1 }\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
+        "inlineFragments"
+      ],
+      "summary": "rejects what §2.9.2 Inline Fragments accepts",
+      "cases": 42,
+      "fixtures": {
+        "random-documents": 42
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"{﻿... {,x1 ...﻿x1\\r\\n}\\t}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\"{﻿{ ...,x1 ...﻿x1\\r\\n}\\t}\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
+        "inputValues"
+      ],
+      "summary": "rejects what §2.10 Input Values accepts",
+      "cases": 36,
+      "fixtures": {
+        "random-documents": 36
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"{\\r\\nb﻿(﻿Foo : on ),{ #c\\ntrue } }\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\"{\\r\\nb﻿(﻿Foo : ] ),{ #c\\ntrue } }\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
+        "listValue"
+      ],
+      "summary": "rejects what §2.10.7 List Value accepts",
+      "cases": 35,
+      "fixtures": {
+        "random-documents": 35
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"{ mutation﻿(\\r\\nx1 #c\\n: [ #c\\n[,]\\n]\\r\\n)﻿}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\"{ mutation﻿(\\r\\nx1 #c\\n: [ #c\\n[,] =\\n]\\r\\n)﻿}\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
+        "inputObjectValues"
+      ],
+      "summary": "rejects what §2.10.8 Input Object Values accepts",
+      "cases": 35,
+      "fixtures": {
+        "random-documents": 35
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"{\\nx1 (\\r\\nFoo﻿:\\t{\\ttrue﻿:\\r\\n6.02E+23,} #c\\n),}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\"{\\nx1 (\\r\\nFoo﻿:\\t{\\ttrue﻿: :\\r\\n6.02E+23,} #c\\n),}\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
+        "arguments"
+      ],
+      "summary": "rejects what §2.7 Arguments accepts",
+      "cases": 29,
+      "fixtures": {
+        "random-documents": 29
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"{ x1\\n(﻿false :﻿RED #c\\n) }\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\"{ x1\\n( (﻿false :﻿RED #c\\n) }\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
+        "directives"
+      ],
+      "summary": "rejects what §2.13 Directives accepts",
+      "cases": 27,
+      "fixtures": {
+        "random-documents": 27
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"{ null\\ta﻿}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}"
+      }
+    },
+    {
+      "checks": [
+        "variables"
+      ],
+      "summary": "rejects what §2.11 Variables accepts",
+      "cases": 25,
+      "fixtures": {
+        "random-documents": 25
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"query {﻿true,( true\\r\\n:﻿$﻿_x )\\t}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\"query {﻿true,( true\\r\\n:﻿$ )\\t}\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
+        "typeConditions"
+      ],
+      "summary": "rejects what §2.9.1 Type Conditions accepts",
+      "cases": 24,
+      "fixtures": {
+        "random-documents": 24
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"fragment﻿x1﻿on\\ton\\n{﻿x1﻿}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\"fragment﻿x1﻿on on\\ton\\n{﻿x1﻿}\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
+        "fieldAlias"
+      ],
+      "summary": "rejects what §2.8 Field Alias accepts",
+      "cases": 21,
+      "fixtures": {
+        "random-documents": 21
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"{ #c\\na\\n:\\tb﻿}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\"{ #c\\n{\\n:\\tb﻿}\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
+        "typeReferences"
+      ],
+      "summary": "rejects what §2.12 Type References accepts",
+      "cases": 21,
+      "fixtures": {
+        "random-documents": 21
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"query\\r\\nfragment,(﻿$﻿on,: #c\\nInt #c\\n)\\n{,false }\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\"query\\r\\nfragment,(﻿$﻿on,: #c\\n)\\n{,false }\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
+        "operations"
+      ],
+      "summary": "rejects what §2.4 Operations accepts",
+      "cases": 18,
+      "fixtures": {
+        "random-documents": 18
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"mutation\\n_x﻿{ x1 }\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\"mutation\\n_x null﻿{ x1 }\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
+        "fragments"
+      ],
+      "summary": "rejects what §2.9 Fragments accepts",
+      "cases": 18,
+      "fixtures": {
+        "random-documents": 18
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"{﻿Foo,}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}"
+      }
+    },
+    {
+      "checks": [
+        "fields"
+      ],
+      "summary": "rejects what §2.6 Fields accepts",
+      "cases": 15,
+      "fixtures": {
+        "random-documents": 15
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"{ on on @﻿Foo,}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}"
+      }
+    },
+    {
+      "checks": [
+        "document"
+      ],
+      "summary": "rejects what §2.3 Document accepts",
+      "cases": 9,
+      "fixtures": {
+        "random-documents": 9
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"{﻿true\\r\\n}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\"a {﻿true\\r\\n}\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
+        "stringValue"
+      ],
+      "summary": "accepts what §2.10.4 String Value rejects",
+      "cases": 8,
+      "fixtures": {
+        "lexer-examples": 5,
+        "strings": 3
+      },
+      "draftOnly": 3,
+      "fixture": "lexer-examples",
+      "example": {
+        "input": "[draft] \"{a(x: \\\"\\\\uD83D\\\")}\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}",
+        "sibling": "\"{a(x: \\\"\\\")}\", which the reference accepts"
+      }
+    },
+    {
+      "checks": [
+        "selectionSets"
+      ],
+      "summary": "rejects what §2.5 Selection Sets accepts",
+      "cases": 6,
+      "fixtures": {
+        "random-documents": 6
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"{\\ta﻿}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\":\\ta﻿}\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
+        "stringValue"
+      ],
+      "summary": "rejects what §2.10.4 String Value accepts",
+      "cases": 4,
+      "fixtures": {
+        "lexer-examples": 1,
+        "block-strings": 3
+      },
+      "fixture": "block-strings",
+      "example": {
+        "input": "\"{a(x: \\\"\\\"\\\"\\\\\\t\\\"\\\"\\\")}\"",
+        "response": {
+          "ok": false,
+          "crash": "Utf8EncodingException: The escape char `\t` is invalid."
+        },
+        "expected": "{\"ok\":true}"
+      }
+    },
+    {
+      "checks": [
+        "ignoredTokens"
+      ],
+      "summary": "rejects what §2.1.6 Ignored Tokens accepts",
+      "cases": 4,
+      "fixtures": {
+        "ignored": 4
+      },
+      "fixture": "ignored",
+      "example": {
+        "input": "\"{a﻿b}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}"
+      }
+    },
+    {
+      "checks": [
+        "document"
+      ],
+      "summary": "accepts what §2.3 Document rejects",
+      "cases": 3,
+      "fixtures": {
+        "parser-examples": 1,
+        "random-documents": 2
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"\\\"s\\\" { mutation }\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}",
+        "sibling": "\"{ mutation }\", which the reference accepts"
+      }
+    },
+    {
+      "checks": [
+        "sourceText"
+      ],
+      "summary": "rejects what §2.1 Source Text accepts",
+      "cases": 3,
+      "fixtures": {
+        "ignored": 3
+      },
+      "draftOnly": 3,
+      "fixture": "ignored",
+      "example": {
+        "input": "[draft] \"{a#\\u000b\\nb}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `\u000b` (11)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\"{a\\ud800\\u000b\\nb}\", which the reference rejects"
+      },
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "descriptions"
+      ],
+      "summary": "accepts what §2.2 Descriptions rejects",
+      "cases": 1,
+      "fixtures": {
+        "parser-examples": 1
+      },
+      "fixture": "parser-examples",
+      "example": {
+        "input": "\"\\\"d\\\" {a}\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}"
+      }
+    },
+    {
+      "checks": [
+        "arguments"
+      ],
+      "summary": "accepts what §2.7 Arguments rejects",
+      "cases": 1,
+      "fixtures": {
+        "parser-examples": 1
+      },
+      "fixture": "parser-examples",
+      "example": {
+        "input": "\"{a()}\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}"
+      }
+    },
+    {
+      "checks": [
+        "directives"
+      ],
+      "summary": "accepts what §2.13 Directives rejects",
+      "cases": 1,
+      "fixtures": {
+        "parser-examples": 1
+      },
+      "fixture": "parser-examples",
+      "example": {
+        "input": "\"{a @d()}\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}"
+      }
+    },
+    {
+      "checks": [
+        "variables"
+      ],
+      "summary": "accepts what §2.11 Variables rejects",
+      "cases": 1,
+      "fixtures": {
+        "parser-examples": 1
+      },
+      "fixture": "parser-examples",
+      "example": {
+        "input": "\"query () {a}\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}"
+      }
+    },
+    {
+      "checks": [
+        "whiteSpace"
+      ],
+      "summary": "rejects what §2.1.1 White Space accepts",
+      "cases": 1,
+      "fixtures": {
+        "ignored": 1
+      },
+      "draftOnly": 1,
+      "fixture": "ignored",
+      "example": {
+        "input": "[draft] \"{a#\\f\\rb}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `\f` (12)."
+        },
+        "expected": "{\"ok\":true}"
+      },
+      "edition": "draft"
+    }
+  ],
+  "fixtures": [],
+  "ok": false
+}
