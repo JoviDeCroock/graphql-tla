@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-directives",
     "custom-scalar-literals",
     "deferred-items",
     "idle",
@@ -19,14 +20,14 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
     "random": 1500,
     "seed": 1,
     "exhaustive": true
   },
-  "checkerSelfTest": "passed (35 negative controls)",
+  "checkerSelfTest": "passed (41 negative controls)",
   "cases": {
     "submitted": 11858,
     "distinct": 2704,

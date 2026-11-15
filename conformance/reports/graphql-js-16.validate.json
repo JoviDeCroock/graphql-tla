@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-directives",
     "custom-scalar-literals",
     "deferred-items",
     "idle",
@@ -19,7 +20,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 3100,
@@ -28,7 +29,7 @@
       "unspecified": 12
     }
   },
-  "checkerSelfTest": "passed (8 negative controls)",
+  "checkerSelfTest": "passed (9 negative controls)",
   "cases": {
     "submitted": 3088,
     "distinct": 3088,
@@ -36,8 +37,8 @@
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 206,
-    "failing": 37
+    "vectors": 178,
+    "failing": 15
   },
   "checks": [
     {
@@ -118,7 +119,7 @@
       "status": "fail",
       "cases": 59,
       "failing": 23,
-      "failingDraftOnly": 23
+      "failingDraftOnly": 1
     },
     {
       "id": "fieldSelections",
@@ -586,16 +587,16 @@
       "checks": [
         "singleRootField"
       ],
-      "summary": "§5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft",
+      "summary": "§5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; 1 of 12 rely on the draft",
       "cases": 12,
-      "draftOnly": 12,
+      "draftOnly": 1,
       "fixtures": {
         "operations": 11,
         "random": 1
       },
       "fixture": "operations",
       "example": {
-        "input": "[draft] SingleRootField-31: subscription S5 { postAdded @skip(if: true) { id } }",
+        "input": "SingleRootField-31: subscription S5 { postAdded @skip(if: true) { id } }",
         "response": {
           "valid": true,
           "errors": []
@@ -608,9 +609,9 @@
       "checks": [
         "singleRootField"
       ],
-      "summary": "crashes on documents that break only §5.2.4.1 Single Root Field, instead of rejecting them; all rely on the draft",
+      "summary": "crashes on documents that break only §5.2.4.1 Single Root Field, instead of rejecting them",
       "cases": 11,
-      "draftOnly": 11,
+      "draftOnly": 0,
       "fixtures": {
         "operations": 9,
         "spec": 2
@@ -618,7 +619,7 @@
       "fixture": "spec",
       "problem": "GraphQLError: Argument \"if\" of required type \"Boolean!\" was provided the variable \"$bool\" which was not provided a runtime value.",
       "example": {
-        "input": "[draft] SingleRootField-spec-7: subscription sub($bool: Boolean!) { newMessage @include(if: $bool) { body sender } }",
+        "input": "SingleRootField-spec-7: subscription sub($bool: Boolean!) { newMessage @include(if: $bool) { body sender } }",
         "response": "the adapter answered with an error: GraphQLError: Argument \"if\" of required type \"Boolean!\" was provided the variable \"$bool\" which was not provided a runtime value.",
         "expected": "invalid: SingleRootField [\"sub\"]"
       }

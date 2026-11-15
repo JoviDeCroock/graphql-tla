@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-directives",
     "custom-scalar-literals",
     "deferred-items",
     "idle",
@@ -19,17 +20,22 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 38
+    "vectors": 39,
+    "graded": 39,
+    "skipped": {}
   },
   "profile": "draft",
-  "checkerSelfTest": "passed (148 negative controls)",
+  "checkerSelfTest": "passed (176 negative controls)",
   "cases": {
-    "submitted": 38,
-    "distinct": 38,
-    "malformed": 3
+    "submitted": 39,
+    "distinct": 39,
+    "malformed": 0,
+    "notGraded": {
+      "the schema applies a directive to a directive definition, which only the draft's grammar has (§3.13 DirectiveDefinition)": 3
+    }
   },
   "adapterProblems": 0,
   "checks": [
@@ -55,7 +61,7 @@
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 39,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -70,10 +76,10 @@
           "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
         }
       ],
-      "status": "fail",
-      "cases": 38,
-      "failing": 3,
-      "failingDraftOnly": 3
+      "status": "pass",
+      "cases": 36,
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "roots",
@@ -161,7 +167,7 @@
         }
       ],
       "status": "pass",
-      "cases": 35,
+      "cases": 36,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -214,7 +220,7 @@
     },
     {
       "id": "defaultValue",
-      "title": "defaultValue encodes the default value, and is null without one",
+      "title": "defaultValue is null for an input value without a default, and otherwise null or an encoding of the default",
       "level": "MUST",
       "spec": [
         {
@@ -227,6 +233,23 @@
       "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
+    },
+    {
+      "id": "defaultValueOmitted",
+      "title": "defaultValue encodes the default value of an input value that has one, rather than returning null",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "4.2.4",
+          "title": "The \\_\\_InputValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 35,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "basis": "§4.2.4: \"defaultValue may return a String encoding (using the GraphQL language) of the default value used by this input value in the condition a value is not provided at runtime. If this input value has no default value, returns null.\" By Appendix A, a lowercase \"may\" keeps its RFC 2119 meaning, so the encoding is optional; the intent is plainly that a default is encoded, which makes this a SHOULD. A string that isn't an encoding of the default, or one for an input value without a default, still fails defaultValue."
     },
     {
       "id": "inputFields",
@@ -330,18 +353,13 @@
     },
     {
       "id": "specifiedByURL",
-      "title": "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL",
+      "title": "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null",
       "level": "MUST",
       "spec": [
         {
           "number": "4.2.2",
           "title": "The \\_\\_Type Type",
           "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
-        },
-        {
-          "number": "3.13",
-          "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
         },
         {
           "number": "3.13.4",
@@ -356,7 +374,7 @@
     },
     {
       "id": "isOneOf",
-      "title": "isOneOf is true exactly for OneOf input objects; @oneOf is returned when one is",
+      "title": "isOneOf is true exactly for OneOf input objects",
       "level": "MUST",
       "spec": [
         {
@@ -368,11 +386,6 @@
           "number": "3.10.1",
           "title": "OneOf Input Objects",
           "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
-        },
-        {
-          "number": "3.13",
-          "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
         }
       ],
       "status": "pass",
@@ -384,8 +397,8 @@
     },
     {
       "id": "descriptions",
-      "title": "Descriptions are the schema's",
-      "level": "MUST",
+      "title": "A description the document gives is returned as it is, the schema's included",
+      "level": "SHOULD",
       "spec": [
         {
           "number": "3.2",
@@ -401,11 +414,12 @@
       "status": "pass",
       "cases": 35,
       "failing": 0,
-      "failingDraftOnly": 0
+      "failingDraftOnly": 0,
+      "basis": "§3.2: documentation is \"written immediately alongside definitions in a TypeSystemDocument and made available via introspection\", which has no key word, and §4.2 says of every description field that it \"may return a String or null\". So a description the document gives that is lost or replaced fails this SHOULD, and any description is accepted for a definition the document doesn't describe (\"\" or one of the service's own included)."
     },
     {
       "id": "directives",
-      "title": "directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types",
+      "title": "directives describes the schema's own directives (name, locations, isRepeatable), and returns any built-in directive the result shows is provided (@specifiedBy for a specifiedByURL, @oneOf for a true isOneOf); any of the service's own takes input types",
       "level": "MUST",
       "spec": [
         {
@@ -484,7 +498,24 @@
       "status": "fail",
       "cases": 35,
       "failing": 22,
-      "failingDraftOnly": 4
+      "failingDraftOnly": 22
+    },
+    {
+      "id": "builtinNullability",
+      "title": "The fields of the introspection types have the Non-Null wrapping the spec gives them",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "pass",
+      "cases": 35,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "basis": "The types of the introspection fields are given only by the definitions §4.2 introduces with \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", which has no key word. The sections below say what each field returns (\"isRepeatable must return a Boolean\"), and a field whose type differs only in Non-Null can still return exactly that. Any other change of type stays under builtinDefinitions, a MUST."
     },
     {
       "id": "builtinAdditions",
@@ -502,6 +533,29 @@
       "failing": 0,
       "failingDraftOnly": 0,
       "basis": "No sentence of §4 forbids extending the introspection types. The nearest is \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", which uses no key word, and Appendix A says \"A conforming implementation of GraphQL may provide additional functionality, but must not do so where explicitly disallowed\". Leaving out or changing a definition stays a MUST, under builtinDefinitions."
+    },
+    {
+      "id": "builtinEdition",
+      "title": "Under the October 2021 profile, a built-in definition that differs from October 2021's is as the draft defines it",
+      "level": "INFO",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "basis": "The kit grades against the draft; the October 2021 profile is a fallback for a service whose introspection types the draft's query can't ask. A built-in definition (or an addition) that is exactly the draft's breaks nothing the draft requires, so it is reported here, not under builtinDefinitions or builtinAdditions.",
+      "note": "Graded only under the October 2021 profile."
     },
     {
       "id": "typename",
@@ -559,7 +613,7 @@
       "checks": [
         "builtinDefinitions"
       ],
-      "summary": "the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Directive.args(includeDeprecated:) isn't as the spec defines it (arguments); the built-in __Field.args(includeDeprecated:) isn't as the spec defines it (arguments); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the spec defines it (arguments)",
+      "summary": "the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments)",
       "cases": 22,
       "fixtures": {
         "minimal": 2,
@@ -576,7 +630,7 @@
       },
       "fixture": "minimal.inc",
       "problem": "arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:)",
-      "draftOnly": 4,
+      "draftOnly": 22,
       "example": {
         "input": "type Query { a: Int }  (the introspection query; includeDeprecated: true)",
         "response": {
@@ -1047,32 +1101,6 @@
           "enumValues": null,
           "possibleTypes": null
         }
-      }
-    },
-    {
-      "checks": [
-        "executes"
-      ],
-      "summary": "the schema didn't build, the query failed, or the result doesn't have the fields the query selects",
-      "cases": 3,
-      "fixtures": {
-        "directiveDeprecation": 3
-      },
-      "fixture": "directiveDeprecation.inc",
-      "problem": "the response has errors: buildSchema: Syntax Error: Expected \"on\", found \"@\".",
-      "draftOnly": 3,
-      "example": {
-        "input": "[draft] directive @old @deprecated(reason: \"Use @new\") on FIELD directive @new(x: Int) on FIELD type Query { a: Int }  (the introspection query; includeDeprecated: true)",
-        "response": {
-          "response": {
-            "errors": [
-              {
-                "message": "buildSchema: Syntax Error: Expected \"on\", found \"@\"."
-              }
-            ]
-          }
-        },
-        "expected": "a well-formed execution result with exactly the fields the query selects, and no errors"
       },
       "edition": "draft"
     }

@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-directives",
     "custom-scalar-literals",
     "deferred-items",
     "error-propagation-off",
@@ -20,11 +21,11 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 2036,
-    "run": 2036,
+    "vectors": 2068,
+    "run": 2068,
     "skipped": 0,
     "modes": [
       "unvalidated",
@@ -32,15 +33,15 @@
       "big JSON numbers graded under jsonNumbers"
     ]
   },
-  "checkerSelfTest": "passed (16593 negative controls)",
+  "checkerSelfTest": "passed (24218 negative controls)",
   "cases": {
-    "submitted": 2036,
-    "distinct": 2036,
+    "submitted": 2068,
+    "distinct": 2068,
     "malformed": 0
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 36,
+    "vectors": 45,
     "failing": 0
   },
   "checks": [
@@ -56,7 +57,7 @@
         }
       ],
       "status": "pass",
-      "cases": 342,
+      "cases": 348,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -90,7 +91,7 @@
       ],
       "basis": "A fractional value is kept as its decimal, which the vectors only use with at most 15 significant digits. Integers a double can't hold exactly are floatPrecision's.",
       "status": "fail",
-      "cases": 92,
+      "cases": 93,
       "failing": 1,
       "failingDraftOnly": 0
     },
@@ -105,7 +106,7 @@
           "url": "https://spec.graphql.org/draft/#sec-Float"
         }
       ],
-      "basis": "The sentence says a request error \"must be raised\" for \"a value outside the available precision\", but which values that covers is Coercion.tla's reading (an integral value must be exactly representable), so the check takes the weaker level.",
+      "basis": "The sentence says a request error \"must be raised\" for \"a value outside the available precision\", but which values that covers is Coercion.tla's reading (an integral value must be exactly representable). A fraction such as 0.1 has no exact double either, and is accepted, so the text doesn't settle it, and the check takes the weaker level.",
       "status": "fail",
       "cases": 1,
       "failing": 1,
@@ -124,7 +125,24 @@
       ],
       "basis": "A JSON string with a lone surrogate is graded under loneSurrogates, not here.",
       "status": "pass",
-      "cases": 93,
+      "cases": 94,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "stringValue",
+      "title": "A string literal's escapes and block string indentation decode to its Unicode text",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.4",
+          "title": "String Value",
+          "url": "https://spec.graphql.org/draft/#sec-String-Value"
+        }
+      ],
+      "basis": "§2.10.4's Static Semantics give a StringValue's Unicode text: each escape sequence's value, and for a block string BlockStringValue(), which removes the common indentation and the leading and trailing blank lines. They have no key word, but they define the value §3.5.3 then accepts, and the draft says \"Errors encountered during this evaluation ... must result in a parsing error\". The vectors use only escapes and block strings whose text is the same in both editions (no braced or surrogate pair escapes). Expected texts come from Lexer.tla.",
+      "status": "pass",
+      "cases": 12,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -140,7 +158,7 @@
         }
       ],
       "status": "pass",
-      "cases": 94,
+      "cases": 95,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -157,7 +175,7 @@
       ],
       "basis": "\"any string (such as \\\"4\\\") or integer (such as 4 or -4) input value should be coerced to ID\". The format of an ID made from an integer is the service's: any string that writes the integer's exact value passes, such as \"1e+21\" for 10^21.",
       "status": "pass",
-      "cases": 27,
+      "cases": 28,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -173,7 +191,7 @@
         }
       ],
       "status": "pass",
-      "cases": 64,
+      "cases": 65,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -190,7 +208,7 @@
       ],
       "basis": "String literals must be rejected. For JSON variables, \"strings may be interpreted as the enum input value with the same name\": a MAY, so taking the string and rejecting it both pass.",
       "status": "pass",
-      "cases": 188,
+      "cases": 190,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -207,7 +225,7 @@
       ],
       "basis": "The \"must\" sentences: the value must be an object without undefined fields, a variable's runtime value must be used, and §3.12 makes a missing Non-Null field an error that must be raised. Field defaults are a \"should\", graded by inputFieldDefaults.",
       "status": "pass",
-      "cases": 413,
+      "cases": 418,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -239,11 +257,11 @@
           "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
         }
       ],
-      "status": "untested",
-      "cases": 0,
+      "basis": "§3.10.1 (the draft only): the value \"must contain exactly one entry and that entry must not be null or the null literal, otherwise a request error must be raised\", and \"The resulting coerced map must contain exactly one entry and the value for that entry must not be null, otherwise an execution error must be raised.\" The vectors are §3.10.1's table of examples and a few more, on a schema of their own (the vectors' `schema: \"oneOf\"`), all draft-only.",
+      "status": "pass",
+      "cases": 20,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "note": "Coercion.tla doesn't model OneOf input objects, so there are no vectors for them."
+      "failingDraftOnly": 0
     },
     {
       "id": "list",
@@ -256,9 +274,9 @@
           "url": "https://spec.graphql.org/draft/#sec-List"
         }
       ],
-      "basis": "An item that isn't a list, where the item type is a list, is coerced as a list of one, as the draft's table gives [[1], [2], [3]] for [1, 2, 3] as [[Int]]. October 2021's table says \"Error: Incorrect item value\", so those vectors are draft-only.",
+      "basis": "An item that isn't a list, where the item type is a list, is coerced as a list of one: \"list values are accepted only when each item in the list can be accepted by the list's item type\", and a value that is \"not a list\" is accepted by a list type as \"a list of size one\". That prose is the same in both editions. October 2021's table of examples says \"Error: Incorrect item value\" for [1, 2, 3] as [[Int]], but examples are non-normative (\"Examples in this document are non-normative\"), and the draft's table gives [[1], [2], [3]]. So these vectors aren't draft-only, and the table's answer fails this check under a finding of its own.",
       "status": "pass",
-      "cases": 489,
+      "cases": 495,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -290,7 +308,7 @@
         }
       ],
       "status": "pass",
-      "cases": 896,
+      "cases": 878,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -306,7 +324,7 @@
         }
       ],
       "status": "pass",
-      "cases": 820,
+      "cases": 830,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -329,7 +347,7 @@
     },
     {
       "id": "invalidNotExecuted",
-      "title": "An invalid document fails as a request error, without executing",
+      "title": "A document with known validation errors fails as a request error, without executing",
       "level": "MUST",
       "spec": [
         {
@@ -338,7 +356,46 @@
           "url": "https://spec.graphql.org/draft/#sec-Validating-Requests"
         }
       ],
-      "basis": "\"If validation errors are known, they should be reported in the list of \\\"errors\\\" in the response and the request must fail without operation execution.\" Graded for adapters without `unvalidated`, on vectors Validation.tla rejects: a request error, no data, no resolver called.",
+      "basis": "\"If validation errors are known, they should be reported in the list of \\\"errors\\\" in the response and the request must fail without operation execution.\" The MUST holds only where the errors are known: graded for adapters without `unvalidated` that claim `validate`, on vectors Validation.tla rejects and the implementation's own validator (asked through the validate area) rejects too. A request error, no data, no resolver called. October 2021 says the same.",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "onlyValidExecuted",
+      "title": "Only valid documents are executed",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "6.1.1",
+          "title": "Validating Requests",
+          "url": "https://spec.graphql.org/draft/#sec-Validating-Requests"
+        },
+        {
+          "number": "5",
+          "title": "Validation",
+          "url": "https://spec.graphql.org/draft/#sec-Validation"
+        }
+      ],
+      "basis": "\"only operations from documents which pass all validation rules should be executed\" (§6.1.1), and \"execution should only occur for valid requests\" (§5). Graded for adapters without `unvalidated`, on vectors Validation.tla rejects whose errors the implementation's validator doesn't report (it accepts the document in the validate area, or the adapter doesn't claim validate, so the kit can't tell). Such a document is a validation rule the implementation misses, which the validate area grades at MUST; executing it is only this SHOULD. October 2021 says the same.",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "acceptsValid",
+      "title": "A valid document isn't rejected at validation",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5",
+          "title": "Validation",
+          "url": "https://spec.graphql.org/draft/#sec-Validation"
+        }
+      ],
+      "basis": "As the validate area's check of the same name: a document that breaks no validation rule is valid, and must not be refused as invalid. Graded for adapters without `unvalidated` that claim `validate`: a valid vector answered with a request error whose document the implementation's own validator rejects (asked through the validate area) fails here, not under the coercion rule the vector is about, whether or not the reference's answer is also a request error.",
       "status": "untested",
       "cases": 0,
       "failing": 0,
@@ -348,7 +405,6 @@
       "id": "requestErrorNoData",
       "title": "A request error result has no data entry",
       "level": "MUST",
-      "oct2021": "SHOULD",
       "spec": [
         {
           "number": "7.1.3",
@@ -356,9 +412,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Request-Error-Result"
         }
       ],
-      "basis": "The draft: \"The request error result map must not contain an entry with key {\"data\"}.\" October 2021 (§7.1.1): \"If an error was raised before execution begins, the data entry should not be present in the result.\" A request error with \"data\": null is still a request error for the vector's own check, and fails this one.",
+      "basis": "The draft: \"The request error result map must not contain an entry with key {\"data\"}.\" October 2021, §7.1: \"If the request failed before execution, due to a syntax error, missing information, or validation error, this entry must not be present.\" and §7.1.2: \"If a request error is raised, execution does not begin and the data entry in the response must not be present.\" Its §7.1.1 also says \"should not be present\", but the two MUST sentences are the ones about request errors, so the check is a MUST in both editions. A request error with \"data\": null is still a request error for the vector's own check, and fails this one.",
       "status": "pass",
-      "cases": 801,
+      "cases": 806,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -375,7 +431,7 @@
       ],
       "basis": "\"When a GraphQL service receives a request, it must return a well-formed response.\" October 2021 says the same. The adapter answers with an `error` when the implementation produced no response at all, for example because it threw. Execution's check of the same name grades the same sentence. A vector whose reference answer is a request error, under a MUST check, counts that against its own check instead: a request error is a response, so no response doesn't match it. Every other vector exercises this check.",
       "status": "pass",
-      "cases": 1267,
+      "cases": 1294,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -397,7 +453,41 @@
       ],
       "basis": "§7.1.6: an error that \"can be associated to a particular field in the GraphQL result ... must contain an entry with the key {\"path\"} with a response path which describes the response position which raised the error\". §7.1.4: a response path names response positions, not arguments. A result whose data holds the field as null, with one error and no resolver call, is a field error whatever its path. If that is the answer the vector expects, a path other than the field's fails this check. Every vector that accepts a field error exercises it.",
       "status": "pass",
-      "cases": 793,
+      "cases": 803,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "errorFormat",
+      "title": "Every error is a map with a string message",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.6",
+          "title": "Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Errors"
+        }
+      ],
+      "basis": "\"Every error must contain an entry with the key {\"message\"} with a string description of the error\", and each error \"must be a map\" (§7.1.1, §7.1.3). October 2021 says the same (\"each error is a map\", \"Every error must contain an entry with the key message\"). A result whose errors aren't all maps with a string message, such as [null], or a field error with only a path, fails this check wherever its outcome would otherwise match. Every vector exercises it.",
+      "status": "pass",
+      "cases": 2068,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "errorsList",
+      "title": "errors, when present, is a non-empty list",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.1",
+          "title": "Execution Result",
+          "url": "https://spec.graphql.org/draft/#sec-Execution-Result"
+        }
+      ],
+      "basis": "The same check as execution's. The draft, §7.1.1: \"If any errors are raised during operation execution, the execution result must contain an entry with key {\"errors\"}. The value of this entry must be a non-empty list ... If the request completed without raising any errors, this entry must not be present.\" October 2021, §7.1: \"If the request raised any errors, the response map must contain an entry with key errors. ... If the request completed without raising any errors, this entry must not be present.\" Its §7.1.2 also says \"should not be present\", but the §7.1 MUST is the sentence about the entry, so the check is a MUST in both editions, as in execution. A value with \"errors\": [] is still a value for the vector's own check, and fails this one. Every vector exercises it.",
+      "status": "pass",
+      "cases": 2068,
       "failing": 0,
       "failingDraftOnly": 0
     },

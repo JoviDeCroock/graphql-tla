@@ -4,6 +4,7 @@
   "implementation": "Hot Chocolate 15.1.21",
   "capabilities": [
     "coerce",
+    "custom-directives",
     "custom-scalar-literals",
     "exact-numbers",
     "idle",
@@ -17,14 +18,14 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
     "random": 1500,
     "seed": 1,
     "exhaustive": true
   },
-  "checkerSelfTest": "passed (35 negative controls)",
+  "checkerSelfTest": "passed (41 negative controls)",
   "cases": {
     "submitted": 11972,
     "distinct": 2189,
@@ -55,7 +56,7 @@
       ],
       "basis": "No sentence says to respond only once execution is complete; the algorithms do. ExecuteRootSelectionSet (§6.3.1) returns {data} once ExecuteCollectedFields has run, and §6.3.3 says \"Execution will recursively resolve and complete the value of every entry in the collected fields map\". The draft's §7.1.5 adds: \"The response data is the result of accumulating the resolved result of all response positions during execution.\" Positions §6.3.3 lets an implementation cancel don't hold the response back.",
       "status": "pass",
-      "cases": 2189,
+      "cases": 2325,
       "failing": 0
     },
     {
@@ -81,7 +82,7 @@
       ],
       "basis": "When an error propagates to the root, §6.4.4 and §7.1.5 say data \"should be null\", in both editions. The kit still requires null, because no other value conforms: the execution result must have a data entry (§7.1.1), {} or a partial map leaves out an entry ExecuteCollectedFields must produce (§6.3.3), and a map with null at the failed root field breaks that field's Non-Null type.",
       "status": "pass",
-      "cases": 2189,
+      "cases": 2325,
       "failing": 0
     },
     {
@@ -96,7 +97,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2189,
+      "cases": 2325,
       "failing": 0
     },
     {
@@ -116,7 +117,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2189,
+      "cases": 2325,
       "failing": 0
     },
     {
@@ -133,7 +134,7 @@
       ],
       "basis": "The draft's §6.4.4: \"each error added to the errors list during execution must have a unique response path.\" October 2021's: \"only one error should be added to the errors list per field.\" Both editions say the errors list \"must not be further affected\" when a position is null because of an error already added.",
       "status": "pass",
-      "cases": 2189,
+      "cases": 2325,
       "failing": 0
     },
     {
@@ -148,7 +149,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2189,
+      "cases": 2325,
       "failing": 0
     },
     {
@@ -168,8 +169,8 @@
         }
       ],
       "status": "fail",
-      "cases": 2189,
-      "failing": 94
+      "cases": 2325,
+      "failing": 96
     },
     {
       "id": "serialErrorsKept",
@@ -583,10 +584,10 @@
         },
         "expected": "data {\"posts\": null, \"tags\": []}"
       },
-      "cases": 94,
+      "cases": 96,
       "fixtures": {
         "lists": 58,
-        "unions": 36
+        "unions": 38
       }
     },
     {

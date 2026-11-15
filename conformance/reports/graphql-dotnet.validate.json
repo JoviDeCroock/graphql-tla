@@ -3,7 +3,7 @@
   "area": "validate",
   "implementation": "graphql-dotnet 8.8.5",
   "capabilities": [
-    "custom-scalar-literals",
+    "custom-directives",
     "deferred-items",
     "idle",
     "introspect",
@@ -16,25 +16,26 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 3100,
-    "graded": 3088,
+    "graded": 3079,
     "skipped": {
-      "unspecified": 12
+      "unspecified": 12,
+      "custom-scalar-literals": 9
     }
   },
-  "checkerSelfTest": "passed (8 negative controls)",
+  "checkerSelfTest": "passed (9 negative controls)",
   "cases": {
-    "submitted": 3088,
-    "distinct": 3088,
+    "submitted": 3079,
+    "distinct": 3079,
     "malformed": 0
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 206,
-    "failing": 24
+    "vectors": 178,
+    "failing": 11
   },
   "checks": [
     {
@@ -115,7 +116,7 @@
       "status": "fail",
       "cases": 59,
       "failing": 15,
-      "failingDraftOnly": 15
+      "failingDraftOnly": 1
     },
     {
       "id": "fieldSelections",
@@ -466,8 +467,8 @@
           "url": "https://spec.graphql.org/draft/#sec-Variables-Are-Input-Types"
         }
       ],
-      "status": "pass",
-      "cases": 4,
+      "status": "untested",
+      "cases": 0,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -516,8 +517,8 @@
       ],
       "status": "fail",
       "cases": 636,
-      "failing": 71,
-      "failingDraftOnly": 0
+      "failing": 72,
+      "failingDraftOnly": 1
     },
     {
       "id": "acceptsValid",
@@ -531,8 +532,8 @@
         }
       ],
       "status": "fail",
-      "cases": 984,
-      "failing": 40,
+      "cases": 979,
+      "failing": 36,
       "failingDraftOnly": 0,
       "basis": "a document is valid when it satisfies every rule of §5, and only invalid requests are kept from execution (§6.1.1); rejecting a valid document applies a rule the spec doesn't have"
     }
@@ -542,11 +543,11 @@
       "checks": [
         "allVariableUsagesAreAllowed"
       ],
-      "summary": "§5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule",
-      "cases": 71,
-      "draftOnly": 0,
+      "summary": "§5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; 1 of 72 rely on the draft",
+      "cases": 72,
+      "draftOnly": 1,
       "fixtures": {
-        "variables": 71
+        "variables": 72
       },
       "fixture": "variables",
       "example": {
@@ -556,6 +557,43 @@
           "errors": []
         },
         "expected": "invalid: AllVariableUsagesAreAllowed [\"v\"]"
+      }
+    },
+    {
+      "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
+        "singleRootField",
+        "loneAnonymousOperation",
+        "operationTypeExistence"
+      ],
+      "likelyOverStrict": false,
+      "summary": "rejects valid documents, all with the same error message; their invalid siblings break §5.2.4.1 Single Root Field (14), §5.2.3.1 Lone Anonymous Operation (12), §5.2.1.1 Operation Type Existence (3), so the hints point at no one rule: the message says what the implementation objected to",
+      "cases": 26,
+      "draftOnly": 0,
+      "fixtures": {
+        "operations": 26
+      },
+      "fixture": "operations",
+      "problem": "Subscription 'S7' must have exactly one root field and that field must not be an introspection field.",
+      "example": {
+        "input": "SingleRootField-valid-22: subscription S7 { a: postAdded { id } a: postAdded { name } }",
+        "response": {
+          "valid": false,
+          "errors": [
+            {
+              "message": "Subscription 'S7' must have exactly one root field and that field must not be an introspection field.",
+              "locations": [
+                {
+                  "line": 5,
+                  "column": 3
+                }
+              ]
+            }
+          ]
+        },
+        "expected": "valid"
       }
     },
     {
@@ -582,9 +620,9 @@
       "checks": [
         "singleRootField"
       ],
-      "summary": "§5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft",
+      "summary": "§5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; 1 of 15 rely on the draft",
       "cases": 15,
-      "draftOnly": 15,
+      "draftOnly": 1,
       "fixtures": {
         "operations": 13,
         "random": 1,
@@ -592,7 +630,7 @@
       },
       "fixture": "spec",
       "example": {
-        "input": "[draft] SingleRootField-spec-7: subscription sub($bool: Boolean!) { newMessage @include(if: $bool) { body sender } }",
+        "input": "SingleRootField-spec-7: subscription sub($bool: Boolean!) { newMessage @include(if: $bool) { body sender } }",
         "response": {
           "valid": true,
           "errors": []
@@ -605,28 +643,36 @@
         "acceptsValid"
       ],
       "hint": [
-        "singleRootField"
+        "allVariableUsagesAreAllowed",
+        "directivesAreDefined",
+        "fragmentSpreadTargetDefined",
+        "valuesOfCorrectType"
       ],
-      "likelyOverStrict": true,
-      "summary": "rejects valid documents: §5.2.4.1 Single Root Field is likely over-strict (14 valid siblings of 16 different invalid vectors rejected, 23 of the same family accepted)",
-      "cases": 14,
+      "likelyOverStrict": false,
+      "summary": "rejects valid documents, all with the same error message; their invalid siblings break §5.8.5 All Variable Usages Are Allowed (8), §5.7.1 Directives Are Defined (1), §5.5.2.1 Fragment Spread Target Defined (1), §5.6.1 Values of Correct Type (1), so the hints point at no one rule: the message says what the implementation objected to",
+      "cases": 10,
       "draftOnly": 0,
       "fixtures": {
-        "operations": 14
+        "random": 2,
+        "variables": 8
       },
-      "fixture": "operations",
-      "problem": "Subscription 'S7' must have exactly one root field and that field must not be an introspection field.",
+      "fixture": "variables",
+      "problem": "Variable '$v' of type '[Int]' used in position expecting type 'Int'.",
       "example": {
-        "input": "SingleRootField-valid-22: subscription S7 { a: postAdded { id } a: postAdded { name } }",
+        "input": "AllVariableUsagesAreAllowed-valid-47: query Q($v: [Int]) { matrix(rows: [$v]) }",
         "response": {
           "valid": false,
           "errors": [
             {
-              "message": "Subscription 'S7' must have exactly one root field and that field must not be an introspection field.",
+              "message": "Variable '$v' of type '[Int]' used in position expecting type 'Int'.",
               "locations": [
                 {
-                  "line": 5,
-                  "column": 3
+                  "line": 1,
+                  "column": 9
+                },
+                {
+                  "line": 2,
+                  "column": 17
                 }
               ]
             }
@@ -658,80 +704,6 @@
     },
     {
       "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "loneAnonymousOperation"
-      ],
-      "likelyOverStrict": true,
-      "summary": "rejects valid documents: §5.2.3.1 Lone Anonymous Operation is likely over-strict (9 valid siblings of 6 different invalid vectors rejected, 7 of the same family accepted)",
-      "cases": 9,
-      "draftOnly": 0,
-      "fixtures": {
-        "operations": 9
-      },
-      "fixture": "operations",
-      "problem": "Subscription 'S7' must have exactly one root field and that field must not be an introspection field.",
-      "example": {
-        "input": "LoneAnonymousOperation-valid-7: query A { post { id } } subscription S7 { a: postAdded { id } a: postAdded { name } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Subscription 'S7' must have exactly one root field and that field must not be an introspection field.",
-              "locations": [
-                {
-                  "line": 11,
-                  "column": 3
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "allVariableUsagesAreAllowed"
-      ],
-      "likelyOverStrict": true,
-      "summary": "rejects valid documents: §5.8.5 All Variable Usages Are Allowed is likely over-strict (7 valid siblings of 28 different invalid vectors rejected, 50 of the same family accepted)",
-      "cases": 7,
-      "draftOnly": 0,
-      "fixtures": {
-        "variables": 7
-      },
-      "fixture": "variables",
-      "problem": "Variable '$v' of type '[Int]' used in position expecting type 'Int'.",
-      "example": {
-        "input": "AllVariableUsagesAreAllowed-valid-47: query Q($v: [Int]) { matrix(rows: [$v]) }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Variable '$v' of type '[Int]' used in position expecting type 'Int'.",
-              "locations": [
-                {
-                  "line": 1,
-                  "column": 9
-                },
-                {
-                  "line": 2,
-                  "column": 17
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
         "executableDefinitions"
       ],
       "summary": "§5.1.1 Executable Definitions isn't enforced: accepts documents that break only this rule",
@@ -748,195 +720,6 @@
           "errors": []
         },
         "expected": "invalid: ExecutableDefinitions [\"document\"]"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "variablesAreInputTypes"
-      ],
-      "likelyOverStrict": true,
-      "summary": "rejects valid documents: §5.8.2 Variables Are Input Types is likely over-strict (4 valid siblings of 3 different invalid vectors rejected, 1 of the same family accepted)",
-      "cases": 4,
-      "draftOnly": 0,
-      "fixtures": {
-        "extra": 4
-      },
-      "fixture": "extra",
-      "problem": "Invalid literal for argument 'value' of field 'json'. Unable to convert 'GraphQLParser.AST.GraphQLVariableWithLocation' literal from AST representation to any possible type",
-      "example": {
-        "input": "VariablesAreInputTypes-valid-2: query Q($v: Int) { json(value: {a: $v}) }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Invalid literal for argument 'value' of field 'json'. Unable to convert 'GraphQLParser.AST.GraphQLVariableWithLocation' literal from AST representation to any possible type",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 15
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "loneAnonymousOperation",
-        "operationTypeExistence"
-      ],
-      "likelyOverStrict": true,
-      "summary": "rejects valid documents: §5.2.3.1 Lone Anonymous Operation or §5.2.1.1 Operation Type Existence is likely over-strict (3 valid siblings of 6 different invalid vectors rejected, 4 of the same family accepted)",
-      "cases": 3,
-      "draftOnly": 0,
-      "fixtures": {
-        "operations": 3
-      },
-      "fixture": "operations",
-      "problem": "Subscription 'S7' must have exactly one root field and that field must not be an introspection field.",
-      "example": {
-        "input": "OperationTypeExistence-valid-3: query A { user { id } } subscription S7 { a: postAdded { id } a: postAdded { name } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Subscription 'S7' must have exactly one root field and that field must not be an introspection field.",
-              "locations": [
-                {
-                  "line": 11,
-                  "column": 3
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "fragmentSpreadTargetDefined"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.5.2.1 Fragment Spread Target Defined; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 1
-      },
-      "fixture": "random",
-      "problem": "Variable '$v0' of type '[Int]' used in position expecting type 'Int'.",
-      "example": {
-        "input": "FragmentSpreadTargetDefined-valid-3: query Q0($v0: [Int]) { b: node(id: \"1\") { id } matrix(rows: [$v0]) }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Variable '$v0' of type '[Int]' used in position expecting type 'Int'.",
-              "locations": [
-                {
-                  "line": 1,
-                  "column": 10
-                },
-                {
-                  "line": 5,
-                  "column": 17
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "allVariableUsagesAreAllowed",
-        "valuesOfCorrectType"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks §5.8.5 All Variable Usages Are Allowed and §5.6.1 Values of Correct Type; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "variables": 1
-      },
-      "fixture": "variables",
-      "problem": "Variable '$v' of type '[Int]' used in position expecting type 'Int'.",
-      "example": {
-        "input": "ValuesOfCorrectType-valid-9: query Q($v: [Int] = null) { matrix(rows: [$v]) }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Variable '$v' of type '[Int]' used in position expecting type 'Int'.",
-              "locations": [
-                {
-                  "line": 1,
-                  "column": 9
-                },
-                {
-                  "line": 2,
-                  "column": 17
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "directivesAreDefined"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.7.1 Directives Are Defined; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 1
-      },
-      "fixture": "random",
-      "problem": "Variable '$v1' of type '[Int]' used in position expecting type 'Int'.",
-      "example": {
-        "input": "DirectivesAreDefined-valid-16: query Q0($v1: [Int], $v0: [Int!]) { matrix(rows: [$v1]) echo(list: $v0, nums: [1], role: ADMIN) a: node(id: \"1\") { id id } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Variable '$v1' of type '[Int]' used in position expecting type 'Int'.",
-              "locations": [
-                {
-                  "line": 1,
-                  "column": 10
-                },
-                {
-                  "line": 2,
-                  "column": 17
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
       }
     }
   ],

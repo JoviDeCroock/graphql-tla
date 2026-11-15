@@ -13,20 +13,24 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 1983
+    "vectors": 2007,
+    "graded": 1992,
+    "skipped": {
+      "unsupported by the adapter": 15
+    }
   },
-  "checkerSelfTest": "passed (4 negative controls)",
+  "checkerSelfTest": "passed (7 negative controls)",
   "cases": {
-    "submitted": 1983,
-    "distinct": 1983,
+    "submitted": 1992,
+    "distinct": 1992,
     "malformed": 0
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 105,
+    "vectors": 113,
     "failing": 10
   },
   "checks": [
@@ -42,7 +46,7 @@
         }
       ],
       "status": "pass",
-      "cases": 33,
+      "cases": 19,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -58,7 +62,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 27,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -90,7 +94,7 @@
         }
       ],
       "status": "pass",
-      "cases": 17,
+      "cases": 21,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -121,9 +125,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Lexical-Tokens"
         }
       ],
-      "status": "fail",
+      "status": "pass",
       "cases": 43,
-      "failing": 2,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -138,7 +142,7 @@
         }
       ],
       "status": "pass",
-      "cases": 81,
+      "cases": 418,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -186,7 +190,7 @@
         }
       ],
       "status": "pass",
-      "cases": 100,
+      "cases": 121,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -202,7 +206,7 @@
         }
       ],
       "status": "pass",
-      "cases": 99,
+      "cases": 98,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -218,7 +222,7 @@
         }
       ],
       "status": "pass",
-      "cases": 100,
+      "cases": 101,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -266,7 +270,7 @@
         }
       ],
       "status": "pass",
-      "cases": 110,
+      "cases": 111,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -362,8 +366,8 @@
         }
       ],
       "status": "fail",
-      "cases": 42,
-      "failing": 11,
+      "cases": 46,
+      "failing": 15,
       "failingDraftOnly": 0
     },
     {
@@ -377,9 +381,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Float-Value"
         }
       ],
-      "status": "fail",
+      "status": "pass",
       "cases": 35,
-      "failing": 1,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -410,8 +414,8 @@
         }
       ],
       "status": "fail",
-      "cases": 146,
-      "failing": 8,
+      "cases": 153,
+      "failing": 10,
       "failingDraftOnly": 2
     },
     {
@@ -442,7 +446,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10,
+      "cases": 14,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -458,7 +462,7 @@
         }
       ],
       "status": "pass",
-      "cases": 101,
+      "cases": 102,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -490,7 +494,7 @@
         }
       ],
       "status": "fail",
-      "cases": 157,
+      "cases": 158,
       "failing": 2,
       "failingDraftOnly": 0
     },
@@ -506,7 +510,7 @@
         }
       ],
       "status": "pass",
-      "cases": 102,
+      "cases": 114,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -522,7 +526,7 @@
         }
       ],
       "status": "pass",
-      "cases": 113,
+      "cases": 112,
       "failing": 0,
       "failingDraftOnly": 0
     }
@@ -575,11 +579,11 @@
         "stringValue"
       ],
       "summary": "rejects what §2.10.4 String Value accepts",
-      "cases": 4,
+      "cases": 6,
       "fixtures": {
         "lexer-examples": 2,
         "strings": 1,
-        "block-strings": 1
+        "block-strings": 3
       },
       "draftOnly": 2,
       "fixture": "lexer-examples",
@@ -590,6 +594,27 @@
         },
         "expected": "{\"ok\":true}",
         "sibling": "\"{a(x: \\\"\\\"\\\"\\\\\\\"\\\"\\\"\\\"\\\")}\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
+        "intValue"
+      ],
+      "summary": "rejects what §2.10.1 Int Value accepts",
+      "cases": 5,
+      "fixtures": {
+        "lexer-examples": 1,
+        "int-range": 3,
+        "numbers": 1
+      },
+      "fixture": "numbers",
+      "example": {
+        "input": "\"{a(x: [0-0])}\"",
+        "response": {
+          "ok": false
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\"{a(x: [0-.])}\", which the reference rejects"
       }
     },
     {
@@ -610,43 +635,6 @@
         },
         "expected": "{\"ok\":false}",
         "sibling": "\"{a(x: \\\"\\\"\\\"\\\\ \\\"\\\"\\\")}\", which the reference accepts"
-      }
-    },
-    {
-      "checks": [
-        "lexicalTokens"
-      ],
-      "summary": "rejects what §2.1.5 Lexical Tokens accepts",
-      "cases": 2,
-      "fixtures": {
-        "block-strings": 2
-      },
-      "fixture": "block-strings",
-      "example": {
-        "input": "\"{a(x: \\\"\\\"\\\"\\\"\\\\\\\"\\\"\\\"\\\"\\\"\\\")}\"",
-        "response": {
-          "ok": false
-        },
-        "expected": "{\"ok\":true}",
-        "sibling": "\"{a(x: \\\"\\\"\\\"\\\"\\\"\\\"\\\\\\\"\\\"\\\"\\\"\\\"\\\")}\", which the reference rejects"
-      }
-    },
-    {
-      "checks": [
-        "intValue"
-      ],
-      "summary": "rejects what §2.10.1 Int Value accepts",
-      "cases": 1,
-      "fixtures": {
-        "lexer-examples": 1
-      },
-      "fixture": "lexer-examples",
-      "example": {
-        "input": "\"{a(x: [1-2])}\"",
-        "response": {
-          "ok": false
-        },
-        "expected": "{\"ok\":true}"
       }
     },
     {
@@ -683,25 +671,6 @@
           "ok": true
         },
         "expected": "{\"ok\":false}"
-      }
-    },
-    {
-      "checks": [
-        "floatValue"
-      ],
-      "summary": "rejects what §2.10.2 Float Value accepts",
-      "cases": 1,
-      "fixtures": {
-        "numbers": 1
-      },
-      "fixture": "numbers",
-      "example": {
-        "input": "\"{a(x: [0-0])}\"",
-        "response": {
-          "ok": false
-        },
-        "expected": "{\"ok\":true}",
-        "sibling": "\"{a(x: [0-.])}\", which the reference rejects"
       }
     }
   ],

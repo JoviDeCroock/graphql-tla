@@ -13,26 +13,27 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 3100,
-    "graded": 3079,
+    "graded": 3028,
     "skipped": {
+      "custom-directives": 52,
       "unspecified": 12,
       "custom-scalar-literals": 9
     }
   },
-  "checkerSelfTest": "passed (8 negative controls)",
+  "checkerSelfTest": "passed (9 negative controls)",
   "cases": {
-    "submitted": 3079,
-    "distinct": 3079,
+    "submitted": 3028,
+    "distinct": 3028,
     "malformed": 0
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 206,
-    "failing": 39
+    "vectors": 178,
+    "failing": 16
   },
   "checks": [
     {
@@ -64,8 +65,8 @@
       ],
       "status": "fail",
       "cases": 12,
-      "failing": 12,
-      "failingDraftOnly": 12
+      "failing": 10,
+      "failingDraftOnly": 10
     },
     {
       "id": "operationNameUniqueness",
@@ -113,7 +114,7 @@
       "status": "fail",
       "cases": 59,
       "failing": 46,
-      "failingDraftOnly": 23
+      "failingDraftOnly": 2
     },
     {
       "id": "fieldSelections",
@@ -127,7 +128,7 @@
         }
       ],
       "status": "pass",
-      "cases": 25,
+      "cases": 23,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -159,7 +160,7 @@
         }
       ],
       "status": "pass",
-      "cases": 39,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -175,7 +176,7 @@
         }
       ],
       "status": "pass",
-      "cases": 8,
+      "cases": 6,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -191,7 +192,7 @@
         }
       ],
       "status": "pass",
-      "cases": 6,
+      "cases": 5,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -255,7 +256,7 @@
         }
       ],
       "status": "pass",
-      "cases": 14,
+      "cases": 13,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -271,7 +272,7 @@
         }
       ],
       "status": "pass",
-      "cases": 78,
+      "cases": 77,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -335,7 +336,7 @@
         }
       ],
       "status": "pass",
-      "cases": 282,
+      "cases": 280,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -401,7 +402,7 @@
         }
       ],
       "status": "pass",
-      "cases": 24,
+      "cases": 23,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -417,7 +418,7 @@
         }
       ],
       "status": "pass",
-      "cases": 27,
+      "cases": 22,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -433,7 +434,7 @@
         }
       ],
       "status": "fail",
-      "cases": 10,
+      "cases": 7,
       "failing": 7,
       "failingDraftOnly": 0
     },
@@ -481,7 +482,7 @@
         }
       ],
       "status": "pass",
-      "cases": 15,
+      "cases": 14,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -497,7 +498,7 @@
         }
       ],
       "status": "pass",
-      "cases": 18,
+      "cases": 16,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -513,7 +514,7 @@
         }
       ],
       "status": "fail",
-      "cases": 636,
+      "cases": 635,
       "failing": 12,
       "failingDraftOnly": 4
     },
@@ -529,8 +530,8 @@
         }
       ],
       "status": "fail",
-      "cases": 979,
-      "failing": 31,
+      "cases": 954,
+      "failing": 6,
       "failingDraftOnly": 0,
       "basis": "a document is valid when it satisfies every rule of §5, and only invalid requests are kept from execution (§6.1.1); rejecting a valid document applies a rule the spec doesn't have"
     }
@@ -540,9 +541,9 @@
       "checks": [
         "singleRootField"
       ],
-      "summary": "§5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; 23 of 46 rely on the draft",
+      "summary": "§5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; 2 of 46 rely on the draft",
       "cases": 46,
-      "draftOnly": 23,
+      "draftOnly": 2,
       "fixtures": {
         "operations": 40,
         "random": 2,
@@ -556,27 +557,6 @@
           "errors": []
         },
         "expected": "invalid: SingleRootField [\"sub\"]"
-      }
-    },
-    {
-      "checks": [
-        "operationTypeExistence"
-      ],
-      "summary": "§5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule; all rely on the draft",
-      "cases": 12,
-      "draftOnly": 12,
-      "fixtures": {
-        "operations": 11,
-        "spec": 1
-      },
-      "fixture": "spec",
-      "example": {
-        "input": "[draft] OperationTypeExistence-spec-2: mutation goodbyeMutation { goodbye }",
-        "response": {
-          "valid": true,
-          "errors": []
-        },
-        "expected": "invalid: OperationTypeExistence [\"mutation\"]"
       }
     },
     {
@@ -598,6 +578,26 @@
           "errors": []
         },
         "expected": "invalid: AllVariableUsagesAreAllowed [\"cat\"]"
+      }
+    },
+    {
+      "checks": [
+        "operationTypeExistence"
+      ],
+      "summary": "§5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule; all rely on the draft",
+      "cases": 10,
+      "draftOnly": 10,
+      "fixtures": {
+        "operations": 10
+      },
+      "fixture": "operations",
+      "example": {
+        "input": "[draft] OperationTypeExistence-8: query A { post { id } } mutation M { user { id } }",
+        "response": {
+          "valid": true,
+          "errors": []
+        },
+        "expected": "invalid: OperationTypeExistence [\"mutation\"]"
       }
     },
     {
@@ -625,50 +625,18 @@
         "acceptsValid"
       ],
       "hint": [
-        "leafFieldSelections"
+        "allVariableUsagesAreAllowed",
+        "variableUniqueness",
+        "allVariableUsesDefined"
       ],
-      "likelyOverStrict": true,
-      "summary": "rejects valid documents: §5.3.3 Leaf Field Selections is likely over-strict (4 valid siblings of 4 different invalid vectors rejected, 6 of the same family accepted)",
-      "cases": 4,
+      "likelyOverStrict": false,
+      "summary": "rejects valid documents, all with the same error message; their invalid siblings break §5.8.5 All Variable Usages Are Allowed (3), §5.8.1 Variable Uniqueness (2), §5.8.3 All Variable Uses Defined (1), so the hints point at no one rule: the message says what the implementation objected to",
+      "cases": 6,
       "draftOnly": 0,
       "fixtures": {
-        "random": 4
-      },
-      "fixture": "random",
-      "problem": "Unknown directive \"tag\"",
-      "example": {
-        "input": "LeafFieldSelections-valid-22: { resource { id id @tag } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Unknown directive \"tag\"",
-              "locations": [
-                {
-                  "line": 4,
-                  "column": 8
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "allVariableUsagesAreAllowed"
-      ],
-      "likelyOverStrict": true,
-      "summary": "rejects valid documents: §5.8.5 All Variable Usages Are Allowed is likely over-strict (4 valid siblings of 16 different invalid vectors rejected, 62 of the same family accepted)",
-      "cases": 4,
-      "draftOnly": 0,
-      "fixtures": {
+        "names": 1,
+        "extra": 2,
         "variables": 2,
-        "random": 1,
         "spec": 1
       },
       "fixture": "spec",
@@ -688,558 +656,6 @@
                 {
                   "line": 3,
                   "column": 56
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "directivesAreDefined",
-        "directivesAreInValidLocations",
-        "directivesAreUniquePerLocation"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks §5.7.1 Directives Are Defined and §5.7.2 Directives Are in Valid Locations and §5.7.3 Directives Are Unique per Location; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 3,
-      "draftOnly": 0,
-      "fixtures": {
-        "directives": 3
-      },
-      "fixture": "directives",
-      "problem": "Unknown directive \"once\"",
-      "example": {
-        "input": "DirectivesAreDefined-valid-1: { user @once { id } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Unknown directive \"once\"",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 8
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "fieldSelections"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.3.1 Field Selections; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 2,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 2
-      },
-      "fixture": "random",
-      "problem": "Unknown directive \"once\"",
-      "example": {
-        "input": "FieldSelections-valid-13: { resource { id @once } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Unknown directive \"once\"",
-              "locations": [
-                {
-                  "line": 3,
-                  "column": 8
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "requiredArguments"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.4.3 Required Arguments; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 2,
-      "draftOnly": 0,
-      "fixtures": {
-        "values": 1,
-        "random": 1
-      },
-      "fixture": "values",
-      "problem": "Unknown directive \"tag\"",
-      "example": {
-        "input": "RequiredArguments-valid-1: { user { id @tag } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Unknown directive \"tag\"",
-              "locations": [
-                {
-                  "line": 3,
-                  "column": 8
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "valuesOfCorrectType"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.6.1 Values of Correct Type; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 2,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 2
-      },
-      "fixture": "random",
-      "problem": "Unknown directive \"once\"",
-      "example": {
-        "input": "ValuesOfCorrectType-valid-57: query Q0 { post { name @once score score } b: matrix }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Unknown directive \"once\"",
-              "locations": [
-                {
-                  "line": 3,
-                  "column": 10
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "directivesAreDefined"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.7.1 Directives Are Defined; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 2,
-      "draftOnly": 0,
-      "fixtures": {
-        "directives": 1,
-        "random": 1
-      },
-      "fixture": "directives",
-      "problem": "Unknown directive \"once\"",
-      "example": {
-        "input": "DirectivesAreDefined-valid-6: { user @once { id @once } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Unknown directive \"once\"",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 8
-                }
-              ]
-            },
-            {
-              "message": "Unknown directive \"once\"",
-              "locations": [
-                {
-                  "line": 3,
-                  "column": 8
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "variableUniqueness"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.8.1 Variable Uniqueness; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 2,
-      "draftOnly": 0,
-      "fixtures": {
-        "names": 1,
-        "extra": 1
-      },
-      "fixture": "names",
-      "problem": "Variable \"b\" of type \"Int\" used in position expecting type \"Int!\"",
-      "example": {
-        "input": "VariableUniqueness-valid-3: query ($a: Int, $b: Int) { echo(int: $a, opt: $b) }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Variable \"b\" of type \"Int\" used in position expecting type \"Int!\"",
-              "locations": [
-                {
-                  "line": 1,
-                  "column": 17
-                },
-                {
-                  "line": 2,
-                  "column": 22
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "allVariableUsesDefined"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.8.3 All Variable Uses Defined; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 2,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 1,
-        "extra": 1
-      },
-      "fixture": "extra",
-      "problem": "Variable \"w\" of type \"Int\" used in position expecting type \"Int!\"",
-      "example": {
-        "input": "AllVariableUsesDefined-valid-7: query Q($w: Int) { echo(opt: $w) }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Variable \"w\" of type \"Int\" used in position expecting type \"Int!\"",
-              "locations": [
-                {
-                  "line": 1,
-                  "column": 9
-                },
-                {
-                  "line": 2,
-                  "column": 13
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "argumentNames",
-        "directivesAreDefined"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks §5.4.1 Argument Names and §5.7.1 Directives Are Defined; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "values": 1
-      },
-      "fixture": "values",
-      "problem": "Unknown directive \"tag\"",
-      "example": {
-        "input": "ArgumentNames-valid-1: { user { id @tag(name: null) } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Unknown directive \"tag\"",
-              "locations": [
-                {
-                  "line": 3,
-                  "column": 8
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "argumentNames",
-        "argumentUniqueness"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks §5.4.1 Argument Names and §5.4.2 Argument Uniqueness; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "names": 1
-      },
-      "fixture": "names",
-      "problem": "Unknown directive \"tag\"",
-      "example": {
-        "input": "ArgumentNames-valid-3: { user @tag(name: \"a\") { id } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Unknown directive \"tag\"",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 8
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "fragmentsMustBeUsed"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.5.1.4 Fragments Must Be Used; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 1
-      },
-      "fixture": "random",
-      "problem": "Unknown directive \"once\"",
-      "example": {
-        "input": "FragmentsMustBeUsed-valid-20: query Q0 { resource @once { __typename } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Unknown directive \"once\"",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 12
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "fragmentSpreadIsPossible"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.5.2.3 Fragment Spread Is Possible; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 1
-      },
-      "fixture": "random",
-      "problem": "Unknown directive \"tag\"",
-      "example": {
-        "input": "FragmentSpreadIsPossible-valid-22: query Q0 { user { id @tag } __typename } query Q1 { resource { id url } echo(opt: 1, role: GUEST) }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Unknown directive \"tag\"",
-              "locations": [
-                {
-                  "line": 3,
-                  "column": 8
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "directivesAreDefined",
-        "directivesAreInValidLocations"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks §5.7.1 Directives Are Defined and §5.7.2 Directives Are in Valid Locations; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "directives": 1
-      },
-      "fixture": "directives",
-      "problem": "Unknown directive \"tag\"",
-      "example": {
-        "input": "DirectivesAreDefined-valid-8: { user { ...F } } fragment F on User @tag(name: \"x\") { id }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Unknown directive \"tag\"",
-              "locations": [
-                {
-                  "line": 7,
-                  "column": 20
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "allVariablesUsed",
-        "directivesAreInValidLocations"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks §5.8.4 All Variables Used and §5.7.2 Directives Are in Valid Locations; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "directives": 1
-      },
-      "fixture": "directives",
-      "problem": "Unknown directive \"tag\"",
-      "example": {
-        "input": "DirectivesAreInValidLocations-valid-1: query Q @tag(name: \"x\") { user { id } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Unknown directive \"tag\"",
-              "locations": [
-                {
-                  "line": 1,
-                  "column": 9
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "directivesAreInValidLocations"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.7.2 Directives Are in Valid Locations; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "directives": 1
-      },
-      "fixture": "directives",
-      "problem": "Unknown directive \"tag\"",
-      "example": {
-        "input": "DirectivesAreInValidLocations-valid-2: subscription S @tag(name: \"x\") { postAdded { id } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Unknown directive \"tag\"",
-              "locations": [
-                {
-                  "line": 1,
-                  "column": 16
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "allVariablesUsed"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.8.4 All Variables Used; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 1
-      },
-      "fixture": "random",
-      "problem": "Unknown directive \"once\"",
-      "example": {
-        "input": "AllVariablesUsed-valid-2: query Q0 { matrix @once }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Unknown directive \"once\"",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 10
                 }
               ]
             }

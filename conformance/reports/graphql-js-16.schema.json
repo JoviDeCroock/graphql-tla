@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-directives",
     "custom-scalar-literals",
     "deferred-items",
     "idle",
@@ -19,25 +20,25 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 168,
-    "graded": 165,
+    "vectors": 172,
+    "graded": 168,
     "skipped": {
-      "unspecified": 3
+      "unspecified": 4
     }
   },
-  "checkerSelfTest": "passed (330 negative controls)",
+  "checkerSelfTest": "passed (343 negative controls)",
   "cases": {
-    "submitted": 165,
-    "distinct": 165,
+    "submitted": 168,
+    "distinct": 168,
     "malformed": 0
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 37,
-    "failing": 17
+    "vectors": 36,
+    "failing": 13
   },
   "checks": [
     {
@@ -52,7 +53,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -68,7 +69,7 @@
         }
       ],
       "status": "fail",
-      "cases": 3,
+      "cases": 1,
       "failing": 1,
       "failingDraftOnly": 0
     },
@@ -84,7 +85,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -100,7 +101,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -116,7 +117,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -132,7 +133,7 @@
         }
       ],
       "status": "pass",
-      "cases": 4,
+      "cases": 2,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -148,7 +149,7 @@
         }
       ],
       "status": "pass",
-      "cases": 6,
+      "cases": 2,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -164,7 +165,7 @@
         }
       ],
       "status": "fail",
-      "cases": 4,
+      "cases": 2,
       "failing": 2,
       "failingDraftOnly": 0
     },
@@ -185,7 +186,7 @@
         }
       ],
       "status": "pass",
-      "cases": 4,
+      "cases": 2,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -206,7 +207,7 @@
         }
       ],
       "status": "pass",
-      "cases": 4,
+      "cases": 2,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -227,7 +228,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -248,7 +249,7 @@
         }
       ],
       "status": "pass",
-      "cases": 4,
+      "cases": 2,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -269,7 +270,7 @@
         }
       ],
       "status": "pass",
-      "cases": 4,
+      "cases": 2,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -290,11 +291,11 @@
         }
       ],
       "status": "pass",
-      "cases": 4,
+      "cases": 2,
       "failing": 0,
       "failingDraftOnly": 0,
       "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have argument name uniqueness."
+      "note": "Draft only: the October 2021 edition doesn't have argument name uniqueness"
     },
     {
       "id": "argInputType",
@@ -313,7 +314,7 @@
         }
       ],
       "status": "pass",
-      "cases": 6,
+      "cases": 3,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -334,11 +335,11 @@
         }
       ],
       "status": "pass",
-      "cases": 8,
+      "cases": 3,
       "failing": 0,
       "failingDraftOnly": 0,
       "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have deprecated arguments."
+      "note": "Draft only: the October 2021 edition doesn't have deprecated arguments"
     },
     {
       "id": "argDefaultCompatible",
@@ -352,11 +353,11 @@
         }
       ],
       "status": "fail",
-      "cases": 20,
+      "cases": 10,
       "failing": 10,
       "failingDraftOnly": 10,
       "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have default value validation."
+      "note": "Draft only: the October 2021 edition doesn't have default value validation"
     },
     {
       "id": "implementsUnique",
@@ -375,7 +376,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -396,7 +397,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -428,7 +429,7 @@
         }
       ],
       "status": "pass",
-      "cases": 4,
+      "cases": 2,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -444,7 +445,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -460,7 +461,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -476,7 +477,7 @@
         }
       ],
       "status": "pass",
-      "cases": 4,
+      "cases": 2,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -492,7 +493,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -508,7 +509,7 @@
         }
       ],
       "status": "pass",
-      "cases": 8,
+      "cases": 4,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -524,11 +525,11 @@
         }
       ],
       "status": "fail",
-      "cases": 2,
+      "cases": 1,
       "failing": 1,
       "failingDraftOnly": 1,
       "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have deprecation of implementing fields."
+      "note": "Draft only: the October 2021 edition doesn't have deprecation of implementing fields"
     },
     {
       "id": "unionMembersDefined",
@@ -542,7 +543,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -558,7 +559,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -574,7 +575,7 @@
         }
       ],
       "status": "pass",
-      "cases": 6,
+      "cases": 3,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -590,7 +591,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -606,7 +607,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -622,7 +623,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -638,7 +639,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -654,7 +655,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -670,7 +671,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -691,7 +692,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -712,11 +713,11 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0,
       "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have deprecated input fields."
+      "note": "Draft only: the October 2021 edition doesn't have deprecated input fields"
     },
     {
       "id": "oneOfFieldNullable",
@@ -735,11 +736,11 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0,
       "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have OneOf input objects."
+      "note": "Draft only: the October 2021 edition doesn't have OneOf input objects"
     },
     {
       "id": "oneOfFieldNoDefault",
@@ -758,11 +759,11 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 1,
       "failing": 0,
       "failingDraftOnly": 0,
       "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have OneOf input objects."
+      "note": "Draft only: the October 2021 edition doesn't have OneOf input objects"
     },
     {
       "id": "inputObjectUnbreakableCycle",
@@ -776,7 +777,7 @@
         }
       ],
       "status": "fail",
-      "cases": 10,
+      "cases": 4,
       "failing": 2,
       "failingDraftOnly": 2
     },
@@ -792,11 +793,11 @@
         }
       ],
       "status": "fail",
-      "cases": 8,
-      "failing": 7,
-      "failingDraftOnly": 4,
+      "cases": 4,
+      "failing": 4,
+      "failingDraftOnly": 0,
       "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have default value validation."
+      "note": "Draft only: the October 2021 edition doesn't have default value validation. 4 failing cases are crashes, which fail under October 2021 too"
     },
     {
       "id": "directiveLocationsDefined",
@@ -828,7 +829,7 @@
       ],
       "status": "fail",
       "cases": 2,
-      "failing": 1,
+      "failing": 2,
       "failingDraftOnly": 0
     },
     {
@@ -843,17 +844,34 @@
         }
       ],
       "status": "fail",
-      "cases": 4,
-      "failing": 1,
+      "cases": 2,
+      "failing": 2,
       "failingDraftOnly": 0
+    },
+    {
+      "id": "acceptsValid",
+      "title": "Valid schemas are accepted",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3",
+          "title": "Type System",
+          "url": "https://spec.graphql.org/draft/#sec-Type-System"
+        }
+      ],
+      "status": "fail",
+      "cases": 87,
+      "failing": 3,
+      "failingDraftOnly": 0,
+      "basis": "a schema is invalid only when it breaks a Type Validation rule of §3 or §4's Reserved Names; rejecting, or crashing on, a schema that breaks none applies a rule the spec doesn't have"
     }
   ],
   "findings": [
     {
+      "kind": "not enforced",
       "checks": [
         "argDefaultCompatible"
       ],
-      "kind": "not enforced",
       "summary": "ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule",
       "cases": 10,
       "fixtures": {
@@ -871,10 +889,10 @@
       "edition": "draft"
     },
     {
+      "kind": "crash",
       "checks": [
         "inputObjectDefaultValueCycle"
       ],
-      "kind": "crash",
       "summary": "INPUT_OBJECT_DEFAULT_VALUE_CYCLE: crashes on a schema that breaks only this rule, instead of rejecting it",
       "cases": 4,
       "fixtures": {
@@ -883,19 +901,20 @@
       "fixture": "inputObjectDefaultValueCycle.1.invalid",
       "problem": "RangeError: Maximum call stack size exceeded",
       "example": {
-        "input": "[draft] input I { i: I = {} } type Query { f(i: I): Int }",
+        "input": "input I { i: I = {} } type Query { f(i: I): Int }",
         "response": "the adapter answered with an error: RangeError: Maximum call stack size exceeded",
         "expected": "invalid: breaks INPUT_OBJECT_DEFAULT_VALUE_CYCLE and no other rule"
-      },
-      "draftOnly": 4,
-      "edition": "draft"
+      }
     },
     {
+      "kind": "crash",
       "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
         "inputObjectDefaultValueCycle"
       ],
-      "kind": "crash",
-      "summary": "INPUT_OBJECT_DEFAULT_VALUE_CYCLE: crashes on a valid schema one small edit away from one that breaks it, instead of accepting it",
+      "summary": "crashes on 3 valid schemas instead of accepting them; hint: inputObjectDefaultValueCycle, the rule their invalid siblings break",
       "cases": 3,
       "fixtures": {
         "input": 3
@@ -909,10 +928,10 @@
       }
     },
     {
+      "kind": "not enforced",
       "checks": [
         "rootTypesDifferent"
       ],
-      "kind": "not enforced",
       "summary": "ROOT_TYPES_DIFFERENT not enforced: accepts a schema that breaks only this rule",
       "cases": 2,
       "fixtures": {
@@ -928,10 +947,10 @@
       }
     },
     {
+      "kind": "not enforced",
       "checks": [
         "inputObjectUnbreakableCycle"
       ],
-      "kind": "not enforced",
       "summary": "INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule",
       "cases": 2,
       "fixtures": {
@@ -949,10 +968,48 @@
       "edition": "draft"
     },
     {
+      "kind": "not enforced",
+      "checks": [
+        "directiveUsesItself"
+      ],
+      "summary": "DIRECTIVE_USES_ITSELF not enforced: accepts a schema that breaks only this rule",
+      "cases": 2,
+      "fixtures": {
+        "directive": 2
+      },
+      "fixture": "directiveUsesItself.2.invalid",
+      "example": {
+        "input": "directive @d(arg: String @d) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION type Query { a: Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks DIRECTIVE_USES_ITSELF and no other rule"
+      }
+    },
+    {
+      "kind": "not enforced",
+      "checks": [
+        "directiveReferencesItselfIndirectly"
+      ],
+      "summary": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule",
+      "cases": 2,
+      "fixtures": {
+        "directive": 2
+      },
+      "fixture": "directiveReferencesItselfIndirectly.2.invalid",
+      "example": {
+        "input": "directive @d(a: Int @e) on ARGUMENT_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION type Query { a: Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule"
+      }
+    },
+    {
+      "kind": "not enforced",
       "checks": [
         "typeNameNotBuiltin"
       ],
-      "kind": "not enforced",
       "summary": "TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule",
       "cases": 1,
       "fixtures": {
@@ -968,10 +1025,10 @@
       }
     },
     {
+      "kind": "not enforced",
       "checks": [
         "implDeprecation"
       ],
-      "kind": "not enforced",
       "summary": "IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule",
       "cases": 1,
       "fixtures": {
@@ -987,44 +1044,6 @@
       },
       "draftOnly": 1,
       "edition": "draft"
-    },
-    {
-      "checks": [
-        "directiveUsesItself"
-      ],
-      "kind": "not enforced",
-      "summary": "DIRECTIVE_USES_ITSELF not enforced: accepts a schema that breaks only this rule",
-      "cases": 1,
-      "fixtures": {
-        "directive": 1
-      },
-      "fixture": "directiveUsesItself.1.invalid",
-      "example": {
-        "input": "directive @invalidExample(arg: String @invalidExample) on ARGUMENT_DEFINITION type Query { a: Int }",
-        "response": {
-          "valid": true
-        },
-        "expected": "invalid: breaks DIRECTIVE_USES_ITSELF and no other rule"
-      }
-    },
-    {
-      "checks": [
-        "directiveReferencesItselfIndirectly"
-      ],
-      "kind": "not enforced",
-      "summary": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule",
-      "cases": 1,
-      "fixtures": {
-        "directive": 1
-      },
-      "fixture": "directiveReferencesItselfIndirectly.2.invalid",
-      "example": {
-        "input": "directive @d(a: Int @e) on ARGUMENT_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION type Query { a: Int }",
-        "response": {
-          "valid": true
-        },
-        "expected": "invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule"
-      }
     }
   ],
   "fixtures": [],

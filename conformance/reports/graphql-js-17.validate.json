@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-directives",
     "custom-scalar-literals",
     "deferred-items",
     "error-propagation-off",
@@ -20,7 +21,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 3100,
@@ -29,7 +30,7 @@
       "unspecified": 12
     }
   },
-  "checkerSelfTest": "passed (8 negative controls)",
+  "checkerSelfTest": "passed (9 negative controls)",
   "cases": {
     "submitted": 3088,
     "distinct": 3088,
@@ -37,7 +38,7 @@
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 206,
+    "vectors": 178,
     "failing": 2
   },
   "checks": [

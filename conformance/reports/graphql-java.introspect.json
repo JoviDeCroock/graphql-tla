@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-directives",
     "custom-scalar-literals",
     "error-propagation-off",
     "idle",
@@ -18,19 +19,28 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 28
+    "vectors": 39,
+    "graded": 39,
+    "skipped": {}
   },
-  "profile": "oct2021",
-  "profileNote": "The draft's introspection query was rejected (\"Validation error (UnknownArgument@[__schema/directives]) : Unknown field argument 'includeDeprecated'\") and October 2021's was answered, so this run grades against October 2021.",
-  "checkerSelfTest": "passed (148 negative controls)",
+  "profile": "draft",
+  "profileNote": "The draft's introspection query was rejected (\"Validation error (UnknownArgument@[__schema/directives]) : Unknown field argument 'includeDeprecated'\"). The introspection types lack __Directive.isDeprecated, __Directive.deprecationReason and __Schema.directives(includeDeprecated:), so this run asks the draft's query without them, grades against the draft, and counts what they lack once, under builtinDefinitions.",
+  "missingFields": [
+    "__Directive.isDeprecated",
+    "__Directive.deprecationReason",
+    "__Schema.directives(includeDeprecated:)"
+  ],
+  "checkerSelfTest": "passed (176 negative controls)",
   "cases": {
-    "submitted": 28,
-    "distinct": 28,
+    "submitted": 39,
+    "distinct": 39,
     "malformed": 0,
-    "skipped": 10
+    "notGraded": {
+      "the schema applies a directive to a directive definition, which only the draft's grammar has (§3.13 DirectiveDefinition)": 3
+    }
   },
   "adapterProblems": 0,
   "checks": [
@@ -56,7 +66,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 39,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -72,7 +82,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 36,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -93,7 +103,7 @@
         }
       ],
       "status": "pass",
-      "cases": 18,
+      "cases": 22,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -109,7 +119,7 @@
         }
       ],
       "status": "pass",
-      "cases": 18,
+      "cases": 22,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -130,7 +140,7 @@
         }
       ],
       "status": "pass",
-      "cases": 18,
+      "cases": 22,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -146,7 +156,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10,
+      "cases": 13,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -162,7 +172,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 36,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -183,7 +193,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -209,13 +219,13 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     },
     {
       "id": "defaultValue",
-      "title": "defaultValue encodes the default value, and is null without one",
+      "title": "defaultValue is null for an input value without a default, and otherwise null or an encoding of the default",
       "level": "MUST",
       "spec": [
         {
@@ -225,9 +235,26 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
+    },
+    {
+      "id": "defaultValueOmitted",
+      "title": "defaultValue encodes the default value of an input value that has one, rather than returning null",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "4.2.4",
+          "title": "The \\_\\_InputValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 35,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "basis": "§4.2.4: \"defaultValue may return a String encoding (using the GraphQL language) of the default value used by this input value in the condition a value is not provided at runtime. If this input value has no default value, returns null.\" By Appendix A, a lowercase \"may\" keeps its RFC 2119 meaning, so the encoding is optional; the intent is plainly that a default is encoded, which makes this a SHOULD. A string that isn't an encoding of the default, or one for an input value without a default, still fails defaultValue."
     },
     {
       "id": "inputFields",
@@ -246,7 +273,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -267,7 +294,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -283,7 +310,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -324,15 +351,14 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0,
-      "oct2021": "fields and enum values only",
-      "note": "Graded for fields and enum values only: the implementation answered the October 2021 query."
+      "oct2021": "fields and enum values only"
     },
     {
       "id": "specifiedByURL",
-      "title": "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL",
+      "title": "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null",
       "level": "MUST",
       "spec": [
         {
@@ -341,24 +367,19 @@
           "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
         },
         {
-          "number": "3.13",
-          "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
-        },
-        {
           "number": "3.13.4",
           "title": "@specifiedBy",
           "url": "https://spec.graphql.org/draft/#sec-specifiedBy"
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     },
     {
       "id": "isOneOf",
-      "title": "isOneOf is true exactly for OneOf input objects; @oneOf is returned when one is",
+      "title": "isOneOf is true exactly for OneOf input objects",
       "level": "MUST",
       "spec": [
         {
@@ -370,24 +391,19 @@
           "number": "3.10.1",
           "title": "OneOf Input Objects",
           "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
-        },
-        {
-          "number": "3.13",
-          "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
         }
       ],
-      "status": "untested",
-      "cases": 0,
+      "status": "pass",
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0,
       "edition": "draft",
-      "note": "Not graded: the implementation answered the October 2021 query, and October 2021 has no OneOf input objects."
+      "note": "Draft only: October 2021 has no OneOf input objects."
     },
     {
       "id": "descriptions",
-      "title": "Descriptions are the schema's",
-      "level": "MUST",
+      "title": "A description the document gives is returned as it is, the schema's included",
+      "level": "SHOULD",
       "spec": [
         {
           "number": "3.2",
@@ -400,14 +416,15 @@
           "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
         }
       ],
-      "status": "fail",
-      "cases": 28,
-      "failing": 6,
-      "failingDraftOnly": 0
+      "status": "pass",
+      "cases": 35,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "basis": "§3.2: documentation is \"written immediately alongside definitions in a TypeSystemDocument and made available via introspection\", which has no key word, and §4.2 says of every description field that it \"may return a String or null\". So a description the document gives that is lost or replaced fails this SHOULD, and any description is accepted for a definition the document doesn't describe (\"\" or one of the service's own included)."
     },
     {
       "id": "directives",
-      "title": "directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types",
+      "title": "directives describes the schema's own directives (name, locations, isRepeatable), and returns any built-in directive the result shows is provided (@specifiedBy for a specifiedByURL, @oneOf for a true isOneOf); any of the service's own takes input types",
       "level": "MUST",
       "spec": [
         {
@@ -427,7 +444,7 @@
         }
       ],
       "status": "pass",
-      "cases": 18,
+      "cases": 22,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -463,7 +480,7 @@
         }
       ],
       "status": "pass",
-      "cases": 18,
+      "cases": 22,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -484,9 +501,26 @@
         }
       ],
       "status": "fail",
-      "cases": 28,
-      "failing": 18,
-      "failingDraftOnly": 0
+      "cases": 36,
+      "failing": 23,
+      "failingDraftOnly": 5
+    },
+    {
+      "id": "builtinNullability",
+      "title": "The fields of the introspection types have the Non-Null wrapping the spec gives them",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "fail",
+      "cases": 35,
+      "failing": 22,
+      "failingDraftOnly": 22,
+      "basis": "The types of the introspection fields are given only by the definitions §4.2 introduces with \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", which has no key word. The sections below say what each field returns (\"isRepeatable must return a Boolean\"), and a field whose type differs only in Non-Null can still return exactly that. Any other change of type stays under builtinDefinitions, a MUST."
     },
     {
       "id": "builtinAdditions",
@@ -500,10 +534,33 @@
         }
       ],
       "status": "fail",
-      "cases": 28,
-      "failing": 18,
-      "failingDraftOnly": 0,
+      "cases": 35,
+      "failing": 11,
+      "failingDraftOnly": 2,
       "basis": "No sentence of §4 forbids extending the introspection types. The nearest is \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", which uses no key word, and Appendix A says \"A conforming implementation of GraphQL may provide additional functionality, but must not do so where explicitly disallowed\". Leaving out or changing a definition stays a MUST, under builtinDefinitions."
+    },
+    {
+      "id": "builtinEdition",
+      "title": "Under the October 2021 profile, a built-in definition that differs from October 2021's is as the draft defines it",
+      "level": "INFO",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "basis": "The kit grades against the draft; the October 2021 profile is a fallback for a service whose introspection types the draft's query can't ask. A built-in definition (or an addition) that is exactly the draft's breaks nothing the draft requires, so it is reported here, not under builtinDefinitions or builtinAdditions.",
+      "note": "Graded only under the October 2021 profile."
     },
     {
       "id": "typename",
@@ -517,7 +574,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -532,12 +589,12 @@
           "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
         }
       ],
-      "status": "untested",
-      "cases": 0,
+      "status": "pass",
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0,
       "edition": "draft",
-      "note": "Not graded: the implementation answered the October 2021 query, and October 2021 has no Stable Ordering."
+      "note": "Draft only: October 2021 has no Stable Ordering."
     },
     {
       "id": "other",
@@ -551,7 +608,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     }
@@ -560,23 +617,29 @@
     {
       "checks": [
         "builtinAdditions",
-        "builtinDefinitions"
+        "builtinDefinitions",
+        "builtinNullability"
       ],
-      "summary": "the built-in @deprecated isn't as October 2021 defines it (directives); the built-in @deprecated(reason:) isn't as October 2021 defines it (arguments); the built-in __Directive.args has an argument October 2021 doesn't define; the built-in __Field.args has an argument October 2021 doesn't define; the built-in __InputValue has a field October 2021 doesn't define; the built-in __Type has a field October 2021 doesn't define; the built-in __Type.inputFields has an argument October 2021 doesn't define",
-      "cases": 14,
+      "summary": "the built-in @deprecated isn't as the spec defines it (directives); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue.isDeprecated has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Type has a field the spec doesn't define; the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments)",
+      "cases": 11,
       "fixtures": {
-        "minimal": 2,
-        "interfaces": 2,
-        "defaults": 2,
-        "deprecation": 2,
-        "roots": 2,
-        "builtinScalars": 2,
-        "order": 2
+        "minimal": 1,
+        "rich": 1,
+        "interfaces": 1,
+        "defaults": 1,
+        "deprecation": 1,
+        "inputDeprecation": 1,
+        "roots": 1,
+        "builtinScalars": 1,
+        "scalars": 1,
+        "oneOf": 1,
+        "order": 1
       },
       "fixture": "minimal.inc",
-      "problem": "added:arguments at __Directive.args, added:arguments at __Field.args, added:arguments at __Type.inputFields, added:fields at __InputValue, added:fields at __Type, arguments at @deprecated(reason:), directives at @deprecated",
+      "problem": "added:fields at __Type, arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, nullability at __InputValue.isDeprecated",
+      "draftOnly": 2,
       "example": {
-        "input": "type Query { a: Int }  (the introspection query, October 2021 profile; includeDeprecated: true)",
+        "input": "type Query { a: Int }  (the introspection query; includeDeprecated: true)",
         "response": {
           "name": "deprecated",
           "description": "Marks the field, argument, input field or enum value as deprecated",
@@ -600,7 +663,9 @@
                   "ofType": null
                 }
               },
-              "defaultValue": "\"No longer supported\""
+              "defaultValue": "\"No longer supported\"",
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -610,103 +675,338 @@
           "isRepeatable": false,
           "locations": [
             "FIELD_DEFINITION",
-            "ENUM_VALUE"
+            "ARGUMENT_DEFINITION",
+            "INPUT_FIELD_DEFINITION",
+            "ENUM_VALUE",
+            "DIRECTIVE_DEFINITION"
           ],
           "args": [
             {
               "name": "reason",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
               },
-              "defaultValue": "\"No longer supported\""
+              "defaultValue": "\"No longer supported\"",
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "isDeprecated": false,
+          "deprecationReason": null
+        }
+      }
+    },
+    {
+      "checks": [
+        "builtinDefinitions",
+        "builtinNullability"
+      ],
+      "summary": "the built-in @deprecated isn't as the spec defines it (directives); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue.isDeprecated has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments)",
+      "cases": 11,
+      "fixtures": {
+        "minimal": 1,
+        "rich": 1,
+        "interfaces": 1,
+        "defaults": 1,
+        "deprecation": 1,
+        "inputDeprecation": 1,
+        "roots": 1,
+        "builtinScalars": 1,
+        "scalars": 1,
+        "oneOf": 1,
+        "order": 1
+      },
+      "fixture": "minimal.defaults",
+      "problem": "arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, nullability at __InputValue.isDeprecated",
+      "draftOnly": 2,
+      "example": {
+        "input": "type Query { a: Int }  (the introspection query; includeDeprecated: the default)",
+        "response": {
+          "name": "deprecated",
+          "description": "Marks the field, argument, input field or enum value as deprecated",
+          "isRepeatable": false,
+          "locations": [
+            "FIELD_DEFINITION",
+            "ARGUMENT_DEFINITION",
+            "ENUM_VALUE",
+            "INPUT_FIELD_DEFINITION"
+          ],
+          "args": [
+            {
+              "name": "reason",
+              "description": "The reason for the deprecation",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": "\"No longer supported\"",
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
-        }
-      }
-    },
-    {
-      "checks": [
-        "builtinAdditions",
-        "builtinDefinitions",
-        "descriptions"
-      ],
-      "summary": "descriptions are the schema's: differs from Introspection.tla; the built-in @deprecated isn't as October 2021 defines it (directives); the built-in @deprecated(reason:) isn't as October 2021 defines it (arguments); the built-in __Directive.args has an argument October 2021 doesn't define; the built-in __Field.args has an argument October 2021 doesn't define; the built-in __InputValue has a field October 2021 doesn't define; the built-in __Type has a field October 2021 doesn't define; the built-in __Type.inputFields has an argument October 2021 doesn't define",
-      "cases": 4,
-      "fixtures": {
-        "rich": 2,
-        "scalars": 2
-      },
-      "fixture": "rich.inc",
-      "problem": "added:arguments at __Directive.args, added:arguments at __Field.args, added:arguments at __Type.inputFields, added:fields at __InputValue, added:fields at __Type, arguments at @deprecated(reason:), description at Date, directives at @deprecated",
-      "example": {
-        "input": "\"\"\"The schema\"\"\" schema { query: Q mutation: M } \"The root\" type Q { a(\"An argument\" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: \"gone\"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X \"Why\" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date \"Tags a field\" directive @tag(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (the introspection query, October 2021 profile; includeDeprecated: true)",
-        "response": {
-          "kind": "SCALAR",
-          "name": "Date",
-          "description": "",
-          "specifiedByURL": null,
-          "fields": null,
-          "inputFields": null,
-          "interfaces": null,
-          "enumValues": null,
-          "possibleTypes": null
         },
         "expected": {
-          "kind": "SCALAR",
-          "name": "Date",
+          "name": "deprecated",
           "description": null,
-          "specifiedByURL": null,
-          "fields": null,
-          "inputFields": null,
-          "interfaces": null,
-          "enumValues": null,
-          "possibleTypes": null
+          "isRepeatable": false,
+          "locations": [
+            "FIELD_DEFINITION",
+            "ARGUMENT_DEFINITION",
+            "INPUT_FIELD_DEFINITION",
+            "ENUM_VALUE",
+            "DIRECTIVE_DEFINITION"
+          ],
+          "args": [
+            {
+              "name": "reason",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": "\"No longer supported\"",
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "isDeprecated": false,
+          "deprecationReason": null
         }
       }
     },
     {
       "checks": [
-        "descriptions"
+        "builtinDefinitions"
       ],
-      "summary": "descriptions are the schema's: differs from Introspection.tla",
-      "cases": 2,
+      "summary": "the introspection types lack __Directive.isDeprecated, __Directive.deprecationReason and __Schema.directives(includeDeprecated:), so the kit leaves them out of every query, and grades what it can see without them",
+      "cases": 1,
       "fixtures": {
-        "rich": 1,
-        "scalars": 1
+        "discovery": 1
       },
-      "fixture": "rich.lookup",
-      "problem": "description at Date",
+      "fixture": "discovery",
+      "problem": "__Directive.isDeprecated, __Directive.deprecationReason, __Schema.directives(includeDeprecated:)",
+      "draftOnly": 1,
+      "edition": "draft",
       "example": {
-        "input": "\"\"\"The schema\"\"\" schema { query: Q mutation: M } \"The root\" type Q { a(\"An argument\" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: \"gone\"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X \"Why\" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date \"Tags a field\" directive @tag(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (__type(name:) for Q, E, In, Pick, Date, U, Unknown, October 2021 profile; includeDeprecated: true)",
+        "input": "the fields of each introspection type, with their arguments (the kit's IntrospectionFields query)",
         "response": {
-          "__type(name: \"Date\")": {
-            "kind": "SCALAR",
-            "name": "Date",
-            "description": "",
-            "specifiedByURL": null,
-            "fields": null,
-            "inputFields": null,
-            "interfaces": null,
-            "enumValues": null,
-            "possibleTypes": null
+          "data": {
+            "a": {
+              "fields": [
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "types",
+                  "args": []
+                },
+                {
+                  "name": "queryType",
+                  "args": []
+                },
+                {
+                  "name": "mutationType",
+                  "args": []
+                },
+                {
+                  "name": "directives",
+                  "args": []
+                },
+                {
+                  "name": "subscriptionType",
+                  "args": []
+                }
+              ]
+            },
+            "b": {
+              "fields": [
+                {
+                  "name": "kind",
+                  "args": []
+                },
+                {
+                  "name": "name",
+                  "args": []
+                },
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "fields",
+                  "args": [
+                    {
+                      "name": "includeDeprecated"
+                    }
+                  ]
+                },
+                {
+                  "name": "interfaces",
+                  "args": []
+                },
+                {
+                  "name": "possibleTypes",
+                  "args": []
+                },
+                {
+                  "name": "enumValues",
+                  "args": [
+                    {
+                      "name": "includeDeprecated"
+                    }
+                  ]
+                },
+                {
+                  "name": "inputFields",
+                  "args": [
+                    {
+                      "name": "includeDeprecated"
+                    }
+                  ]
+                },
+                {
+                  "name": "ofType",
+                  "args": []
+                },
+                {
+                  "name": "isOneOf",
+                  "args": []
+                },
+                {
+                  "name": "specifiedByURL",
+                  "args": []
+                }
+              ]
+            },
+            "c": {
+              "fields": [
+                {
+                  "name": "name",
+                  "args": []
+                },
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "args",
+                  "args": [
+                    {
+                      "name": "includeDeprecated"
+                    }
+                  ]
+                },
+                {
+                  "name": "type",
+                  "args": []
+                },
+                {
+                  "name": "isDeprecated",
+                  "args": []
+                },
+                {
+                  "name": "deprecationReason",
+                  "args": []
+                }
+              ]
+            },
+            "d": {
+              "fields": [
+                {
+                  "name": "name",
+                  "args": []
+                },
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "type",
+                  "args": []
+                },
+                {
+                  "name": "defaultValue",
+                  "args": []
+                },
+                {
+                  "name": "isDeprecated",
+                  "args": []
+                },
+                {
+                  "name": "deprecationReason",
+                  "args": []
+                }
+              ]
+            },
+            "e": {
+              "fields": [
+                {
+                  "name": "name",
+                  "args": []
+                },
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "isDeprecated",
+                  "args": []
+                },
+                {
+                  "name": "deprecationReason",
+                  "args": []
+                }
+              ]
+            },
+            "f": {
+              "fields": [
+                {
+                  "name": "name",
+                  "args": []
+                },
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "isRepeatable",
+                  "args": []
+                },
+                {
+                  "name": "locations",
+                  "args": []
+                },
+                {
+                  "name": "args",
+                  "args": [
+                    {
+                      "name": "includeDeprecated"
+                    }
+                  ]
+                }
+              ]
+            }
           }
         },
-        "expected": {
-          "__type(name: \"Date\")": {
-            "kind": "SCALAR",
-            "name": "Date",
-            "description": null,
-            "specifiedByURL": null,
-            "fields": null,
-            "inputFields": null,
-            "interfaces": null,
-            "enumValues": null,
-            "possibleTypes": null
-          }
-        }
+        "expected": "the fields and arguments the spec defines, including __Directive.isDeprecated, __Directive.deprecationReason and __Schema.directives(includeDeprecated:)"
       }
     }
   ],

@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-directives",
     "idle",
     "introspect",
     "invalid-results",
@@ -16,19 +17,29 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 28
+    "vectors": 39,
+    "graded": 39,
+    "skipped": {}
   },
-  "profile": "oct2021",
-  "profileNote": "The draft's introspection query was rejected (\"Field 'directives' doesn't accept argument 'includeDeprecated'\") and October 2021's was answered, so this run grades against October 2021.",
-  "checkerSelfTest": "passed (148 negative controls)",
+  "profile": "draft",
+  "profileNote": "The draft's introspection query was rejected (\"Field 'directives' doesn't accept argument 'includeDeprecated'\"). The introspection types lack __Directive.isDeprecated, __Directive.deprecationReason and __Schema.directives(includeDeprecated:), so this run asks the draft's query without them, grades against the draft, and counts what they lack once, under builtinDefinitions.",
+  "missingFields": [
+    "__Directive.isDeprecated",
+    "__Directive.deprecationReason",
+    "__Schema.directives(includeDeprecated:)"
+  ],
+  "checkerSelfTest": "passed (176 negative controls)",
   "cases": {
-    "submitted": 28,
-    "distinct": 28,
-    "malformed": 3,
-    "skipped": 10
+    "submitted": 39,
+    "distinct": 39,
+    "malformed": 0,
+    "crashed": 3,
+    "notGraded": {
+      "the schema applies a directive to a directive definition, which only the draft's grammar has (§3.13 DirectiveDefinition)": 3
+    }
   },
   "adapterProblems": 0,
   "checks": [
@@ -54,7 +65,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 39,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -70,7 +81,7 @@
         }
       ],
       "status": "fail",
-      "cases": 28,
+      "cases": 36,
       "failing": 3,
       "failingDraftOnly": 0
     },
@@ -91,7 +102,7 @@
         }
       ],
       "status": "pass",
-      "cases": 16,
+      "cases": 20,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -107,7 +118,7 @@
         }
       ],
       "status": "fail",
-      "cases": 16,
+      "cases": 20,
       "failing": 2,
       "failingDraftOnly": 0
     },
@@ -128,7 +139,7 @@
         }
       ],
       "status": "pass",
-      "cases": 16,
+      "cases": 20,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -144,7 +155,7 @@
         }
       ],
       "status": "fail",
-      "cases": 9,
+      "cases": 12,
       "failing": 1,
       "failingDraftOnly": 0
     },
@@ -159,10 +170,10 @@
           "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
         }
       ],
-      "status": "pass",
-      "cases": 25,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "status": "fail",
+      "cases": 33,
+      "failing": 32,
+      "failingDraftOnly": 32
     },
     {
       "id": "fields",
@@ -181,7 +192,7 @@
         }
       ],
       "status": "pass",
-      "cases": 25,
+      "cases": 32,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -207,13 +218,13 @@
         }
       ],
       "status": "pass",
-      "cases": 25,
+      "cases": 32,
       "failing": 0,
       "failingDraftOnly": 0
     },
     {
       "id": "defaultValue",
-      "title": "defaultValue encodes the default value, and is null without one",
+      "title": "defaultValue is null for an input value without a default, and otherwise null or an encoding of the default",
       "level": "MUST",
       "spec": [
         {
@@ -223,9 +234,26 @@
         }
       ],
       "status": "pass",
-      "cases": 25,
+      "cases": 32,
       "failing": 0,
       "failingDraftOnly": 0
+    },
+    {
+      "id": "defaultValueOmitted",
+      "title": "defaultValue encodes the default value of an input value that has one, rather than returning null",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "4.2.4",
+          "title": "The \\_\\_InputValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 32,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "basis": "§4.2.4: \"defaultValue may return a String encoding (using the GraphQL language) of the default value used by this input value in the condition a value is not provided at runtime. If this input value has no default value, returns null.\" By Appendix A, a lowercase \"may\" keeps its RFC 2119 meaning, so the encoding is optional; the intent is plainly that a default is encoded, which makes this a SHOULD. A string that isn't an encoding of the default, or one for an input value without a default, still fails defaultValue."
     },
     {
       "id": "inputFields",
@@ -244,7 +272,7 @@
         }
       ],
       "status": "pass",
-      "cases": 25,
+      "cases": 32,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -265,7 +293,7 @@
         }
       ],
       "status": "pass",
-      "cases": 25,
+      "cases": 32,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -281,7 +309,7 @@
         }
       ],
       "status": "pass",
-      "cases": 25,
+      "cases": 32,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -322,15 +350,14 @@
         }
       ],
       "status": "pass",
-      "cases": 25,
+      "cases": 32,
       "failing": 0,
       "failingDraftOnly": 0,
-      "oct2021": "fields and enum values only",
-      "note": "Graded for fields and enum values only: the implementation answered the October 2021 query."
+      "oct2021": "fields and enum values only"
     },
     {
       "id": "specifiedByURL",
-      "title": "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL",
+      "title": "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null",
       "level": "MUST",
       "spec": [
         {
@@ -339,24 +366,19 @@
           "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
         },
         {
-          "number": "3.13",
-          "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
-        },
-        {
           "number": "3.13.4",
           "title": "@specifiedBy",
           "url": "https://spec.graphql.org/draft/#sec-specifiedBy"
         }
       ],
       "status": "pass",
-      "cases": 25,
+      "cases": 32,
       "failing": 0,
       "failingDraftOnly": 0
     },
     {
       "id": "isOneOf",
-      "title": "isOneOf is true exactly for OneOf input objects; @oneOf is returned when one is",
+      "title": "isOneOf is true exactly for OneOf input objects",
       "level": "MUST",
       "spec": [
         {
@@ -368,24 +390,19 @@
           "number": "3.10.1",
           "title": "OneOf Input Objects",
           "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
-        },
-        {
-          "number": "3.13",
-          "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
         }
       ],
-      "status": "untested",
-      "cases": 0,
+      "status": "pass",
+      "cases": 32,
       "failing": 0,
       "failingDraftOnly": 0,
       "edition": "draft",
-      "note": "Not graded: the implementation answered the October 2021 query, and October 2021 has no OneOf input objects."
+      "note": "Draft only: October 2021 has no OneOf input objects."
     },
     {
       "id": "descriptions",
-      "title": "Descriptions are the schema's",
-      "level": "MUST",
+      "title": "A description the document gives is returned as it is, the schema's included",
+      "level": "SHOULD",
       "spec": [
         {
           "number": "3.2",
@@ -399,13 +416,14 @@
         }
       ],
       "status": "fail",
-      "cases": 25,
+      "cases": 32,
       "failing": 2,
-      "failingDraftOnly": 0
+      "failingDraftOnly": 0,
+      "basis": "§3.2: documentation is \"written immediately alongside definitions in a TypeSystemDocument and made available via introspection\", which has no key word, and §4.2 says of every description field that it \"may return a String or null\". So a description the document gives that is lost or replaced fails this SHOULD, and any description is accepted for a definition the document doesn't describe (\"\" or one of the service's own included)."
     },
     {
       "id": "directives",
-      "title": "directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types",
+      "title": "directives describes the schema's own directives (name, locations, isRepeatable), and returns any built-in directive the result shows is provided (@specifiedBy for a specifiedByURL, @oneOf for a true isOneOf); any of the service's own takes input types",
       "level": "MUST",
       "spec": [
         {
@@ -425,7 +443,7 @@
         }
       ],
       "status": "pass",
-      "cases": 16,
+      "cases": 20,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -461,7 +479,7 @@
         }
       ],
       "status": "pass",
-      "cases": 16,
+      "cases": 20,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -482,9 +500,26 @@
         }
       ],
       "status": "fail",
-      "cases": 25,
-      "failing": 16,
-      "failingDraftOnly": 0
+      "cases": 33,
+      "failing": 21,
+      "failingDraftOnly": 5
+    },
+    {
+      "id": "builtinNullability",
+      "title": "The fields of the introspection types have the Non-Null wrapping the spec gives them",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "fail",
+      "cases": 32,
+      "failing": 20,
+      "failingDraftOnly": 4,
+      "basis": "The types of the introspection fields are given only by the definitions §4.2 introduces with \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", which has no key word. The sections below say what each field returns (\"isRepeatable must return a Boolean\"), and a field whose type differs only in Non-Null can still return exactly that. Any other change of type stays under builtinDefinitions, a MUST."
     },
     {
       "id": "builtinAdditions",
@@ -498,10 +533,33 @@
         }
       ],
       "status": "fail",
-      "cases": 25,
-      "failing": 16,
-      "failingDraftOnly": 0,
+      "cases": 32,
+      "failing": 10,
+      "failingDraftOnly": 2,
       "basis": "No sentence of §4 forbids extending the introspection types. The nearest is \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", which uses no key word, and Appendix A says \"A conforming implementation of GraphQL may provide additional functionality, but must not do so where explicitly disallowed\". Leaving out or changing a definition stays a MUST, under builtinDefinitions."
+    },
+    {
+      "id": "builtinEdition",
+      "title": "Under the October 2021 profile, a built-in definition that differs from October 2021's is as the draft defines it",
+      "level": "INFO",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "basis": "The kit grades against the draft; the October 2021 profile is a fallback for a service whose introspection types the draft's query can't ask. A built-in definition (or an addition) that is exactly the draft's breaks nothing the draft requires, so it is reported here, not under builtinDefinitions or builtinAdditions.",
+      "note": "Graded only under the October 2021 profile."
     },
     {
       "id": "typename",
@@ -515,7 +573,7 @@
         }
       ],
       "status": "pass",
-      "cases": 25,
+      "cases": 32,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -530,12 +588,12 @@
           "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
         }
       ],
-      "status": "untested",
-      "cases": 0,
-      "failing": 0,
-      "failingDraftOnly": 0,
+      "status": "fail",
+      "cases": 32,
+      "failing": 9,
+      "failingDraftOnly": 9,
       "edition": "draft",
-      "note": "Not graded: the implementation answered the October 2021 query, and October 2021 has no Stable Ordering."
+      "note": "Draft only: October 2021 has no Stable Ordering."
     },
     {
       "id": "other",
@@ -549,7 +607,7 @@
         }
       ],
       "status": "pass",
-      "cases": 25,
+      "cases": 32,
       "failing": 0,
       "failingDraftOnly": 0
     }
@@ -557,283 +615,116 @@
   "findings": [
     {
       "checks": [
-        "builtinAdditions",
-        "builtinDefinitions"
+        "typeKinds"
       ],
-      "summary": "the built-in @deprecated isn't as October 2021 defines it (directives); the built-in __Directive has a field October 2021 doesn't define; the built-in __Directive.args has an argument October 2021 doesn't define; the built-in __Directive.isRepeatable isn't as October 2021 defines it (fields); the built-in __Field.args has an argument October 2021 doesn't define; the built-in __InputValue has a field October 2021 doesn't define; the built-in __Type has a field October 2021 doesn't define; the built-in __Type.inputFields has an argument October 2021 doesn't define",
-      "cases": 6,
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 4,
+      "fixtures": {
+        "deprecation": 2,
+        "inputDeprecation": 2
+      },
+      "fixture": "deprecation.lookup",
+      "problem": "isOneOfNull at E, isOneOfNull at Old, isOneOfNull at Query",
+      "draftOnly": 4,
+      "example": {
+        "input": "type Query { a: Int @deprecated, b(y: Int): Int @deprecated(reason: \"Use c\"), c: E, old: Old } type Old { x: Int @deprecated(reason: \"All of it\") } enum E { A B @deprecated(reason: \"Gone\") }  (__type(name:) for Query, Old, E, Unknown; includeDeprecated: true)",
+        "response": {
+          "__type(name: \"E\")": {
+            "kind": "ENUM",
+            "name": "E",
+            "description": null,
+            "specifiedByURL": null,
+            "isOneOf": false,
+            "fields": null,
+            "inputFields": null,
+            "interfaces": null,
+            "enumValues": [
+              {
+                "name": "A",
+                "description": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "B",
+                "description": null,
+                "isDeprecated": true,
+                "deprecationReason": "Gone"
+              }
+            ],
+            "possibleTypes": null
+          }
+        },
+        "expected": {
+          "__type(name: \"E\")": {
+            "kind": "ENUM",
+            "name": "E",
+            "description": null,
+            "specifiedByURL": null,
+            "isOneOf": null,
+            "fields": null,
+            "inputFields": null,
+            "interfaces": null,
+            "enumValues": [
+              {
+                "name": "A",
+                "description": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "B",
+                "description": null,
+                "isDeprecated": true,
+                "deprecationReason": "Gone"
+              }
+            ],
+            "possibleTypes": null
+          }
+        }
+      },
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "builtinAdditions",
+        "builtinDefinitions",
+        "builtinNullability",
+        "typeKinds"
+      ],
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in Int's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive has a field the spec doesn't define; the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 3,
       "fixtures": {
         "minimal": 1,
-        "interfaces": 1,
         "deprecation": 1,
-        "builtinScalars": 1,
-        "scalars": 1,
-        "order": 1
+        "inputDeprecation": 1
       },
       "fixture": "minimal.inc",
-      "problem": "added:arguments at __Directive.args, added:arguments at __Field.args, added:arguments at __Type.inputFields, added:fields at __Directive, added:fields at __InputValue, added:fields at __Type, directives at @deprecated, fields at __Directive.isRepeatable",
+      "problem": "added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at Boolean, isOneOfNull at Int, isOneOfNull at Query, isOneOfNull at String, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf",
+      "draftOnly": 1,
       "example": {
-        "input": "type Query { a: Int }  (the introspection query, October 2021 profile; includeDeprecated: true)",
+        "input": "type Query { a: Int }  (the introspection query; includeDeprecated: true)",
         "response": {
-          "kind": "OBJECT",
-          "name": "__Directive",
-          "description": "A Directive provides a way to describe alternate runtime execution and type validation behavior in a GraphQL document.\n\nIn some cases, you need to provide options to alter GraphQL's execution behavior in ways field arguments will not suffice, such as conditionally including or skipping a field. Directives provide this by describing additional information to the executor.",
+          "kind": "SCALAR",
+          "name": "Int",
+          "description": "Represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.",
           "specifiedByURL": null,
-          "fields": [
-            {
-              "name": "args",
-              "description": null,
-              "args": [
-                {
-                  "name": "includeDeprecated",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Boolean",
-                    "ofType": null
-                  },
-                  "defaultValue": "false"
-                }
-              ],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "OBJECT",
-                      "name": "__InputValue",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "description",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "isRepeatable",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "Boolean",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "locations",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "ENUM",
-                      "name": "__DirectiveLocation",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "name",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "onField",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": true,
-              "deprecationReason": "Use `locations`."
-            },
-            {
-              "name": "onFragment",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": true,
-              "deprecationReason": "Use `locations`."
-            },
-            {
-              "name": "onOperation",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": true,
-              "deprecationReason": "Use `locations`."
-            }
-          ],
+          "isOneOf": false,
+          "fields": null,
           "inputFields": null,
-          "interfaces": [],
+          "interfaces": null,
           "enumValues": null,
           "possibleTypes": null
         },
         "expected": {
-          "kind": "OBJECT",
-          "name": "__Directive",
+          "kind": "SCALAR",
+          "name": "Int",
           "description": null,
           "specifiedByURL": null,
-          "fields": [
-            {
-              "name": "name",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "description",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "locations",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "ENUM",
-                      "name": "__DirectiveLocation",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "args",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "OBJECT",
-                      "name": "__InputValue",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "isRepeatable",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
+          "isOneOf": null,
+          "fields": null,
           "inputFields": null,
-          "interfaces": [],
+          "interfaces": null,
           "enumValues": null,
           "possibleTypes": null
         }
@@ -841,235 +732,43 @@
     },
     {
       "checks": [
-        "builtinAdditions",
-        "builtinDefinitions"
+        "builtinDefinitions",
+        "builtinNullability",
+        "typeKinds"
       ],
-      "summary": "the built-in @deprecated isn't as October 2021 defines it (directives); the built-in __Directive.args has an argument October 2021 doesn't define; the built-in __Directive.isRepeatable isn't as October 2021 defines it (fields); the built-in __Field.args has an argument October 2021 doesn't define; the built-in __InputValue has a field October 2021 doesn't define; the built-in __Type has a field October 2021 doesn't define; the built-in __Type.inputFields has an argument October 2021 doesn't define",
-      "cases": 6,
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in Int's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 3,
       "fixtures": {
         "minimal": 1,
-        "interfaces": 1,
         "deprecation": 1,
-        "builtinScalars": 1,
-        "scalars": 1,
-        "order": 1
+        "inputDeprecation": 1
       },
       "fixture": "minimal.defaults",
-      "problem": "added:arguments at __Directive.args, added:arguments at __Field.args, added:arguments at __Type.inputFields, added:fields at __InputValue, added:fields at __Type, directives at @deprecated, fields at __Directive.isRepeatable",
+      "problem": "arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at Boolean, isOneOfNull at Int, isOneOfNull at Query, isOneOfNull at String, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf",
+      "draftOnly": 1,
       "example": {
-        "input": "type Query { a: Int }  (the introspection query, October 2021 profile; includeDeprecated: the default)",
+        "input": "type Query { a: Int }  (the introspection query; includeDeprecated: the default)",
         "response": {
-          "kind": "OBJECT",
-          "name": "__Directive",
-          "description": "A Directive provides a way to describe alternate runtime execution and type validation behavior in a GraphQL document.\n\nIn some cases, you need to provide options to alter GraphQL's execution behavior in ways field arguments will not suffice, such as conditionally including or skipping a field. Directives provide this by describing additional information to the executor.",
+          "kind": "SCALAR",
+          "name": "Int",
+          "description": "Represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.",
           "specifiedByURL": null,
-          "fields": [
-            {
-              "name": "args",
-              "description": null,
-              "args": [
-                {
-                  "name": "includeDeprecated",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Boolean",
-                    "ofType": null
-                  },
-                  "defaultValue": "false"
-                }
-              ],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "OBJECT",
-                      "name": "__InputValue",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "description",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "isRepeatable",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "Boolean",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "locations",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "ENUM",
-                      "name": "__DirectiveLocation",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "name",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
+          "isOneOf": false,
+          "fields": null,
           "inputFields": null,
-          "interfaces": [],
+          "interfaces": null,
           "enumValues": null,
           "possibleTypes": null
         },
         "expected": {
-          "kind": "OBJECT",
-          "name": "__Directive",
+          "kind": "SCALAR",
+          "name": "Int",
           "description": null,
           "specifiedByURL": null,
-          "fields": [
-            {
-              "name": "name",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "description",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "locations",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "ENUM",
-                      "name": "__DirectiveLocation",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "args",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "OBJECT",
-                      "name": "__InputValue",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "isRepeatable",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
+          "isOneOf": null,
+          "fields": null,
           "inputFields": null,
-          "interfaces": [],
+          "interfaces": null,
           "enumValues": null,
           "possibleTypes": null
         }
@@ -1079,43 +778,330 @@
       "checks": [
         "executes"
       ],
-      "summary": "the schema didn't build, the query failed, or the result doesn't have the fields the query selects",
+      "kind": "crash",
+      "summary": "crashes: the adapter answered with an error",
       "cases": 3,
       "fixtures": {
         "defaults": 3
       },
       "fixture": "defaults.inc",
-      "problem": "the response has errors: from_definition: NoMethodError: undefined method 'map' for an instance of Integer",
+      "problem": "NoMethodError: undefined method 'map' for an instance of Integer",
       "example": {
-        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }  (the introspection query, October 2021 profile; includeDeprecated: true)",
-        "response": {
-          "response": {
-            "errors": [
-              {
-                "message": "from_definition: NoMethodError: undefined method 'map' for an instance of Integer"
-              }
-            ]
-          },
-          "crash": "from_definition: NoMethodError: undefined method 'map' for an instance of Integer"
-        },
+        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }  (the introspection query; includeDeprecated: true)",
+        "response": "the adapter answered with an error: NoMethodError: undefined method 'map' for an instance of Integer",
         "expected": "a well-formed execution result with exactly the fields the query selects, and no errors"
       }
     },
     {
       "checks": [
+        "order",
+        "typeKinds"
+      ],
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla",
+      "cases": 3,
+      "fixtures": {
+        "rich": 1,
+        "interfaces": 1,
+        "order": 1
+      },
+      "fixture": "rich.lookup",
+      "problem": "isOneOfNull at Date, isOneOfNull at E, isOneOfNull at Q, isOneOfNull at U, order at Q, order at U",
+      "draftOnly": 3,
+      "example": {
+        "input": "\"\"\"The schema\"\"\" schema { query: Q mutation: M } \"The root\" type Q { a(\"An argument\" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: \"gone\"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X \"Why\" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date \"Labels a field\" directive @label(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (__type(name:) for Q, E, In, Pick, Date, U, Unknown; includeDeprecated: true)",
+        "response": {
+          "__type(name: \"E\")": {
+            "kind": "ENUM",
+            "name": "E",
+            "description": null,
+            "specifiedByURL": null,
+            "isOneOf": false,
+            "fields": null,
+            "inputFields": null,
+            "interfaces": null,
+            "enumValues": [
+              {
+                "name": "X",
+                "description": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "Y",
+                "description": "Why",
+                "isDeprecated": true,
+                "deprecationReason": "No longer supported"
+              }
+            ],
+            "possibleTypes": null
+          }
+        },
+        "expected": {
+          "__type(name: \"E\")": {
+            "kind": "ENUM",
+            "name": "E",
+            "description": null,
+            "specifiedByURL": null,
+            "isOneOf": null,
+            "fields": null,
+            "inputFields": null,
+            "interfaces": null,
+            "enumValues": [
+              {
+                "name": "X",
+                "description": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "Y",
+                "description": "Why",
+                "isDeprecated": true,
+                "deprecationReason": "No longer supported"
+              }
+            ],
+            "possibleTypes": null
+          }
+        }
+      },
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "builtinDefinitions"
+      ],
+      "summary": "the introspection types lack __Directive.isDeprecated, __Directive.deprecationReason and __Schema.directives(includeDeprecated:), so the kit leaves them out of every query, and grades what it can see without them",
+      "cases": 1,
+      "fixtures": {
+        "discovery": 1
+      },
+      "fixture": "discovery",
+      "problem": "__Directive.isDeprecated, __Directive.deprecationReason, __Schema.directives(includeDeprecated:)",
+      "draftOnly": 1,
+      "edition": "draft",
+      "example": {
+        "input": "the fields of each introspection type, with their arguments (the kit's IntrospectionFields query)",
+        "response": {
+          "data": {
+            "a": {
+              "fields": [
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "directives",
+                  "args": []
+                },
+                {
+                  "name": "mutationType",
+                  "args": []
+                },
+                {
+                  "name": "queryType",
+                  "args": []
+                },
+                {
+                  "name": "subscriptionType",
+                  "args": []
+                },
+                {
+                  "name": "types",
+                  "args": []
+                }
+              ]
+            },
+            "b": {
+              "fields": [
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "enumValues",
+                  "args": [
+                    {
+                      "name": "includeDeprecated"
+                    }
+                  ]
+                },
+                {
+                  "name": "fields",
+                  "args": [
+                    {
+                      "name": "includeDeprecated"
+                    }
+                  ]
+                },
+                {
+                  "name": "inputFields",
+                  "args": [
+                    {
+                      "name": "includeDeprecated"
+                    }
+                  ]
+                },
+                {
+                  "name": "interfaces",
+                  "args": []
+                },
+                {
+                  "name": "isOneOf",
+                  "args": []
+                },
+                {
+                  "name": "kind",
+                  "args": []
+                },
+                {
+                  "name": "name",
+                  "args": []
+                },
+                {
+                  "name": "ofType",
+                  "args": []
+                },
+                {
+                  "name": "possibleTypes",
+                  "args": []
+                },
+                {
+                  "name": "specifiedByURL",
+                  "args": []
+                }
+              ]
+            },
+            "c": {
+              "fields": [
+                {
+                  "name": "args",
+                  "args": [
+                    {
+                      "name": "includeDeprecated"
+                    }
+                  ]
+                },
+                {
+                  "name": "deprecationReason",
+                  "args": []
+                },
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "isDeprecated",
+                  "args": []
+                },
+                {
+                  "name": "name",
+                  "args": []
+                },
+                {
+                  "name": "type",
+                  "args": []
+                }
+              ]
+            },
+            "d": {
+              "fields": [
+                {
+                  "name": "defaultValue",
+                  "args": []
+                },
+                {
+                  "name": "deprecationReason",
+                  "args": []
+                },
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "isDeprecated",
+                  "args": []
+                },
+                {
+                  "name": "name",
+                  "args": []
+                },
+                {
+                  "name": "type",
+                  "args": []
+                }
+              ]
+            },
+            "e": {
+              "fields": [
+                {
+                  "name": "deprecationReason",
+                  "args": []
+                },
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "isDeprecated",
+                  "args": []
+                },
+                {
+                  "name": "name",
+                  "args": []
+                }
+              ]
+            },
+            "f": {
+              "fields": [
+                {
+                  "name": "args",
+                  "args": [
+                    {
+                      "name": "includeDeprecated"
+                    }
+                  ]
+                },
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "isRepeatable",
+                  "args": []
+                },
+                {
+                  "name": "locations",
+                  "args": []
+                },
+                {
+                  "name": "name",
+                  "args": []
+                }
+              ]
+            }
+          }
+        },
+        "expected": "the fields and arguments the spec defines, including __Directive.isDeprecated, __Directive.deprecationReason and __Schema.directives(includeDeprecated:)"
+      }
+    },
+    {
+      "checks": [
         "builtinAdditions",
         "builtinDefinitions",
-        "descriptions"
+        "builtinNullability",
+        "descriptions",
+        "order",
+        "typeKinds"
       ],
-      "summary": "descriptions are the schema's: differs from Introspection.tla; the built-in @deprecated isn't as October 2021 defines it (directives); the built-in __Directive has a field October 2021 doesn't define; the built-in __Directive.args has an argument October 2021 doesn't define; the built-in __Directive.isRepeatable isn't as October 2021 defines it (fields); the built-in __Field.args has an argument October 2021 doesn't define; the built-in __InputValue has a field October 2021 doesn't define; the built-in __Type has a field October 2021 doesn't define; the built-in __Type.inputFields has an argument October 2021 doesn't define",
+      "summary": "a description the document gives is returned as it is, the schema's included: differs from Introspection.tla; a type's isOneOf is null for an input object, or not null for another kind (draft only); fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla; the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in ID's isOneOf is null for an input object, or not null for another kind (draft only); the built-in Int's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive has a field the spec doesn't define; the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
       "cases": 1,
       "fixtures": {
         "rich": 1
       },
       "fixture": "rich.inc",
-      "problem": "added:arguments at __Directive.args, added:arguments at __Field.args, added:arguments at __Type.inputFields, added:fields at __Directive, added:fields at __InputValue, added:fields at __Type, description at schema, directives at @deprecated, fields at __Directive.isRepeatable",
+      "problem": "added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), description at schema, directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at A, isOneOfNull at B, isOneOfNull at Boolean, isOneOfNull at Date, isOneOfNull at E, isOneOfNull at ID, isOneOfNull at Int, isOneOfNull at M, isOneOfNull at Q, isOneOfNull at String, isOneOfNull at U, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf, order at Q, order at U",
       "example": {
-        "input": "\"\"\"The schema\"\"\" schema { query: Q mutation: M } \"The root\" type Q { a(\"An argument\" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: \"gone\"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X \"Why\" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date \"Tags a field\" directive @tag(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (the introspection query, October 2021 profile; includeDeprecated: true)",
+        "input": "\"\"\"The schema\"\"\" schema { query: Q mutation: M } \"The root\" type Q { a(\"An argument\" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: \"gone\"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X \"Why\" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date \"Labels a field\" directive @label(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (the introspection query; includeDeprecated: true)",
         "response": {
           "__typename": "Q",
           "description": null,
@@ -1154,10 +1140,10 @@
           "directives": [
             "deprecated",
             "include",
+            "label",
             "oneOf",
             "skip",
-            "specifiedBy",
-            "tag"
+            "specifiedBy"
           ]
         },
         "expected": {
@@ -1196,30 +1182,33 @@
             "__TypeKind"
           ],
           "directives": [
-            "tag",
+            "label",
             "skip",
             "include",
             "deprecated",
-            "specifiedBy"
+            "specifiedBy",
+            "oneOf"
           ]
         }
       }
     },
     {
       "checks": [
-        "builtinAdditions",
         "builtinDefinitions",
-        "descriptions"
+        "builtinNullability",
+        "descriptions",
+        "order",
+        "typeKinds"
       ],
-      "summary": "descriptions are the schema's: differs from Introspection.tla; the built-in @deprecated isn't as October 2021 defines it (directives); the built-in __Directive.args has an argument October 2021 doesn't define; the built-in __Directive.isRepeatable isn't as October 2021 defines it (fields); the built-in __Field.args has an argument October 2021 doesn't define; the built-in __InputValue has a field October 2021 doesn't define; the built-in __Type has a field October 2021 doesn't define; the built-in __Type.inputFields has an argument October 2021 doesn't define",
+      "summary": "a description the document gives is returned as it is, the schema's included: differs from Introspection.tla; a type's isOneOf is null for an input object, or not null for another kind (draft only); fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla; the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in ID's isOneOf is null for an input object, or not null for another kind (draft only); the built-in Int's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
       "cases": 1,
       "fixtures": {
         "rich": 1
       },
       "fixture": "rich.defaults",
-      "problem": "added:arguments at __Directive.args, added:arguments at __Field.args, added:arguments at __Type.inputFields, added:fields at __InputValue, added:fields at __Type, description at schema, directives at @deprecated, fields at __Directive.isRepeatable",
+      "problem": "arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), description at schema, directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at A, isOneOfNull at B, isOneOfNull at Boolean, isOneOfNull at Date, isOneOfNull at E, isOneOfNull at ID, isOneOfNull at Int, isOneOfNull at M, isOneOfNull at Q, isOneOfNull at String, isOneOfNull at U, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf, order at U",
       "example": {
-        "input": "\"\"\"The schema\"\"\" schema { query: Q mutation: M } \"The root\" type Q { a(\"An argument\" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: \"gone\"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X \"Why\" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date \"Tags a field\" directive @tag(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (the introspection query, October 2021 profile; includeDeprecated: the default)",
+        "input": "\"\"\"The schema\"\"\" schema { query: Q mutation: M } \"The root\" type Q { a(\"An argument\" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: \"gone\"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X \"Why\" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date \"Labels a field\" directive @label(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (the introspection query; includeDeprecated: the default)",
         "response": {
           "__typename": "Q",
           "description": null,
@@ -1258,10 +1247,10 @@
           "directives": [
             "deprecated",
             "include",
+            "label",
             "oneOf",
             "skip",
-            "specifiedBy",
-            "tag"
+            "specifiedBy"
           ]
         },
         "expected": {
@@ -1300,11 +1289,12 @@
             "__TypeKind"
           ],
           "directives": [
-            "tag",
+            "label",
             "skip",
             "include",
             "deprecated",
-            "specifiedBy"
+            "specifiedBy",
+            "oneOf"
           ]
         }
       }
@@ -1313,23 +1303,155 @@
       "checks": [
         "builtinAdditions",
         "builtinDefinitions",
+        "builtinNullability",
+        "order",
+        "typeKinds"
+      ],
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla; the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in ID's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive has a field the spec doesn't define; the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 1,
+      "fixtures": {
+        "interfaces": 1
+      },
+      "fixture": "interfaces.inc",
+      "problem": "added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at Boolean, isOneOfNull at ID, isOneOfNull at Image, isOneOfNull at Node, isOneOfNull at Query, isOneOfNull at Resource, isOneOfNull at String, isOneOfNull at User, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf, order at Image, order at User",
+      "example": {
+        "input": "interface Node { id: ID! } interface Resource implements Node { id: ID! url: [[String!]]! } type Image implements Resource & Node { id: ID! url: [[String!]]! } type User implements Node { id: ID! friends: [User!] } type Query { node(id: ID!): Node, resource: Resource }  (the introspection query; includeDeprecated: true)",
+        "response": {
+          "kind": "SCALAR",
+          "name": "String",
+          "description": "Represents textual data as UTF-8 character sequences. This type is most often used by GraphQL to represent free-form human-readable text.",
+          "specifiedByURL": null,
+          "isOneOf": false,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        "expected": {
+          "kind": "SCALAR",
+          "name": "String",
+          "description": null,
+          "specifiedByURL": null,
+          "isOneOf": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        }
+      }
+    },
+    {
+      "checks": [
+        "builtinDefinitions",
+        "builtinNullability",
+        "order",
+        "typeKinds"
+      ],
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla; the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in ID's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 1,
+      "fixtures": {
+        "interfaces": 1
+      },
+      "fixture": "interfaces.defaults",
+      "problem": "arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at Boolean, isOneOfNull at ID, isOneOfNull at Image, isOneOfNull at Node, isOneOfNull at Query, isOneOfNull at Resource, isOneOfNull at String, isOneOfNull at User, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf, order at Image, order at User",
+      "example": {
+        "input": "interface Node { id: ID! } interface Resource implements Node { id: ID! url: [[String!]]! } type Image implements Resource & Node { id: ID! url: [[String!]]! } type User implements Node { id: ID! friends: [User!] } type Query { node(id: ID!): Node, resource: Resource }  (the introspection query; includeDeprecated: the default)",
+        "response": {
+          "kind": "SCALAR",
+          "name": "String",
+          "description": "Represents textual data as UTF-8 character sequences. This type is most often used by GraphQL to represent free-form human-readable text.",
+          "specifiedByURL": null,
+          "isOneOf": false,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        "expected": {
+          "kind": "SCALAR",
+          "name": "String",
+          "description": null,
+          "specifiedByURL": null,
+          "isOneOf": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        }
+      }
+    },
+    {
+      "checks": [
+        "builtinAdditions",
+        "builtinDefinitions",
+        "builtinNullability",
+        "typeKinds",
         "types"
       ],
-      "summary": "the built-in @deprecated isn't as October 2021 defines it (directives); the built-in __Directive has a field October 2021 doesn't define; the built-in __Directive.args has an argument October 2021 doesn't define; the built-in __Directive.isRepeatable isn't as October 2021 defines it (fields); the built-in __Field.args has an argument October 2021 doesn't define; the built-in __InputValue has a field October 2021 doesn't define; the built-in __Type has a field October 2021 doesn't define; the built-in __Type.inputFields has an argument October 2021 doesn't define; types is the set of all named types: differs from Introspection.tla",
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in Int's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive has a field the spec doesn't define; the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only); types is the set of all named types: differs from Introspection.tla",
       "cases": 1,
       "fixtures": {
         "roots": 1
       },
       "fixture": "roots.inc",
-      "problem": "added:arguments at __Directive.args, added:arguments at __Field.args, added:arguments at __Type.inputFields, added:fields at __Directive, added:fields at __InputValue, added:fields at __Type, directives at @deprecated, fields at __Directive.isRepeatable, types at Mutation",
+      "problem": "added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at Boolean, isOneOfNull at Int, isOneOfNull at Q, isOneOfNull at S, isOneOfNull at String, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf, types at Mutation",
       "example": {
-        "input": "schema { query: Q subscription: S } type Q { a: Int } type S { s: Int } type Mutation { m: Int }  (the introspection query, October 2021 profile; includeDeprecated: true)",
+        "input": "schema { query: Q subscription: S } type Q { a: Int } type S { s: Int } type Mutation { m: Int }  (the introspection query; includeDeprecated: true)",
         "response": "no type Mutation",
         "expected": {
           "kind": "OBJECT",
           "name": "Mutation",
           "description": null,
           "specifiedByURL": null,
+          "isOneOf": null,
+          "fields": [
+            {
+              "name": "m",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "Int",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        }
+      }
+    },
+    {
+      "checks": [
+        "builtinDefinitions",
+        "builtinNullability",
+        "typeKinds",
+        "types"
+      ],
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in Int's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only); types is the set of all named types: differs from Introspection.tla",
+      "cases": 1,
+      "fixtures": {
+        "roots": 1
+      },
+      "fixture": "roots.defaults",
+      "problem": "arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at Boolean, isOneOfNull at Int, isOneOfNull at Q, isOneOfNull at S, isOneOfNull at String, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf, types at Mutation",
+      "example": {
+        "input": "schema { query: Q subscription: S } type Q { a: Int } type S { s: Int } type Mutation { m: Int }  (the introspection query; includeDeprecated: the default)",
+        "response": "no type Mutation",
+        "expected": {
+          "kind": "OBJECT",
+          "name": "Mutation",
+          "description": null,
+          "specifiedByURL": null,
+          "isOneOf": null,
           "fields": [
             {
               "name": "m",
@@ -1355,39 +1477,39 @@
       "checks": [
         "builtinAdditions",
         "builtinDefinitions",
-        "types"
+        "builtinNullability",
+        "typeKinds"
       ],
-      "summary": "the built-in @deprecated isn't as October 2021 defines it (directives); the built-in __Directive.args has an argument October 2021 doesn't define; the built-in __Directive.isRepeatable isn't as October 2021 defines it (fields); the built-in __Field.args has an argument October 2021 doesn't define; the built-in __InputValue has a field October 2021 doesn't define; the built-in __Type has a field October 2021 doesn't define; the built-in __Type.inputFields has an argument October 2021 doesn't define; types is the set of all named types: differs from Introspection.tla",
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in Float's isOneOf is null for an input object, or not null for another kind (draft only); the built-in ID's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive has a field the spec doesn't define; the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
       "cases": 1,
       "fixtures": {
-        "roots": 1
+        "builtinScalars": 1
       },
-      "fixture": "roots.defaults",
-      "problem": "added:arguments at __Directive.args, added:arguments at __Field.args, added:arguments at __Type.inputFields, added:fields at __InputValue, added:fields at __Type, directives at @deprecated, fields at __Directive.isRepeatable, types at Mutation",
+      "fixture": "builtinScalars.inc",
+      "problem": "added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at Boolean, isOneOfNull at Float, isOneOfNull at ID, isOneOfNull at Query, isOneOfNull at String, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf",
       "example": {
-        "input": "schema { query: Q subscription: S } type Q { a: Int } type S { s: Int } type Mutation { m: Int }  (the introspection query, October 2021 profile; includeDeprecated: the default)",
-        "response": "no type Mutation",
+        "input": "directive @d(f: Float) on FIELD input In { id: ID } type Query { a(i: In): String }  (the introspection query; includeDeprecated: true)",
+        "response": {
+          "kind": "SCALAR",
+          "name": "Float",
+          "description": "Represents signed double-precision fractional values as specified by [IEEE 754](https://en.wikipedia.org/wiki/IEEE_floating_point).",
+          "specifiedByURL": null,
+          "isOneOf": false,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
         "expected": {
-          "kind": "OBJECT",
-          "name": "Mutation",
+          "kind": "SCALAR",
+          "name": "Float",
           "description": null,
           "specifiedByURL": null,
-          "fields": [
-            {
-              "name": "m",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "Int",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
+          "isOneOf": null,
+          "fields": null,
           "inputFields": null,
-          "interfaces": [],
+          "interfaces": null,
           "enumValues": null,
           "possibleTypes": null
         }
@@ -1395,29 +1517,472 @@
     },
     {
       "checks": [
-        "typeByName"
+        "builtinDefinitions",
+        "builtinNullability",
+        "typeKinds"
       ],
-      "summary": "__type(name:) doesn't return a type the schema has",
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in Float's isOneOf is null for an input object, or not null for another kind (draft only); the built-in ID's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 1,
+      "fixtures": {
+        "builtinScalars": 1
+      },
+      "fixture": "builtinScalars.defaults",
+      "problem": "arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at Boolean, isOneOfNull at Float, isOneOfNull at ID, isOneOfNull at Query, isOneOfNull at String, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf",
+      "example": {
+        "input": "directive @d(f: Float) on FIELD input In { id: ID } type Query { a(i: In): String }  (the introspection query; includeDeprecated: the default)",
+        "response": {
+          "kind": "SCALAR",
+          "name": "Float",
+          "description": "Represents signed double-precision fractional values as specified by [IEEE 754](https://en.wikipedia.org/wiki/IEEE_floating_point).",
+          "specifiedByURL": null,
+          "isOneOf": false,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        "expected": {
+          "kind": "SCALAR",
+          "name": "Float",
+          "description": null,
+          "specifiedByURL": null,
+          "isOneOf": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        }
+      }
+    },
+    {
+      "checks": [
+        "builtinAdditions",
+        "builtinDefinitions",
+        "builtinNullability",
+        "typeKinds"
+      ],
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive has a field the spec doesn't define; the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 1,
+      "fixtures": {
+        "scalars": 1
+      },
+      "fixture": "scalars.inc",
+      "problem": "added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at Boolean, isOneOfNull at Date, isOneOfNull at Plain, isOneOfNull at Query, isOneOfNull at String, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf",
+      "example": {
+        "input": "\"A date\" scalar Date @specifiedBy(url: \"https://example.com/date\") scalar Plain type Query { d: Date, p: Plain }  (the introspection query; includeDeprecated: true)",
+        "response": {
+          "kind": "SCALAR",
+          "name": "String",
+          "description": "Represents textual data as UTF-8 character sequences. This type is most often used by GraphQL to represent free-form human-readable text.",
+          "specifiedByURL": null,
+          "isOneOf": false,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        "expected": {
+          "kind": "SCALAR",
+          "name": "String",
+          "description": null,
+          "specifiedByURL": null,
+          "isOneOf": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        }
+      }
+    },
+    {
+      "checks": [
+        "builtinDefinitions",
+        "builtinNullability",
+        "typeKinds"
+      ],
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 1,
+      "fixtures": {
+        "scalars": 1
+      },
+      "fixture": "scalars.defaults",
+      "problem": "arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at Boolean, isOneOfNull at Date, isOneOfNull at Plain, isOneOfNull at Query, isOneOfNull at String, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf",
+      "example": {
+        "input": "\"A date\" scalar Date @specifiedBy(url: \"https://example.com/date\") scalar Plain type Query { d: Date, p: Plain }  (the introspection query; includeDeprecated: the default)",
+        "response": {
+          "kind": "SCALAR",
+          "name": "String",
+          "description": "Represents textual data as UTF-8 character sequences. This type is most often used by GraphQL to represent free-form human-readable text.",
+          "specifiedByURL": null,
+          "isOneOf": false,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        "expected": {
+          "kind": "SCALAR",
+          "name": "String",
+          "description": null,
+          "specifiedByURL": null,
+          "isOneOf": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        }
+      }
+    },
+    {
+      "checks": [
+        "builtinAdditions",
+        "builtinDefinitions",
+        "builtinNullability",
+        "typeKinds"
+      ],
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in ID's isOneOf is null for an input object, or not null for another kind (draft only); the built-in Int's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive has a field the spec doesn't define; the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 1,
+      "fixtures": {
+        "oneOf": 1
+      },
+      "fixture": "oneOf.inc",
+      "problem": "added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at Boolean, isOneOfNull at ID, isOneOfNull at Int, isOneOfNull at Query, isOneOfNull at String, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf",
+      "draftOnly": 1,
+      "example": {
+        "input": "[draft] input Pick @oneOf { id: ID, name: String } input Plain { x: Int! } type Query { a(p: Pick, q: Plain): Int }  (the introspection query; includeDeprecated: true)",
+        "response": {
+          "kind": "SCALAR",
+          "name": "Int",
+          "description": "Represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.",
+          "specifiedByURL": null,
+          "isOneOf": false,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        "expected": {
+          "kind": "SCALAR",
+          "name": "Int",
+          "description": null,
+          "specifiedByURL": null,
+          "isOneOf": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        }
+      },
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "builtinDefinitions",
+        "builtinNullability",
+        "typeKinds"
+      ],
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in ID's isOneOf is null for an input object, or not null for another kind (draft only); the built-in Int's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 1,
+      "fixtures": {
+        "oneOf": 1
+      },
+      "fixture": "oneOf.defaults",
+      "problem": "arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at Boolean, isOneOfNull at ID, isOneOfNull at Int, isOneOfNull at Query, isOneOfNull at String, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf",
+      "draftOnly": 1,
+      "example": {
+        "input": "[draft] input Pick @oneOf { id: ID, name: String } input Plain { x: Int! } type Query { a(p: Pick, q: Plain): Int }  (the introspection query; includeDeprecated: the default)",
+        "response": {
+          "kind": "SCALAR",
+          "name": "Int",
+          "description": "Represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.",
+          "specifiedByURL": null,
+          "isOneOf": false,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        "expected": {
+          "kind": "SCALAR",
+          "name": "Int",
+          "description": null,
+          "specifiedByURL": null,
+          "isOneOf": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        }
+      },
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "builtinAdditions",
+        "builtinDefinitions",
+        "builtinNullability",
+        "order",
+        "typeKinds"
+      ],
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla; the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in Int's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive has a field the spec doesn't define; the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 1,
+      "fixtures": {
+        "order": 1
+      },
+      "fixture": "order.inc",
+      "problem": "added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at A2, isOneOfNull at B2, isOneOfNull at Boolean, isOneOfNull at E, isOneOfNull at I1, isOneOfNull at I2, isOneOfNull at Int, isOneOfNull at O, isOneOfNull at Query, isOneOfNull at String, isOneOfNull at U, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf, order at O, order at Query, order at U",
+      "example": {
+        "input": "type Query { z: Int, a: Int, m(c: Int, b: Int, a: Int): O, u: U, e: E } interface I1 { x: Int } interface I2 { x: Int } type O implements I2 & I1 { x: Int } type A2 { a: Int } type B2 { b: Int } union U = B2 | A2 enum E { Z A M }  (the introspection query; includeDeprecated: true)",
+        "response": {
+          "kind": "ENUM",
+          "name": "E",
+          "description": null,
+          "specifiedByURL": null,
+          "isOneOf": false,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "Z",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "A",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "M",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        "expected": {
+          "kind": "ENUM",
+          "name": "E",
+          "description": null,
+          "specifiedByURL": null,
+          "isOneOf": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "Z",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "A",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "M",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        }
+      }
+    },
+    {
+      "checks": [
+        "builtinDefinitions",
+        "builtinNullability",
+        "order",
+        "typeKinds"
+      ],
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla; the built-in @deprecated isn't as the spec defines it (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in Boolean's isOneOf is null for an input object, or not null for another kind (draft only); the built-in Int's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Directive.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Directive.isRepeatable has the spec's type, but not its Non-Null wrapping; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __DirectiveLocation's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __EnumValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Field.args(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __InputValue's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Schema's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the draft defines it; October 2021 doesn't define it (arguments); the built-in __Type.isOneOf has the spec's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 1,
+      "fixtures": {
+        "order": 1
+      },
+      "fixture": "order.defaults",
+      "problem": "arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, isOneOfNull at A2, isOneOfNull at B2, isOneOfNull at Boolean, isOneOfNull at E, isOneOfNull at I1, isOneOfNull at I2, isOneOfNull at Int, isOneOfNull at O, isOneOfNull at Query, isOneOfNull at String, isOneOfNull at U, isOneOfNull at __Directive, isOneOfNull at __DirectiveLocation, isOneOfNull at __EnumValue, isOneOfNull at __Field, isOneOfNull at __InputValue, isOneOfNull at __Schema, isOneOfNull at __Type, isOneOfNull at __TypeKind, nullability at __Directive.isRepeatable, nullability at __Type.isOneOf, order at O, order at Query, order at U",
+      "example": {
+        "input": "type Query { z: Int, a: Int, m(c: Int, b: Int, a: Int): O, u: U, e: E } interface I1 { x: Int } interface I2 { x: Int } type O implements I2 & I1 { x: Int } type A2 { a: Int } type B2 { b: Int } union U = B2 | A2 enum E { Z A M }  (the introspection query; includeDeprecated: the default)",
+        "response": {
+          "kind": "ENUM",
+          "name": "E",
+          "description": null,
+          "specifiedByURL": null,
+          "isOneOf": false,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "Z",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "A",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "M",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        "expected": {
+          "kind": "ENUM",
+          "name": "E",
+          "description": null,
+          "specifiedByURL": null,
+          "isOneOf": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "Z",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "A",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "M",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        }
+      }
+    },
+    {
+      "checks": [
+        "typeKinds"
+      ],
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in Int's isOneOf is null for an input object, or not null for another kind (draft only); the built-in __TypeKind's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 1,
+      "fixtures": {
+        "minimal": 1
+      },
+      "fixture": "minimal.lookup",
+      "problem": "isOneOfNull at Int, isOneOfNull at Query, isOneOfNull at __TypeKind",
+      "draftOnly": 1,
+      "example": {
+        "input": "type Query { a: Int }  (__type(name:) for Query, Int, Float, __TypeKind, Unknown; includeDeprecated: true)",
+        "response": {
+          "__type(name: \"Int\")": {
+            "kind": "SCALAR",
+            "name": "Int",
+            "description": "Represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.",
+            "specifiedByURL": null,
+            "isOneOf": false,
+            "fields": null,
+            "inputFields": null,
+            "interfaces": null,
+            "enumValues": null,
+            "possibleTypes": null
+          }
+        },
+        "expected": {
+          "__type(name: \"Int\")": {
+            "kind": "SCALAR",
+            "name": "Int",
+            "description": null,
+            "specifiedByURL": null,
+            "isOneOf": null,
+            "fields": null,
+            "inputFields": null,
+            "interfaces": null,
+            "enumValues": null,
+            "possibleTypes": null
+          }
+        }
+      },
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "typeByName",
+        "typeKinds"
+      ],
+      "summary": "__type(name:) doesn't return a type the schema has; a type's isOneOf is null for an input object, or not null for another kind (draft only)",
       "cases": 1,
       "fixtures": {
         "roots": 1
       },
       "fixture": "roots.lookup",
-      "problem": "typeByName at Mutation",
+      "problem": "isOneOfNull at Q, isOneOfNull at S, typeByName at Mutation",
       "example": {
-        "input": "schema { query: Q subscription: S } type Q { a: Int } type S { s: Int } type Mutation { m: Int }  (__type(name:) for Q, S, Mutation, Float, Unknown, October 2021 profile; includeDeprecated: true)",
+        "input": "schema { query: Q subscription: S } type Q { a: Int } type S { s: Int } type Mutation { m: Int }  (__type(name:) for Q, S, Mutation, Float, Unknown; includeDeprecated: true)",
         "response": {
-          "__type(name: \"Mutation\")": null
-        },
-        "expected": {
-          "__type(name: \"Mutation\")": {
+          "__type(name: \"S\")": {
             "kind": "OBJECT",
-            "name": "Mutation",
+            "name": "S",
             "description": null,
             "specifiedByURL": null,
+            "isOneOf": false,
             "fields": [
               {
-                "name": "m",
+                "name": "s",
+                "description": null,
+                "args": [],
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                },
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "inputFields": null,
+            "interfaces": [],
+            "enumValues": null,
+            "possibleTypes": null
+          }
+        },
+        "expected": {
+          "__type(name: \"S\")": {
+            "kind": "OBJECT",
+            "name": "S",
+            "description": null,
+            "specifiedByURL": null,
+            "isOneOf": null,
+            "fields": [
+              {
+                "name": "s",
                 "description": null,
                 "args": [],
                 "type": {
@@ -1436,6 +2001,199 @@
           }
         }
       }
+    },
+    {
+      "checks": [
+        "typeKinds"
+      ],
+      "summary": "the built-in Float's isOneOf is null for an input object, or not null for another kind (draft only); the built-in ID's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 1,
+      "fixtures": {
+        "builtinScalars": 1
+      },
+      "fixture": "builtinScalars.lookup",
+      "problem": "isOneOfNull at Float, isOneOfNull at ID",
+      "draftOnly": 1,
+      "example": {
+        "input": "directive @d(f: Float) on FIELD input In { id: ID } type Query { a(i: In): String }  (__type(name:) for In, ID, Float, Int, Unknown; includeDeprecated: true)",
+        "response": {
+          "__type(name: \"Float\")": {
+            "kind": "SCALAR",
+            "name": "Float",
+            "description": "Represents signed double-precision fractional values as specified by [IEEE 754](https://en.wikipedia.org/wiki/IEEE_floating_point).",
+            "specifiedByURL": null,
+            "isOneOf": false,
+            "fields": null,
+            "inputFields": null,
+            "interfaces": null,
+            "enumValues": null,
+            "possibleTypes": null
+          }
+        },
+        "expected": {
+          "__type(name: \"Float\")": {
+            "kind": "SCALAR",
+            "name": "Float",
+            "description": null,
+            "specifiedByURL": null,
+            "isOneOf": null,
+            "fields": null,
+            "inputFields": null,
+            "interfaces": null,
+            "enumValues": null,
+            "possibleTypes": null
+          }
+        }
+      },
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "typeKinds"
+      ],
+      "summary": "a type's isOneOf is null for an input object, or not null for another kind (draft only); the built-in String's isOneOf is null for an input object, or not null for another kind (draft only)",
+      "cases": 1,
+      "fixtures": {
+        "scalars": 1
+      },
+      "fixture": "scalars.lookup",
+      "problem": "isOneOfNull at Date, isOneOfNull at Plain, isOneOfNull at String",
+      "draftOnly": 1,
+      "example": {
+        "input": "\"A date\" scalar Date @specifiedBy(url: \"https://example.com/date\") scalar Plain type Query { d: Date, p: Plain }  (__type(name:) for Date, Plain, String, Unknown; includeDeprecated: true)",
+        "response": {
+          "__type(name: \"String\")": {
+            "kind": "SCALAR",
+            "name": "String",
+            "description": "Represents textual data as UTF-8 character sequences. This type is most often used by GraphQL to represent free-form human-readable text.",
+            "specifiedByURL": null,
+            "isOneOf": false,
+            "fields": null,
+            "inputFields": null,
+            "interfaces": null,
+            "enumValues": null,
+            "possibleTypes": null
+          }
+        },
+        "expected": {
+          "__type(name: \"String\")": {
+            "kind": "SCALAR",
+            "name": "String",
+            "description": null,
+            "specifiedByURL": null,
+            "isOneOf": null,
+            "fields": null,
+            "inputFields": null,
+            "interfaces": null,
+            "enumValues": null,
+            "possibleTypes": null
+          }
+        }
+      },
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "typeKinds"
+      ],
+      "summary": "a List or Non-Null type has a non-null isOneOf (draft only)",
+      "cases": 1,
+      "fixtures": {
+        "wrappers": 1
+      },
+      "fixture": "wrappers",
+      "problem": "wrapperIsOneOf at __Schema.directives, wrapperIsOneOf at __Schema.queryType, wrapperIsOneOf at __Schema.types",
+      "draftOnly": 1,
+      "example": {
+        "input": "type Query { a: Int }  (__type(name: \"__Schema\")'s fields and their types; includeDeprecated: the default)",
+        "response": {
+          "name": "directives",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "description": null,
+            "specifiedByURL": null,
+            "isOneOf": false,
+            "fields": null,
+            "interfaces": null,
+            "possibleTypes": null,
+            "enumValues": null,
+            "inputFields": null,
+            "ofType": {
+              "kind": "LIST",
+              "name": null,
+              "description": null,
+              "specifiedByURL": null,
+              "isOneOf": false,
+              "fields": null,
+              "interfaces": null,
+              "possibleTypes": null,
+              "enumValues": null,
+              "inputFields": null,
+              "ofType": {
+                "kind": "NON_NULL",
+                "name": null,
+                "description": null,
+                "specifiedByURL": null,
+                "isOneOf": false,
+                "fields": null,
+                "interfaces": null,
+                "possibleTypes": null,
+                "enumValues": null,
+                "inputFields": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "__Directive"
+                }
+              }
+            }
+          }
+        },
+        "expected": {
+          "name": "directives",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "description": null,
+            "specifiedByURL": null,
+            "isOneOf": null,
+            "fields": null,
+            "interfaces": null,
+            "possibleTypes": null,
+            "enumValues": null,
+            "inputFields": null,
+            "ofType": {
+              "kind": "LIST",
+              "name": null,
+              "description": null,
+              "specifiedByURL": null,
+              "isOneOf": null,
+              "fields": null,
+              "interfaces": null,
+              "possibleTypes": null,
+              "enumValues": null,
+              "inputFields": null,
+              "ofType": {
+                "kind": "NON_NULL",
+                "name": null,
+                "description": null,
+                "specifiedByURL": null,
+                "isOneOf": null,
+                "fields": null,
+                "interfaces": null,
+                "possibleTypes": null,
+                "enumValues": null,
+                "inputFields": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "__Directive"
+                }
+              }
+            }
+          }
+        }
+      },
+      "edition": "draft"
     }
   ],
   "fixtures": [],

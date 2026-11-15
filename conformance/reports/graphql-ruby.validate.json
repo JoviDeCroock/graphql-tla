@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-directives",
     "idle",
     "introspect",
     "invalid-results",
@@ -16,7 +17,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 3100,
@@ -26,7 +27,7 @@
       "custom-scalar-literals": 9
     }
   },
-  "checkerSelfTest": "passed (8 negative controls)",
+  "checkerSelfTest": "passed (9 negative controls)",
   "cases": {
     "submitted": 3079,
     "distinct": 3079,
@@ -34,8 +35,8 @@
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 206,
-    "failing": 25
+    "vectors": 178,
+    "failing": 4
   },
   "checks": [
     {
@@ -116,7 +117,7 @@
       "status": "fail",
       "cases": 59,
       "failing": 22,
-      "failingDraftOnly": 22
+      "failingDraftOnly": 1
     },
     {
       "id": "fieldSelections",
@@ -582,11 +583,57 @@
     },
     {
       "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
+        "leafFieldSelections",
+        "fragmentSpreadIsPossible",
+        "fieldSelections",
+        "fragmentSpreadTargetDefined",
+        "allVariablesUsed",
+        "directivesAreDefined",
+        "valuesOfCorrectType",
+        "fieldSelectionMerging",
+        "fragmentsMustBeUsed",
+        "fragmentsOnObjectInterfaceOrUnionTypes",
+        "requiredArguments"
+      ],
+      "likelyOverStrict": false,
+      "summary": "rejects valid documents, all with the same error message; their invalid siblings break §5.3.3 Leaf Field Selections (5), §5.5.2.3 Fragment Spread Is Possible (4), §5.3.1 Field Selections (3), §5.5.2.1 Fragment Spread Target Defined (3) and 7 other rules, so the hints point at no one rule: the message says what the implementation objected to",
+      "cases": 24,
+      "draftOnly": 0,
+      "fixtures": {
+        "random": 22,
+        "leaves": 2
+      },
+      "fixture": "random",
+      "problem": "Field 'resource' doesn't exist on type 'Query'",
+      "example": {
+        "input": "FragmentSpreadTargetDefined-valid-1: { resource { url } }",
+        "response": {
+          "valid": false,
+          "errors": [
+            {
+              "message": "Field 'resource' doesn't exist on type 'Query'",
+              "locations": [
+                {
+                  "line": 2,
+                  "column": 3
+                }
+              ]
+            }
+          ]
+        },
+        "expected": "valid"
+      }
+    },
+    {
+      "checks": [
         "singleRootField"
       ],
-      "summary": "§5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft",
+      "summary": "§5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; 1 of 22 rely on the draft",
       "cases": 22,
-      "draftOnly": 22,
+      "draftOnly": 1,
       "fixtures": {
         "operations": 20,
         "random": 1,
@@ -594,119 +641,12 @@
       },
       "fixture": "spec",
       "example": {
-        "input": "[draft] SingleRootField-spec-7: subscription sub($bool: Boolean!) { newMessage @include(if: $bool) { body sender } }",
+        "input": "SingleRootField-spec-7: subscription sub($bool: Boolean!) { newMessage @include(if: $bool) { body sender } }",
         "response": {
           "valid": true,
           "errors": []
         },
         "expected": "invalid: SingleRootField [\"sub\"]"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "leafFieldSelections"
-      ],
-      "likelyOverStrict": true,
-      "summary": "rejects valid documents: §5.3.3 Leaf Field Selections is likely over-strict (5 valid siblings of 4 different invalid vectors rejected, 19 of the same family accepted)",
-      "cases": 5,
-      "draftOnly": 0,
-      "fixtures": {
-        "leaves": 2,
-        "random": 3
-      },
-      "fixture": "leaves",
-      "problem": "Field 'resource' doesn't exist on type 'Query'",
-      "example": {
-        "input": "LeafFieldSelections-valid-10: { resource { __typename } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Field 'resource' doesn't exist on type 'Query'",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 3
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "fragmentSpreadIsPossible"
-      ],
-      "likelyOverStrict": true,
-      "summary": "rejects valid documents: §5.5.2.3 Fragment Spread Is Possible is likely over-strict (5 valid siblings of 5 different invalid vectors rejected, 12 of the same family accepted)",
-      "cases": 5,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 4,
-        "spec": 1
-      },
-      "fixture": "spec",
-      "problem": "No such type DogOrHuman, so it can't be a fragment condition",
-      "example": {
-        "input": "FragmentSpreadIsPossible-spec-8: { pet { ...unionWithInterface } } fragment unionWithInterface on Pet { ...dogOrHumanFragment } fragment dogOrHumanFragment on DogOrHuman { ... on Dog { barkVolume } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "No such type DogOrHuman, so it can't be a fragment condition",
-              "locations": [
-                {
-                  "line": 11,
-                  "column": 1
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "fieldSelections"
-      ],
-      "likelyOverStrict": true,
-      "summary": "rejects valid documents: §5.3.1 Field Selections is likely over-strict (3 valid siblings of 3 different invalid vectors rejected, 9 of the same family accepted)",
-      "cases": 3,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 3
-      },
-      "fixture": "random",
-      "problem": "Field 'resource' doesn't exist on type 'Query'",
-      "example": {
-        "input": "FieldSelections-valid-13: { resource { id @once } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Field 'resource' doesn't exist on type 'Query'",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 3
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
       }
     },
     {
@@ -736,239 +676,28 @@
         "acceptsValid"
       ],
       "hint": [
-        "fragmentSpreadTargetDefined"
-      ],
-      "likelyOverStrict": true,
-      "summary": "rejects valid documents: §5.5.2.1 Fragment Spread Target Defined is likely over-strict (3 valid siblings of 3 different invalid vectors rejected, 1 of the same family accepted)",
-      "cases": 3,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 3
-      },
-      "fixture": "random",
-      "problem": "Field 'resource' doesn't exist on type 'Query'",
-      "example": {
-        "input": "FragmentSpreadTargetDefined-valid-1: { resource { url } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Field 'resource' doesn't exist on type 'Query'",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 3
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "valuesOfCorrectType"
+        "fragmentSpreadIsPossible"
       ],
       "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.6.1 Values of Correct Type; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 2,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 2
-      },
-      "fixture": "random",
-      "problem": "Field 'resource' doesn't exist on type 'Query'",
-      "example": {
-        "input": "ValuesOfCorrectType-valid-51: query Q0 { a: echo(opt: 1, nums: 1, role: GUEST) resource { url id @include(if: true) } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Field 'resource' doesn't exist on type 'Query'",
-              "locations": [
-                {
-                  "line": 3,
-                  "column": 3
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "directivesAreDefined"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.7.1 Directives Are Defined; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 2,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 2
-      },
-      "fixture": "random",
-      "problem": "Field 'resource' doesn't exist on type 'Query'",
-      "example": {
-        "input": "DirectivesAreDefined-valid-13: query Q0 { b: resource { a: id } search { ... on Node { id } } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Field 'resource' doesn't exist on type 'Query'",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 3
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "fieldSelectionMerging"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.3.2 Field Selection Merging; the rule it applied is a guess, since the kit doesn't read error messages",
+      "summary": "rejects valid documents, the spec's own examples of documents valid under §5.5.2.3 Fragment Spread Is Possible; the rule it applied is a guess, since the kit doesn't interpret error messages",
       "cases": 1,
       "draftOnly": 0,
       "fixtures": {
-        "random": 1
+        "spec": 1
       },
-      "fixture": "random",
-      "problem": "Field 'resource' doesn't exist on type 'Query'",
+      "fixture": "spec",
+      "problem": "No such type DogOrHuman, so it can't be a fragment condition",
       "example": {
-        "input": "FieldSelectionMerging-valid-547: query Q0($v0: Role) { search(term: \"s\", filter: {role: $v0, limit: 1, offset: 1}) { ...F1 __typename ... { ... on User { score } a: __typename } } a: resource { url } } fragment F1 on Post { tags @skip(if: true) }",
+        "input": "FragmentSpreadIsPossible-spec-8: { pet { ...unionWithInterface } } fragment unionWithInterface on Pet { ...dogOrHumanFragment } fragment dogOrHumanFragment on DogOrHuman { ... on Dog { barkVolume } }",
         "response": {
           "valid": false,
           "errors": [
             {
-              "message": "Field 'resource' doesn't exist on type 'Query'",
+              "message": "No such type DogOrHuman, so it can't be a fragment condition",
               "locations": [
                 {
-                  "line": 12,
-                  "column": 3
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "allVariablesUsed",
-        "requiredArguments"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks §5.8.4 All Variables Used and §5.4.3 Required Arguments; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 1
-      },
-      "fixture": "random",
-      "problem": "Field 'resource' doesn't exist on type 'Query'",
-      "example": {
-        "input": "RequiredArguments-valid-2: query Q0 { a: resource { a: id } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Field 'resource' doesn't exist on type 'Query'",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 3
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "fragmentsOnObjectInterfaceOrUnionTypes"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.5.1.3 Fragments on Object, Interface or Union Types; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 1
-      },
-      "fixture": "random",
-      "problem": "Field 'resource' doesn't exist on type 'Query'",
-      "example": {
-        "input": "FragmentsOnObjectInterfaceOrUnionTypes-valid-15: { resource { id url } echo(role: GUEST) }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Field 'resource' doesn't exist on type 'Query'",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 3
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "fragmentsMustBeUsed"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.5.1.4 Fragments Must Be Used; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 1
-      },
-      "fixture": "random",
-      "problem": "Field 'resource' doesn't exist on type 'Query'",
-      "example": {
-        "input": "FragmentsMustBeUsed-valid-20: query Q0 { resource @once { __typename } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Field 'resource' doesn't exist on type 'Query'",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 3
+                  "line": 11,
+                  "column": 1
                 }
               ]
             }
@@ -1015,41 +744,6 @@
           "errors": []
         },
         "expected": "invalid: DirectivesAreUniquePerLocation [\"once\"]"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "allVariablesUsed"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.8.4 All Variables Used; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "random": 1
-      },
-      "fixture": "random",
-      "problem": "Field 'resource' doesn't exist on type 'Query'",
-      "example": {
-        "input": "AllVariablesUsed-valid-4: query Q0 { resource { a: id url } b: matrix }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Field 'resource' doesn't exist on type 'Query'",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 3
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
       }
     }
   ],

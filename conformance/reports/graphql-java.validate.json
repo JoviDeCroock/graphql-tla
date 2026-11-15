@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-directives",
     "custom-scalar-literals",
     "error-propagation-off",
     "idle",
@@ -18,7 +19,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 3100,
@@ -27,7 +28,7 @@
       "unspecified": 12
     }
   },
-  "checkerSelfTest": "passed (8 negative controls)",
+  "checkerSelfTest": "passed (9 negative controls)",
   "cases": {
     "submitted": 3088,
     "distinct": 3088,
@@ -35,8 +36,8 @@
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 206,
-    "failing": 28
+    "vectors": 178,
+    "failing": 6
   },
   "checks": [
     {
@@ -117,7 +118,7 @@
       "status": "fail",
       "cases": 59,
       "failing": 23,
-      "failingDraftOnly": 23
+      "failingDraftOnly": 1
     },
     {
       "id": "fieldSelections",
@@ -545,9 +546,9 @@
       "checks": [
         "singleRootField"
       ],
-      "summary": "crashes on documents that break only §5.2.4.1 Single Root Field, instead of rejecting them; all rely on the draft",
+      "summary": "crashes on documents that break only §5.2.4.1 Single Root Field, instead of rejecting them",
       "cases": 22,
-      "draftOnly": 22,
+      "draftOnly": 0,
       "fixtures": {
         "operations": 20,
         "spec": 2
@@ -555,7 +556,7 @@
       "fixture": "spec",
       "problem": "java.lang.NullPointerException: Cannot invoke \"java.lang.Boolean.booleanValue()\" because the return value of \"java.util.Map.get(Object)\" is null",
       "example": {
-        "input": "[draft] SingleRootField-spec-7: subscription sub($bool: Boolean!) { newMessage @include(if: $bool) { body sender } }",
+        "input": "SingleRootField-spec-7: subscription sub($bool: Boolean!) { newMessage @include(if: $bool) { body sender } }",
         "response": "the adapter answered with an error: java.lang.NullPointerException: Cannot invoke \"java.lang.Boolean.booleanValue()\" because the return value of \"java.util.Map.get(Object)\" is null",
         "expected": "invalid: SingleRootField [\"sub\"]"
       }

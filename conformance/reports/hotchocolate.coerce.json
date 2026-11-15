@@ -4,6 +4,7 @@
   "implementation": "Hot Chocolate 15.1.21",
   "capabilities": [
     "coerce",
+    "custom-directives",
     "custom-scalar-literals",
     "exact-numbers",
     "idle",
@@ -17,28 +18,28 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 2036,
-    "run": 1930,
+    "vectors": 2068,
+    "run": 1962,
     "skipped": 106,
     "modes": [
-      "validating: invalid documents graded under invalidNotExecuted",
+      "validating: invalid documents graded under invalidNotExecuted where the validator rejects them, else onlyValidExecuted",
       "null and absent alike at optional positions",
       "exact-numbers"
     ]
   },
-  "checkerSelfTest": "passed (14769 negative controls)",
+  "checkerSelfTest": "passed (23315 negative controls)",
   "cases": {
-    "submitted": 1930,
-    "distinct": 1930,
+    "submitted": 1962,
+    "distinct": 1962,
     "malformed": 0
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 35,
-    "failing": 11
+    "vectors": 44,
+    "failing": 3
   },
   "checks": [
     {
@@ -53,8 +54,8 @@
         }
       ],
       "status": "fail",
-      "cases": 189,
-      "failing": 4,
+      "cases": 202,
+      "failing": 11,
       "failingDraftOnly": 0
     },
     {
@@ -87,7 +88,7 @@
       ],
       "basis": "A fractional value is kept as its decimal, which the vectors only use with at most 15 significant digits. Integers a double can't hold exactly are floatPrecision's.",
       "status": "pass",
-      "cases": 57,
+      "cases": 58,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -102,7 +103,7 @@
           "url": "https://spec.graphql.org/draft/#sec-Float"
         }
       ],
-      "basis": "The sentence says a request error \"must be raised\" for \"a value outside the available precision\", but which values that covers is Coercion.tla's reading (an integral value must be exactly representable), so the check takes the weaker level.",
+      "basis": "The sentence says a request error \"must be raised\" for \"a value outside the available precision\", but which values that covers is Coercion.tla's reading (an integral value must be exactly representable). A fraction such as 0.1 has no exact double either, and is accepted, so the text doesn't settle it, and the check takes the weaker level.",
       "status": "fail",
       "cases": 1,
       "failing": 1,
@@ -121,8 +122,25 @@
       ],
       "basis": "A JSON string with a lone surrogate is graded under loneSurrogates, not here.",
       "status": "pass",
-      "cases": 50,
+      "cases": 51,
       "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "stringValue",
+      "title": "A string literal's escapes and block string indentation decode to its Unicode text",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.4",
+          "title": "String Value",
+          "url": "https://spec.graphql.org/draft/#sec-String-Value"
+        }
+      ],
+      "basis": "§2.10.4's Static Semantics give a StringValue's Unicode text: each escape sequence's value, and for a block string BlockStringValue(), which removes the common indentation and the leading and trailing blank lines. They have no key word, but they define the value §3.5.3 then accepts, and the draft says \"Errors encountered during this evaluation ... must result in a parsing error\". The vectors use only escapes and block strings whose text is the same in both editions (no braced or surrogate pair escapes). Expected texts come from Lexer.tla.",
+      "status": "fail",
+      "cases": 12,
+      "failing": 2,
       "failingDraftOnly": 0
     },
     {
@@ -137,7 +155,7 @@
         }
       ],
       "status": "pass",
-      "cases": 49,
+      "cases": 50,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -154,7 +172,7 @@
       ],
       "basis": "\"any string (such as \\\"4\\\") or integer (such as 4 or -4) input value should be coerced to ID\". The format of an ID made from an integer is the service's: any string that writes the integer's exact value passes, such as \"1e+21\" for 10^21.",
       "status": "fail",
-      "cases": 28,
+      "cases": 29,
       "failing": 3,
       "failingDraftOnly": 0
     },
@@ -187,7 +205,7 @@
       ],
       "basis": "String literals must be rejected. For JSON variables, \"strings may be interpreted as the enum input value with the same name\": a MAY, so taking the string and rejecting it both pass.",
       "status": "pass",
-      "cases": 97,
+      "cases": 99,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -203,9 +221,9 @@
         }
       ],
       "basis": "The \"must\" sentences: the value must be an object without undefined fields, a variable's runtime value must be used, and §3.12 makes a missing Non-Null field an error that must be raised. Field defaults are a \"should\", graded by inputFieldDefaults.",
-      "status": "fail",
-      "cases": 219,
-      "failing": 2,
+      "status": "pass",
+      "cases": 224,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -236,11 +254,11 @@
           "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
         }
       ],
-      "status": "untested",
-      "cases": 0,
-      "failing": 0,
-      "failingDraftOnly": 0,
-      "note": "Coercion.tla doesn't model OneOf input objects, so there are no vectors for them."
+      "basis": "§3.10.1 (the draft only): the value \"must contain exactly one entry and that entry must not be null or the null literal, otherwise a request error must be raised\", and \"The resulting coerced map must contain exactly one entry and the value for that entry must not be null, otherwise an execution error must be raised.\" The vectors are §3.10.1's table of examples and a few more, on a schema of their own (the vectors' `schema: \"oneOf\"`), all draft-only.",
+      "status": "fail",
+      "cases": 10,
+      "failing": 3,
+      "failingDraftOnly": 3
     },
     {
       "id": "list",
@@ -253,11 +271,11 @@
           "url": "https://spec.graphql.org/draft/#sec-List"
         }
       ],
-      "basis": "An item that isn't a list, where the item type is a list, is coerced as a list of one, as the draft's table gives [[1], [2], [3]] for [1, 2, 3] as [[Int]]. October 2021's table says \"Error: Incorrect item value\", so those vectors are draft-only.",
+      "basis": "An item that isn't a list, where the item type is a list, is coerced as a list of one: \"list values are accepted only when each item in the list can be accepted by the list's item type\", and a value that is \"not a list\" is accepted by a list type as \"a list of size one\". That prose is the same in both editions. October 2021's table of examples says \"Error: Incorrect item value\" for [1, 2, 3] as [[Int]], but examples are non-normative (\"Examples in this document are non-normative\"), and the draft's table gives [[1], [2], [3]]. So these vectors aren't draft-only, and the table's answer fails this check under a finding of its own.",
       "status": "fail",
-      "cases": 299,
-      "failing": 17,
-      "failingDraftOnly": 10
+      "cases": 305,
+      "failing": 11,
+      "failingDraftOnly": 0
     },
     {
       "id": "nonNull",
@@ -286,10 +304,10 @@
           "url": "https://spec.graphql.org/draft/#sec-Coercing-Variable-Values"
         }
       ],
-      "status": "fail",
-      "cases": 849,
-      "failing": 8,
-      "failingDraftOnly": 1
+      "status": "pass",
+      "cases": 831,
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "arguments",
@@ -302,9 +320,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Coercing-Field-Arguments"
         }
       ],
-      "status": "fail",
+      "status": "pass",
       "cases": 20,
-      "failing": 2,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -326,7 +344,7 @@
     },
     {
       "id": "invalidNotExecuted",
-      "title": "An invalid document fails as a request error, without executing",
+      "title": "A document with known validation errors fails as a request error, without executing",
       "level": "MUST",
       "spec": [
         {
@@ -335,17 +353,55 @@
           "url": "https://spec.graphql.org/draft/#sec-Validating-Requests"
         }
       ],
-      "basis": "\"If validation errors are known, they should be reported in the list of \\\"errors\\\" in the response and the request must fail without operation execution.\" Graded for adapters without `unvalidated`, on vectors Validation.tla rejects: a request error, no data, no resolver called.",
+      "basis": "\"If validation errors are known, they should be reported in the list of \\\"errors\\\" in the response and the request must fail without operation execution.\" The MUST holds only where the errors are known: graded for adapters without `unvalidated` that claim `validate`, on vectors Validation.tla rejects and the implementation's own validator (asked through the validate area) rejects too. A request error, no data, no resolver called. October 2021 says the same.",
+      "status": "pass",
+      "cases": 727,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "onlyValidExecuted",
+      "title": "Only valid documents are executed",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "6.1.1",
+          "title": "Validating Requests",
+          "url": "https://spec.graphql.org/draft/#sec-Validating-Requests"
+        },
+        {
+          "number": "5",
+          "title": "Validation",
+          "url": "https://spec.graphql.org/draft/#sec-Validation"
+        }
+      ],
+      "basis": "\"only operations from documents which pass all validation rules should be executed\" (§6.1.1), and \"execution should only occur for valid requests\" (§5). Graded for adapters without `unvalidated`, on vectors Validation.tla rejects whose errors the implementation's validator doesn't report (it accepts the document in the validate area, or the adapter doesn't claim validate, so the kit can't tell). Such a document is a validation rule the implementation misses, which the validate area grades at MUST; executing it is only this SHOULD. October 2021 says the same.",
       "status": "fail",
-      "cases": 775,
+      "cases": 58,
       "failing": 58,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "acceptsValid",
+      "title": "A valid document isn't rejected at validation",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5",
+          "title": "Validation",
+          "url": "https://spec.graphql.org/draft/#sec-Validation"
+        }
+      ],
+      "basis": "As the validate area's check of the same name: a document that breaks no validation rule is valid, and must not be refused as invalid. Graded for adapters without `unvalidated` that claim `validate`: a valid vector answered with a request error whose document the implementation's own validator rejects (asked through the validate area) fails here, not under the coercion rule the vector is about, whether or not the reference's answer is also a request error.",
+      "status": "fail",
+      "cases": 1177,
+      "failing": 12,
       "failingDraftOnly": 0
     },
     {
       "id": "requestErrorNoData",
       "title": "A request error result has no data entry",
       "level": "MUST",
-      "oct2021": "SHOULD",
       "spec": [
         {
           "number": "7.1.3",
@@ -353,9 +409,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Request-Error-Result"
         }
       ],
-      "basis": "The draft: \"The request error result map must not contain an entry with key {\"data\"}.\" October 2021 (§7.1.1): \"If an error was raised before execution begins, the data entry should not be present in the result.\" A request error with \"data\": null is still a request error for the vector's own check, and fails this one.",
+      "basis": "The draft: \"The request error result map must not contain an entry with key {\"data\"}.\" October 2021, §7.1: \"If the request failed before execution, due to a syntax error, missing information, or validation error, this entry must not be present.\" and §7.1.2: \"If a request error is raised, execution does not begin and the data entry in the response must not be present.\" Its §7.1.1 also says \"should not be present\", but the two MUST sentences are the ones about request errors, so the check is a MUST in both editions. A request error with \"data\": null is still a request error for the vector's own check, and fails this one.",
       "status": "pass",
-      "cases": 1569,
+      "cases": 1584,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -372,7 +428,7 @@
       ],
       "basis": "\"When a GraphQL service receives a request, it must return a well-formed response.\" October 2021 says the same. The adapter answers with an `error` when the implementation produced no response at all, for example because it threw. Execution's check of the same name grades the same sentence. A vector whose reference answer is a request error, under a MUST check, counts that against its own check instead: a request error is a response, so no response doesn't match it. Every other vector exercises this check.",
       "status": "pass",
-      "cases": 391,
+      "cases": 466,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -396,6 +452,40 @@
       "status": "fail",
       "cases": 8,
       "failing": 5,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "errorFormat",
+      "title": "Every error is a map with a string message",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.6",
+          "title": "Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Errors"
+        }
+      ],
+      "basis": "\"Every error must contain an entry with the key {\"message\"} with a string description of the error\", and each error \"must be a map\" (§7.1.1, §7.1.3). October 2021 says the same (\"each error is a map\", \"Every error must contain an entry with the key message\"). A result whose errors aren't all maps with a string message, such as [null], or a field error with only a path, fails this check wherever its outcome would otherwise match. Every vector exercises it.",
+      "status": "pass",
+      "cases": 1962,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "errorsList",
+      "title": "errors, when present, is a non-empty list",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.1",
+          "title": "Execution Result",
+          "url": "https://spec.graphql.org/draft/#sec-Execution-Result"
+        }
+      ],
+      "basis": "The same check as execution's. The draft, §7.1.1: \"If any errors are raised during operation execution, the execution result must contain an entry with key {\"errors\"}. The value of this entry must be a non-empty list ... If the request completed without raising any errors, this entry must not be present.\" October 2021, §7.1: \"If the request raised any errors, the response map must contain an entry with key errors. ... If the request completed without raising any errors, this entry must not be present.\" Its §7.1.2 also says \"should not be present\", but the §7.1 MUST is the sentence about the entry, so the check is a MUST in both editions, as in execution. A value with \"errors\": [] is still a value for the vector's own check, and fails this one. Every vector exercises it.",
+      "status": "pass",
+      "cases": 1962,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -424,9 +514,9 @@
   "findings": [
     {
       "checks": [
-        "invalidNotExecuted"
+        "onlyValidExecuted"
       ],
-      "summary": "doesn't fail an invalid document without executing it, as §6.1.1 (Validating Requests) requires",
+      "summary": "executes an invalid document its validator doesn't reject, though §6.1.1 (Validating Requests) says only valid documents should be executed (the rule it misses is the validate area's)",
       "cases": 58,
       "draftOnly": 0,
       "fixtures": {
@@ -475,19 +565,100 @@
     },
     {
       "checks": [
+        "acceptsValid"
+      ],
+      "summary": "rejects a valid document at validation, so it never reaches coercion (§5 (Validation))",
+      "cases": 12,
+      "draftOnly": 0,
+      "fixtures": {
+        "variable-default": 9,
+        "nested-variable": 3
+      },
+      "fixture": "nested-variable",
+      "example": {
+        "vector": "coerce-1946",
+        "input": "query($x: Int = 1) { intsNN(v: [1, $x]) }  variables: {}",
+        "response": {
+          "response": {
+            "errors": [
+              {
+                "message": "The specified argument value does not match the argument type.",
+                "locations": [
+                  {
+                    "line": 1,
+                    "column": 32
+                  }
+                ],
+                "path": [
+                  "intsNN"
+                ],
+                "extensions": {
+                  "argument": "v",
+                  "argumentValue": "[ 1, $x ]",
+                  "locationType": "[Int!]!",
+                  "specifiedBy": "https://spec.graphql.org/October2021/#sec-Values-of-Correct-Type"
+                }
+              }
+            ]
+          },
+          "calls": []
+        },
+        "outcome": {
+          "outcome": "request-error"
+        },
+        "expected": "intsNN resolved with {\"v\":[1,1]}"
+      }
+    },
+    {
+      "checks": [
+        "int"
+      ],
+      "summary": "rejects what §3.5.1 (Int) accepts",
+      "cases": 11,
+      "draftOnly": 0,
+      "fixtures": {
+        "variable": 11
+      },
+      "fixture": "variable",
+      "example": {
+        "vector": "coerce-0054",
+        "input": "query($x: Int) { int(v: $x) }  variables: {\"x\": 1.0}",
+        "response": {
+          "response": {
+            "errors": [
+              {
+                "message": "Int cannot parse the given literal of type `FloatValueNode`.",
+                "path": [
+                  "x"
+                ]
+              }
+            ]
+          },
+          "calls": []
+        },
+        "outcome": {
+          "outcome": "request-error"
+        },
+        "expected": "int resolved with {\"v\":1}"
+      },
+      "throughInner": 7
+    },
+    {
+      "checks": [
         "list"
       ],
-      "summary": "gives October 2021's answer where the draft changed it, under §3.11 (List)",
-      "cases": 10,
-      "draftOnly": 10,
+      "summary": "follows October 2021's §3.11 table of examples, which is non-normative and which §3.11's prose, the same in both editions, contradicts",
+      "cases": 11,
+      "draftOnly": 0,
       "fixtures": {
         "literal": 5,
-        "variable": 5
+        "variable": 5,
+        "variable-default": 1
       },
       "fixture": "literal",
       "example": {
-        "vector": "coerce-1357",
-        "input": "[draft] { matrix(v: [1, null, 3]) }  variables: {}",
+        "vector": "coerce-1353",
+        "input": "{ matrix(v: [1]) }  variables: {}",
         "response": {
           "response": {
             "errors": [
@@ -523,84 +694,7 @@
             0
           ]
         },
-        "expected": "matrix resolved with {\"v\":[[1],null,[3]]}"
-      }
-    },
-    {
-      "checks": [
-        "list"
-      ],
-      "summary": "rejects what §3.11 (List) accepts",
-      "cases": 7,
-      "draftOnly": 0,
-      "fixtures": {
-        "variable": 5,
-        "nested-variable": 2
-      },
-      "fixture": "variable",
-      "example": {
-        "vector": "coerce-1074",
-        "input": "query($x: [Int]) { ints(v: $x) }  variables: {\"x\": 1.0}",
-        "response": {
-          "response": {
-            "errors": [
-              {
-                "message": "Int cannot parse the given literal of type `FloatValueNode`.",
-                "path": [
-                  "x",
-                  0
-                ]
-              }
-            ]
-          },
-          "calls": []
-        },
-        "outcome": {
-          "outcome": "request-error"
-        },
-        "expected": "ints resolved with {\"v\":[1]}"
-      }
-    },
-    {
-      "checks": [
-        "variables"
-      ],
-      "summary": "rejects what §6.1.2 (Coercing Variable Values) accepts",
-      "cases": 7,
-      "draftOnly": 0,
-      "fixtures": {
-        "variable-default": 7
-      },
-      "fixture": "variable-default",
-      "example": {
-        "vector": "coerce-1222",
-        "input": "query($x: [Int!] = [1, 2]) { intsNN(v: $x) }  variables: {}",
-        "response": {
-          "response": {
-            "errors": [
-              {
-                "message": "The specified value type of variable `x` does not match the variable type.",
-                "locations": [
-                  {
-                    "line": 1,
-                    "column": 20
-                  }
-                ],
-                "extensions": {
-                  "variable": "x",
-                  "variableType": "[Int!]",
-                  "locationType": "Int",
-                  "specifiedBy": "https://spec.graphql.org/October2021/#sec-Values-of-Correct-Type"
-                }
-              }
-            ]
-          },
-          "calls": []
-        },
-        "outcome": {
-          "outcome": "request-error"
-        },
-        "expected": "intsNN resolved with {\"v\":[1,2]}"
+        "expected": "matrix resolved with {\"v\":[[1]]}"
       }
     },
     {
@@ -657,39 +751,6 @@
     },
     {
       "checks": [
-        "int"
-      ],
-      "summary": "rejects what §3.5.1 (Int) accepts",
-      "cases": 4,
-      "draftOnly": 0,
-      "fixtures": {
-        "variable": 4
-      },
-      "fixture": "variable",
-      "example": {
-        "vector": "coerce-0054",
-        "input": "query($x: Int) { int(v: $x) }  variables: {\"x\": 1.0}",
-        "response": {
-          "response": {
-            "errors": [
-              {
-                "message": "Int cannot parse the given literal of type `FloatValueNode`.",
-                "path": [
-                  "x"
-                ]
-              }
-            ]
-          },
-          "calls": []
-        },
-        "outcome": {
-          "outcome": "request-error"
-        },
-        "expected": "int resolved with {\"v\":1}"
-      }
-    },
-    {
-      "checks": [
         "idCoerced"
       ],
       "summary": "rejects what §3.5.5 (ID) accepts",
@@ -719,6 +780,53 @@
           "outcome": "request-error"
         },
         "expected": "id resolved with {\"v\":\"1\"}"
+      }
+    },
+    {
+      "checks": [
+        "oneOf"
+      ],
+      "summary": "coerces to the wrong value under §3.10.1 (OneOf Input Objects)",
+      "cases": 3,
+      "draftOnly": 3,
+      "fixtures": {
+        "oneOf": 3
+      },
+      "fixture": "oneOf",
+      "example": {
+        "vector": "coerce-2015",
+        "input": "[draft] { oneOfExample(arg: { a: \"abc\" }) }  variables: {}",
+        "response": {
+          "response": {
+            "data": {
+              "oneOfExample": "ok"
+            }
+          },
+          "calls": [
+            {
+              "path": [
+                "oneOfExample"
+              ],
+              "arguments": {
+                "arg": {
+                  "a": "abc",
+                  "b": 0
+                }
+              }
+            }
+          ]
+        },
+        "outcome": {
+          "outcome": "value",
+          "field": "oneOfExample",
+          "arguments": {
+            "arg": {
+              "a": "abc",
+              "b": 0
+            }
+          }
+        },
+        "expected": "oneOfExample resolved with {\"arg\":{\"a\":\"abc\"}}"
       }
     },
     {
@@ -764,86 +872,43 @@
     },
     {
       "checks": [
-        "arguments"
+        "stringValue"
       ],
-      "summary": "raises a request error where §6.4.1 (Coercing Field Arguments) requires a field error",
+      "summary": "coerces to the wrong value under §2.10.4 (String Value)",
       "cases": 2,
       "draftOnly": 0,
       "fixtures": {
-        "variable-default": 1,
-        "nested-variable": 1
+        "string-value": 2
       },
-      "fixture": "nested-variable",
+      "fixture": "string-value",
       "example": {
-        "vector": "coerce-1947",
-        "input": "query($x: Int = 1) { intsNN(v: [1, $x]) }  variables: {\"x\": null}",
+        "vector": "coerce-2043",
+        "input": "{ string(v: \"\"\"\n\n  x\n\n\"\"\") }  variables: {}",
         "response": {
           "response": {
-            "errors": [
-              {
-                "message": "The specified argument value does not match the argument type.",
-                "locations": [
-                  {
-                    "line": 1,
-                    "column": 32
-                  }
-                ],
-                "path": [
-                  "intsNN"
-                ],
-                "extensions": {
-                  "argument": "v",
-                  "argumentValue": "[ 1, $x ]",
-                  "locationType": "[Int!]!",
-                  "specifiedBy": "https://spec.graphql.org/October2021/#sec-Values-of-Correct-Type"
-                }
-              }
-            ]
+            "data": {
+              "string": "ok"
+            }
           },
-          "calls": []
+          "calls": [
+            {
+              "path": [
+                "string"
+              ],
+              "arguments": {
+                "v": "x\n"
+              }
+            }
+          ]
         },
         "outcome": {
-          "outcome": "request-error"
+          "outcome": "value",
+          "field": "string",
+          "arguments": {
+            "v": "x\n"
+          }
         },
-        "expected": "a field error at intsNN"
-      }
-    },
-    {
-      "checks": [
-        "inputObject"
-      ],
-      "summary": "rejects what §3.10 (Input Objects) accepts",
-      "cases": 2,
-      "draftOnly": 0,
-      "fixtures": {
-        "variable": 2
-      },
-      "fixture": "variable",
-      "example": {
-        "vector": "coerce-1620",
-        "input": "query($x: Point!) { pointNN(v: $x) }  variables: {\"x\": {\"x\": 1.0}}",
-        "response": {
-          "response": {
-            "errors": [
-              {
-                "message": "Int cannot parse the given literal of type `FloatValueNode`.",
-                "path": [
-                  "x",
-                  "x"
-                ],
-                "extensions": {
-                  "fieldCoordinate": "Point.x",
-                  "fieldType": "Int"
-                }
-              }
-            ]
-          },
-          "calls": []
-        },
-        "outcome": {
-          "outcome": "request-error"
-        },
-        "expected": "pointNN resolved with {\"v\":{\"x\":1,\"y\":0}}"
+        "expected": "string resolved with {\"v\":\"x\"}"
       }
     },
     {
@@ -885,43 +950,6 @@
           }
         },
         "expected": "a request error"
-      }
-    },
-    {
-      "checks": [
-        "variables"
-      ],
-      "summary": "gives October 2021's answer where the draft changed it, under §6.1.2 (Coercing Variable Values)",
-      "cases": 1,
-      "draftOnly": 1,
-      "fixtures": {
-        "variable-default": 1
-      },
-      "fixture": "variable-default",
-      "example": {
-        "vector": "coerce-1428",
-        "input": "[draft] query($x: [[Int]] = 1) { matrix(v: $x) }  variables: {\"x\": [1, [2]]}",
-        "response": {
-          "response": {
-            "errors": [
-              {
-                "message": "The item syntax node for a nested list must be `ListValue` but the parser found `IntValue`.",
-                "path": [
-                  "x",
-                  0
-                ],
-                "extensions": {
-                  "specifiedBy": "https://spec.graphql.org/June2018/#sec-Type-System.List"
-                }
-              }
-            ]
-          },
-          "calls": []
-        },
-        "outcome": {
-          "outcome": "request-error"
-        },
-        "expected": "matrix resolved with {\"v\":[[1],[2]]}"
       }
     }
   ],

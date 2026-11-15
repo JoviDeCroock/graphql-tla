@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-directives",
     "custom-scalar-literals",
     "error-propagation-off",
     "idle",
@@ -18,21 +19,21 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 1983
+    "vectors": 2007
   },
-  "checkerSelfTest": "passed (4 negative controls)",
+  "checkerSelfTest": "passed (7 negative controls)",
   "cases": {
-    "submitted": 1983,
-    "distinct": 1983,
+    "submitted": 2007,
+    "distinct": 2007,
     "malformed": 0
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 105,
-    "failing": 81
+    "vectors": 116,
+    "failing": 92
   },
   "checks": [
     {
@@ -47,7 +48,7 @@
         }
       ],
       "status": "pass",
-      "cases": 33,
+      "cases": 34,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -63,7 +64,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 27,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -95,7 +96,7 @@
         }
       ],
       "status": "pass",
-      "cases": 17,
+      "cases": 21,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -143,7 +144,7 @@
         }
       ],
       "status": "pass",
-      "cases": 81,
+      "cases": 427,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -191,9 +192,9 @@
         }
       ],
       "status": "fail",
-      "cases": 100,
-      "failing": 73,
-      "failingDraftOnly": 73
+      "cases": 121,
+      "failing": 84,
+      "failingDraftOnly": 84
     },
     {
       "id": "document",
@@ -207,7 +208,7 @@
         }
       ],
       "status": "pass",
-      "cases": 99,
+      "cases": 98,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -223,7 +224,7 @@
         }
       ],
       "status": "pass",
-      "cases": 100,
+      "cases": 101,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -271,7 +272,7 @@
         }
       ],
       "status": "pass",
-      "cases": 110,
+      "cases": 111,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -367,7 +368,7 @@
         }
       ],
       "status": "pass",
-      "cases": 42,
+      "cases": 46,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -415,7 +416,7 @@
         }
       ],
       "status": "fail",
-      "cases": 146,
+      "cases": 153,
       "failing": 4,
       "failingDraftOnly": 0
     },
@@ -447,7 +448,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10,
+      "cases": 14,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -463,7 +464,7 @@
         }
       ],
       "status": "pass",
-      "cases": 101,
+      "cases": 102,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -495,7 +496,7 @@
         }
       ],
       "status": "fail",
-      "cases": 157,
+      "cases": 158,
       "failing": 1,
       "failingDraftOnly": 0
     },
@@ -511,7 +512,7 @@
         }
       ],
       "status": "pass",
-      "cases": 102,
+      "cases": 114,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -527,7 +528,7 @@
         }
       ],
       "status": "pass",
-      "cases": 113,
+      "cases": 112,
       "failing": 0,
       "failingDraftOnly": 0
     }
@@ -538,13 +539,13 @@
         "descriptions"
       ],
       "summary": "rejects what §2.2 Descriptions accepts",
-      "cases": 73,
+      "cases": 84,
       "fixtures": {
         "parser-examples": 3,
         "variable-definitions": 1,
-        "random-documents": 69
+        "random-documents": 80
       },
-      "draftOnly": 73,
+      "draftOnly": 84,
       "fixture": "parser-examples",
       "example": {
         "input": "[draft] \"\\\"d\\\" query {a}\"",

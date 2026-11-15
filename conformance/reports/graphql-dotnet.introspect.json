@@ -3,7 +3,7 @@
   "area": "introspect",
   "implementation": "graphql-dotnet 8.8.5",
   "capabilities": [
-    "custom-scalar-literals",
+    "custom-directives",
     "deferred-items",
     "idle",
     "introspect",
@@ -16,23 +16,35 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 28
+    "vectors": 39,
+    "graded": 39,
+    "skipped": {}
   },
-  "profile": "oct2021",
-  "profileNote": "The draft's introspection query was rejected (\"Unknown argument 'includeDeprecated' on field 'directives' of type '__Schema'.\"), and so was October 2021's (\"Cannot query field 'isRepeatable' on type '__Directive'.\"). The introspection types lack __Type.specifiedByURL and __Directive.isRepeatable, so this run asks October 2021's query without them, grades against October 2021, and counts each missing field against its check.",
+  "profile": "draft",
+  "profileNote": "The draft's introspection query was rejected (\"Unknown argument 'includeDeprecated' on field 'directives' of type '__Schema'.\"). The introspection types lack __Type.specifiedByURL, __InputValue.isDeprecated, __InputValue.deprecationReason, __Directive.isRepeatable, __Directive.isDeprecated, __Directive.deprecationReason, __Type.inputFields(includeDeprecated:), __Field.args(includeDeprecated:), __Directive.args(includeDeprecated:) and __Schema.directives(includeDeprecated:), so this run asks the draft's query without them, grades against the draft, and counts what they lack once, under builtinDefinitions.",
   "missingFields": [
     "__Type.specifiedByURL",
-    "__Directive.isRepeatable"
+    "__InputValue.isDeprecated",
+    "__InputValue.deprecationReason",
+    "__Directive.isRepeatable",
+    "__Directive.isDeprecated",
+    "__Directive.deprecationReason",
+    "__Type.inputFields(includeDeprecated:)",
+    "__Field.args(includeDeprecated:)",
+    "__Directive.args(includeDeprecated:)",
+    "__Schema.directives(includeDeprecated:)"
   ],
-  "checkerSelfTest": "passed (148 negative controls)",
+  "checkerSelfTest": "passed (176 negative controls)",
   "cases": {
-    "submitted": 28,
-    "distinct": 28,
+    "submitted": 39,
+    "distinct": 39,
     "malformed": 0,
-    "skipped": 10
+    "notGraded": {
+      "the schema applies a directive to a directive definition, which only the draft's grammar has (§3.13 DirectiveDefinition)": 3
+    }
   },
   "adapterProblems": 0,
   "checks": [
@@ -58,7 +70,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 39,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -74,7 +86,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 36,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -95,7 +107,7 @@
         }
       ],
       "status": "pass",
-      "cases": 18,
+      "cases": 22,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -111,7 +123,7 @@
         }
       ],
       "status": "pass",
-      "cases": 18,
+      "cases": 22,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -132,7 +144,7 @@
         }
       ],
       "status": "pass",
-      "cases": 18,
+      "cases": 22,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -148,7 +160,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10,
+      "cases": 13,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -164,7 +176,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 36,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -185,7 +197,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -211,13 +223,13 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     },
     {
       "id": "defaultValue",
-      "title": "defaultValue encodes the default value, and is null without one",
+      "title": "defaultValue is null for an input value without a default, and otherwise null or an encoding of the default",
       "level": "MUST",
       "spec": [
         {
@@ -226,10 +238,27 @@
           "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
         }
       ],
-      "status": "fail",
-      "cases": 28,
-      "failing": 3,
+      "status": "pass",
+      "cases": 35,
+      "failing": 0,
       "failingDraftOnly": 0
+    },
+    {
+      "id": "defaultValueOmitted",
+      "title": "defaultValue encodes the default value of an input value that has one, rather than returning null",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "4.2.4",
+          "title": "The \\_\\_InputValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+        }
+      ],
+      "status": "fail",
+      "cases": 35,
+      "failing": 3,
+      "failingDraftOnly": 0,
+      "basis": "§4.2.4: \"defaultValue may return a String encoding (using the GraphQL language) of the default value used by this input value in the condition a value is not provided at runtime. If this input value has no default value, returns null.\" By Appendix A, a lowercase \"may\" keeps its RFC 2119 meaning, so the encoding is optional; the intent is plainly that a default is encoded, which makes this a SHOULD. A string that isn't an encoding of the default, or one for an input value without a default, still fails defaultValue."
     },
     {
       "id": "inputFields",
@@ -248,7 +277,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -269,7 +298,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -285,7 +314,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -326,15 +355,14 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0,
-      "oct2021": "fields and enum values only",
-      "note": "Graded for fields and enum values only: the implementation answered the October 2021 query."
+      "oct2021": "fields and enum values only"
     },
     {
       "id": "specifiedByURL",
-      "title": "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL",
+      "title": "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null",
       "level": "MUST",
       "spec": [
         {
@@ -343,24 +371,19 @@
           "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
         },
         {
-          "number": "3.13",
-          "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
-        },
-        {
           "number": "3.13.4",
           "title": "@specifiedBy",
           "url": "https://spec.graphql.org/draft/#sec-specifiedBy"
         }
       ],
-      "status": "fail",
-      "cases": 28,
-      "failing": 28,
+      "status": "pass",
+      "cases": 35,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
       "id": "isOneOf",
-      "title": "isOneOf is true exactly for OneOf input objects; @oneOf is returned when one is",
+      "title": "isOneOf is true exactly for OneOf input objects",
       "level": "MUST",
       "spec": [
         {
@@ -372,24 +395,19 @@
           "number": "3.10.1",
           "title": "OneOf Input Objects",
           "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
-        },
-        {
-          "number": "3.13",
-          "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
         }
       ],
-      "status": "untested",
-      "cases": 0,
+      "status": "pass",
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0,
       "edition": "draft",
-      "note": "Not graded: the implementation answered the October 2021 query, and October 2021 has no OneOf input objects."
+      "note": "Draft only: October 2021 has no OneOf input objects."
     },
     {
       "id": "descriptions",
-      "title": "Descriptions are the schema's",
-      "level": "MUST",
+      "title": "A description the document gives is returned as it is, the schema's included",
+      "level": "SHOULD",
       "spec": [
         {
           "number": "3.2",
@@ -402,14 +420,15 @@
           "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
         }
       ],
-      "status": "fail",
-      "cases": 28,
-      "failing": 3,
-      "failingDraftOnly": 0
+      "status": "pass",
+      "cases": 35,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "basis": "§3.2: documentation is \"written immediately alongside definitions in a TypeSystemDocument and made available via introspection\", which has no key word, and §4.2 says of every description field that it \"may return a String or null\". So a description the document gives that is lost or replaced fails this SHOULD, and any description is accepted for a definition the document doesn't describe (\"\" or one of the service's own included)."
     },
     {
       "id": "directives",
-      "title": "directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types",
+      "title": "directives describes the schema's own directives (name, locations, isRepeatable), and returns any built-in directive the result shows is provided (@specifiedBy for a specifiedByURL, @oneOf for a true isOneOf); any of the service's own takes input types",
       "level": "MUST",
       "spec": [
         {
@@ -429,9 +448,9 @@
         }
       ],
       "status": "fail",
-      "cases": 18,
-      "failing": 18,
-      "failingDraftOnly": 0
+      "cases": 22,
+      "failing": 4,
+      "failingDraftOnly": 2
     },
     {
       "id": "builtinDirectives",
@@ -465,7 +484,7 @@
         }
       ],
       "status": "fail",
-      "cases": 18,
+      "cases": 22,
       "failing": 4,
       "failingDraftOnly": 0
     },
@@ -486,9 +505,26 @@
         }
       ],
       "status": "fail",
-      "cases": 28,
-      "failing": 18,
-      "failingDraftOnly": 0
+      "cases": 36,
+      "failing": 23,
+      "failingDraftOnly": 22
+    },
+    {
+      "id": "builtinNullability",
+      "title": "The fields of the introspection types have the Non-Null wrapping the spec gives them",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "pass",
+      "cases": 35,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "basis": "The types of the introspection fields are given only by the definitions §4.2 introduces with \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", which has no key word. The sections below say what each field returns (\"isRepeatable must return a Boolean\"), and a field whose type differs only in Non-Null can still return exactly that. Any other change of type stays under builtinDefinitions, a MUST."
     },
     {
       "id": "builtinAdditions",
@@ -502,10 +538,33 @@
         }
       ],
       "status": "fail",
-      "cases": 28,
-      "failing": 18,
-      "failingDraftOnly": 0,
+      "cases": 35,
+      "failing": 11,
+      "failingDraftOnly": 2,
       "basis": "No sentence of §4 forbids extending the introspection types. The nearest is \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", which uses no key word, and Appendix A says \"A conforming implementation of GraphQL may provide additional functionality, but must not do so where explicitly disallowed\". Leaving out or changing a definition stays a MUST, under builtinDefinitions."
+    },
+    {
+      "id": "builtinEdition",
+      "title": "Under the October 2021 profile, a built-in definition that differs from October 2021's is as the draft defines it",
+      "level": "INFO",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0,
+      "failingDraftOnly": 0,
+      "basis": "The kit grades against the draft; the October 2021 profile is a fallback for a service whose introspection types the draft's query can't ask. A built-in definition (or an addition) that is exactly the draft's breaks nothing the draft requires, so it is reported here, not under builtinDefinitions or builtinAdditions.",
+      "note": "Graded only under the October 2021 profile."
     },
     {
       "id": "typename",
@@ -519,7 +578,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -534,12 +593,12 @@
           "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
         }
       ],
-      "status": "untested",
-      "cases": 0,
+      "status": "pass",
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0,
       "edition": "draft",
-      "note": "Not graded: the implementation answered the October 2021 query, and October 2021 has no Stable Ordering."
+      "note": "Draft only: October 2021 has no Stable Ordering."
     },
     {
       "id": "other",
@@ -553,7 +612,7 @@
         }
       ],
       "status": "pass",
-      "cases": 28,
+      "cases": 35,
       "failing": 0,
       "failingDraftOnly": 0
     }
@@ -561,1058 +620,340 @@
   "findings": [
     {
       "checks": [
-        "specifiedByURL"
-      ],
-      "summary": "the service has no __Type.specifiedByURL field, so the kit leaves it out of the query",
-      "cases": 8,
-      "fixtures": {
-        "minimal": 1,
-        "rich": 1,
-        "interfaces": 1,
-        "deprecation": 2,
-        "roots": 1,
-        "builtinScalars": 1,
-        "order": 1
-      },
-      "fixture": "minimal.lookup",
-      "problem": "missingField at __Type.specifiedByURL",
-      "example": {
-        "input": "type Query { a: Int }  (__type(name:) for Query, Int, Float, __TypeKind, Unknown, October 2021 profile; includeDeprecated: true)",
-        "response": {
-          "data": {
-            "t0": {
-              "kind": "OBJECT",
-              "name": "Query",
-              "description": null,
-              "fields": [
-                {
-                  "name": "a",
-                  "description": null,
-                  "args": [],
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ],
-              "inputFields": null,
-              "interfaces": [],
-              "enumValues": null,
-              "possibleTypes": null
-            },
-            "t1": {
-              "kind": "SCALAR",
-              "name": "Int",
-              "description": null,
-              "fields": null,
-              "inputFields": null,
-              "interfaces": null,
-              "enumValues": null,
-              "possibleTypes": null
-            },
-            "t2": null,
-            "t3": {
-              "kind": "ENUM",
-              "name": "__TypeKind",
-              "description": "An enum describing what kind of type a given __Type is.",
-              "fields": null,
-              "inputFields": null,
-              "interfaces": null,
-              "enumValues": [
-                {
-                  "name": "SCALAR",
-                  "description": "Indicates this type is a scalar.",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "OBJECT",
-                  "description": "Indicates this type is an object. `fields` and `possibleTypes` are valid fields.",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "INTERFACE",
-                  "description": "Indicates this type is an interface. `fields` and `possibleTypes` are valid fields.",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "UNION",
-                  "description": "Indicates this type is a union. `possibleTypes` is a valid field.",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "ENUM",
-                  "description": "Indicates this type is an enum. `enumValues` is a valid field.",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "INPUT_OBJECT",
-                  "description": "Indicates this type is an input object. `inputFields` is a valid field.",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "LIST",
-                  "description": "Indicates this type is a list. `ofType` is a valid field.",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "NON_NULL",
-                  "description": "Indicates this type is a non-null. `ofType` is a valid field.",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ],
-              "possibleTypes": null
-            },
-            "t4": null
-          }
-        },
-        "expected": {
-          "data": {
-            "t0": {
-              "kind": "OBJECT",
-              "name": "Query",
-              "description": null,
-              "specifiedByURL": null,
-              "fields": [
-                {
-                  "name": "a",
-                  "description": null,
-                  "args": [],
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ],
-              "inputFields": null,
-              "interfaces": [],
-              "enumValues": null,
-              "possibleTypes": null
-            },
-            "t1": {
-              "kind": "SCALAR",
-              "name": "Int",
-              "description": null,
-              "specifiedByURL": null,
-              "fields": null,
-              "inputFields": null,
-              "interfaces": null,
-              "enumValues": null,
-              "possibleTypes": null
-            },
-            "t2": null,
-            "t3": {
-              "kind": "ENUM",
-              "name": "__TypeKind",
-              "description": null,
-              "specifiedByURL": null,
-              "fields": null,
-              "inputFields": null,
-              "interfaces": null,
-              "enumValues": [
-                {
-                  "name": "SCALAR",
-                  "description": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "OBJECT",
-                  "description": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "INTERFACE",
-                  "description": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "UNION",
-                  "description": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "ENUM",
-                  "description": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "INPUT_OBJECT",
-                  "description": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "LIST",
-                  "description": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "NON_NULL",
-                  "description": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ],
-              "possibleTypes": null
-            },
-            "t4": null
-          }
-        }
-      }
-    },
-    {
-      "checks": [
         "builtinAdditions",
-        "builtinDefinitions",
-        "directives",
-        "specifiedByURL"
+        "builtinDefinitions"
       ],
-      "summary": "the built-in __Directive has a field October 2021 doesn't define; the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query",
-      "cases": 6,
+      "summary": "the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Directive has a field the spec doesn't define; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)",
+      "cases": 7,
       "fixtures": {
         "minimal": 1,
         "interfaces": 1,
         "deprecation": 1,
+        "inputDeprecation": 1,
         "roots": 1,
         "builtinScalars": 1,
         "order": 1
       },
       "fixture": "minimal.inc",
-      "problem": "added:fields at __Directive, added:fields at __Type, fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL",
+      "problem": "added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation",
+      "draftOnly": 1,
       "example": {
-        "input": "type Query { a: Int }  (the introspection query, October 2021 profile; includeDeprecated: true)",
+        "input": "type Query { a: Int }  (the introspection query; includeDeprecated: true)",
         "response": {
-          "kind": "OBJECT",
-          "name": "__Type",
-          "description": "The fundamental unit of any GraphQL Schema is the type. There are many kinds of types in GraphQL as represented by the `__TypeKind` enum.\n\nDepending on the kind of a type, certain fields describe information about that type. Scalar types provide no information beyond a name and description, while Enum types provide their values. Object and Interface types provide the fields they describe. Abstract types, Union and Interface, provide the Object types possible at runtime. List and NonNull types compose other types.",
-          "fields": [
-            {
-              "name": "kind",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "__TypeKind",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "name",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "description",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "fields",
-              "description": null,
-              "args": [
-                {
-                  "name": "includeDeprecated",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Boolean",
-                    "ofType": null
-                  },
-                  "defaultValue": "false"
-                }
-              ],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__Field",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "interfaces",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__Type",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "possibleTypes",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__Type",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "enumValues",
-              "description": null,
-              "args": [
-                {
-                  "name": "includeDeprecated",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Boolean",
-                    "ofType": null
-                  },
-                  "defaultValue": "false"
-                }
-              ],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__EnumValue",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "inputFields",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__InputValue",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "ofType",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "OBJECT",
-                "name": "__Type",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "isOneOf",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "Boolean",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
+          "name": "deprecated",
+          "description": "Marks an element of a GraphQL schema as no longer supported.",
+          "locations": [
+            "FIELD_DEFINITION",
+            "ENUM_VALUE"
           ],
-          "inputFields": null,
-          "interfaces": [],
-          "enumValues": null,
-          "possibleTypes": null
+          "args": [
+            {
+              "name": "reason",
+              "description": "Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formatted in [Markdown](https://daringfireball.net/projects/markdown/).",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": "\"No longer supported\""
+            }
+          ]
         },
         "expected": {
-          "kind": "OBJECT",
-          "name": "__Type",
+          "name": "deprecated",
           "description": null,
-          "specifiedByURL": null,
-          "fields": [
+          "isRepeatable": false,
+          "locations": [
+            "FIELD_DEFINITION",
+            "ARGUMENT_DEFINITION",
+            "INPUT_FIELD_DEFINITION",
+            "ENUM_VALUE",
+            "DIRECTIVE_DEFINITION"
+          ],
+          "args": [
             {
-              "name": "kind",
+              "name": "reason",
               "description": null,
-              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "ENUM",
-                  "name": "__TypeKind",
+                  "kind": "SCALAR",
+                  "name": "String",
                   "ofType": null
                 }
               },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "name",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "description",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "fields",
-              "description": null,
-              "args": [
-                {
-                  "name": "includeDeprecated",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Boolean",
-                    "ofType": null
-                  },
-                  "defaultValue": "false"
-                }
-              ],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__Field",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "interfaces",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__Type",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "possibleTypes",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__Type",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "enumValues",
-              "description": null,
-              "args": [
-                {
-                  "name": "includeDeprecated",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Boolean",
-                    "ofType": null
-                  },
-                  "defaultValue": "false"
-                }
-              ],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__EnumValue",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "inputFields",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__InputValue",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "ofType",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "OBJECT",
-                "name": "__Type",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "specifiedByURL",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
+              "defaultValue": "\"No longer supported\"",
               "isDeprecated": false,
               "deprecationReason": null
             }
           ],
-          "inputFields": null,
-          "interfaces": [],
-          "enumValues": null,
-          "possibleTypes": null
+          "isDeprecated": false,
+          "deprecationReason": null
         }
       }
     },
     {
       "checks": [
-        "builtinAdditions",
-        "builtinDefinitions",
-        "directives",
-        "specifiedByURL"
+        "builtinDefinitions"
       ],
-      "summary": "the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query",
-      "cases": 6,
+      "summary": "the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)",
+      "cases": 7,
       "fixtures": {
         "minimal": 1,
         "interfaces": 1,
         "deprecation": 1,
+        "inputDeprecation": 1,
         "roots": 1,
         "builtinScalars": 1,
         "order": 1
       },
       "fixture": "minimal.defaults",
-      "problem": "added:fields at __Type, fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL",
+      "problem": "arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation",
+      "draftOnly": 7,
       "example": {
-        "input": "type Query { a: Int }  (the introspection query, October 2021 profile; includeDeprecated: the default)",
+        "input": "type Query { a: Int }  (the introspection query; includeDeprecated: the default)",
         "response": {
-          "kind": "OBJECT",
-          "name": "__Type",
-          "description": "The fundamental unit of any GraphQL Schema is the type. There are many kinds of types in GraphQL as represented by the `__TypeKind` enum.\n\nDepending on the kind of a type, certain fields describe information about that type. Scalar types provide no information beyond a name and description, while Enum types provide their values. Object and Interface types provide the fields they describe. Abstract types, Union and Interface, provide the Object types possible at runtime. List and NonNull types compose other types.",
-          "fields": [
-            {
-              "name": "kind",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "__TypeKind",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "name",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "description",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "fields",
-              "description": null,
-              "args": [
-                {
-                  "name": "includeDeprecated",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Boolean",
-                    "ofType": null
-                  },
-                  "defaultValue": "false"
-                }
-              ],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__Field",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "interfaces",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__Type",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "possibleTypes",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__Type",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "enumValues",
-              "description": null,
-              "args": [
-                {
-                  "name": "includeDeprecated",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Boolean",
-                    "ofType": null
-                  },
-                  "defaultValue": "false"
-                }
-              ],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__EnumValue",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "inputFields",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__InputValue",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "ofType",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "OBJECT",
-                "name": "__Type",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "isOneOf",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "Boolean",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
+          "name": "deprecated",
+          "description": "Marks an element of a GraphQL schema as no longer supported.",
+          "locations": [
+            "FIELD_DEFINITION",
+            "ENUM_VALUE"
           ],
-          "inputFields": null,
-          "interfaces": [],
-          "enumValues": null,
-          "possibleTypes": null
+          "args": [
+            {
+              "name": "reason",
+              "description": "Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formatted in [Markdown](https://daringfireball.net/projects/markdown/).",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": "\"No longer supported\""
+            }
+          ]
         },
         "expected": {
-          "kind": "OBJECT",
-          "name": "__Type",
+          "name": "deprecated",
           "description": null,
-          "specifiedByURL": null,
-          "fields": [
+          "isRepeatable": false,
+          "locations": [
+            "FIELD_DEFINITION",
+            "ARGUMENT_DEFINITION",
+            "INPUT_FIELD_DEFINITION",
+            "ENUM_VALUE",
+            "DIRECTIVE_DEFINITION"
+          ],
+          "args": [
             {
-              "name": "kind",
+              "name": "reason",
               "description": null,
-              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "ENUM",
-                  "name": "__TypeKind",
+                  "kind": "SCALAR",
+                  "name": "String",
                   "ofType": null
                 }
               },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "name",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "description",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "fields",
-              "description": null,
-              "args": [
-                {
-                  "name": "includeDeprecated",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Boolean",
-                    "ofType": null
-                  },
-                  "defaultValue": "false"
-                }
-              ],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__Field",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "interfaces",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__Type",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "possibleTypes",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__Type",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "enumValues",
-              "description": null,
-              "args": [
-                {
-                  "name": "includeDeprecated",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Boolean",
-                    "ofType": null
-                  },
-                  "defaultValue": "false"
-                }
-              ],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__EnumValue",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "inputFields",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "__InputValue",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "ofType",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "OBJECT",
-                "name": "__Type",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "specifiedByURL",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
+              "defaultValue": "\"No longer supported\"",
               "isDeprecated": false,
               "deprecationReason": null
             }
           ],
-          "inputFields": null,
-          "interfaces": [],
-          "enumValues": null,
-          "possibleTypes": null
+          "isDeprecated": false,
+          "deprecationReason": null
         }
+      },
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "builtinDefinitions"
+      ],
+      "summary": "the introspection types lack __Type.specifiedByURL, __InputValue.isDeprecated, __InputValue.deprecationReason, __Directive.isRepeatable, __Directive.isDeprecated, __Directive.deprecationReason, __Type.inputFields(includeDeprecated:), __Field.args(includeDeprecated:), __Directive.args(includeDeprecated:) and __Schema.directives(includeDeprecated:), so the kit leaves them out of every query, and grades what it can see without them",
+      "cases": 1,
+      "fixtures": {
+        "discovery": 1
+      },
+      "fixture": "discovery",
+      "problem": "__Type.specifiedByURL, __InputValue.isDeprecated, __InputValue.deprecationReason, __Directive.isRepeatable, __Directive.isDeprecated, __Directive.deprecationReason, __Type.inputFields(includeDeprecated:), __Field.args(includeDeprecated:), __Directive.args(includeDeprecated:), __Schema.directives(includeDeprecated:)",
+      "example": {
+        "input": "the fields of each introspection type, with their arguments (the kit's IntrospectionFields query)",
+        "response": {
+          "data": {
+            "a": {
+              "fields": [
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "types",
+                  "args": []
+                },
+                {
+                  "name": "queryType",
+                  "args": []
+                },
+                {
+                  "name": "mutationType",
+                  "args": []
+                },
+                {
+                  "name": "subscriptionType",
+                  "args": []
+                },
+                {
+                  "name": "directives",
+                  "args": []
+                }
+              ]
+            },
+            "b": {
+              "fields": [
+                {
+                  "name": "kind",
+                  "args": []
+                },
+                {
+                  "name": "name",
+                  "args": []
+                },
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "fields",
+                  "args": [
+                    {
+                      "name": "includeDeprecated"
+                    }
+                  ]
+                },
+                {
+                  "name": "interfaces",
+                  "args": []
+                },
+                {
+                  "name": "possibleTypes",
+                  "args": []
+                },
+                {
+                  "name": "enumValues",
+                  "args": [
+                    {
+                      "name": "includeDeprecated"
+                    }
+                  ]
+                },
+                {
+                  "name": "inputFields",
+                  "args": []
+                },
+                {
+                  "name": "ofType",
+                  "args": []
+                },
+                {
+                  "name": "isOneOf",
+                  "args": []
+                }
+              ]
+            },
+            "c": {
+              "fields": [
+                {
+                  "name": "name",
+                  "args": []
+                },
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "args",
+                  "args": []
+                },
+                {
+                  "name": "type",
+                  "args": []
+                },
+                {
+                  "name": "isDeprecated",
+                  "args": []
+                },
+                {
+                  "name": "deprecationReason",
+                  "args": []
+                }
+              ]
+            },
+            "d": {
+              "fields": [
+                {
+                  "name": "name",
+                  "args": []
+                },
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "type",
+                  "args": []
+                },
+                {
+                  "name": "defaultValue",
+                  "args": []
+                }
+              ]
+            },
+            "e": {
+              "fields": [
+                {
+                  "name": "name",
+                  "args": []
+                },
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "isDeprecated",
+                  "args": []
+                },
+                {
+                  "name": "deprecationReason",
+                  "args": []
+                }
+              ]
+            },
+            "f": {
+              "fields": [
+                {
+                  "name": "name",
+                  "args": []
+                },
+                {
+                  "name": "description",
+                  "args": []
+                },
+                {
+                  "name": "locations",
+                  "args": []
+                },
+                {
+                  "name": "args",
+                  "args": []
+                }
+              ]
+            }
+          }
+        },
+        "expected": "the fields and arguments the spec defines, including __Type.specifiedByURL, __InputValue.isDeprecated, __InputValue.deprecationReason, __Directive.isRepeatable, __Directive.isDeprecated, __Directive.deprecationReason, __Type.inputFields(includeDeprecated:), __Field.args(includeDeprecated:), __Directive.args(includeDeprecated:) and __Schema.directives(includeDeprecated:)"
       }
     },
     {
@@ -1620,18 +961,17 @@
         "builtinAdditions",
         "builtinDefinitions",
         "builtinDirectives",
-        "directives",
-        "specifiedByURL"
+        "directives"
       ],
-      "summary": "directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types: differs from Introspection.tla; doesn't provide @specifiedBy; the built-in __Directive has a field October 2021 doesn't define; the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query",
+      "summary": "directives describes the schema's own directives (name, locations, isRepeatable), and returns any built-in directive the result shows is provided (@specifiedBy for a specifiedByURL, @oneOf for a true isOneOf); any of the service's own takes input types: differs from Introspection.tla; doesn't provide @specifiedBy; the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Directive has a field the spec doesn't define; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)",
       "cases": 1,
       "fixtures": {
         "rich": 1
       },
       "fixture": "rich.inc",
-      "problem": "added:fields at __Directive, added:fields at __Type, builtinDirectives at @specifiedBy, directives at the root, fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL",
+      "problem": "added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), builtinDirectives at @specifiedBy, directives at @deprecated, directives at the root, enumValues at __DirectiveLocation",
       "example": {
-        "input": "\"\"\"The schema\"\"\" schema { query: Q mutation: M } \"The root\" type Q { a(\"An argument\" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: \"gone\"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X \"Why\" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date \"Tags a field\" directive @tag(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (the introspection query, October 2021 profile; includeDeprecated: true)",
+        "input": "\"\"\"The schema\"\"\" schema { query: Q mutation: M } \"The root\" type Q { a(\"An argument\" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: \"gone\"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X \"Why\" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date \"Labels a field\" directive @label(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (the introspection query; includeDeprecated: true)",
         "response": {
           "__typename": "Q",
           "description": "The schema",
@@ -1709,32 +1049,31 @@
             "__TypeKind"
           ],
           "directives": [
-            "tag",
+            "label",
             "skip",
             "include",
             "deprecated",
-            "specifiedBy"
+            "specifiedBy",
+            "oneOf"
           ]
         }
       }
     },
     {
       "checks": [
-        "builtinAdditions",
         "builtinDefinitions",
         "builtinDirectives",
-        "directives",
-        "specifiedByURL"
+        "directives"
       ],
-      "summary": "directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types: differs from Introspection.tla; doesn't provide @specifiedBy; the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query",
+      "summary": "directives describes the schema's own directives (name, locations, isRepeatable), and returns any built-in directive the result shows is provided (@specifiedBy for a specifiedByURL, @oneOf for a true isOneOf); any of the service's own takes input types: differs from Introspection.tla; doesn't provide @specifiedBy; the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)",
       "cases": 1,
       "fixtures": {
         "rich": 1
       },
       "fixture": "rich.defaults",
-      "problem": "added:fields at __Type, builtinDirectives at @specifiedBy, directives at the root, fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL",
+      "problem": "arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), builtinDirectives at @specifiedBy, directives at @deprecated, directives at the root, enumValues at __DirectiveLocation",
       "example": {
-        "input": "\"\"\"The schema\"\"\" schema { query: Q mutation: M } \"The root\" type Q { a(\"An argument\" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: \"gone\"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X \"Why\" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date \"Tags a field\" directive @tag(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (the introspection query, October 2021 profile; includeDeprecated: the default)",
+        "input": "\"\"\"The schema\"\"\" schema { query: Q mutation: M } \"The root\" type Q { a(\"An argument\" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: \"gone\"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X \"Why\" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date \"Labels a field\" directive @label(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (the introspection query; includeDeprecated: the default)",
         "response": {
           "__typename": "Q",
           "description": "The schema",
@@ -1812,11 +1151,12 @@
             "__TypeKind"
           ],
           "directives": [
-            "tag",
+            "label",
             "skip",
             "include",
             "deprecated",
-            "specifiedBy"
+            "specifiedBy",
+            "oneOf"
           ]
         }
       }
@@ -1825,23 +1165,22 @@
       "checks": [
         "builtinAdditions",
         "builtinDefinitions",
-        "defaultValue",
-        "directives",
-        "specifiedByURL"
+        "defaultValueOmitted"
       ],
-      "summary": "defaultValue encodes the default value, and is null without one: differs from Introspection.tla; the built-in __Directive has a field October 2021 doesn't define; the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query",
+      "summary": "defaultValue is null for an input value that has a default; the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Directive has a field the spec doesn't define; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)",
       "cases": 1,
       "fixtures": {
         "defaults": 1
       },
       "fixture": "defaults.inc",
-      "problem": "added:fields at __Directive, added:fields at __Type, defaultValue at Query.f(n:), fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL",
+      "problem": "added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), defaultValueOmitted at Query.f(n:), directives at @deprecated, enumValues at __DirectiveLocation",
       "example": {
-        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }  (the introspection query, October 2021 profile; includeDeprecated: true)",
+        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }  (the introspection query; includeDeprecated: true)",
         "response": {
           "kind": "OBJECT",
           "name": "Query",
           "description": null,
+          "isOneOf": null,
           "fields": [
             {
               "name": "f",
@@ -1967,6 +1306,7 @@
           "name": "Query",
           "description": null,
           "specifiedByURL": null,
+          "isOneOf": null,
           "fields": [
             {
               "name": "f",
@@ -1984,7 +1324,9 @@
                       "ofType": null
                     }
                   },
-                  "defaultValue": "1"
+                  "defaultValue": "1",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "y",
@@ -1994,7 +1336,9 @@
                     "name": "Float",
                     "ofType": null
                   },
-                  "defaultValue": "1"
+                  "defaultValue": "1",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "z",
@@ -2004,7 +1348,9 @@
                     "name": "ID",
                     "ofType": null
                   },
-                  "defaultValue": "7"
+                  "defaultValue": "7",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "w",
@@ -2022,7 +1368,9 @@
                       }
                     }
                   },
-                  "defaultValue": "[1, 2]"
+                  "defaultValue": "[1, 2]",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "i",
@@ -2032,7 +1380,9 @@
                     "name": "I",
                     "ofType": null
                   },
-                  "defaultValue": "{b: 2}"
+                  "defaultValue": "{b: 2}",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "s",
@@ -2042,7 +1392,9 @@
                     "name": "String",
                     "ofType": null
                   },
-                  "defaultValue": "\"say \\\"hi\\\"\""
+                  "defaultValue": "\"say \\\"hi\\\"\"",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "n",
@@ -2052,7 +1404,9 @@
                     "name": "Int",
                     "ofType": null
                   },
-                  "defaultValue": "null"
+                  "defaultValue": "null",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "l",
@@ -2070,7 +1424,9 @@
                       }
                     }
                   },
-                  "defaultValue": "[X, Y]"
+                  "defaultValue": "[X, Y]",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 }
               ],
               "type": {
@@ -2091,25 +1447,23 @@
     },
     {
       "checks": [
-        "builtinAdditions",
         "builtinDefinitions",
-        "defaultValue",
-        "directives",
-        "specifiedByURL"
+        "defaultValueOmitted"
       ],
-      "summary": "defaultValue encodes the default value, and is null without one: differs from Introspection.tla; the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query",
+      "summary": "defaultValue is null for an input value that has a default; the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)",
       "cases": 1,
       "fixtures": {
         "defaults": 1
       },
       "fixture": "defaults.defaults",
-      "problem": "added:fields at __Type, defaultValue at Query.f(n:), fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL",
+      "problem": "arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), defaultValueOmitted at Query.f(n:), directives at @deprecated, enumValues at __DirectiveLocation",
       "example": {
-        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }  (the introspection query, October 2021 profile; includeDeprecated: the default)",
+        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }  (the introspection query; includeDeprecated: the default)",
         "response": {
           "kind": "OBJECT",
           "name": "Query",
           "description": null,
+          "isOneOf": null,
           "fields": [
             {
               "name": "f",
@@ -2235,6 +1589,7 @@
           "name": "Query",
           "description": null,
           "specifiedByURL": null,
+          "isOneOf": null,
           "fields": [
             {
               "name": "f",
@@ -2252,7 +1607,9 @@
                       "ofType": null
                     }
                   },
-                  "defaultValue": "1"
+                  "defaultValue": "1",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "y",
@@ -2262,7 +1619,9 @@
                     "name": "Float",
                     "ofType": null
                   },
-                  "defaultValue": "1"
+                  "defaultValue": "1",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "z",
@@ -2272,7 +1631,9 @@
                     "name": "ID",
                     "ofType": null
                   },
-                  "defaultValue": "7"
+                  "defaultValue": "7",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "w",
@@ -2290,7 +1651,9 @@
                       }
                     }
                   },
-                  "defaultValue": "[1, 2]"
+                  "defaultValue": "[1, 2]",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "i",
@@ -2300,7 +1663,9 @@
                     "name": "I",
                     "ofType": null
                   },
-                  "defaultValue": "{b: 2}"
+                  "defaultValue": "{b: 2}",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "s",
@@ -2310,7 +1675,9 @@
                     "name": "String",
                     "ofType": null
                   },
-                  "defaultValue": "\"say \\\"hi\\\"\""
+                  "defaultValue": "\"say \\\"hi\\\"\"",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "n",
@@ -2320,7 +1687,9 @@
                     "name": "Int",
                     "ofType": null
                   },
-                  "defaultValue": "null"
+                  "defaultValue": "null",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "l",
@@ -2338,7 +1707,9 @@
                       }
                     }
                   },
-                  "defaultValue": "[X, Y]"
+                  "defaultValue": "[X, Y]",
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 }
               ],
               "type": {
@@ -2361,40 +1732,90 @@
       "checks": [
         "builtinAdditions",
         "builtinDefinitions",
-        "builtinDirectives",
-        "descriptions",
-        "directives",
-        "specifiedByURL"
+        "builtinDirectives"
       ],
-      "summary": "descriptions are the schema's: differs from Introspection.tla; doesn't provide @specifiedBy; the built-in __Directive has a field October 2021 doesn't define; the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query",
+      "summary": "doesn't provide @specifiedBy; the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Directive has a field the spec doesn't define; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)",
       "cases": 1,
       "fixtures": {
         "scalars": 1
       },
       "fixture": "scalars.inc",
-      "problem": "added:fields at __Directive, added:fields at __Type, builtinDirectives at @specifiedBy, description at Date, fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL",
+      "problem": "added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), builtinDirectives at @specifiedBy, directives at @deprecated, enumValues at __DirectiveLocation",
       "example": {
-        "input": "\"A date\" scalar Date @specifiedBy(url: \"https://example.com/date\") scalar Plain type Query { d: Date, p: Plain }  (the introspection query, October 2021 profile; includeDeprecated: true)",
-        "response": {
-          "kind": "SCALAR",
-          "name": "Date",
-          "description": null,
-          "fields": null,
-          "inputFields": null,
-          "interfaces": null,
-          "enumValues": null,
-          "possibleTypes": null
-        },
+        "input": "\"A date\" scalar Date @specifiedBy(url: \"https://example.com/date\") scalar Plain type Query { d: Date, p: Plain }  (the introspection query; includeDeprecated: true)",
+        "response": "no directive specifiedBy",
         "expected": {
-          "kind": "SCALAR",
-          "name": "Date",
-          "description": "A date",
-          "specifiedByURL": "https://example.com/date",
-          "fields": null,
-          "inputFields": null,
-          "interfaces": null,
-          "enumValues": null,
-          "possibleTypes": null
+          "name": "specifiedBy",
+          "description": null,
+          "isRepeatable": false,
+          "locations": [
+            "SCALAR"
+          ],
+          "args": [
+            {
+              "name": "url",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "isDeprecated": false,
+          "deprecationReason": null
+        }
+      }
+    },
+    {
+      "checks": [
+        "builtinDefinitions",
+        "builtinDirectives"
+      ],
+      "summary": "doesn't provide @specifiedBy; the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)",
+      "cases": 1,
+      "fixtures": {
+        "scalars": 1
+      },
+      "fixture": "scalars.defaults",
+      "problem": "arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), builtinDirectives at @specifiedBy, directives at @deprecated, enumValues at __DirectiveLocation",
+      "example": {
+        "input": "\"A date\" scalar Date @specifiedBy(url: \"https://example.com/date\") scalar Plain type Query { d: Date, p: Plain }  (the introspection query; includeDeprecated: the default)",
+        "response": "no directive specifiedBy",
+        "expected": {
+          "name": "specifiedBy",
+          "description": null,
+          "isRepeatable": false,
+          "locations": [
+            "SCALAR"
+          ],
+          "args": [
+            {
+              "name": "url",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "isDeprecated": false,
+          "deprecationReason": null
         }
       }
     },
@@ -2402,62 +1823,82 @@
       "checks": [
         "builtinAdditions",
         "builtinDefinitions",
-        "builtinDirectives",
-        "descriptions",
-        "directives",
-        "specifiedByURL"
+        "directives"
       ],
-      "summary": "descriptions are the schema's: differs from Introspection.tla; doesn't provide @specifiedBy; the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query",
+      "summary": "doesn't return @oneOf in directives, though an input object's isOneOf shows it is provided (draft only); the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Directive has a field the spec doesn't define; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)",
       "cases": 1,
       "fixtures": {
-        "scalars": 1
+        "oneOf": 1
       },
-      "fixture": "scalars.defaults",
-      "problem": "added:fields at __Type, builtinDirectives at @specifiedBy, description at Date, fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL",
+      "fixture": "oneOf.inc",
+      "problem": "added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, requiredDirective at @oneOf",
+      "draftOnly": 1,
       "example": {
-        "input": "\"A date\" scalar Date @specifiedBy(url: \"https://example.com/date\") scalar Plain type Query { d: Date, p: Plain }  (the introspection query, October 2021 profile; includeDeprecated: the default)",
-        "response": {
-          "kind": "SCALAR",
-          "name": "Date",
-          "description": null,
-          "fields": null,
-          "inputFields": null,
-          "interfaces": null,
-          "enumValues": null,
-          "possibleTypes": null
-        },
+        "input": "[draft] input Pick @oneOf { id: ID, name: String } input Plain { x: Int! } type Query { a(p: Pick, q: Plain): Int }  (the introspection query; includeDeprecated: true)",
+        "response": "no directive oneOf",
         "expected": {
-          "kind": "SCALAR",
-          "name": "Date",
-          "description": "A date",
-          "specifiedByURL": "https://example.com/date",
-          "fields": null,
-          "inputFields": null,
-          "interfaces": null,
-          "enumValues": null,
-          "possibleTypes": null
+          "name": "oneOf",
+          "description": null,
+          "isRepeatable": false,
+          "locations": [
+            "INPUT_OBJECT"
+          ],
+          "args": [],
+          "isDeprecated": false,
+          "deprecationReason": null
         }
-      }
+      },
+      "edition": "draft"
     },
     {
       "checks": [
-        "defaultValue",
-        "specifiedByURL"
+        "builtinDefinitions",
+        "directives"
       ],
-      "summary": "defaultValue encodes the default value, and is null without one: differs from Introspection.tla; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query",
+      "summary": "doesn't return @oneOf in directives, though an input object's isOneOf shows it is provided (draft only); the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)",
+      "cases": 1,
+      "fixtures": {
+        "oneOf": 1
+      },
+      "fixture": "oneOf.defaults",
+      "problem": "arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, requiredDirective at @oneOf",
+      "draftOnly": 1,
+      "example": {
+        "input": "[draft] input Pick @oneOf { id: ID, name: String } input Plain { x: Int! } type Query { a(p: Pick, q: Plain): Int }  (the introspection query; includeDeprecated: the default)",
+        "response": "no directive oneOf",
+        "expected": {
+          "name": "oneOf",
+          "description": null,
+          "isRepeatable": false,
+          "locations": [
+            "INPUT_OBJECT"
+          ],
+          "args": [],
+          "isDeprecated": false,
+          "deprecationReason": null
+        }
+      },
+      "edition": "draft"
+    },
+    {
+      "checks": [
+        "defaultValueOmitted"
+      ],
+      "summary": "defaultValue is null for an input value that has a default",
       "cases": 1,
       "fixtures": {
         "defaults": 1
       },
       "fixture": "defaults.lookup",
-      "problem": "defaultValue at Query.f(n:), missingField at __Type.specifiedByURL",
+      "problem": "defaultValueOmitted at Query.f(n:)",
       "example": {
-        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }  (__type(name:) for Query, I, Unknown, October 2021 profile; includeDeprecated: true)",
+        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }  (__type(name:) for Query, I, Unknown; includeDeprecated: true)",
         "response": {
           "__type(name: \"Query\")": {
             "kind": "OBJECT",
             "name": "Query",
             "description": null,
+            "isOneOf": null,
             "fields": [
               {
                 "name": "f",
@@ -2585,6 +2026,7 @@
             "name": "Query",
             "description": null,
             "specifiedByURL": null,
+            "isOneOf": null,
             "fields": [
               {
                 "name": "f",
@@ -2602,7 +2044,9 @@
                         "ofType": null
                       }
                     },
-                    "defaultValue": "1"
+                    "defaultValue": "1",
+                    "isDeprecated": false,
+                    "deprecationReason": null
                   },
                   {
                     "name": "y",
@@ -2612,7 +2056,9 @@
                       "name": "Float",
                       "ofType": null
                     },
-                    "defaultValue": "1"
+                    "defaultValue": "1",
+                    "isDeprecated": false,
+                    "deprecationReason": null
                   },
                   {
                     "name": "z",
@@ -2622,7 +2068,9 @@
                       "name": "ID",
                       "ofType": null
                     },
-                    "defaultValue": "7"
+                    "defaultValue": "7",
+                    "isDeprecated": false,
+                    "deprecationReason": null
                   },
                   {
                     "name": "w",
@@ -2640,7 +2088,9 @@
                         }
                       }
                     },
-                    "defaultValue": "[1, 2]"
+                    "defaultValue": "[1, 2]",
+                    "isDeprecated": false,
+                    "deprecationReason": null
                   },
                   {
                     "name": "i",
@@ -2650,7 +2100,9 @@
                       "name": "I",
                       "ofType": null
                     },
-                    "defaultValue": "{b: 2}"
+                    "defaultValue": "{b: 2}",
+                    "isDeprecated": false,
+                    "deprecationReason": null
                   },
                   {
                     "name": "s",
@@ -2660,7 +2112,9 @@
                       "name": "String",
                       "ofType": null
                     },
-                    "defaultValue": "\"say \\\"hi\\\"\""
+                    "defaultValue": "\"say \\\"hi\\\"\"",
+                    "isDeprecated": false,
+                    "deprecationReason": null
                   },
                   {
                     "name": "n",
@@ -2670,7 +2124,9 @@
                       "name": "Int",
                       "ofType": null
                     },
-                    "defaultValue": "null"
+                    "defaultValue": "null",
+                    "isDeprecated": false,
+                    "deprecationReason": null
                   },
                   {
                     "name": "l",
@@ -2688,7 +2144,9 @@
                         }
                       }
                     },
-                    "defaultValue": "[X, Y]"
+                    "defaultValue": "[X, Y]",
+                    "isDeprecated": false,
+                    "deprecationReason": null
                   }
                 ],
                 "type": {
@@ -2702,47 +2160,6 @@
             ],
             "inputFields": null,
             "interfaces": [],
-            "enumValues": null,
-            "possibleTypes": null
-          }
-        }
-      }
-    },
-    {
-      "checks": [
-        "descriptions",
-        "specifiedByURL"
-      ],
-      "summary": "descriptions are the schema's: differs from Introspection.tla; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query",
-      "cases": 1,
-      "fixtures": {
-        "scalars": 1
-      },
-      "fixture": "scalars.lookup",
-      "problem": "description at Date, missingField at __Type.specifiedByURL",
-      "example": {
-        "input": "\"A date\" scalar Date @specifiedBy(url: \"https://example.com/date\") scalar Plain type Query { d: Date, p: Plain }  (__type(name:) for Date, Plain, String, Unknown, October 2021 profile; includeDeprecated: true)",
-        "response": {
-          "__type(name: \"Date\")": {
-            "kind": "SCALAR",
-            "name": "Date",
-            "description": null,
-            "fields": null,
-            "inputFields": null,
-            "interfaces": null,
-            "enumValues": null,
-            "possibleTypes": null
-          }
-        },
-        "expected": {
-          "__type(name: \"Date\")": {
-            "kind": "SCALAR",
-            "name": "Date",
-            "description": "A date",
-            "specifiedByURL": "https://example.com/date",
-            "fields": null,
-            "inputFields": null,
-            "interfaces": null,
             "enumValues": null,
             "possibleTypes": null
           }

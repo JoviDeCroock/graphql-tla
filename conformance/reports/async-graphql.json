@@ -9,14 +9,14 @@
     "subscription"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
     "random": 1500,
     "seed": 1,
     "exhaustive": true
   },
-  "checkerSelfTest": "passed (35 negative controls)",
+  "checkerSelfTest": "passed (41 negative controls)",
   "cases": {
     "submitted": 11213,
     "distinct": 350,
@@ -47,8 +47,8 @@
       ],
       "basis": "No sentence says to respond only once execution is complete; the algorithms do. ExecuteRootSelectionSet (§6.3.1) returns {data} once ExecuteCollectedFields has run, and §6.3.3 says \"Execution will recursively resolve and complete the value of every entry in the collected fields map\". The draft's §7.1.5 adds: \"The response data is the result of accumulating the resolved result of all response positions during execution.\" Positions §6.3.3 lets an implementation cancel don't hold the response back.",
       "status": "fail",
-      "cases": 350,
-      "failing": 32
+      "cases": 531,
+      "failing": 67
     },
     {
       "id": "dataMatches",
@@ -73,8 +73,8 @@
       ],
       "basis": "When an error propagates to the root, §6.4.4 and §7.1.5 say data \"should be null\", in both editions. The kit still requires null, because no other value conforms: the execution result must have a data entry (§7.1.1), {} or a partial map leaves out an entry ExecuteCollectedFields must produce (§6.3.3), and a map with null at the failed root field breaks that field's Non-Null type.",
       "status": "fail",
-      "cases": 350,
-      "failing": 119
+      "cases": 531,
+      "failing": 276
     },
     {
       "id": "keyOrder",
@@ -88,7 +88,7 @@
         }
       ],
       "status": "pass",
-      "cases": 350,
+      "cases": 531,
       "failing": 0
     },
     {
@@ -201,7 +201,7 @@
         }
       ],
       "status": "pass",
-      "cases": 11,
+      "cases": 21,
       "failing": 0
     },
     {
@@ -483,7 +483,7 @@
       ],
       "status": "fail",
       "cases": 9289,
-      "failing": 4658
+      "failing": 5137
     },
     {
       "id": "responsePosition",
@@ -562,14 +562,14 @@
           ]
         }
       },
-      "cases": 4658,
+      "cases": 5137,
       "fixtures": {
-        "fragments": 715,
+        "fragments": 760,
         "leaves": 761,
-        "lists": 577,
+        "lists": 801,
         "mutation": 1035,
         "nullPropagation": 881,
-        "subscription": 236,
+        "subscription": 446,
         "unions": 453
       }
     },
@@ -613,35 +613,32 @@
       ],
       "fixture": "fragments",
       "example": {
-        "trace": "call node; settle node = object(Bot); call node.id; settle node.id = null",
+        "trace": "call node; settle node = error",
         "response": {
           "data": null,
           "errors": [
             {
-              "message": "internal: non-null types require a return value",
+              "message": "resolver at node failed",
               "locations": [
                 {
-                  "line": 3,
-                  "column": 5
+                  "line": 2,
+                  "column": 3
                 }
-              ],
-              "path": [
-                "node",
-                "id"
               ]
             }
           ]
         },
         "expected": "data {\"node\": null}"
       },
-      "cases": 102,
+      "cases": 221,
       "fixtures": {
-        "fragments": 3,
-        "leaves": 16,
-        "lists": 48,
-        "mutation": 2,
-        "nullPropagation": 12,
-        "unions": 21
+        "fragments": 7,
+        "leaves": 40,
+        "lists": 103,
+        "mutation": 6,
+        "nullPropagation": 23,
+        "unions": 41,
+        "subscription": 1
       }
     },
     {
@@ -679,16 +676,17 @@
     },
     {
       "checks": [
-        "complete"
+        "complete",
+        "dataMatches"
       ],
-      "fixture": "unions",
+      "fixture": "leaves",
       "example": {
-        "trace": "call search; call matrix; settle search = leaf",
+        "trace": "call count; call ratio; call color; settle count = object()",
         "response": {
           "data": null,
           "errors": [
             {
-              "message": "internal: expects an array",
+              "message": "internal: invalid value for scalar \"Int\", expected \"FieldValue::Value\"",
               "locations": [
                 {
                   "line": 2,
@@ -696,7 +694,38 @@
                 }
               ],
               "path": [
-                "search"
+                "count"
+              ]
+            }
+          ]
+        },
+        "expected": "data (incomplete)"
+      },
+      "cases": 35,
+      "fixtures": {
+        "leaves": 25,
+        "unions": 6,
+        "fragments": 1,
+        "nullPropagation": 3
+      }
+    },
+    {
+      "checks": [
+        "complete"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; settle first = error",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "resolver at first failed",
+              "locations": [
+                {
+                  "line": 2,
+                  "column": 3
+                }
               ]
             }
           ]
@@ -705,11 +734,10 @@
       },
       "cases": 29,
       "fixtures": {
-        "leaves": 10,
-        "lists": 3,
-        "mutation": 1,
-        "nullPropagation": 5,
-        "unions": 10
+        "lists": 7,
+        "mutation": 3,
+        "nullPropagation": 12,
+        "unions": 7
       }
     },
     {
@@ -740,6 +768,7 @@
     {
       "checks": [
         "complete",
+        "dataMatches",
         "errorsInsideNulls",
         "errorsWereRaised"
       ],

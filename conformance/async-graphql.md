@@ -4,15 +4,16 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 
 **Notes** (hand-written, from outside the kit):
 
-- The adapter uses async-graphql's dynamic schema API (`async_graphql::dynamic`). The derive-macro API may behave differently. See the [adapter's README](../adapters/async-graphql/README.md).
+- The adapter uses async-graphql's dynamic schema API (`async_graphql::dynamic`). Every execution finding comes from `async_graphql::dynamic::resolve`, which the derive-macro API doesn't use: resolver errors without a path, any error nulling all of `data`, a null list item completed as an object, and fields resolved once per selection. The derive API may behave differently; it does stop an error at a nullable field. See the [adapter's README](../adapters/async-graphql/README.md#known-async-graphql-deviations).
+- The adapter doesn't claim `uncoercible-results`, so `resultCoercion` and `intFraction` are untested here, not passed.
 
 ## Execution
 
 - **Capabilities:** idle, invalid-results, mutation, subscription
 - **Cases:** 11213 submitted, 350 distinct, 5801 malformed
 - **Adapter problems:** none
-- **Checker self-test:** passed (35 negative controls)
-- **Run:** kit 5da3deb09c91, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
+- **Checker self-test:** passed (41 negative controls)
+- **Run:** kit 71f0a24bdc40, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
 
 ### Findings
 
@@ -20,7 +21,7 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 
 #### 1. `errorPath`: an execution error without a path
 
-4658 cases, in `mutation` (1035), `nullPropagation` (881), `leaves` (761), `fragments` (715), `lists` (577), `unions` (453), `subscription` (236).
+5137 cases, in `mutation` (1035), `nullPropagation` (881), `lists` (801), `leaves` (761), `fragments` (760), `unions` (453), `subscription` (446).
 
 - Execution errors have a path to a position the operation selects (MUST, [§7.1.6](https://spec.graphql.org/draft/#sec-Errors))
 
@@ -52,15 +53,15 @@ response: {"data":null,"errors":[{"message":"internal: non-null types require a 
 
 #### 3. `dataMatches`
 
-102 cases, in `lists` (48), `unions` (21), `leaves` (16), `nullPropagation` (12), `fragments` (3), `mutation` (2).
+221 cases, in `lists` (103), `unions` (41), `leaves` (40), `nullPropagation` (23), `fragments` (7), `mutation` (6), `subscription` (1).
 
 - data is the completed value: field collection, value completion and null propagation (MUST, [§6.3.2](https://spec.graphql.org/draft/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/draft/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors))
 
 The shortest case, from `fragments`:
 
 ```
-trace:    call node; settle node = object(Bot); call node.id; settle node.id = null
-response: {"data":null,"errors":[{"message":"internal: non-null types require a return value","locations":[{"line":3,"column":5}],"path":["node","id"]}]}
+trace:    call node; settle node = error
+response: {"data":null,"errors":[{"message":"resolver at node failed","locations":[{"line":2,"column":3}]}]}
 expected: data {"node": null}
 ```
 
@@ -82,23 +83,40 @@ response: {"data":null,"errors":[{"message":"internal: non-null types require a 
 
 <a id="execution-finding-5"></a>
 
-#### 5. `complete`
+#### 5. `complete`, `dataMatches`
 
-29 cases, in `leaves` (10), `unions` (10), `nullPropagation` (5), `lists` (3), `mutation` (1).
+35 cases, in `leaves` (25), `unions` (6), `nullPropagation` (3), `fragments` (1).
 
 - The response is sent only once execution is complete (MUST, [§6.3.1](https://spec.graphql.org/draft/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/draft/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/draft/#sec-Data))
+- data is the completed value: field collection, value completion and null propagation (MUST, [§6.3.2](https://spec.graphql.org/draft/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/draft/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors))
 
-The shortest case, from `unions`:
+The shortest case, from `leaves`:
 
 ```
-trace:    call search; call matrix; settle search = leaf
-response: {"data":null,"errors":[{"message":"internal: expects an array","locations":[{"line":2,"column":3}],"path":["search"]}]}
+trace:    call count; call ratio; call color; settle count = object()
+response: {"data":null,"errors":[{"message":"internal: invalid value for scalar \"Int\", expected \"FieldValue::Value\"","locations":[{"line":2,"column":3}],"path":["count"]}]}
 expected: data (incomplete)
 ```
 
 <a id="execution-finding-6"></a>
 
-#### 6. `dataMatches`, `nullsExplained`
+#### 6. `complete`
+
+29 cases, in `nullPropagation` (12), `lists` (7), `unions` (7), `mutation` (3).
+
+- The response is sent only once execution is complete (MUST, [§6.3.1](https://spec.graphql.org/draft/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/draft/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/draft/#sec-Data))
+
+The shortest case, from `mutation`:
+
+```
+trace:    call first; settle first = error
+response: {"data":null,"errors":[{"message":"resolver at first failed","locations":[{"line":2,"column":3}]}]}
+expected: data (incomplete)
+```
+
+<a id="execution-finding-7"></a>
+
+#### 7. `dataMatches`, `nullsExplained`
 
 15 cases, in `unions` (15).
 
@@ -113,13 +131,14 @@ response: {"data":{"search":null,"matrix":[[null]]}}
 expected: data {"search": null, "matrix": [null]}
 ```
 
-<a id="execution-finding-7"></a>
+<a id="execution-finding-8"></a>
 
-#### 7. `complete`, `errorsInsideNulls`, `errorsWereRaised`
+#### 8. `complete`, `dataMatches`, `errorsInsideNulls`, `errorsWereRaised`
 
 3 cases, in `unions` (3).
 
 - The response is sent only once execution is complete (MUST, [§6.3.1](https://spec.graphql.org/draft/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/draft/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/draft/#sec-Data))
+- data is the completed value: field collection, value completion and null propagation (MUST, [§6.3.2](https://spec.graphql.org/draft/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/draft/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors))
 - Every error is inside a null in data (MUST, [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors))
 - Every error was raised, at the path where it was raised (MUST, [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors) [§7.1.6](https://spec.graphql.org/draft/#sec-Errors))
 
@@ -131,9 +150,9 @@ response: {"data":null,"errors":[{"message":"internal: expects an array","locati
 expected: data (incomplete)
 ```
 
-<a id="execution-finding-8"></a>
+<a id="execution-finding-9"></a>
 
-#### 8. `dataMatches`, `errorsInsideNulls`, `errorsWereRaised`
+#### 9. `dataMatches`, `errorsInsideNulls`, `errorsWereRaised`
 
 2 cases, in `unions` (2).
 
@@ -162,15 +181,15 @@ expected: data {"search": null, "matrix": [null]}
 
 | Check | Level | Spec | Result |
 | --- | :---: | :---: | :---: |
-| The response is sent only once execution is complete (`complete`) | MUST | [§6.3.1](https://spec.graphql.org/draft/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/draft/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/draft/#sec-Data) | ✗ 32/350 |
-| data is the completed value: field collection, value completion and null propagation (`dataMatches`) | MUST | [§6.3.2](https://spec.graphql.org/draft/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/draft/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors) | ✗ 119/350 |
-| Response keys are in collected field order (`keyOrder`) | SHOULD | [§7.2.2](https://spec.graphql.org/draft/#sec-Serialized-Map-Ordering) | ✓ 350 |
+| The response is sent only once execution is complete (`complete`) | MUST | [§6.3.1](https://spec.graphql.org/draft/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/draft/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/draft/#sec-Data) | ✗ 67/531 |
+| data is the completed value: field collection, value completion and null propagation (`dataMatches`) | MUST | [§6.3.2](https://spec.graphql.org/draft/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/draft/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors) | ✗ 276/531 |
+| Response keys are in collected field order (`keyOrder`) | SHOULD | [§7.2.2](https://spec.graphql.org/draft/#sec-Serialized-Map-Ordering) | ✓ 531 |
 | Every error was raised, at the path where it was raised (`errorsWereRaised`) | MUST | [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors) [§7.1.6](https://spec.graphql.org/draft/#sec-Errors) | ✗ 5/350 |
 | No two errors share a response path (`errorPathsUnique`) | MUST (Oct 2021: SHOULD) | [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors) | ✓ 350 |
 | Every error is inside a null in data (`errorsInsideNulls`) | MUST | [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors) | ✗ 5/350 |
 | Every null an error caused comes with an error from one of its causes (`nullsExplained`) | MUST | [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors) [§7.1.1](https://spec.graphql.org/draft/#sec-Execution-Result) | ✗ 15/350 |
 | A mutation reports every error its earlier root fields raised (`serialErrorsKept`) | MUST | [§6.3.4](https://spec.graphql.org/draft/#sec-Normal-and-Serial-Execution) [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors) | ✓ 11 |
-| A mutation's root fields execute one after another (`calledSerially`) | MUST | [§6.2.2](https://spec.graphql.org/draft/#sec-Mutation) [§6.3.4](https://spec.graphql.org/draft/#sec-Normal-and-Serial-Execution) | ✓ 11 |
+| A mutation's root fields execute one after another (`calledSerially`) | MUST | [§6.2.2](https://spec.graphql.org/draft/#sec-Mutation) [§6.3.4](https://spec.graphql.org/draft/#sec-Normal-and-Serial-Execution) | ✓ 21 |
 | Each field is executed once, merged selections included (`callsOnce`) | MUST | [§6.3.2](https://spec.graphql.org/draft/#sec-Field-Collection) [§6.3.3](https://spec.graphql.org/draft/#sec-Executing-Collected-Fields) | ✗ 101/11213 |
 | Only fields the operation selects are executed (`callsSelected`) | MUST | [§6.3.2](https://spec.graphql.org/draft/#sec-Field-Collection) | ✓ 11213 |
 | A field executes only once its parent has a value that contains it (`callsReachable`) | MUST | [§6.3.3](https://spec.graphql.org/draft/#sec-Executing-Collected-Fields) [§6.4.3](https://spec.graphql.org/draft/#sec-Value-Completion) | ✗ 1042/11213 |
@@ -187,7 +206,7 @@ expected: data {"search": null, "matrix": [null]}
 | extensions is a map (`extensions`) | MUST | [§7.1.7](https://spec.graphql.org/draft/#sec-Extensions) | – |
 | Errors are maps with a message, and extensions, if present, is a map (`errorFormat`) | MUST | [§7.1.6](https://spec.graphql.org/draft/#sec-Errors) | ✓ 9289 |
 | An error's locations, if present, is a list of maps with line and column, both positive integers (`errorLocations`) | SHOULD | [§7.1.6](https://spec.graphql.org/draft/#sec-Errors) | ✓ 9289 |
-| Execution errors have a path to a position the operation selects (`errorPath`) | MUST | [§7.1.6](https://spec.graphql.org/draft/#sec-Errors) | ✗ 4658/9289 |
+| Execution errors have a path to a position the operation selects (`errorPath`) | MUST | [§7.1.6](https://spec.graphql.org/draft/#sec-Errors) | ✗ 5137/9289 |
 | Paths are lists of response names (aliases, not field names) and integer list indices (`responsePosition`) | MUST (Oct 2021: SHOULD) | [§7.1.4](https://spec.graphql.org/draft/#sec-Response-Position) | ✓ 9289 |
 | Errors have no entries besides message, locations, path and extensions (`errorEntries`) | SHOULD | [§7.1.6](https://spec.graphql.org/draft/#sec-Errors) | ✓ 9289 |
 | The adapter follows the kit's protocol (call types, settles) (`protocol`) | ADAPTER | — | ✓ 11213 |

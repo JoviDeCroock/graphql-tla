@@ -10,18 +10,18 @@
     "uncoercible-results"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
     "random": 1500,
     "seed": 1,
     "exhaustive": false
   },
-  "checkerSelfTest": "passed (35 negative controls)",
+  "checkerSelfTest": "passed (41 negative controls)",
   "cases": {
     "submitted": 10500,
-    "distinct": 1834,
-    "malformed": 548
+    "distinct": 1714,
+    "malformed": 798
   },
   "adapterProblems": 0,
   "checks": [
@@ -48,8 +48,8 @@
       ],
       "basis": "No sentence says to respond only once execution is complete; the algorithms do. ExecuteRootSelectionSet (§6.3.1) returns {data} once ExecuteCollectedFields has run, and §6.3.3 says \"Execution will recursively resolve and complete the value of every entry in the collected fields map\". The draft's §7.1.5 adds: \"The response data is the result of accumulating the resolved result of all response positions during execution.\" Positions §6.3.3 lets an implementation cancel don't hold the response back.",
       "status": "fail",
-      "cases": 1834,
-      "failing": 134
+      "cases": 1850,
+      "failing": 140
     },
     {
       "id": "dataMatches",
@@ -74,8 +74,8 @@
       ],
       "basis": "When an error propagates to the root, §6.4.4 and §7.1.5 say data \"should be null\", in both editions. The kit still requires null, because no other value conforms: the execution result must have a data entry (§7.1.1), {} or a partial map leaves out an entry ExecuteCollectedFields must produce (§6.3.3), and a map with null at the failed root field breaks that field's Non-Null type.",
       "status": "fail",
-      "cases": 1834,
-      "failing": 513
+      "cases": 1850,
+      "failing": 582
     },
     {
       "id": "keyOrder",
@@ -89,8 +89,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1834,
-      "failing": 463
+      "cases": 1850,
+      "failing": 500
     },
     {
       "id": "errorsWereRaised",
@@ -109,7 +109,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1834,
+      "cases": 1850,
       "failing": 0
     },
     {
@@ -126,7 +126,7 @@
       ],
       "basis": "The draft's §6.4.4: \"each error added to the errors list during execution must have a unique response path.\" October 2021's: \"only one error should be added to the errors list per field.\" Both editions say the errors list \"must not be further affected\" when a position is null because of an error already added.",
       "status": "pass",
-      "cases": 1834,
+      "cases": 1850,
       "failing": 0
     },
     {
@@ -141,7 +141,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1834,
+      "cases": 1850,
       "failing": 0
     },
     {
@@ -161,8 +161,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1834,
-      "failing": 398
+      "cases": 1850,
+      "failing": 344
     },
     {
       "id": "serialErrorsKept",
@@ -182,8 +182,8 @@
       ],
       "basis": "§6.4.4: an execution error \"must be added to the errors list\". §6.3.3 lets an implementation cancel fields that have not yet executed or yielded a value, but §6.3.4 completes each mutation root field before the next starts, so an earlier root field's errors can't have been cancelled.",
       "status": "fail",
-      "cases": 489,
-      "failing": 177
+      "cases": 488,
+      "failing": 160
     },
     {
       "id": "calledSerially",
@@ -202,8 +202,8 @@
         }
       ],
       "status": "fail",
-      "cases": 489,
-      "failing": 489
+      "cases": 488,
+      "failing": 488
     },
     {
       "id": "callsOnce",
@@ -302,7 +302,7 @@
         }
       ],
       "status": "pass",
-      "cases": 3675,
+      "cases": 3672,
       "failing": 0
     },
     {
@@ -327,8 +327,8 @@
         }
       ],
       "status": "fail",
-      "cases": 628,
-      "failing": 309
+      "cases": 623,
+      "failing": 623
     },
     {
       "id": "intFraction",
@@ -348,8 +348,8 @@
       ],
       "basis": "The level is contested. §3.5.1 states a rule with must: services \"may coerce non-integer internal values to integers when reasonable without losing information, otherwise they must raise an execution error\". Truncating 1.2 loses information, so on that reading the must applies. But the example that applies the rule to this very case says should: \"a floating-point number 1.2 should raise an execution error instead of being truncated to 1\". Where the level is in doubt, the kit takes the weaker one, so this is a SHOULD. October 2021 has the same sentences, with \"field error\".",
       "status": "fail",
-      "cases": 303,
-      "failing": 239
+      "cases": 299,
+      "failing": 237
     },
     {
       "id": "leafValues",
@@ -363,7 +363,7 @@
         }
       ],
       "status": "pass",
-      "cases": 3675,
+      "cases": 3672,
       "failing": 0
     },
     {
@@ -378,7 +378,7 @@
         }
       ],
       "status": "pass",
-      "cases": 3675,
+      "cases": 3672,
       "failing": 0
     },
     {
@@ -393,7 +393,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10191,
+      "cases": 10195,
       "failing": 0
     },
     {
@@ -408,7 +408,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10191,
+      "cases": 10195,
       "failing": 0
     },
     {
@@ -423,7 +423,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10191,
+      "cases": 10195,
       "failing": 0
     },
     {
@@ -453,7 +453,7 @@
         }
       ],
       "status": "pass",
-      "cases": 8425,
+      "cases": 8400,
       "failing": 0
     },
     {
@@ -468,7 +468,7 @@
         }
       ],
       "status": "pass",
-      "cases": 8425,
+      "cases": 8400,
       "failing": 0
     },
     {
@@ -483,7 +483,7 @@
         }
       ],
       "status": "pass",
-      "cases": 8425,
+      "cases": 8400,
       "failing": 0
     },
     {
@@ -500,7 +500,7 @@
       ],
       "basis": "The draft's §7.1.4: \"The value for a response path must be a list of path segments\", with list indices \"0-indexed integers\", and an aliased field \"must use the aliased name\". October 2021's §7.1.6 says each of these with should: \"This field should be a list of path segments\", \"If the error happens in an aliased field, the path to the error should use the aliased name\".",
       "status": "pass",
-      "cases": 8425,
+      "cases": 8400,
       "failing": 0
     },
     {
@@ -515,7 +515,7 @@
         }
       ],
       "status": "pass",
-      "cases": 8425,
+      "cases": 8400,
       "failing": 0
     },
     {
@@ -545,7 +545,7 @@
       ],
       "fixture": "fragments",
       "example": {
-        "trace": "call node; settle node = object(Bot); call node.id; call node.nodeId; settle node.id = null",
+        "trace": "call node; settle node = object(Bot); call node.id; call node.nodeId; settle node.nodeId = null",
         "response": {
           "data": null,
           "errors": [
@@ -553,41 +553,25 @@
               "message": "Cannot return null for non-nullable field Bot.id.",
               "locations": [
                 {
-                  "line": 3,
-                  "column": 5
+                  "line": 12,
+                  "column": 7
                 }
               ],
               "path": [
                 "node",
-                "id"
+                "nodeId"
               ]
             }
           ]
         },
         "expected": "data {\"node\": null}"
       },
-      "cases": 414,
+      "cases": 412,
       "fixtures": {
-        "fragments": 156,
-        "lists": 106,
-        "nullPropagation": 115,
-        "unions": 37
-      }
-    },
-    {
-      "checks": [
-        "resultCoercion"
-      ],
-      "summary": "the implementation produced no response, after a resolver returned a value its type can't represent: …",
-      "fixture": "leaves",
-      "problem": "the implementation produced no response, after a resolver returned a value its type can't represent: \"can't serialize the result: json: unsupported value: +Inf\"",
-      "example": {
-        "trace": "call count; call ratio; call color; settle ratio = uncoercible; settle count = uncoercible; settle color = error",
-        "noResponse": "can't serialize the result: json: unsupported value: +Inf"
-      },
-      "cases": 309,
-      "fixtures": {
-        "leaves": 309
+        "fragments": 149,
+        "lists": 111,
+        "nullPropagation": 120,
+        "unions": 32
       }
     },
     {
@@ -605,11 +589,80 @@
         },
         "expected": "data {\"version\": <leaf>, \"user\": null}"
       },
-      "cases": 258,
+      "cases": 337,
       "fixtures": {
-        "leaves": 164,
-        "nullPropagation": 14,
+        "leaves": 245,
+        "nullPropagation": 12,
         "unions": 80
+      }
+    },
+    {
+      "checks": [
+        "resultCoercion"
+      ],
+      "summary": "color is null without an error, though its resolver returned a value its type can't represent, which must raise an execution error",
+      "fixture": "leaves",
+      "problem": "color is null without an error, though its resolver returned a value its type can't represent, which must raise an execution error",
+      "example": {
+        "trace": "call color; call count; call ratio; settle count = object(); settle color = uncoercible; settle ratio = leaf",
+        "response": {
+          "data": {
+            "color": null,
+            "count": null,
+            "ratio": 1.5
+          }
+        }
+      },
+      "cases": 318,
+      "fixtures": {
+        "leaves": 318
+      }
+    },
+    {
+      "checks": [
+        "resultCoercion"
+      ],
+      "summary": "the implementation produced no response, after a resolver returned a value its type can't represent: …",
+      "fixture": "leaves",
+      "problem": "the implementation produced no response, after a resolver returned a value its type can't represent: \"can't serialize the result: json: unsupported value: +Inf\"",
+      "example": {
+        "trace": "call ratio; call color; call count; settle color = uncoercible; settle ratio = uncoercible; settle count = leaf",
+        "noResponse": "can't serialize the result: json: unsupported value: +Inf"
+      },
+      "cases": 305,
+      "fixtures": {
+        "leaves": 305
+      }
+    },
+    {
+      "checks": [
+        "calledSerially"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; call second; call third; settle second = error",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "resolver at second failed",
+              "locations": [
+                {
+                  "line": 5,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "second"
+              ]
+            }
+          ]
+        },
+        "expected": "data null"
+      },
+      "cases": 245,
+      "fixtures": {
+        "mutation": 245
       }
     },
     {
@@ -643,40 +696,9 @@
           ]
         }
       },
-      "cases": 234,
+      "cases": 228,
       "fixtures": {
-        "leaves": 234
-      }
-    },
-    {
-      "checks": [
-        "calledSerially"
-      ],
-      "fixture": "mutation",
-      "example": {
-        "trace": "call first; call second; call third; settle second = error",
-        "response": {
-          "data": null,
-          "errors": [
-            {
-              "message": "resolver at second failed",
-              "locations": [
-                {
-                  "line": 5,
-                  "column": 3
-                }
-              ],
-              "path": [
-                "second"
-              ]
-            }
-          ]
-        },
-        "expected": "data null"
-      },
-      "cases": 232,
-      "fixtures": {
-        "mutation": 232
+        "leaves": 228
       }
     },
     {
@@ -686,19 +708,33 @@
       ],
       "fixture": "leaves",
       "example": {
-        "trace": "call color; call count; call ratio; settle count = object(); settle color = uncoercible; settle ratio = leaf",
+        "trace": "call count; call ratio; call color; settle ratio = object(); settle count = error; settle color = leaf",
         "response": {
           "data": {
-            "color": null,
+            "color": "RED",
             "count": null,
-            "ratio": 1.5
-          }
+            "ratio": null
+          },
+          "errors": [
+            {
+              "message": "resolver at count failed",
+              "locations": [
+                {
+                  "line": 2,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "count"
+              ]
+            }
+          ]
         },
-        "expected": "data {\"count\": null, \"ratio\": <leaf>, \"color\": null}"
+        "expected": "data {\"count\": null, \"ratio\": null, \"color\": <leaf>}"
       },
-      "cases": 205,
+      "cases": 163,
       "fixtures": {
-        "leaves": 205
+        "leaves": 163
       }
     },
     {
@@ -708,12 +744,12 @@
       ],
       "fixture": "mutation",
       "example": {
-        "trace": "call first; call second; call third; settle first = error; settle second = error",
+        "trace": "call first; call second; call third; settle second = null; settle first = error",
         "response": {
           "data": null,
           "errors": [
             {
-              "message": "resolver at second failed",
+              "message": "Cannot return null for non-nullable field Mutation.second.",
               "locations": [
                 {
                   "line": 5,
@@ -728,43 +764,9 @@
         },
         "expected": "data null"
       },
-      "cases": 87,
+      "cases": 80,
       "fixtures": {
-        "mutation": 87
-      }
-    },
-    {
-      "checks": [
-        "calledSerially",
-        "nullsExplained",
-        "serialErrorsKept"
-      ],
-      "fixture": "mutation",
-      "example": {
-        "trace": "call first; call second; call third; settle second = null; settle third = object(Payload); call third.likes; settle third.likes = null",
-        "response": {
-          "data": null,
-          "errors": [
-            {
-              "message": "Cannot return null for non-nullable field Payload.likes.",
-              "locations": [
-                {
-                  "line": 9,
-                  "column": 5
-                }
-              ],
-              "path": [
-                "third",
-                "likes"
-              ]
-            }
-          ]
-        },
-        "expected": "data null"
-      },
-      "cases": 79,
-      "fixtures": {
-        "mutation": 79
+        "mutation": 80
       }
     },
     {
@@ -795,19 +797,20 @@
         },
         "expected": "data {\"posts\": null, \"tags\": [null]}"
       },
-      "cases": 78,
+      "cases": 71,
       "fixtures": {
-        "lists": 58,
-        "unions": 20
+        "lists": 47,
+        "unions": 24
       }
     },
     {
       "checks": [
-        "complete"
+        "complete",
+        "dataMatches"
       ],
       "fixture": "lists",
       "example": {
-        "trace": "call posts; call tags; settle posts = list(1); call posts.0; settle tags = list(1); call tags.0; settle posts.0 = null",
+        "trace": "call posts; call tags; settle posts = list(1); call posts.0; settle posts.0 = null; settle tags = list(1); call tags.0",
         "response": {
           "data": null,
           "errors": [
@@ -828,10 +831,44 @@
         },
         "expected": "data (incomplete)"
       },
-      "cases": 69,
+      "cases": 67,
       "fixtures": {
-        "lists": 60,
-        "unions": 9
+        "lists": 55,
+        "unions": 12
+      }
+    },
+    {
+      "checks": [
+        "calledSerially",
+        "nullsExplained",
+        "serialErrorsKept"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; call second; call third; settle third = object(Payload); call third.likes; settle second = null; settle third.likes = error",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "resolver at third.likes failed",
+              "locations": [
+                {
+                  "line": 9,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "third",
+                "likes"
+              ]
+            }
+          ]
+        },
+        "expected": "data null"
+      },
+      "cases": 66,
+      "fixtures": {
+        "mutation": 66
       }
     },
     {
@@ -862,9 +899,9 @@
         },
         "expected": "data (incomplete)"
       },
-      "cases": 48,
+      "cases": 45,
       "fixtures": {
-        "mutation": 48
+        "mutation": 45
       }
     },
     {
@@ -875,7 +912,40 @@
       ],
       "fixture": "mutation",
       "example": {
-        "trace": "call first; call second; call third; settle first = object(Payload); call first.likes; settle third = error; settle first.likes = error",
+        "trace": "call first; call second; call third; settle third = error; settle first = object(Payload); call first.likes; settle first.likes = null",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "Cannot return null for non-nullable field Payload.likes.",
+              "locations": [
+                {
+                  "line": 3,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "first",
+                "likes"
+              ]
+            }
+          ]
+        },
+        "expected": "data (incomplete)"
+      },
+      "cases": 14,
+      "fixtures": {
+        "mutation": 14
+      }
+    },
+    {
+      "checks": [
+        "calledSerially",
+        "dataMatches"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; call second; call third; settle second = object(Payload); call second.likes; settle second.likes = leaf; settle first = object(Payload); settle third = null; call first.likes; settle first.likes = error",
         "response": {
           "data": null,
           "errors": [
@@ -894,11 +964,50 @@
             }
           ]
         },
-        "expected": "data (incomplete)"
+        "expected": "data {\"first\": null, \"second\": {\"likes\": <leaf>}, \"third\": null}"
       },
       "cases": 13,
       "fixtures": {
         "mutation": 13
+      }
+    },
+    {
+      "checks": [
+        "intFraction"
+      ],
+      "summary": "… is 1, though its resolver returned a value its type can't represent, which should raise an execution error",
+      "fixture": "unions",
+      "problem": "matrix.0.0 is 1, though its resolver returned a value its type can't represent, which should raise an execution error",
+      "example": {
+        "trace": "call search; call matrix; settle search = error; settle matrix = list(1); call matrix.0; settle matrix.0 = list(1); call matrix.0.0; settle matrix.0.0 = uncoercible",
+        "response": {
+          "data": {
+            "matrix": [
+              [
+                1
+              ]
+            ],
+            "search": null
+          },
+          "errors": [
+            {
+              "message": "resolver at search failed",
+              "locations": [
+                {
+                  "line": 2,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "search"
+              ]
+            }
+          ]
+        }
+      },
+      "cases": 9,
+      "fixtures": {
+        "unions": 9
       }
     },
     {
@@ -910,12 +1019,12 @@
       ],
       "fixture": "mutation",
       "example": {
-        "trace": "call first; call second; call third; settle second = object(Payload); settle first = error; call second.likes; settle third = object(Payload); settle second.likes = leaf; call third.likes; settle third.likes = null",
+        "trace": "call first; call second; call third; settle third = object(Payload); settle first = error; settle second = object(Payload); call second.likes; settle second.likes = leaf; call third.likes; settle third.likes = error",
         "response": {
           "data": null,
           "errors": [
             {
-              "message": "Cannot return null for non-nullable field Payload.likes.",
+              "message": "resolver at third.likes failed",
               "locations": [
                 {
                   "line": 9,
@@ -931,42 +1040,9 @@
         },
         "expected": "data {\"first\": null, \"second\": {\"likes\": <leaf>}, \"third\": null}"
       },
-      "cases": 10,
+      "cases": 9,
       "fixtures": {
-        "mutation": 10
-      }
-    },
-    {
-      "checks": [
-        "calledSerially",
-        "dataMatches"
-      ],
-      "fixture": "mutation",
-      "example": {
-        "trace": "call first; call second; call third; settle second = object(Payload); settle third = object(Payload); settle first = null; call second.likes; settle second.likes = leaf; call third.likes; settle third.likes = null",
-        "response": {
-          "data": null,
-          "errors": [
-            {
-              "message": "Cannot return null for non-nullable field Payload.likes.",
-              "locations": [
-                {
-                  "line": 9,
-                  "column": 5
-                }
-              ],
-              "path": [
-                "third",
-                "likes"
-              ]
-            }
-          ]
-        },
-        "expected": "data {\"first\": null, \"second\": {\"likes\": <leaf>}, \"third\": null}"
-      },
-      "cases": 10,
-      "fixtures": {
-        "mutation": 10
+        "mutation": 9
       }
     },
     {
@@ -1004,56 +1080,18 @@
     },
     {
       "checks": [
-        "intFraction"
-      ],
-      "summary": "… is 1, though its resolver returned a value its type can't represent, which should raise an execution error",
-      "fixture": "unions",
-      "problem": "matrix.0.0 is 1, though its resolver returned a value its type can't represent, which should raise an execution error",
-      "example": {
-        "trace": "call search; call matrix; settle matrix = list(1); settle search = error; call matrix.0; settle matrix.0 = list(1); call matrix.0.0; settle matrix.0.0 = uncoercible",
-        "response": {
-          "data": {
-            "matrix": [
-              [
-                1
-              ]
-            ],
-            "search": null
-          },
-          "errors": [
-            {
-              "message": "resolver at search failed",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 3
-                }
-              ],
-              "path": [
-                "search"
-              ]
-            }
-          ]
-        }
-      },
-      "cases": 5,
-      "fixtures": {
-        "unions": 5
-      }
-    },
-    {
-      "checks": [
         "complete",
+        "dataMatches",
         "nullsExplained"
       ],
       "fixture": "lists",
       "example": {
-        "trace": "call posts; call tags; settle tags = list(2); settle posts = list(1); call posts.0; call tags.0; call tags.1; settle tags.0 = error; settle posts.0 = error",
+        "trace": "call posts; call tags; settle tags = list(2); settle posts = list(1); call posts.0; call tags.0; call tags.1; settle tags.0 = error; settle posts.0 = null",
         "response": {
           "data": null,
           "errors": [
             {
-              "message": "resolver at posts.0 failed",
+              "message": "Cannot return null for non-nullable field Query.posts.",
               "locations": [
                 {
                   "line": 2,
@@ -1069,9 +1107,9 @@
         },
         "expected": "data (incomplete)"
       },
-      "cases": 3,
+      "cases": 7,
       "fixtures": {
-        "lists": 3
+        "lists": 7
       }
     },
     {
@@ -1083,7 +1121,7 @@
       ],
       "fixture": "mutation",
       "example": {
-        "trace": "call first; call second; call third; settle second = object(Payload); settle third = object(Payload); call third.likes; settle first = error; settle third.likes = error",
+        "trace": "call first; call second; call third; settle third = object(Payload); call third.likes; settle first = error; settle third.likes = error",
         "response": {
           "data": null,
           "errors": [
@@ -1104,9 +1142,43 @@
         },
         "expected": "data (incomplete)"
       },
-      "cases": 1,
+      "cases": 5,
       "fixtures": {
-        "mutation": 1
+        "mutation": 5
+      }
+    },
+    {
+      "checks": [
+        "calledSerially",
+        "complete",
+        "dataMatches"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; call second; call third; settle first = object(Payload); settle second = object(Payload); call second.likes; settle third = object(Payload); settle second.likes = leaf; call third.likes; settle third.likes = null",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "Cannot return null for non-nullable field Payload.likes.",
+              "locations": [
+                {
+                  "line": 9,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "third",
+                "likes"
+              ]
+            }
+          ]
+        },
+        "expected": "data (incomplete)"
+      },
+      "cases": 2,
+      "fixtures": {
+        "mutation": 2
       }
     },
     {
@@ -1117,7 +1189,7 @@
       ],
       "fixture": "mutation",
       "example": {
-        "trace": "call first; call second; call third; settle third = error; settle first = object(Payload); settle second = object(Payload); call second.likes; settle second.likes = leaf; call first.likes; settle first.likes = error",
+        "trace": "call first; call second; call third; settle first = object(Payload); settle second = object(Payload); call second.likes; settle second.likes = leaf; settle third = error; call first.likes; settle first.likes = error",
         "response": {
           "data": null,
           "errors": [
@@ -1176,7 +1248,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 156
+      "failing": 149
     },
     {
       "id": "leaves",
@@ -1204,7 +1276,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 912
+      "failing": 1066
     },
     {
       "id": "lists",
@@ -1232,7 +1304,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 227
+      "failing": 220
     },
     {
       "id": "mutation",
@@ -1255,7 +1327,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 489
+      "failing": 488
     },
     {
       "id": "noPropagation",
@@ -1288,7 +1360,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 129
+      "failing": 132
     },
     {
       "id": "subscription",
@@ -1339,7 +1411,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 151
+      "failing": 152
     }
   ],
   "ok": false

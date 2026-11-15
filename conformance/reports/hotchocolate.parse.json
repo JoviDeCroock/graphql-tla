@@ -4,6 +4,7 @@
   "implementation": "Hot Chocolate 15.1.21",
   "capabilities": [
     "coerce",
+    "custom-directives",
     "custom-scalar-literals",
     "exact-numbers",
     "idle",
@@ -17,21 +18,21 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 1983
+    "vectors": 2007
   },
-  "checkerSelfTest": "passed (4 negative controls)",
+  "checkerSelfTest": "passed (7 negative controls)",
   "cases": {
-    "submitted": 1983,
-    "distinct": 1983,
+    "submitted": 2007,
+    "distinct": 2007,
     "malformed": 0
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 105,
-    "failing": 67
+    "vectors": 116,
+    "failing": 28
   },
   "checks": [
     {
@@ -46,9 +47,9 @@
         }
       ],
       "status": "fail",
-      "cases": 33,
-      "failing": 3,
-      "failingDraftOnly": 3
+      "cases": 34,
+      "failing": 15,
+      "failingDraftOnly": 4
     },
     {
       "id": "whiteSpace",
@@ -61,10 +62,10 @@
           "url": "https://spec.graphql.org/draft/#sec-White-Space"
         }
       ],
-      "status": "fail",
-      "cases": 28,
-      "failing": 1,
-      "failingDraftOnly": 1
+      "status": "pass",
+      "cases": 27,
+      "failing": 0,
+      "failingDraftOnly": 0
     },
     {
       "id": "lineTerminators",
@@ -94,7 +95,7 @@
         }
       ],
       "status": "pass",
-      "cases": 17,
+      "cases": 21,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -142,8 +143,8 @@
         }
       ],
       "status": "fail",
-      "cases": 81,
-      "failing": 4,
+      "cases": 427,
+      "failing": 350,
       "failingDraftOnly": 0
     },
     {
@@ -190,9 +191,9 @@
         }
       ],
       "status": "fail",
-      "cases": 100,
-      "failing": 58,
-      "failingDraftOnly": 54
+      "cases": 121,
+      "failing": 24,
+      "failingDraftOnly": 21
     },
     {
       "id": "document",
@@ -206,8 +207,8 @@
         }
       ],
       "status": "fail",
-      "cases": 99,
-      "failing": 12,
+      "cases": 98,
+      "failing": 1,
       "failingDraftOnly": 0
     },
     {
@@ -221,9 +222,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Operations"
         }
       ],
-      "status": "fail",
-      "cases": 100,
-      "failing": 18,
+      "status": "pass",
+      "cases": 101,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -237,9 +238,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Selection-Sets"
         }
       ],
-      "status": "fail",
+      "status": "pass",
       "cases": 95,
-      "failing": 6,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -253,9 +254,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Fields"
         }
       ],
-      "status": "fail",
+      "status": "pass",
       "cases": 96,
-      "failing": 15,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -270,8 +271,8 @@
         }
       ],
       "status": "fail",
-      "cases": 110,
-      "failing": 30,
+      "cases": 111,
+      "failing": 2,
       "failingDraftOnly": 0
     },
     {
@@ -285,9 +286,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Field-Alias"
         }
       ],
-      "status": "fail",
+      "status": "pass",
       "cases": 94,
-      "failing": 21,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -301,9 +302,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Fragments"
         }
       ],
-      "status": "fail",
+      "status": "pass",
       "cases": 117,
-      "failing": 18,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -317,9 +318,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Type-Conditions"
         }
       ],
-      "status": "fail",
+      "status": "pass",
       "cases": 112,
-      "failing": 24,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -333,9 +334,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Inline-Fragments"
         }
       ],
-      "status": "fail",
+      "status": "pass",
       "cases": 100,
-      "failing": 42,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -349,9 +350,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Input-Values"
         }
       ],
-      "status": "fail",
+      "status": "pass",
       "cases": 122,
-      "failing": 36,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -366,7 +367,7 @@
         }
       ],
       "status": "pass",
-      "cases": 42,
+      "cases": 46,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -414,9 +415,9 @@
         }
       ],
       "status": "fail",
-      "cases": 146,
+      "cases": 153,
       "failing": 24,
-      "failingDraftOnly": 9
+      "failingDraftOnly": 3
     },
     {
       "id": "nullValue",
@@ -446,7 +447,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10,
+      "cases": 14,
       "failing": 0,
       "failingDraftOnly": 0
     },
@@ -461,9 +462,9 @@
           "url": "https://spec.graphql.org/draft/#sec-List-Value"
         }
       ],
-      "status": "fail",
-      "cases": 101,
-      "failing": 35,
+      "status": "pass",
+      "cases": 102,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -477,9 +478,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Input-Object-Values"
         }
       ],
-      "status": "fail",
+      "status": "pass",
       "cases": 107,
-      "failing": 35,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -494,8 +495,8 @@
         }
       ],
       "status": "fail",
-      "cases": 157,
-      "failing": 26,
+      "cases": 158,
+      "failing": 1,
       "failingDraftOnly": 0
     },
     {
@@ -509,9 +510,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Type-References"
         }
       ],
-      "status": "fail",
-      "cases": 102,
-      "failing": 21,
+      "status": "pass",
+      "cases": 114,
+      "failing": 0,
       "failingDraftOnly": 0
     },
     {
@@ -525,292 +526,57 @@
           "url": "https://spec.graphql.org/draft/#sec-Directives"
         }
       ],
-      "status": "fail",
-      "cases": 113,
-      "failing": 28,
+      "status": "pass",
+      "cases": 112,
+      "failing": 0,
       "failingDraftOnly": 0
     }
   ],
   "findings": [
     {
       "checks": [
+        "ignoredTokens"
+      ],
+      "summary": "rejects what §2.1.6 Ignored Tokens accepts",
+      "cases": 350,
+      "fixtures": {
+        "ignored": 4,
+        "random-documents": 346
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"{\\ta﻿}\"",
+        "response": {
+          "ok": false,
+          "error": "Unexpected character `ï` (239)."
+        },
+        "expected": "{\"ok\":true}",
+        "sibling": "\":\\ta﻿}\", which the reference rejects"
+      }
+    },
+    {
+      "checks": [
         "descriptions"
       ],
       "summary": "rejects what §2.2 Descriptions accepts",
-      "cases": 57,
+      "cases": 21,
       "fixtures": {
         "parser-examples": 1,
         "variable-definitions": 1,
-        "random-documents": 55
+        "random-documents": 19
       },
-      "draftOnly": 54,
-      "fixture": "random-documents",
+      "draftOnly": 21,
+      "fixture": "variable-definitions",
       "example": {
-        "input": "[draft] \"\\\"\\\"\\\"\\\"\\\"\\\" mutation {﻿x1 }\"",
+        "input": "[draft] \"query (\\\"d\\\" $ a : Int) {a}\"",
         "response": {
           "ok": false,
-          "error": "Unexpected character `ï` (239)."
+          "error": "Expected a `Dollar`-token, but found a `String`-token."
         },
         "expected": "{\"ok\":true}",
-        "sibling": "\"\\\"\\\"\\\"\\\"\\\"\\\" { {﻿x1 }\", which the reference rejects"
-      }
-    },
-    {
-      "checks": [
-        "inlineFragments"
-      ],
-      "summary": "rejects what §2.9.2 Inline Fragments accepts",
-      "cases": 42,
-      "fixtures": {
-        "random-documents": 42
+        "sibling": "\"query (\\\"d\\\" $ : Int) {a}\", which the reference rejects"
       },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"{﻿... {,x1 ...﻿x1\\r\\n}\\t}\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}",
-        "sibling": "\"{﻿{ ...,x1 ...﻿x1\\r\\n}\\t}\", which the reference rejects"
-      }
-    },
-    {
-      "checks": [
-        "inputValues"
-      ],
-      "summary": "rejects what §2.10 Input Values accepts",
-      "cases": 36,
-      "fixtures": {
-        "random-documents": 36
-      },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"{\\r\\nb﻿(﻿Foo : on ),{ #c\\ntrue } }\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}",
-        "sibling": "\"{\\r\\nb﻿(﻿Foo : ] ),{ #c\\ntrue } }\", which the reference rejects"
-      }
-    },
-    {
-      "checks": [
-        "listValue"
-      ],
-      "summary": "rejects what §2.10.7 List Value accepts",
-      "cases": 35,
-      "fixtures": {
-        "random-documents": 35
-      },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"{ mutation﻿(\\r\\nx1 #c\\n: [ #c\\n[,]\\n]\\r\\n)﻿}\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}",
-        "sibling": "\"{ mutation﻿(\\r\\nx1 #c\\n: [ #c\\n[,] =\\n]\\r\\n)﻿}\", which the reference rejects"
-      }
-    },
-    {
-      "checks": [
-        "inputObjectValues"
-      ],
-      "summary": "rejects what §2.10.8 Input Object Values accepts",
-      "cases": 35,
-      "fixtures": {
-        "random-documents": 35
-      },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"{\\nx1 (\\r\\nFoo﻿:\\t{\\ttrue﻿:\\r\\n6.02E+23,} #c\\n),}\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}",
-        "sibling": "\"{\\nx1 (\\r\\nFoo﻿:\\t{\\ttrue﻿: :\\r\\n6.02E+23,} #c\\n),}\", which the reference rejects"
-      }
-    },
-    {
-      "checks": [
-        "arguments"
-      ],
-      "summary": "rejects what §2.7 Arguments accepts",
-      "cases": 29,
-      "fixtures": {
-        "random-documents": 29
-      },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"{ x1\\n(﻿false :﻿RED #c\\n) }\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}",
-        "sibling": "\"{ x1\\n( (﻿false :﻿RED #c\\n) }\", which the reference rejects"
-      }
-    },
-    {
-      "checks": [
-        "directives"
-      ],
-      "summary": "rejects what §2.13 Directives accepts",
-      "cases": 27,
-      "fixtures": {
-        "random-documents": 27
-      },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"{ null\\ta﻿}\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}"
-      }
-    },
-    {
-      "checks": [
-        "variables"
-      ],
-      "summary": "rejects what §2.11 Variables accepts",
-      "cases": 25,
-      "fixtures": {
-        "random-documents": 25
-      },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"query {﻿true,( true\\r\\n:﻿$﻿_x )\\t}\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}",
-        "sibling": "\"query {﻿true,( true\\r\\n:﻿$ )\\t}\", which the reference rejects"
-      }
-    },
-    {
-      "checks": [
-        "typeConditions"
-      ],
-      "summary": "rejects what §2.9.1 Type Conditions accepts",
-      "cases": 24,
-      "fixtures": {
-        "random-documents": 24
-      },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"fragment﻿x1﻿on\\ton\\n{﻿x1﻿}\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}",
-        "sibling": "\"fragment﻿x1﻿on on\\ton\\n{﻿x1﻿}\", which the reference rejects"
-      }
-    },
-    {
-      "checks": [
-        "fieldAlias"
-      ],
-      "summary": "rejects what §2.8 Field Alias accepts",
-      "cases": 21,
-      "fixtures": {
-        "random-documents": 21
-      },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"{ #c\\na\\n:\\tb﻿}\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}",
-        "sibling": "\"{ #c\\n{\\n:\\tb﻿}\", which the reference rejects"
-      }
-    },
-    {
-      "checks": [
-        "typeReferences"
-      ],
-      "summary": "rejects what §2.12 Type References accepts",
-      "cases": 21,
-      "fixtures": {
-        "random-documents": 21
-      },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"query\\r\\nfragment,(﻿$﻿on,: #c\\nInt #c\\n)\\n{,false }\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}",
-        "sibling": "\"query\\r\\nfragment,(﻿$﻿on,: #c\\n)\\n{,false }\", which the reference rejects"
-      }
-    },
-    {
-      "checks": [
-        "operations"
-      ],
-      "summary": "rejects what §2.4 Operations accepts",
-      "cases": 18,
-      "fixtures": {
-        "random-documents": 18
-      },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"mutation\\n_x﻿{ x1 }\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}",
-        "sibling": "\"mutation\\n_x null﻿{ x1 }\", which the reference rejects"
-      }
-    },
-    {
-      "checks": [
-        "fragments"
-      ],
-      "summary": "rejects what §2.9 Fragments accepts",
-      "cases": 18,
-      "fixtures": {
-        "random-documents": 18
-      },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"{﻿Foo,}\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}"
-      }
-    },
-    {
-      "checks": [
-        "fields"
-      ],
-      "summary": "rejects what §2.6 Fields accepts",
-      "cases": 15,
-      "fixtures": {
-        "random-documents": 15
-      },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"{ on on @﻿Foo,}\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}"
-      }
+      "edition": "draft"
     },
     {
       "checks": [
@@ -824,33 +590,12 @@
         "lexer-examples": 7,
         "strings": 5
       },
-      "draftOnly": 6,
       "fixture": "strings",
       "example": {
         "input": "\"{a(x: \\\"\\\\u00\\\")}\"",
         "response": "the adapter answered with an error: IndexOutOfRangeException: Index was outside the bounds of the array.",
         "expected": "{\"ok\":false}",
         "sibling": "\"{a(x: \\\"\\\")}\", which the reference accepts"
-      }
-    },
-    {
-      "checks": [
-        "document"
-      ],
-      "summary": "rejects what §2.3 Document accepts",
-      "cases": 9,
-      "fixtures": {
-        "random-documents": 9
-      },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"{﻿true\\r\\n}\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}",
-        "sibling": "\"a {﻿true\\r\\n}\", which the reference rejects"
       }
     },
     {
@@ -876,22 +621,22 @@
     },
     {
       "checks": [
-        "selectionSets"
+        "sourceText"
       ],
-      "summary": "rejects what §2.5 Selection Sets accepts",
-      "cases": 6,
+      "kind": "crash",
+      "summary": "crashes on a source §2.1 Source Text rejects, instead of rejecting it",
+      "problem": "Utf8EncodingException: High surrogate not followed by low surrogate.",
+      "cases": 8,
       "fixtures": {
-        "random-documents": 6
+        "strings": 6,
+        "ignored": 2
       },
-      "fixture": "random-documents",
+      "fixture": "ignored",
       "example": {
-        "input": "\"{\\ta﻿}\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}",
-        "sibling": "\":\\ta﻿}\", which the reference rejects"
+        "input": "\"{a\\ud800\\u000b\\nb}\"",
+        "response": "the adapter answered with an error: Utf8EncodingException: High surrogate not followed by low surrogate.",
+        "expected": "{\"ok\":false}",
+        "sibling": "\"{a#\\u000b\\nb}\", which the reference accepts"
       }
     },
     {
@@ -915,53 +660,14 @@
     },
     {
       "checks": [
-        "ignoredTokens"
+        "sourceText"
       ],
-      "summary": "rejects what §2.1.6 Ignored Tokens accepts",
+      "summary": "rejects what §2.1 Source Text accepts",
       "cases": 4,
       "fixtures": {
         "ignored": 4
       },
-      "fixture": "ignored",
-      "example": {
-        "input": "\"{a﻿b}\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `ï` (239)."
-        },
-        "expected": "{\"ok\":true}"
-      }
-    },
-    {
-      "checks": [
-        "document"
-      ],
-      "summary": "accepts what §2.3 Document rejects",
-      "cases": 3,
-      "fixtures": {
-        "parser-examples": 1,
-        "random-documents": 2
-      },
-      "fixture": "random-documents",
-      "example": {
-        "input": "\"\\\"s\\\" { mutation }\"",
-        "response": {
-          "ok": true
-        },
-        "expected": "{\"ok\":false}",
-        "sibling": "\"{ mutation }\", which the reference accepts"
-      }
-    },
-    {
-      "checks": [
-        "sourceText"
-      ],
-      "summary": "rejects what §2.1 Source Text accepts",
-      "cases": 3,
-      "fixtures": {
-        "ignored": 3
-      },
-      "draftOnly": 3,
+      "draftOnly": 4,
       "fixture": "ignored",
       "example": {
         "input": "[draft] \"{a#\\u000b\\nb}\"",
@@ -979,9 +685,10 @@
         "descriptions"
       ],
       "summary": "accepts what §2.2 Descriptions rejects",
-      "cases": 1,
+      "cases": 3,
       "fixtures": {
-        "parser-examples": 1
+        "parser-examples": 1,
+        "random-documents": 2
       },
       "fixture": "parser-examples",
       "example": {
@@ -994,12 +701,31 @@
     },
     {
       "checks": [
+        "sourceText"
+      ],
+      "summary": "accepts what §2.1 Source Text rejects",
+      "cases": 3,
+      "fixtures": {
+        "ignored": 3
+      },
+      "fixture": "ignored",
+      "example": {
+        "input": "\"{a\\ud800b}\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}",
+        "sibling": "\"{ab}\", which the reference accepts"
+      }
+    },
+    {
+      "checks": [
         "arguments"
       ],
       "summary": "accepts what §2.7 Arguments rejects",
-      "cases": 1,
+      "cases": 2,
       "fixtures": {
-        "parser-examples": 1
+        "parser-examples": 2
       },
       "fixture": "parser-examples",
       "example": {
@@ -1012,16 +738,16 @@
     },
     {
       "checks": [
-        "directives"
+        "document"
       ],
-      "summary": "accepts what §2.13 Directives rejects",
+      "summary": "accepts what §2.3 Document rejects",
       "cases": 1,
       "fixtures": {
         "parser-examples": 1
       },
       "fixture": "parser-examples",
       "example": {
-        "input": "\"{a @d()}\"",
+        "input": "\"  # only a comment\"",
         "response": {
           "ok": true
         },
@@ -1045,27 +771,6 @@
         },
         "expected": "{\"ok\":false}"
       }
-    },
-    {
-      "checks": [
-        "whiteSpace"
-      ],
-      "summary": "rejects what §2.1.1 White Space accepts",
-      "cases": 1,
-      "fixtures": {
-        "ignored": 1
-      },
-      "draftOnly": 1,
-      "fixture": "ignored",
-      "example": {
-        "input": "[draft] \"{a#\\f\\rb}\"",
-        "response": {
-          "ok": false,
-          "error": "Unexpected character `\f` (12)."
-        },
-        "expected": "{\"ok\":true}"
-      },
-      "edition": "draft"
     }
   ],
   "fixtures": [],

@@ -13,18 +13,23 @@
     "validate"
   ],
   "provenance": {
-    "kit": "5da3deb09c91",
+    "kit": "71f0a24bdc40",
     "date": "2026-11-15",
     "strict": true,
     "random": 1500,
     "seed": 1,
-    "exhaustive": true
+    "exhaustive": true,
+    "skipped": {
+      "uncoercible Int results (uncoercibleTypes: Float)": 1713,
+      "uncoercible Enum results (uncoercibleTypes: Float)": 1572,
+      "null for a Non-Null list item or subscription event (nullItems: false)": 3936
+    }
   },
-  "checkerSelfTest": "passed (35 negative controls)",
+  "checkerSelfTest": "passed (41 negative controls)",
   "cases": {
-    "submitted": 12160,
-    "distinct": 1573,
-    "malformed": 2663
+    "submitted": 11781,
+    "distinct": 1262,
+    "malformed": 1754
   },
   "adapterProblems": 0,
   "checks": [
@@ -51,7 +56,7 @@
       ],
       "basis": "No sentence says to respond only once execution is complete; the algorithms do. ExecuteRootSelectionSet (§6.3.1) returns {data} once ExecuteCollectedFields has run, and §6.3.3 says \"Execution will recursively resolve and complete the value of every entry in the collected fields map\". The draft's §7.1.5 adds: \"The response data is the result of accumulating the resolved result of all response positions during execution.\" Positions §6.3.3 lets an implementation cancel don't hold the response back.",
       "status": "pass",
-      "cases": 1573,
+      "cases": 1896,
       "failing": 0
     },
     {
@@ -77,8 +82,8 @@
       ],
       "basis": "When an error propagates to the root, §6.4.4 and §7.1.5 say data \"should be null\", in both editions. The kit still requires null, because no other value conforms: the execution result must have a data entry (§7.1.1), {} or a partial map leaves out an entry ExecuteCollectedFields must produce (§6.3.3), and a map with null at the failed root field breaks that field's Non-Null type.",
       "status": "fail",
-      "cases": 1573,
-      "failing": 59
+      "cases": 1896,
+      "failing": 45
     },
     {
       "id": "keyOrder",
@@ -92,7 +97,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1573,
+      "cases": 1896,
       "failing": 0
     },
     {
@@ -112,8 +117,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1573,
-      "failing": 530
+      "cases": 1315,
+      "failing": 418
     },
     {
       "id": "errorPathsUnique",
@@ -129,8 +134,8 @@
       ],
       "basis": "The draft's §6.4.4: \"each error added to the errors list during execution must have a unique response path.\" October 2021's: \"only one error should be added to the errors list per field.\" Both editions say the errors list \"must not be further affected\" when a position is null because of an error already added.",
       "status": "fail",
-      "cases": 1573,
-      "failing": 77
+      "cases": 1315,
+      "failing": 70
     },
     {
       "id": "errorsInsideNulls",
@@ -144,8 +149,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1573,
-      "failing": 338
+      "cases": 1315,
+      "failing": 243
     },
     {
       "id": "nullsExplained",
@@ -164,8 +169,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1573,
-      "failing": 667
+      "cases": 1315,
+      "failing": 372
     },
     {
       "id": "serialErrorsKept",
@@ -225,7 +230,7 @@
         }
       ],
       "status": "fail",
-      "cases": 12160,
+      "cases": 11781,
       "failing": 555
     },
     {
@@ -240,7 +245,7 @@
         }
       ],
       "status": "pass",
-      "cases": 12160,
+      "cases": 11781,
       "failing": 0
     },
     {
@@ -260,7 +265,7 @@
         }
       ],
       "status": "pass",
-      "cases": 12160,
+      "cases": 11781,
       "failing": 0
     },
     {
@@ -275,7 +280,7 @@
         }
       ],
       "status": "pass",
-      "cases": 12160,
+      "cases": 11781,
       "failing": 0
     },
     {
@@ -290,7 +295,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1518,
+      "cases": 1516,
       "failing": 0
     },
     {
@@ -305,7 +310,7 @@
         }
       ],
       "status": "pass",
-      "cases": 8249,
+      "cases": 7890,
       "failing": 0
     },
     {
@@ -330,8 +335,8 @@
         }
       ],
       "status": "fail",
-      "cases": 721,
-      "failing": 402
+      "cases": 415,
+      "failing": 415
     },
     {
       "id": "intFraction",
@@ -350,9 +355,9 @@
         }
       ],
       "basis": "The level is contested. §3.5.1 states a rule with must: services \"may coerce non-integer internal values to integers when reasonable without losing information, otherwise they must raise an execution error\". Truncating 1.2 loses information, so on that reading the must applies. But the example that applies the rule to this very case says should: \"a floating-point number 1.2 should raise an execution error instead of being truncated to 1\". Where the level is in doubt, the kit takes the weaker one, so this is a SHOULD. October 2021 has the same sentences, with \"field error\".",
-      "status": "fail",
-      "cases": 476,
-      "failing": 403
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
     },
     {
       "id": "leafValues",
@@ -365,9 +370,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
         }
       ],
-      "status": "fail",
-      "cases": 8249,
-      "failing": 403
+      "status": "pass",
+      "cases": 7890,
+      "failing": 0
     },
     {
       "id": "leafEncoding",
@@ -381,7 +386,7 @@
         }
       ],
       "status": "pass",
-      "cases": 8249,
+      "cases": 7890,
       "failing": 0
     },
     {
@@ -396,7 +401,7 @@
         }
       ],
       "status": "pass",
-      "cases": 12160,
+      "cases": 11781,
       "failing": 0
     },
     {
@@ -410,9 +415,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Execution-Result"
         }
       ],
-      "status": "fail",
-      "cases": 12160,
-      "failing": 605
+      "status": "pass",
+      "cases": 11781,
+      "failing": 0
     },
     {
       "id": "additionalEntries",
@@ -426,7 +431,7 @@
         }
       ],
       "status": "pass",
-      "cases": 12160,
+      "cases": 11781,
       "failing": 0
     },
     {
@@ -456,7 +461,7 @@
         }
       ],
       "status": "pass",
-      "cases": 9204,
+      "cases": 9672,
       "failing": 0
     },
     {
@@ -471,7 +476,7 @@
         }
       ],
       "status": "pass",
-      "cases": 9204,
+      "cases": 9672,
       "failing": 0
     },
     {
@@ -486,7 +491,7 @@
         }
       ],
       "status": "pass",
-      "cases": 9204,
+      "cases": 9672,
       "failing": 0
     },
     {
@@ -503,8 +508,8 @@
       ],
       "basis": "The draft's §7.1.4: \"The value for a response path must be a list of path segments\", with list indices \"0-indexed integers\", and an aliased field \"must use the aliased name\". October 2021's §7.1.6 says each of these with should: \"This field should be a list of path segments\", \"If the error happens in an aliased field, the path to the error should use the aliased name\".",
       "status": "fail",
-      "cases": 9204,
-      "failing": 743
+      "cases": 9672,
+      "failing": 784
     },
     {
       "id": "errorEntries",
@@ -518,7 +523,7 @@
         }
       ],
       "status": "pass",
-      "cases": 9204,
+      "cases": 9672,
       "failing": 0
     },
     {
@@ -527,7 +532,7 @@
       "level": "ADAPTER",
       "spec": [],
       "status": "pass",
-      "cases": 12160,
+      "cases": 11781,
       "failing": 0
     },
     {
@@ -582,31 +587,10 @@
           ]
         }
       },
-      "cases": 743,
+      "cases": 784,
       "fixtures": {
-        "lists": 574,
-        "unions": 169
-      }
-    },
-    {
-      "checks": [
-        "errorsList"
-      ],
-      "summary": "errors is present but empty",
-      "fixture": "subscription",
-      "problem": "errors is present but empty (§7.1.1)",
-      "example": {
-        "trace": "call postLiked; settle postLiked = null",
-        "response": {
-          "data": {
-            "postLiked": null
-          },
-          "errors": []
-        }
-      },
-      "cases": 605,
-      "fixtures": {
-        "subscription": 605
+        "lists": 579,
+        "unions": 205
       }
     },
     {
@@ -659,69 +643,24 @@
     },
     {
       "checks": [
-        "leafValues"
-      ],
-      "summary": "a leaf isn't the canonical value",
-      "fixture": "leaves",
-      "problem": "count is 1.2, not the canonical 1",
-      "example": {
-        "trace": "call count; call ratio; call color; settle count = uncoercible; settle ratio = null; settle color = null",
-        "response": {
-          "data": {
-            "count": 1.2,
-            "ratio": null,
-            "color": null
-          }
-        }
-      },
-      "cases": 403,
-      "fixtures": {
-        "leaves": 360,
-        "unions": 43
-      }
-    },
-    {
-      "checks": [
         "resultCoercion"
       ],
-      "summary": "color is …, though its resolver returned a value its type can't represent, which must raise an execution error",
+      "summary": "ratio is null without an error, though its resolver returned a value its type can't represent, which must raise an execution error",
       "fixture": "leaves",
-      "problem": "color is \"NOT_A_VALUE\", though its resolver returned a value its type can't represent, which must raise an execution error",
+      "problem": "ratio is null without an error, though its resolver returned a value its type can't represent, which must raise an execution error",
       "example": {
-        "trace": "call count; call ratio; call color; settle count = null; settle ratio = null; settle color = uncoercible",
+        "trace": "call count; call ratio; call color; settle count = null; settle ratio = uncoercible; settle color = null",
         "response": {
           "data": {
             "count": null,
             "ratio": null,
-            "color": "NOT_A_VALUE"
-          }
-        }
-      },
-      "cases": 402,
-      "fixtures": {
-        "leaves": 402
-      }
-    },
-    {
-      "checks": [
-        "intFraction"
-      ],
-      "summary": "count is … though its resolver returned a value its type can't represent, which should raise an execution error",
-      "fixture": "leaves",
-      "problem": "count is 1.2, though its resolver returned a value its type can't represent, which should raise an execution error",
-      "example": {
-        "trace": "call count; call ratio; call color; settle count = uncoercible; settle ratio = null; settle color = null",
-        "response": {
-          "data": {
-            "count": 1.2,
-            "ratio": null,
             "color": null
           }
         }
       },
-      "cases": 360,
+      "cases": 415,
       "fixtures": {
-        "leaves": 360
+        "leaves": 415
       }
     },
     {
@@ -757,33 +696,10 @@
         },
         "expected": "data {\"posts\": null, \"tags\": [null]}"
       },
-      "cases": 252,
+      "cases": 172,
       "fixtures": {
-        "lists": 226,
-        "unions": 26
-      }
-    },
-    {
-      "checks": [
-        "nullsExplained"
-      ],
-      "fixture": "leaves",
-      "example": {
-        "trace": "call count; call ratio; call color; settle count = null; settle ratio = uncoercible; settle color = null",
-        "response": {
-          "data": {
-            "count": null,
-            "ratio": null,
-            "color": null
-          }
-        },
-        "expected": "data {\"count\": null, \"ratio\": null, \"color\": null}"
-      },
-      "cases": 164,
-      "fixtures": {
-        "leaves": 53,
-        "lists": 96,
-        "unions": 15
+        "lists": 150,
+        "unions": 22
       }
     },
     {
@@ -816,10 +732,10 @@
         },
         "expected": "data {\"posts\": null, \"tags\": []}"
       },
-      "cases": 130,
+      "cases": 111,
       "fixtures": {
-        "lists": 115,
-        "unions": 15
+        "lists": 92,
+        "unions": 19
       }
     },
     {
@@ -869,34 +785,9 @@
         },
         "expected": "data {\"posts\": null, \"tags\": [null, null]}"
       },
-      "cases": 58,
+      "cases": 46,
       "fixtures": {
-        "lists": 58
-      }
-    },
-    {
-      "checks": [
-        "intFraction"
-      ],
-      "summary": "… is … though its resolver returned a value its type can't represent, which should raise an execution error",
-      "fixture": "unions",
-      "problem": "matrix.0.0 is 1.2, though its resolver returned a value its type can't represent, which should raise an execution error",
-      "example": {
-        "trace": "call search; call matrix; settle search = null; settle matrix = list(1); call matrix.0; settle matrix.0 = list(1); call matrix.0.0; settle matrix.0.0 = uncoercible",
-        "response": {
-          "data": {
-            "search": null,
-            "matrix": [
-              [
-                1.2
-              ]
-            ]
-          }
-        }
-      },
-      "cases": 43,
-      "fixtures": {
-        "unions": 43
+        "lists": 46
       }
     },
     {
@@ -979,34 +870,43 @@
         },
         "expected": "data {\"search\": null, \"matrix\": [null]}"
       },
-      "cases": 28,
+      "cases": 25,
       "fixtures": {
-        "unions": 28
+        "unions": 25
       }
     },
     {
       "checks": [
-        "dataMatches",
-        "nullsExplained"
+        "dataMatches"
       ],
-      "fixture": "unions",
+      "fixture": "subscription",
       "example": {
-        "trace": "call search; call matrix; settle search = null; settle matrix = list(1); call matrix.0; settle matrix.0 = list(1); call matrix.0.0; settle matrix.0.0 = null",
+        "trace": "call postLiked; settle postLiked = error",
         "response": {
           "data": {
-            "search": null,
-            "matrix": [
-              [
-                null
+            "postLiked": null
+          },
+          "errors": [
+            {
+              "message": "resolver at postLiked failed",
+              "locations": [
+                {
+                  "line": 2,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "postLiked"
               ]
-            ]
-          }
+            }
+          ]
         },
-        "expected": "data {\"search\": null, \"matrix\": [null]}"
+        "expected": "data null"
       },
-      "cases": 17,
+      "cases": 20,
       "fixtures": {
-        "unions": 17
+        "subscription": 11,
+        "unions": 9
       }
     },
     {
@@ -1052,42 +952,9 @@
         },
         "expected": "data {\"posts\": null, \"tags\": []}"
       },
-      "cases": 15,
+      "cases": 18,
       "fixtures": {
-        "lists": 15
-      }
-    },
-    {
-      "checks": [
-        "dataMatches"
-      ],
-      "fixture": "subscription",
-      "example": {
-        "trace": "call postLiked; settle postLiked = error",
-        "response": {
-          "data": {
-            "postLiked": null
-          },
-          "errors": [
-            {
-              "message": "resolver at postLiked failed",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 3
-                }
-              ],
-              "path": [
-                "postLiked"
-              ]
-            }
-          ]
-        },
-        "expected": "data null"
-      },
-      "cases": 11,
-      "fixtures": {
-        "subscription": 11
+        "lists": 18
       }
     },
     {
@@ -1141,49 +1008,9 @@
         },
         "expected": "data null"
       },
-      "cases": 4,
+      "cases": 6,
       "fixtures": {
-        "lists": 4
-      }
-    },
-    {
-      "checks": [
-        "dataMatches",
-        "errorsWereRaised",
-        "nullsExplained"
-      ],
-      "fixture": "unions",
-      "example": {
-        "trace": "call search; call matrix; settle search = list(1); call search.0; settle matrix = list(1); call matrix.0; settle search.0 = error; settle matrix.0 = list(1); call matrix.0.0; settle matrix.0.0 = null",
-        "response": {
-          "data": {
-            "search": null,
-            "matrix": [
-              [
-                null
-              ]
-            ]
-          },
-          "errors": [
-            {
-              "message": "resolver at search.0 failed",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 3
-                }
-              ],
-              "path": [
-                "search"
-              ]
-            }
-          ]
-        },
-        "expected": "data {\"search\": null, \"matrix\": [null]}"
-      },
-      "cases": 3,
-      "fixtures": {
-        "unions": 3
+        "lists": 6
       }
     }
   ],
@@ -1246,8 +1073,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1628,
-      "failing": 770,
+      "cases": 1572,
+      "failing": 415,
       "note": "without results of the wrong shape (no invalid-results capability)"
     },
     {
@@ -1275,8 +1102,8 @@
         }
       ],
       "status": "fail",
-      "cases": 2358,
-      "failing": 1122
+      "cases": 2097,
+      "failing": 925
     },
     {
       "id": "mutation",
@@ -1349,8 +1176,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1518,
-      "failing": 616
+      "cases": 1516,
+      "failing": 11
     },
     {
       "id": "unions",
@@ -1382,8 +1209,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1720,
-      "failing": 322,
+      "cases": 1660,
+      "failing": 277,
       "note": "without results of the wrong shape (no invalid-results capability)"
     }
   ],

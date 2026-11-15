@@ -5,15 +5,15 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 **Notes** (hand-written, from outside the kit):
 
 - The adapter uses graphql-dotnet's schema-first `Schema.For`, its default `DocumentExecuter` and the System.Text.Json serializer. List items are `IDataLoaderResult` values, the only kind of item graphql-dotnet waits for. `idle` holds because everything runs on one thread; the determinism replay passed.
-- The `resultCoercion` finding: `FloatGraphType` passes a non-finite double through, and `GraphQLSerializer` then throws, so the client gets no response. graphql-dotnet rejects the kit's full introspection queries: it has no `specifiedByURL`, and `isRepeatable` and input-value deprecation are behind experimental flags that are off by default. The kit then discovers which fields exist and grades the rest under the October 2021 profile. Parse, validate, schema and introspect findings are described with source locations in the [adapter's README](../adapters/graphql-dotnet/README.md#known-graphql-dotnet-deviations).
+- The `resultCoercion` finding: `FloatGraphType` passes a non-finite double through, and `GraphQLSerializer` then throws, so the client gets no response. graphql-dotnet rejects the kit's full introspection queries: it has no `specifiedByURL`, input-value deprecation is behind an experimental flag that is off by default, and `isRepeatable` needs that kind of flag and is also hidden by the default schema filter (only `EnableExperimentalIntrospectionFeatures` shows it). The kit then discovers which fields exist and grades the rest under the October 2021 profile. The default schema filter also hides every directive with a type system location from `__schema.directives`. Parse, validate, schema and introspect findings are described with source locations in the [adapter's README](../adapters/graphql-dotnet/README.md#known-graphql-dotnet-deviations).
 
 ## Execution
 
-- **Capabilities:** custom-scalar-literals, deferred-items, idle, introspect, invalid-results, mutation, parse, schema, subscription, uncoercible-results, validate
+- **Capabilities:** custom-directives, deferred-items, idle, introspect, invalid-results, mutation, parse, schema, subscription, uncoercible-results, validate
 - **Cases:** 12658 submitted, 3014 distinct, 357 malformed
 - **Adapter problems:** none
-- **Checker self-test:** passed (35 negative controls)
-- **Run:** kit 5da3deb09c91, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
+- **Checker self-test:** passed (41 negative controls)
+- **Run:** kit 71f0a24bdc40, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
 
 ### Findings
 
@@ -100,12 +100,13 @@ response: none: GraphQLSerializer.Serialize threw ArgumentException: .NET number
 
 ## Parse
 
-- **Capabilities:** custom-scalar-literals, deferred-items, idle, introspect, invalid-results, mutation, parse, schema, subscription, uncoercible-results, validate
-- **Cases:** 1983 submitted, 1983 distinct, 0 malformed
-- **Draft only:** 96 of the failing vectors (of 105 draft-only vectors) rely on grammar or rules only in the draft
+- **Capabilities:** custom-directives, deferred-items, idle, introspect, invalid-results, mutation, parse, schema, subscription, uncoercible-results, validate
+- **Cases:** 1992 submitted, 1992 distinct, 0 malformed
+- **Vectors:** 1992 of 2007 graded (not graded: 15 unsupported by the adapter)
+- **Draft only:** 107 of the failing vectors (of 113 draft-only vectors) rely on grammar or rules only in the draft
 - **Adapter problems:** none
-- **Checker self-test:** passed (4 negative controls)
-- **Run:** kit 5da3deb09c91, 2026-11-15, strict
+- **Checker self-test:** passed (7 negative controls)
+- **Run:** kit 71f0a24bdc40, 2026-11-15, strict
 
 ### Findings
 
@@ -113,7 +114,7 @@ response: none: GraphQLSerializer.Serialize threw ArgumentException: .NET number
 
 #### 1. `descriptions`: rejects what §2.2 Descriptions accepts
 
-73 cases, in `random-documents` (69), `parser-examples` (3), `variable-definitions` (1). All rely on grammar or rules that are only in the draft, not in October 2021.
+84 cases, in `random-documents` (80), `parser-examples` (3), `variable-definitions` (1). All rely on grammar or rules that are only in the draft, not in October 2021.
 
 - Descriptions on operations, fragments and variables, not on the query shorthand (MUST, [§2.2](https://spec.graphql.org/draft/#sec-Descriptions))
 
@@ -236,55 +237,55 @@ expected: {"ok":false}
 
 | Check | Level | Spec | Result |
 | --- | :---: | :---: | :---: |
-| Source text is a sequence of SourceCharacter (`sourceText`) | MUST | [§2.1](https://spec.graphql.org/draft/#sec-Source-Text) | ✓ 33 |
-| White space is tab and space only (`whiteSpace`) | MUST | [§2.1.1](https://spec.graphql.org/draft/#sec-White-Space) | ✓ 28 |
+| Source text is a sequence of SourceCharacter (`sourceText`) | MUST | [§2.1](https://spec.graphql.org/draft/#sec-Source-Text) | ✓ 19 |
+| White space is tab and space only (`whiteSpace`) | MUST | [§2.1.1](https://spec.graphql.org/draft/#sec-White-Space) | ✓ 27 |
 | Line terminators are LF, CR and CR LF only (`lineTerminators`) | MUST | [§2.1.2](https://spec.graphql.org/draft/#sec-Line-Terminators) | ✓ 31 |
-| A comment runs to the end of its line (`comments`) | MUST | [§2.1.3](https://spec.graphql.org/draft/#sec-Comments) | ✓ 17 |
+| A comment runs to the end of its line (`comments`) | MUST | [§2.1.3](https://spec.graphql.org/draft/#sec-Comments) | ✓ 21 |
 | Commas are insignificant (`insignificantCommas`) | MUST | [§2.1.4](https://spec.graphql.org/draft/#sec-Insignificant-Commas) | ✓ 5 |
 | Every character outside ignored tokens is part of a token (`lexicalTokens`) | MUST | [§2.1.5](https://spec.graphql.org/draft/#sec-Lexical-Tokens) | ✓ 43 |
-| Ignored tokens may appear before and after every token (`ignoredTokens`) | MUST | [§2.1.6](https://spec.graphql.org/draft/#sec-Ignored-Tokens) | ✓ 81 |
+| Ignored tokens may appear before and after every token (`ignoredTokens`) | MUST | [§2.1.6](https://spec.graphql.org/draft/#sec-Ignored-Tokens) | ✓ 418 |
 | Punctuators, and `...` only as a whole (`punctuators`) | MUST | [§2.1.7](https://spec.graphql.org/draft/#sec-Punctuators) | ✓ 40 |
 | Names (`names`) | MUST | [§2.1.8](https://spec.graphql.org/draft/#sec-Names) | ✓ 14 |
-| Descriptions on operations, fragments and variables, not on the query shorthand (`descriptions`) | MUST | [§2.2](https://spec.graphql.org/draft/#sec-Descriptions) | ✗ 73/100 (all draft only) |
-| A document is one or more executable definitions (`document`) | MUST | [§2.3](https://spec.graphql.org/draft/#sec-Document) | ✗ 2/99 |
-| Operation definitions and the query shorthand (`operations`) | MUST | [§2.4](https://spec.graphql.org/draft/#sec-Operations) | ✓ 100 |
+| Descriptions on operations, fragments and variables, not on the query shorthand (`descriptions`) | MUST | [§2.2](https://spec.graphql.org/draft/#sec-Descriptions) | ✗ 84/121 (all draft only) |
+| A document is one or more executable definitions (`document`) | MUST | [§2.3](https://spec.graphql.org/draft/#sec-Document) | ✗ 2/98 |
+| Operation definitions and the query shorthand (`operations`) | MUST | [§2.4](https://spec.graphql.org/draft/#sec-Operations) | ✓ 101 |
 | Selection sets, including empty ones (`selectionSets`) | MUST | [§2.5](https://spec.graphql.org/draft/#sec-Selection-Sets) | ✗ 8/95 (all draft only) |
 | Fields (`fields`) | MUST | [§2.6](https://spec.graphql.org/draft/#sec-Fields) | ✓ 96 |
-| Arguments (`arguments`) | MUST | [§2.7](https://spec.graphql.org/draft/#sec-Arguments) | ✓ 110 |
+| Arguments (`arguments`) | MUST | [§2.7](https://spec.graphql.org/draft/#sec-Arguments) | ✓ 111 |
 | Field aliases (`fieldAlias`) | MUST | [§2.8](https://spec.graphql.org/draft/#sec-Field-Alias) | ✓ 94 |
 | Fragment definitions and fragment spreads (`fragments`) | MUST | [§2.9](https://spec.graphql.org/draft/#sec-Fragments) | ✓ 117 |
 | Type conditions (`typeConditions`) | MUST | [§2.9.1](https://spec.graphql.org/draft/#sec-Type-Conditions) | ✓ 112 |
 | Inline fragments (`inlineFragments`) | MUST | [§2.9.2](https://spec.graphql.org/draft/#sec-Inline-Fragments) | ✓ 100 |
 | Input values, and no variables in constant values (`inputValues`) | MUST | [§2.10](https://spec.graphql.org/draft/#sec-Input-Values) | ✓ 122 |
-| Int values (`intValue`) | MUST | [§2.10.1](https://spec.graphql.org/draft/#sec-Int-Value) | ✗ 8/42 |
+| Int values (`intValue`) | MUST | [§2.10.1](https://spec.graphql.org/draft/#sec-Int-Value) | ✗ 8/46 |
 | Float values (`floatValue`) | MUST | [§2.10.2](https://spec.graphql.org/draft/#sec-Float-Value) | ✓ 35 |
 | Boolean values (`booleanValue`) | MUST | [§2.10.3](https://spec.graphql.org/draft/#sec-Boolean-Value) | ✓ 3 |
-| String values and block strings (`stringValue`) | MUST | [§2.10.4](https://spec.graphql.org/draft/#sec-String-Value) | ✗ 15/146 (all draft only) |
+| String values and block strings (`stringValue`) | MUST | [§2.10.4](https://spec.graphql.org/draft/#sec-String-Value) | ✗ 15/153 (all draft only) |
 | Null value (`nullValue`) | MUST | [§2.10.5](https://spec.graphql.org/draft/#sec-Null-Value) | ✓ 2 |
-| Enum values (`enumValue`) | MUST | [§2.10.6](https://spec.graphql.org/draft/#sec-Enum-Value) | ✓ 10 |
-| List values (`listValue`) | MUST | [§2.10.7](https://spec.graphql.org/draft/#sec-List-Value) | ✓ 101 |
+| Enum values (`enumValue`) | MUST | [§2.10.6](https://spec.graphql.org/draft/#sec-Enum-Value) | ✓ 14 |
+| List values (`listValue`) | MUST | [§2.10.7](https://spec.graphql.org/draft/#sec-List-Value) | ✓ 102 |
 | Input object values (`inputObjectValues`) | MUST | [§2.10.8](https://spec.graphql.org/draft/#sec-Input-Object-Values) | ✓ 107 |
-| Variables and variable definitions (`variables`) | MUST | [§2.11](https://spec.graphql.org/draft/#sec-Variables) | ✗ 1/157 |
-| Type references (`typeReferences`) | MUST | [§2.12](https://spec.graphql.org/draft/#sec-Type-References) | ✓ 102 |
-| Directives (`directives`) | MUST | [§2.13](https://spec.graphql.org/draft/#sec-Directives) | ✓ 113 |
+| Variables and variable definitions (`variables`) | MUST | [§2.11](https://spec.graphql.org/draft/#sec-Variables) | ✗ 1/158 |
+| Type references (`typeReferences`) | MUST | [§2.12](https://spec.graphql.org/draft/#sec-Type-References) | ✓ 114 |
+| Directives (`directives`) | MUST | [§2.13](https://spec.graphql.org/draft/#sec-Directives) | ✓ 112 |
 
 ## Validate
 
-- **Capabilities:** custom-scalar-literals, deferred-items, idle, introspect, invalid-results, mutation, parse, schema, subscription, uncoercible-results, validate
-- **Cases:** 3088 submitted, 3088 distinct, 0 malformed
-- **Vectors:** 3088 of 3100 graded (not graded: 12 unspecified)
-- **Draft only:** 24 of the failing vectors (of 206 draft-only vectors) rely on grammar or rules only in the draft
+- **Capabilities:** custom-directives, deferred-items, idle, introspect, invalid-results, mutation, parse, schema, subscription, uncoercible-results, validate
+- **Cases:** 3079 submitted, 3079 distinct, 0 malformed
+- **Vectors:** 3079 of 3100 graded (not graded: 12 unspecified, 9 custom-scalar-literals)
+- **Draft only:** 11 of the failing vectors (of 178 draft-only vectors) rely on grammar or rules only in the draft
 - **Adapter problems:** none
-- **Checker self-test:** passed (8 negative controls)
-- **Run:** kit 5da3deb09c91, 2026-11-15, strict
+- **Checker self-test:** passed (9 negative controls)
+- **Run:** kit 71f0a24bdc40, 2026-11-15, strict
 
 ### Findings
 
 <a id="validate-finding-1"></a>
 
-#### 1. `allVariableUsagesAreAllowed`: §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule
+#### 1. `allVariableUsagesAreAllowed`: §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; 1 of 72 rely on the draft
 
-71 cases, in `variables` (71).
+72 cases, in `variables` (72). 1 of them rely on grammar or rules that are only in the draft, not in October 2021.
 
 - All Variable Usages Are Allowed (MUST, [§5.8.5](https://spec.graphql.org/draft/#sec-All-Variable-Usages-Are-Allowed))
 
@@ -298,7 +299,26 @@ expected: invalid: AllVariableUsagesAreAllowed ["v"]
 
 <a id="validate-finding-2"></a>
 
-#### 2. `fieldSelectionMerging`: §5.3.2 Field Selection Merging isn't enforced: accepts documents that break only this rule
+#### 2. `acceptsValid`: rejects valid documents, all with the same error message; their invalid siblings break §5.2.4.1 Single Root Field (14), §5.2.3.1 Lone Anonymous Operation (12), §5.2.1.1 Operation Type Existence (3), so the hints point at no one rule: the message says what the implementation objected to
+
+26 cases, in `operations` (26).
+
+Each rejected document is one edit from a document that breaks only `singleRootField` or `loneAnonymousOperation` or `operationTypeExistence`; which rule the implementation applied is a guess.
+
+- Valid documents are accepted (MUST, [§5](https://spec.graphql.org/draft/#sec-Validation))
+
+The shortest case, from `operations`:
+
+```
+problem:  Subscription 'S7' must have exactly one root field and that field must not be an introspection field.
+input:    SingleRootField-valid-22: subscription S7 { a: postAdded { id } a: postAdded { name } }
+response: {"valid":false,"errors":[{"message":"Subscription 'S7' must have exactly one root field and that field must not be an introspection field.","locations":[{"line":5,"column":3}]}]}
+expected: valid
+```
+
+<a id="validate-finding-3"></a>
+
+#### 3. `fieldSelectionMerging`: §5.3.2 Field Selection Merging isn't enforced: accepts documents that break only this rule
 
 22 cases, in `merging` (22).
 
@@ -312,44 +332,44 @@ response: {"valid":true,"errors":[]}
 expected: invalid: FieldSelectionMerging ["conflict"]
 ```
 
-<a id="validate-finding-3"></a>
+<a id="validate-finding-4"></a>
 
-#### 3. `singleRootField`: §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft
+#### 4. `singleRootField`: §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; 1 of 15 rely on the draft
 
-15 cases, in `operations` (13), `random` (1), `spec` (1). All rely on grammar or rules that are only in the draft, not in October 2021.
+15 cases, in `operations` (13), `random` (1), `spec` (1). 1 of them rely on grammar or rules that are only in the draft, not in October 2021.
 
 - Single Root Field (MUST, [§5.2.4.1](https://spec.graphql.org/draft/#sec-Single-Root-Field))
 
 The shortest case, from `spec`:
 
 ```
-input:    [draft] SingleRootField-spec-7: subscription sub($bool: Boolean!) { newMessage @include(if: $bool) { body sender } }
+input:    SingleRootField-spec-7: subscription sub($bool: Boolean!) { newMessage @include(if: $bool) { body sender } }
 response: {"valid":true,"errors":[]}
 expected: invalid: SingleRootField ["sub"]
 ```
 
-<a id="validate-finding-4"></a>
+<a id="validate-finding-5"></a>
 
-#### 4. `acceptsValid`: rejects valid documents: §5.2.4.1 Single Root Field is likely over-strict (14 valid siblings of 16 different invalid vectors rejected, 23 of the same family accepted)
+#### 5. `acceptsValid`: rejects valid documents, all with the same error message; their invalid siblings break §5.8.5 All Variable Usages Are Allowed (8), §5.7.1 Directives Are Defined (1), §5.5.2.1 Fragment Spread Target Defined (1), §5.6.1 Values of Correct Type (1), so the hints point at no one rule: the message says what the implementation objected to
 
-14 cases, in `operations` (14).
+10 cases, in `variables` (8), `random` (2).
 
-Each rejected document is one edit from a document that breaks only `singleRootField`, so that rule is likely over-strict.
+Each rejected document is one edit from a document that breaks only `allVariableUsagesAreAllowed` or `directivesAreDefined` or `fragmentSpreadTargetDefined` or `valuesOfCorrectType`; which rule the implementation applied is a guess.
 
 - Valid documents are accepted (MUST, [§5](https://spec.graphql.org/draft/#sec-Validation))
 
-The shortest case, from `operations`:
+The shortest case, from `variables`:
 
 ```
-problem:  Subscription 'S7' must have exactly one root field and that field must not be an introspection field.
-input:    SingleRootField-valid-22: subscription S7 { a: postAdded { id } a: postAdded { name } }
-response: {"valid":false,"errors":[{"message":"Subscription 'S7' must have exactly one root field and that field must not be an introspection field.","locations":[{"line":5,"column":3}]}]}
+problem:  Variable '$v' of type '[Int]' used in position expecting type 'Int'.
+input:    AllVariableUsagesAreAllowed-valid-47: query Q($v: [Int]) { matrix(rows: [$v]) }
+response: {"valid":false,"errors":[{"message":"Variable '$v' of type '[Int]' used in position expecting type 'Int'.","locations":[{"line":1,"column":9},{"line":2,"column":17}]}]}
 expected: valid
 ```
 
-<a id="validate-finding-5"></a>
+<a id="validate-finding-6"></a>
 
-#### 5. `operationTypeExistence`: §5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule; all rely on the draft
+#### 6. `operationTypeExistence`: §5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule; all rely on the draft
 
 9 cases, in `operations` (8), `spec` (1). All rely on grammar or rules that are only in the draft, not in October 2021.
 
@@ -363,47 +383,9 @@ response: {"valid":true,"errors":[]}
 expected: invalid: OperationTypeExistence ["mutation"]
 ```
 
-<a id="validate-finding-6"></a>
-
-#### 6. `acceptsValid`: rejects valid documents: §5.2.3.1 Lone Anonymous Operation is likely over-strict (9 valid siblings of 6 different invalid vectors rejected, 7 of the same family accepted)
-
-9 cases, in `operations` (9).
-
-Each rejected document is one edit from a document that breaks only `loneAnonymousOperation`, so that rule is likely over-strict.
-
-- Valid documents are accepted (MUST, [§5](https://spec.graphql.org/draft/#sec-Validation))
-
-The shortest case, from `operations`:
-
-```
-problem:  Subscription 'S7' must have exactly one root field and that field must not be an introspection field.
-input:    LoneAnonymousOperation-valid-7: query A { post { id } } subscription S7 { a: postAdded { id } a: postAdded { name } }
-response: {"valid":false,"errors":[{"message":"Subscription 'S7' must have exactly one root field and that field must not be an introspection field.","locations":[{"line":11,"column":3}]}]}
-expected: valid
-```
-
 <a id="validate-finding-7"></a>
 
-#### 7. `acceptsValid`: rejects valid documents: §5.8.5 All Variable Usages Are Allowed is likely over-strict (7 valid siblings of 28 different invalid vectors rejected, 50 of the same family accepted)
-
-7 cases, in `variables` (7).
-
-Each rejected document is one edit from a document that breaks only `allVariableUsagesAreAllowed`, so that rule is likely over-strict.
-
-- Valid documents are accepted (MUST, [§5](https://spec.graphql.org/draft/#sec-Validation))
-
-The shortest case, from `variables`:
-
-```
-problem:  Variable '$v' of type '[Int]' used in position expecting type 'Int'.
-input:    AllVariableUsagesAreAllowed-valid-47: query Q($v: [Int]) { matrix(rows: [$v]) }
-response: {"valid":false,"errors":[{"message":"Variable '$v' of type '[Int]' used in position expecting type 'Int'.","locations":[{"line":1,"column":9},{"line":2,"column":17}]}]}
-expected: valid
-```
-
-<a id="validate-finding-8"></a>
-
-#### 8. `executableDefinitions`: §5.1.1 Executable Definitions isn't enforced: accepts documents that break only this rule
+#### 7. `executableDefinitions`: §5.1.1 Executable Definitions isn't enforced: accepts documents that break only this rule
 
 4 cases, in `executable` (4).
 
@@ -415,101 +397,6 @@ The shortest case, from `executable`:
 input:    ExecutableDefinitions-1: directive @x on FIELD { user { id } }
 response: {"valid":true,"errors":[]}
 expected: invalid: ExecutableDefinitions ["document"]
-```
-
-<a id="validate-finding-9"></a>
-
-#### 9. `acceptsValid`: rejects valid documents: §5.8.2 Variables Are Input Types is likely over-strict (4 valid siblings of 3 different invalid vectors rejected, 1 of the same family accepted)
-
-4 cases, in `extra` (4).
-
-Each rejected document is one edit from a document that breaks only `variablesAreInputTypes`, so that rule is likely over-strict.
-
-- Valid documents are accepted (MUST, [§5](https://spec.graphql.org/draft/#sec-Validation))
-
-The shortest case, from `extra`:
-
-```
-problem:  Invalid literal for argument 'value' of field 'json'. Unable to convert 'GraphQLParser.AST.GraphQLVariableWithLocation' literal from AST representation to any possible type
-input:    VariablesAreInputTypes-valid-2: query Q($v: Int) { json(value: {a: $v}) }
-response: {"valid":false,"errors":[{"message":"Invalid literal for argument 'value' of field 'json'. Unable to convert 'GraphQLParser.AST.GraphQLVariableWithLocation' literal from AST representation to any possible type","locations":[{"line":2,"column":15}]}]}
-expected: valid
-```
-
-<a id="validate-finding-10"></a>
-
-#### 10. `acceptsValid`: rejects valid documents: §5.2.3.1 Lone Anonymous Operation or §5.2.1.1 Operation Type Existence is likely over-strict (3 valid siblings of 6 different invalid vectors rejected, 4 of the same family accepted)
-
-3 cases, in `operations` (3).
-
-Each rejected document is one edit from a document that breaks only `loneAnonymousOperation` or `operationTypeExistence`, so that rule is likely over-strict.
-
-- Valid documents are accepted (MUST, [§5](https://spec.graphql.org/draft/#sec-Validation))
-
-The shortest case, from `operations`:
-
-```
-problem:  Subscription 'S7' must have exactly one root field and that field must not be an introspection field.
-input:    OperationTypeExistence-valid-3: query A { user { id } } subscription S7 { a: postAdded { id } a: postAdded { name } }
-response: {"valid":false,"errors":[{"message":"Subscription 'S7' must have exactly one root field and that field must not be an introspection field.","locations":[{"line":11,"column":3}]}]}
-expected: valid
-```
-
-<a id="validate-finding-11"></a>
-
-#### 11. `acceptsValid`: rejects valid documents, each one edit from a document that breaks only §5.5.2.1 Fragment Spread Target Defined; the rule it applied is a guess, since the kit doesn't read error messages
-
-1 case, in `random` (1).
-
-Each rejected document is one edit from a document that breaks only `fragmentSpreadTargetDefined`; which rule the implementation applied is a guess.
-
-- Valid documents are accepted (MUST, [§5](https://spec.graphql.org/draft/#sec-Validation))
-
-The shortest case, from `random`:
-
-```
-problem:  Variable '$v0' of type '[Int]' used in position expecting type 'Int'.
-input:    FragmentSpreadTargetDefined-valid-3: query Q0($v0: [Int]) { b: node(id: "1") { id } matrix(rows: [$v0]) }
-response: {"valid":false,"errors":[{"message":"Variable '$v0' of type '[Int]' used in position expecting type 'Int'.","locations":[{"line":1,"column":10},{"line":5,"column":17}]}]}
-expected: valid
-```
-
-<a id="validate-finding-12"></a>
-
-#### 12. `acceptsValid`: rejects valid documents, each one edit from a document that breaks §5.8.5 All Variable Usages Are Allowed and §5.6.1 Values of Correct Type; the rule it applied is a guess, since the kit doesn't read error messages
-
-1 case, in `variables` (1).
-
-Each rejected document is one edit from a document that breaks only `allVariableUsagesAreAllowed` or `valuesOfCorrectType`; which rule the implementation applied is a guess.
-
-- Valid documents are accepted (MUST, [§5](https://spec.graphql.org/draft/#sec-Validation))
-
-The shortest case, from `variables`:
-
-```
-problem:  Variable '$v' of type '[Int]' used in position expecting type 'Int'.
-input:    ValuesOfCorrectType-valid-9: query Q($v: [Int] = null) { matrix(rows: [$v]) }
-response: {"valid":false,"errors":[{"message":"Variable '$v' of type '[Int]' used in position expecting type 'Int'.","locations":[{"line":1,"column":9},{"line":2,"column":17}]}]}
-expected: valid
-```
-
-<a id="validate-finding-13"></a>
-
-#### 13. `acceptsValid`: rejects valid documents, each one edit from a document that breaks only §5.7.1 Directives Are Defined; the rule it applied is a guess, since the kit doesn't read error messages
-
-1 case, in `random` (1).
-
-Each rejected document is one edit from a document that breaks only `directivesAreDefined`; which rule the implementation applied is a guess.
-
-- Valid documents are accepted (MUST, [§5](https://spec.graphql.org/draft/#sec-Validation))
-
-The shortest case, from `random`:
-
-```
-problem:  Variable '$v1' of type '[Int]' used in position expecting type 'Int'.
-input:    DirectivesAreDefined-valid-16: query Q0($v1: [Int], $v0: [Int!]) { matrix(rows: [$v1]) echo(list: $v0, nums: [1], role: ADMIN) a: node(id: "1") { id id } }
-response: {"valid":false,"errors":[{"message":"Variable '$v1' of type '[Int]' used in position expecting type 'Int'.","locations":[{"line":1,"column":10},{"line":2,"column":17}]}]}
-expected: valid
 ```
 
 ### Every check
@@ -529,7 +416,7 @@ expected: valid
 | Operation Type Existence (`operationTypeExistence`) | MUST | [§5.2.1.1](https://spec.graphql.org/draft/#sec-Operation-Type-Existence) | ✗ 9/12 (all draft only) |
 | Operation Name Uniqueness (`operationNameUniqueness`) | MUST | [§5.2.2.1](https://spec.graphql.org/draft/#sec-Operation-Name-Uniqueness) | ✓ 6 |
 | Lone Anonymous Operation (`loneAnonymousOperation`) | MUST | [§5.2.3.1](https://spec.graphql.org/draft/#sec-Lone-Anonymous-Operation) | ✓ 21 |
-| Single Root Field (`singleRootField`) | MUST | [§5.2.4.1](https://spec.graphql.org/draft/#sec-Single-Root-Field) | ✗ 15/59 (all draft only) |
+| Single Root Field (`singleRootField`) | MUST | [§5.2.4.1](https://spec.graphql.org/draft/#sec-Single-Root-Field) | ✗ 15/59 (1 draft only) |
 | Field Selections (`fieldSelections`) | MUST | [§5.3.1](https://spec.graphql.org/draft/#sec-Field-Selections) | ✓ 25 |
 | Field Selection Merging (`fieldSelectionMerging`) | MUST | [§5.3.2](https://spec.graphql.org/draft/#sec-Field-Selection-Merging) | ✗ 22/674 |
 | Leaf Field Selections (`leafFieldSelections`) | MUST | [§5.3.3](https://spec.graphql.org/draft/#sec-Leaf-Field-Selections) | ✓ 39 |
@@ -551,45 +438,29 @@ expected: valid
 | Directives Are in Valid Locations (`directivesAreInValidLocations`) | MUST | [§5.7.2](https://spec.graphql.org/draft/#sec-Directives-Are-in-Valid-Locations) | ✓ 27 |
 | Directives Are Unique per Location (`directivesAreUniquePerLocation`) | MUST | [§5.7.3](https://spec.graphql.org/draft/#sec-Directives-Are-Unique-per-Location) | ✓ 10 |
 | Variable Uniqueness (`variableUniqueness`) | MUST | [§5.8.1](https://spec.graphql.org/draft/#sec-Variable-Uniqueness) | ✓ 6 |
-| Variables Are Input Types (`variablesAreInputTypes`) | MUST | [§5.8.2](https://spec.graphql.org/draft/#sec-Variables-Are-Input-Types) | ✓ 4 |
+| Variables Are Input Types (`variablesAreInputTypes`) | MUST | [§5.8.2](https://spec.graphql.org/draft/#sec-Variables-Are-Input-Types) | – |
 | All Variable Uses Defined (`allVariableUsesDefined`) | MUST | [§5.8.3](https://spec.graphql.org/draft/#sec-All-Variable-Uses-Defined) | ✓ 15 |
 | All Variables Used (`allVariablesUsed`) | MUST | [§5.8.4](https://spec.graphql.org/draft/#sec-All-Variables-Used) | ✓ 18 |
-| All Variable Usages Are Allowed (`allVariableUsagesAreAllowed`) | MUST | [§5.8.5](https://spec.graphql.org/draft/#sec-All-Variable-Usages-Are-Allowed) | ✗ 71/636 |
-| Valid documents are accepted (`acceptsValid`) | MUST | [§5](https://spec.graphql.org/draft/#sec-Validation) | ✗ 40/984 |
+| All Variable Usages Are Allowed (`allVariableUsagesAreAllowed`) | MUST | [§5.8.5](https://spec.graphql.org/draft/#sec-All-Variable-Usages-Are-Allowed) | ✗ 72/636 (1 draft only) |
+| Valid documents are accepted (`acceptsValid`) | MUST | [§5](https://spec.graphql.org/draft/#sec-Validation) | ✗ 36/979 |
 
 - **Basis for `acceptsValid`:** a document is valid when it satisfies every rule of §5, and only invalid requests are kept from execution (§6.1.1); rejecting a valid document applies a rule the spec doesn't have
 
 ## Schema
 
-- **Capabilities:** custom-scalar-literals, deferred-items, idle, introspect, invalid-results, mutation, parse, schema, subscription, uncoercible-results, validate
-- **Cases:** 165 submitted, 165 distinct, 0 malformed
-- **Vectors:** 165 of 168 graded (not graded: 3 unspecified)
-- **Draft only:** 8 of the failing vectors (of 37 draft-only vectors) rely on grammar or rules only in the draft
+- **Capabilities:** custom-directives, deferred-items, idle, introspect, invalid-results, mutation, parse, schema, subscription, uncoercible-results, validate
+- **Cases:** 168 submitted, 168 distinct, 0 malformed
+- **Vectors:** 168 of 172 graded (not graded: 4 unspecified)
+- **Draft only:** 8 of the failing vectors (of 36 draft-only vectors) rely on grammar or rules only in the draft
 - **Adapter problems:** none
-- **Checker self-test:** passed (330 negative controls)
-- **Run:** kit 5da3deb09c91, 2026-11-15, strict
+- **Checker self-test:** passed (343 negative controls)
+- **Run:** kit 71f0a24bdc40, 2026-11-15, strict
 
 ### Findings
 
 <a id="schema-finding-1"></a>
 
-#### 1. `inputObjectUnbreakableCycle`: INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule
-
-5 cases, in `input` (5). 2 of them rely on grammar or rules that are only in the draft, not in October 2021.
-
-- An input object can be given a finite value (MUST, [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects))
-
-The shortest case, from `inputObjectUnbreakableCycle.5.invalid`:
-
-```
-input:    [draft] input A @oneOf { b: B } input B @oneOf { a: A } type Query { f(a: A): Int }
-response: {"valid":true}
-expected: invalid: breaks INPUT_OBJECT_UNBREAKABLE_CYCLE and no other rule
-```
-
-<a id="schema-finding-2"></a>
-
-#### 2. `argDefaultCompatible`: ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule
+#### 1. `argDefaultCompatible`: ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule
 
 4 cases, in `defaults` (4). All rely on grammar or rules that are only in the draft, not in October 2021.
 
@@ -603,20 +474,36 @@ response: {"valid":true}
 expected: invalid: breaks ARG_DEFAULT_COMPATIBLE and no other rule
 ```
 
-<a id="schema-finding-3"></a>
+<a id="schema-finding-2"></a>
 
-#### 3. `rootTypesAreObjects`: ROOT_TYPES_ARE_OBJECTS not enforced: accepts a schema that breaks only this rule
+#### 2. `inputObjectUnbreakableCycle`: INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule
 
-2 cases, in `root` (2).
+4 cases, in `input` (4). 2 of them rely on grammar or rules that are only in the draft, not in October 2021.
 
-- Root operation types are object types (MUST, [§3.3.1](https://spec.graphql.org/draft/#sec-Root-Operation-Types))
+- An input object can be given a finite value (MUST, [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects))
 
-The shortest case, from `rootTypesAreObjects.2.invalid`:
+The shortest case, from `inputObjectUnbreakableCycle.5.invalid`:
 
 ```
-input:    type Query { a: Int } interface Mutation { a: Int }
+input:    [draft] input A @oneOf { b: B } input B @oneOf { a: A } type Query { f(a: A): Int }
 response: {"valid":true}
-expected: invalid: breaks ROOT_TYPES_ARE_OBJECTS and no other rule
+expected: invalid: breaks INPUT_OBJECT_UNBREAKABLE_CYCLE and no other rule
+```
+
+<a id="schema-finding-3"></a>
+
+#### 3. `implementsItself`: IMPLEMENTS_ITSELF not enforced: accepts a schema that breaks only this rule
+
+2 cases, in `implementation` (2).
+
+- An interface doesn't implement itself (MUST, [§3.7](https://spec.graphql.org/draft/#sec-Interfaces))
+
+The shortest case, from `implementsItself.1.invalid`:
+
+```
+input:    interface A implements A { x: Int } type Query { a: A }
+response: {"valid":true}
+expected: invalid: breaks IMPLEMENTS_ITSELF and no other rule
 ```
 
 <a id="schema-finding-4"></a>
@@ -654,7 +541,39 @@ expected: invalid: breaks UNION_MEMBERS_OBJECTS and no other rule
 
 <a id="schema-finding-6"></a>
 
-#### 6. `typeNameNotBuiltin`: TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule
+#### 6. `directiveUsesItself`: DIRECTIVE_USES_ITSELF not enforced: accepts a schema that breaks only this rule
+
+2 cases, in `directive` (2).
+
+- A directive definition doesn't use itself (MUST, [§3.13](https://spec.graphql.org/draft/#sec-Directives))
+
+The shortest case, from `directiveUsesItself.2.invalid`:
+
+```
+input:    directive @d(arg: String @d) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION type Query { a: Int }
+response: {"valid":true}
+expected: invalid: breaks DIRECTIVE_USES_ITSELF and no other rule
+```
+
+<a id="schema-finding-7"></a>
+
+#### 7. `directiveReferencesItselfIndirectly`: DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule
+
+2 cases, in `directive` (2).
+
+- A directive definition doesn't reference itself through a type or directive (MUST, [§3.13](https://spec.graphql.org/draft/#sec-Directives))
+
+The shortest case, from `directiveReferencesItselfIndirectly.2.invalid`:
+
+```
+input:    directive @d(a: Int @e) on ARGUMENT_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION type Query { a: Int }
+response: {"valid":true}
+expected: invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule
+```
+
+<a id="schema-finding-8"></a>
+
+#### 8. `typeNameNotBuiltin`: TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule
 
 1 case, in `names` (1).
 
@@ -668,9 +587,25 @@ response: {"valid":true}
 expected: invalid: breaks TYPE_NAME_NOT_BUILTIN and no other rule
 ```
 
-<a id="schema-finding-7"></a>
+<a id="schema-finding-9"></a>
 
-#### 7. `requiredArgNotDeprecated`: REQUIRED_ARG_NOT_DEPRECATED not enforced: accepts a schema that breaks only this rule
+#### 9. `rootTypesAreObjects`: ROOT_TYPES_ARE_OBJECTS not enforced: accepts a schema that breaks only this rule
+
+1 case, in `root` (1).
+
+- Root operation types are object types (MUST, [§3.3.1](https://spec.graphql.org/draft/#sec-Root-Operation-Types))
+
+The shortest case, from `rootTypesAreObjects.3.invalid`:
+
+```
+input:    schema { query: Q mutation: In } type Q { a: Int } input In { a: Int }
+response: {"valid":true}
+expected: invalid: breaks ROOT_TYPES_ARE_OBJECTS and no other rule
+```
+
+<a id="schema-finding-10"></a>
+
+#### 10. `requiredArgNotDeprecated`: REQUIRED_ARG_NOT_DEPRECATED not enforced: accepts a schema that breaks only this rule
 
 1 case, in `typeUse` (1). All rely on grammar or rules that are only in the draft, not in October 2021.
 
@@ -684,9 +619,9 @@ response: {"valid":true}
 expected: invalid: breaks REQUIRED_ARG_NOT_DEPRECATED and no other rule
 ```
 
-<a id="schema-finding-8"></a>
+<a id="schema-finding-11"></a>
 
-#### 8. `implementsUnique`: IMPLEMENTS_UNIQUE not enforced: accepts a schema that breaks only this rule
+#### 11. `implementsUnique`: IMPLEMENTS_UNIQUE not enforced: accepts a schema that breaks only this rule
 
 1 case, in `implementation` (1).
 
@@ -700,9 +635,9 @@ response: {"valid":true}
 expected: invalid: breaks IMPLEMENTS_UNIQUE and no other rule
 ```
 
-<a id="schema-finding-9"></a>
+<a id="schema-finding-12"></a>
 
-#### 9. `implementsInterfaces`: IMPLEMENTS_INTERFACES: crashes on a schema that breaks only this rule, instead of rejecting it
+#### 12. `implementsInterfaces`: IMPLEMENTS_INTERFACES: crashes on a schema that breaks only this rule, instead of rejecting it
 
 1 case, in `implementation` (1).
 
@@ -717,25 +652,9 @@ response: "the adapter answered with an error: InvalidCastException: Unable to c
 expected: invalid: breaks IMPLEMENTS_INTERFACES and no other rule
 ```
 
-<a id="schema-finding-10"></a>
+<a id="schema-finding-13"></a>
 
-#### 10. `implementsItself`: IMPLEMENTS_ITSELF not enforced: accepts a schema that breaks only this rule
-
-1 case, in `implementation` (1).
-
-- An interface doesn't implement itself (MUST, [§3.7](https://spec.graphql.org/draft/#sec-Interfaces))
-
-The shortest case, from `implementsItself.1.invalid`:
-
-```
-input:    interface A implements A { x: Int } type Query { a: A }
-response: {"valid":true}
-expected: invalid: breaks IMPLEMENTS_ITSELF and no other rule
-```
-
-<a id="schema-finding-11"></a>
-
-#### 11. `implTransitive`: IMPL_TRANSITIVE not enforced: accepts a schema that breaks only this rule
+#### 13. `implTransitive`: IMPL_TRANSITIVE not enforced: accepts a schema that breaks only this rule
 
 1 case, in `implementation` (1).
 
@@ -749,25 +668,28 @@ response: {"valid":true}
 expected: invalid: breaks IMPL_TRANSITIVE and no other rule
 ```
 
-<a id="schema-finding-12"></a>
+<a id="schema-finding-14"></a>
 
-#### 12. `implFieldCovariant`: IMPL_FIELD_COVARIANT over-strict: rejects a valid schema one small edit away from one that breaks it
+#### 14. `acceptsValid`: rejects a valid schema, one edit from a schema that breaks only implFieldCovariant; which rule it applied is a guess: the message says what the implementation checked
 
 1 case, in `implementation` (1).
 
-- An implementation's field returns a subtype of the interface field's type (MUST, [§3.6](https://spec.graphql.org/draft/#sec-Objects))
+Each rejected document is one edit from a document that breaks only `implFieldCovariant`; which rule the implementation applied is a guess.
+
+- Valid schemas are accepted (MUST, [§3](https://spec.graphql.org/draft/#sec-Type-System))
 
 The shortest case, from `implFieldCovariant.3.valid`:
 
 ```
+problem:  Type ObjectGraphType with name 'Query' does not implement interface InterfaceGraphType with name 'Node'. Field 'f' must be of type 'Node' or covariant from it, but in fact it is of type 'Query'.
 input:    interface Node { f: Node } type Other { x: Int } type Query implements Node { f: Query }
 response: {"valid":false,"errors":["Type ObjectGraphType with name 'Query' does not implement interface InterfaceGraphType with name 'Node'. Field 'f' must be of type 'Node' or covariant from it, but in fact it is of type 'Query'."]}
 expected: valid (TypeSystem!Verdict is empty)
 ```
 
-<a id="schema-finding-13"></a>
+<a id="schema-finding-15"></a>
 
-#### 13. `implDeprecation`: IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule
+#### 15. `implDeprecation`: IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule
 
 1 case, in `implementation` (1). All rely on grammar or rules that are only in the draft, not in October 2021.
 
@@ -781,9 +703,9 @@ response: {"valid":true}
 expected: invalid: breaks IMPL_DEPRECATION and no other rule
 ```
 
-<a id="schema-finding-14"></a>
+<a id="schema-finding-16"></a>
 
-#### 14. `unionMembersUnique`: UNION_MEMBERS_UNIQUE not enforced: accepts a schema that breaks only this rule
+#### 16. `unionMembersUnique`: UNION_MEMBERS_UNIQUE not enforced: accepts a schema that breaks only this rule
 
 1 case, in `union` (1).
 
@@ -797,9 +719,26 @@ response: {"valid":true}
 expected: invalid: breaks UNION_MEMBERS_UNIQUE and no other rule
 ```
 
-<a id="schema-finding-15"></a>
+<a id="schema-finding-17"></a>
 
-#### 15. `enumValuesUnique`: ENUM_VALUES_UNIQUE not enforced: accepts a schema that breaks only this rule
+#### 17. `unionMembersObjects`: UNION_MEMBERS_OBJECTS: crashes on a schema that breaks only this rule, instead of rejecting it
+
+1 case, in `union` (1).
+
+- A union's member types are object types (MUST, [§3.8](https://spec.graphql.org/draft/#sec-Unions))
+
+The shortest case, from `unionMembersObjects.2.invalid`:
+
+```
+problem:  ArgumentNullException: Value cannot be null. (Parameter 'type')
+input:    interface I { x: Int } union U = I type Query { u: U }
+response: "the adapter answered with an error: ArgumentNullException: Value cannot be null. (Parameter 'type')"
+expected: invalid: breaks UNION_MEMBERS_OBJECTS and no other rule
+```
+
+<a id="schema-finding-18"></a>
+
+#### 18. `enumValuesUnique`: ENUM_VALUES_UNIQUE not enforced: accepts a schema that breaks only this rule
 
 1 case, in `enum` (1).
 
@@ -813,38 +752,6 @@ response: {"valid":true}
 expected: invalid: breaks ENUM_VALUES_UNIQUE and no other rule
 ```
 
-<a id="schema-finding-16"></a>
-
-#### 16. `directiveUsesItself`: DIRECTIVE_USES_ITSELF not enforced: accepts a schema that breaks only this rule
-
-1 case, in `directive` (1).
-
-- A directive definition doesn't use itself (MUST, [§3.13](https://spec.graphql.org/draft/#sec-Directives))
-
-The shortest case, from `directiveUsesItself.1.invalid`:
-
-```
-input:    directive @invalidExample(arg: String @invalidExample) on ARGUMENT_DEFINITION type Query { a: Int }
-response: {"valid":true}
-expected: invalid: breaks DIRECTIVE_USES_ITSELF and no other rule
-```
-
-<a id="schema-finding-17"></a>
-
-#### 17. `directiveReferencesItselfIndirectly`: DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule
-
-1 case, in `directive` (1).
-
-- A directive definition doesn't reference itself through a type or directive (MUST, [§3.13](https://spec.graphql.org/draft/#sec-Directives))
-
-The shortest case, from `directiveReferencesItselfIndirectly.2.invalid`:
-
-```
-input:    directive @d(a: Int @e) on ARGUMENT_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION type Query { a: Int }
-response: {"valid":true}
-expected: invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule
-```
-
 ### Every check
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
@@ -858,282 +765,283 @@ expected: invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other ru
 
 | Check | Level | Spec | Result |
 | --- | :---: | :---: | :---: |
-| No two types have the same name (`typeNamesUnique`) | MUST | [§3.3](https://spec.graphql.org/draft/#sec-Schema) | ✓ 2 |
-| No type is named like a built-in type (`typeNameNotBuiltin`) | MUST | [§3.3](https://spec.graphql.org/draft/#sec-Schema) | ✗ 1/3 |
-| No type name begins with __ (`typeNameReserved`) | MUST | [§3.3](https://spec.graphql.org/draft/#sec-Schema) | ✓ 2 |
-| No two directives have the same name (`directiveNamesUnique`) | MUST | [§3.3](https://spec.graphql.org/draft/#sec-Schema) | ✓ 2 |
-| No directive name begins with __ (`directiveNameReserved`) | MUST | [§3.3](https://spec.graphql.org/draft/#sec-Schema) | ✓ 2 |
-| The query root operation type is provided (`queryRootProvided`) | MUST | [§3.3.1](https://spec.graphql.org/draft/#sec-Root-Operation-Types) | ✓ 4 |
-| Root operation types are object types (`rootTypesAreObjects`) | MUST | [§3.3.1](https://spec.graphql.org/draft/#sec-Root-Operation-Types) | ✗ 2/6 |
-| Root operation types are all different (`rootTypesDifferent`) | MUST | [§3.3.1](https://spec.graphql.org/draft/#sec-Root-Operation-Types) | ✓ 4 |
-| An object or interface type defines one or more fields (`fieldsDefined`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.7](https://spec.graphql.org/draft/#sec-Interfaces) | ✓ 4 |
-| Field names are unique within a type (`fieldNamesUnique`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.7](https://spec.graphql.org/draft/#sec-Interfaces) | ✓ 4 |
-| No field name begins with __ (`fieldNameReserved`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.7](https://spec.graphql.org/draft/#sec-Interfaces) | ✓ 2 |
-| Fields return output types (`fieldOutputType`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.4.2](https://spec.graphql.org/draft/#sec-Input-and-Output-Types) | ✓ 4 |
-| No argument name begins with __ (`argNameReserved`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✓ 4 |
-| Argument names are unique within a field or directive (`argNamesUnique`). Draft only: the October 2021 edition doesn't have argument name uniqueness. | MUST (draft only) | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✓ 4 |
-| Arguments accept input types (`argInputType`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.4.2](https://spec.graphql.org/draft/#sec-Input-and-Output-Types) | ✓ 6 |
-| A required argument isn't deprecated (`requiredArgNotDeprecated`). Draft only: the October 2021 edition doesn't have deprecated arguments. | MUST (draft only) | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.13.3](https://spec.graphql.org/draft/#sec-deprecated) | ✗ 1/8 (all draft only) |
-| An object field argument's default value coerces to its type (`argDefaultCompatible`). Draft only: the October 2021 edition doesn't have default value validation. | MUST (draft only) | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✗ 4/20 (all draft only) |
-| A type implements each interface once (`implementsUnique`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.7](https://spec.graphql.org/draft/#sec-Interfaces) | ✗ 1/2 |
-| A type implements only interface types (`implementsInterfaces`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.7](https://spec.graphql.org/draft/#sec-Interfaces) | ✗ 1/2 |
-| An interface doesn't implement itself (`implementsItself`) | MUST | [§3.7](https://spec.graphql.org/draft/#sec-Interfaces) | ✗ 1/2 |
-| A type also implements the interfaces its interfaces implement (`implTransitive`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✗ 1/4 |
-| An implementation has every field of the interface (`implFieldProvided`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✓ 2 |
-| An implementation's field has every argument of the interface field (`implArgProvided`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✓ 2 |
-| An implementation's field arguments have the interface's argument types (`implArgInvariant`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✗ 2/4 |
-| An implementation's additional arguments aren't required (`implExtraArgOptional`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✓ 2 |
-| An implementation's field returns a subtype of the interface field's type (`implFieldCovariant`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✗ 1/8 |
-| A deprecated implementation field implements a deprecated field (`implDeprecation`). Draft only: the October 2021 edition doesn't have deprecation of implementing fields. | MUST (draft only) | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✗ 1/2 (all draft only) |
-| A union has one or more member types (`unionMembersDefined`) | MUST | [§3.8](https://spec.graphql.org/draft/#sec-Unions) | ✓ 2 |
-| A union's member types are unique (`unionMembersUnique`) | MUST | [§3.8](https://spec.graphql.org/draft/#sec-Unions) | ✗ 1/2 |
-| A union's member types are object types (`unionMembersObjects`) | MUST | [§3.8](https://spec.graphql.org/draft/#sec-Unions) | ✗ 2/6 |
-| An enum has one or more values (`enumValuesDefined`) | MUST | [§3.9](https://spec.graphql.org/draft/#sec-Enums) | ✓ 2 |
-| An enum's values are unique (`enumValuesUnique`) | MUST | [§3.9](https://spec.graphql.org/draft/#sec-Enums) | ✗ 1/2 |
-| No enum value begins with __ (`enumValueNameReserved`) | MUST | [§4](https://spec.graphql.org/draft/#sec-Introspection) | ✓ 2 |
-| An input object has one or more fields (`inputFieldsDefined`) | MUST | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) | ✓ 2 |
-| Input field names are unique within an input object (`inputFieldNamesUnique`) | MUST | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) | ✓ 2 |
-| No input field name begins with __ (`inputFieldNameReserved`) | MUST | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) | ✓ 2 |
-| Input fields accept input types (`inputFieldInputType`) | MUST | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) [§3.4.2](https://spec.graphql.org/draft/#sec-Input-and-Output-Types) | ✓ 2 |
-| A required input field isn't deprecated (`requiredInputFieldNotDeprecated`). Draft only: the October 2021 edition doesn't have deprecated input fields. | MUST (draft only) | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) [§3.13.3](https://spec.graphql.org/draft/#sec-deprecated) | ✓ 2 |
-| A OneOf input object's fields are nullable (`oneOfFieldNullable`). Draft only: the October 2021 edition doesn't have OneOf input objects. | MUST (draft only) | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) [§3.10.1](https://spec.graphql.org/draft/#sec-OneOf-Input-Objects) | ✓ 2 |
-| A OneOf input object's fields have no default value (`oneOfFieldNoDefault`). Draft only: the October 2021 edition doesn't have OneOf input objects. | MUST (draft only) | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) [§3.10.1](https://spec.graphql.org/draft/#sec-OneOf-Input-Objects) | ✓ 2 |
-| An input object can be given a finite value (`inputObjectUnbreakableCycle`) | MUST | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) | ✗ 5/10 (2 draft only) |
-| Input object default values don't form a cycle (`inputObjectDefaultValueCycle`). Draft only: the October 2021 edition doesn't have default value validation. | MUST (draft only) | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) | ✓ 8 |
+| No two types have the same name (`typeNamesUnique`) | MUST | [§3.3](https://spec.graphql.org/draft/#sec-Schema) | ✓ 1 |
+| No type is named like a built-in type (`typeNameNotBuiltin`) | MUST | [§3.3](https://spec.graphql.org/draft/#sec-Schema) | ✗ 1/1 |
+| No type name begins with __ (`typeNameReserved`) | MUST | [§3.3](https://spec.graphql.org/draft/#sec-Schema) | ✓ 1 |
+| No two directives have the same name (`directiveNamesUnique`) | MUST | [§3.3](https://spec.graphql.org/draft/#sec-Schema) | ✓ 1 |
+| No directive name begins with __ (`directiveNameReserved`) | MUST | [§3.3](https://spec.graphql.org/draft/#sec-Schema) | ✓ 1 |
+| The query root operation type is provided (`queryRootProvided`) | MUST | [§3.3.1](https://spec.graphql.org/draft/#sec-Root-Operation-Types) | ✓ 2 |
+| Root operation types are object types (`rootTypesAreObjects`) | MUST | [§3.3.1](https://spec.graphql.org/draft/#sec-Root-Operation-Types) | ✗ 1/2 |
+| Root operation types are all different (`rootTypesDifferent`) | MUST | [§3.3.1](https://spec.graphql.org/draft/#sec-Root-Operation-Types) | ✓ 2 |
+| An object or interface type defines one or more fields (`fieldsDefined`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.7](https://spec.graphql.org/draft/#sec-Interfaces) | ✓ 2 |
+| Field names are unique within a type (`fieldNamesUnique`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.7](https://spec.graphql.org/draft/#sec-Interfaces) | ✓ 2 |
+| No field name begins with __ (`fieldNameReserved`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.7](https://spec.graphql.org/draft/#sec-Interfaces) | ✓ 1 |
+| Fields return output types (`fieldOutputType`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.4.2](https://spec.graphql.org/draft/#sec-Input-and-Output-Types) | ✓ 2 |
+| No argument name begins with __ (`argNameReserved`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✓ 2 |
+| Argument names are unique within a field or directive (`argNamesUnique`). Draft only: the October 2021 edition doesn't have argument name uniqueness | MUST (draft only) | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✓ 2 |
+| Arguments accept input types (`argInputType`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.4.2](https://spec.graphql.org/draft/#sec-Input-and-Output-Types) | ✓ 3 |
+| A required argument isn't deprecated (`requiredArgNotDeprecated`). Draft only: the October 2021 edition doesn't have deprecated arguments | MUST (draft only) | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.13.3](https://spec.graphql.org/draft/#sec-deprecated) | ✗ 1/3 (all draft only) |
+| An object field argument's default value coerces to its type (`argDefaultCompatible`). Draft only: the October 2021 edition doesn't have default value validation | MUST (draft only) | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✗ 4/10 (all draft only) |
+| A type implements each interface once (`implementsUnique`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.7](https://spec.graphql.org/draft/#sec-Interfaces) | ✗ 1/1 |
+| A type implements only interface types (`implementsInterfaces`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) [§3.7](https://spec.graphql.org/draft/#sec-Interfaces) | ✗ 1/1 |
+| An interface doesn't implement itself (`implementsItself`) | MUST | [§3.7](https://spec.graphql.org/draft/#sec-Interfaces) | ✗ 2/2 |
+| A type also implements the interfaces its interfaces implement (`implTransitive`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✗ 1/2 |
+| An implementation has every field of the interface (`implFieldProvided`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✓ 1 |
+| An implementation's field has every argument of the interface field (`implArgProvided`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✓ 1 |
+| An implementation's field arguments have the interface's argument types (`implArgInvariant`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✗ 2/2 |
+| An implementation's additional arguments aren't required (`implExtraArgOptional`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✓ 1 |
+| An implementation's field returns a subtype of the interface field's type (`implFieldCovariant`) | MUST | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✓ 4 |
+| A deprecated implementation field implements a deprecated field (`implDeprecation`). Draft only: the October 2021 edition doesn't have deprecation of implementing fields | MUST (draft only) | [§3.6](https://spec.graphql.org/draft/#sec-Objects) | ✗ 1/1 (all draft only) |
+| A union has one or more member types (`unionMembersDefined`) | MUST | [§3.8](https://spec.graphql.org/draft/#sec-Unions) | ✓ 1 |
+| A union's member types are unique (`unionMembersUnique`) | MUST | [§3.8](https://spec.graphql.org/draft/#sec-Unions) | ✗ 1/1 |
+| A union's member types are object types (`unionMembersObjects`) | MUST | [§3.8](https://spec.graphql.org/draft/#sec-Unions) | ✗ 3/3 |
+| An enum has one or more values (`enumValuesDefined`) | MUST | [§3.9](https://spec.graphql.org/draft/#sec-Enums) | ✓ 1 |
+| An enum's values are unique (`enumValuesUnique`) | MUST | [§3.9](https://spec.graphql.org/draft/#sec-Enums) | ✗ 1/1 |
+| No enum value begins with __ (`enumValueNameReserved`) | MUST | [§4](https://spec.graphql.org/draft/#sec-Introspection) | ✓ 1 |
+| An input object has one or more fields (`inputFieldsDefined`) | MUST | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) | ✓ 1 |
+| Input field names are unique within an input object (`inputFieldNamesUnique`) | MUST | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) | ✓ 1 |
+| No input field name begins with __ (`inputFieldNameReserved`) | MUST | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) | ✓ 1 |
+| Input fields accept input types (`inputFieldInputType`) | MUST | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) [§3.4.2](https://spec.graphql.org/draft/#sec-Input-and-Output-Types) | ✓ 1 |
+| A required input field isn't deprecated (`requiredInputFieldNotDeprecated`). Draft only: the October 2021 edition doesn't have deprecated input fields | MUST (draft only) | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) [§3.13.3](https://spec.graphql.org/draft/#sec-deprecated) | ✓ 1 |
+| A OneOf input object's fields are nullable (`oneOfFieldNullable`). Draft only: the October 2021 edition doesn't have OneOf input objects | MUST (draft only) | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) [§3.10.1](https://spec.graphql.org/draft/#sec-OneOf-Input-Objects) | ✓ 1 |
+| A OneOf input object's fields have no default value (`oneOfFieldNoDefault`). Draft only: the October 2021 edition doesn't have OneOf input objects | MUST (draft only) | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) [§3.10.1](https://spec.graphql.org/draft/#sec-OneOf-Input-Objects) | ✓ 1 |
+| An input object can be given a finite value (`inputObjectUnbreakableCycle`) | MUST | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) | ✗ 4/4 (2 draft only) |
+| Input object default values don't form a cycle (`inputObjectDefaultValueCycle`). Draft only: the October 2021 edition doesn't have default value validation | MUST (draft only) | [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) | ✓ 4 |
 | A directive has one or more locations (`directiveLocationsDefined`). SDL can't write a directive without locations, so no vector breaks this rule | MUST | [§3.13](https://spec.graphql.org/draft/#sec-Directives) | – |
-| A directive definition doesn't use itself (`directiveUsesItself`) | MUST | [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✗ 1/2 |
-| A directive definition doesn't reference itself through a type or directive (`directiveReferencesItselfIndirectly`) | MUST | [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✗ 1/4 |
+| A directive definition doesn't use itself (`directiveUsesItself`) | MUST | [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✗ 2/2 |
+| A directive definition doesn't reference itself through a type or directive (`directiveReferencesItselfIndirectly`) | MUST | [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✗ 2/2 |
+| Valid schemas are accepted (`acceptsValid`) | MUST | [§3](https://spec.graphql.org/draft/#sec-Type-System) | ✗ 1/87 |
+
+- **Basis for `acceptsValid`:** a schema is invalid only when it breaks a Type Validation rule of §3 or §4's Reserved Names; rejecting, or crashing on, a schema that breaks none applies a rule the spec doesn't have
 
 ## Introspect
 
-- **Capabilities:** custom-scalar-literals, deferred-items, idle, introspect, invalid-results, mutation, parse, schema, subscription, uncoercible-results, validate
-- **Cases:** 28 submitted, 28 distinct, 0 malformed
-- **Skipped:** 10
-- **Profile:** the oct2021 edition's introspection types. The draft's introspection query was rejected ("Unknown argument 'includeDeprecated' on field 'directives' of type '__Schema'."), and so was October 2021's ("Cannot query field 'isRepeatable' on type '__Directive'."). The introspection types lack __Type.specifiedByURL and __Directive.isRepeatable, so this run asks October 2021's query without them, grades against October 2021, and counts each missing field against its check.
+- **Capabilities:** custom-directives, deferred-items, idle, introspect, invalid-results, mutation, parse, schema, subscription, uncoercible-results, validate
+- **Cases:** 39 submitted, 39 distinct, 0 malformed
+- **Vectors:** 39 of 39 graded
+- **Profile:** the draft's introspection types. The draft's introspection query was rejected ("Unknown argument 'includeDeprecated' on field 'directives' of type '__Schema'."). The introspection types lack __Type.specifiedByURL, __InputValue.isDeprecated, __InputValue.deprecationReason, __Directive.isRepeatable, __Directive.isDeprecated, __Directive.deprecationReason, __Type.inputFields(includeDeprecated:), __Field.args(includeDeprecated:), __Directive.args(includeDeprecated:) and __Schema.directives(includeDeprecated:), so this run asks the draft's query without them, grades against the draft, and counts what they lack once, under builtinDefinitions.
 - **Adapter problems:** none
-- **Checker self-test:** passed (148 negative controls)
-- **Run:** kit 5da3deb09c91, 2026-11-15, strict
+- **Checker self-test:** passed (176 negative controls)
+- **Run:** kit 71f0a24bdc40, 2026-11-15, strict
 
 ### Findings
 
 <a id="introspect-finding-1"></a>
 
-#### 1. `specifiedByURL`: the service has no __Type.specifiedByURL field, so the kit leaves it out of the query
+#### 1. `builtinAdditions`, `builtinDefinitions`: the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Directive has a field the spec doesn't define; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)
 
-8 cases, in `deprecation` (2), `minimal` (1), `rich` (1), `interfaces` (1), `roots` (1), `builtinScalars` (1), `order` (1).
+7 cases, in `minimal` (1), `interfaces` (1), `deprecation` (1), `inputDeprecation` (1), `roots` (1), `builtinScalars` (1), `order` (1). 1 of them rely on grammar or rules that are only in the draft, not in October 2021.
 
-- specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL (MUST, [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy))
+- The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection))
+- The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (MUST, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
 
-The shortest case, from `minimal.lookup`:
+The shortest case, from `minimal.inc`:
 
 ```
-problem:  missingField at __Type.specifiedByURL
-input:    type Query { a: Int }  (__type(name:) for Query, Int, Float, __TypeKind, Unknown, October 2021 profile; includeDeprecated: true)
-response: {"data":{"t0":{"kind":"OBJECT","name":"Query","description":null,"fields":[{"name":"a","description":null,"args":[],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null},"t1":{"kind":"SCALAR","name":"Int","description":null,"fields":null,"inputFields":null,"interfaces":null,"enumValues":null,"possibleTypes":null},"t2":null,"t3":{"kind":"ENUM","name":"__TypeKind","description":"An enum describing what kind of type a given __Type is.","fields":null,"inputFields":null,"interfaces":null,"enumValues":[{"name":"SCALAR","description":"Indicates this type is a scalar.","isDeprecated":false,"deprecationReason":null},{"name":"OBJECT","description":"Indicates this type is an object. `fields` and `possibleTypes` are valid fields.","isDeprecated":false,"deprecationReason":null},{"name":"INTERFACE","description":"Indicates this type is an interface. `fields` and `possibleTypes` are valid fields.","isDeprecated":false,"deprecationReason":null},{"name":"UNION","description":"Indicates this type is a union. `possibleTypes` is a valid field.","isDeprecated":false,"deprecationReason":null},{"name":"ENUM","description":"Indicates this type is an enum. `enumValues` is a valid field.","isDeprecated":false,"deprecationReason":null},{"name":"INPUT_OBJECT","description":"Indicates this type is an input object. `inputFields` is a valid field.","isDeprecated":false,"deprecationReason":null},{"name":"LIST","description":"Indicates this type is a list. `ofType` is a valid field.","isDeprecated":false,"deprecationReason":null},{"name":"NON_NULL","description":"Indicates this type is a non-null. `ofType` is a valid field.","isDeprecated":false,"deprecationReason":null}],"possibleTypes":null},"t4":null}}
+problem:  added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation
+input:    type Query { a: Int }  (the introspection query; includeDeprecated: true)
+response: {"name":"deprecated","description":"Marks an element of a GraphQL schema as no longer supported.","locations":["FIELD_DEFINITION","ENUM_VALUE"],"args":[{"name":"reason","description":"Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formatted in [Markdown](https://daringfireball.net/projects/markdown/).","type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"No longer supported\""}]}
 expected: [object Object]
 ```
 
 <a id="introspect-finding-2"></a>
 
-#### 2. `builtinAdditions`, `builtinDefinitions`, `directives`, `specifiedByURL`: the built-in __Directive has a field October 2021 doesn't define; the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query
+#### 2. `builtinDefinitions`: the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)
 
-6 cases, in `minimal` (1), `interfaces` (1), `deprecation` (1), `roots` (1), `builtinScalars` (1), `order` (1).
+7 cases, in `minimal` (1), `interfaces` (1), `deprecation` (1), `inputDeprecation` (1), `roots` (1), `builtinScalars` (1), `order` (1). All rely on grammar or rules that are only in the draft, not in October 2021.
 
-- The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection))
 - The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (MUST, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
-- directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types (MUST, [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
-- specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL (MUST, [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy))
 
-The shortest case, from `minimal.inc`:
+The shortest case, from `minimal.defaults`:
 
 ```
-problem:  added:fields at __Directive, added:fields at __Type, fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL
-input:    type Query { a: Int }  (the introspection query, October 2021 profile; includeDeprecated: true)
-response: {"kind":"OBJECT","name":"__Type","description":"The fundamental unit of any GraphQL Schema is the type. There are many kinds of types in GraphQL as represented by the `__TypeKind` enum.\n\nDepending on the kind of a type, certain fields describe information about that type. Scalar types provide no information beyond a name and description, while Enum types provide their values. Object and Interface types provide the fields they describe. Abstract types, Union and Interface, provide the Object types possible at runtime. List and NonNull types compose other types.","fields":[{"name":"kind","description":null,"args":[],"type":{"kind":"NON_NULL","name":null,"ofType":{"kind":"ENUM","name":"__TypeKind","ofType":null}},"isDeprecated":false,"deprecationReason":null},{"name":"name","description":null,"args":[],"type":{"kind":"SCALAR","name":"String","ofType":null},"isDeprecated":false,"deprecationReason":null},{"name":"description","description":null,"args":[],"type":{"kind":"SCALAR","name":"String","ofType":null},"isDeprecated":false,"deprecationReason":null},{"name":"fields","description":null,"args":[{"name":"includeDeprecated","description":null,"type":{"kind":"SCALAR","name":"Boolean","ofType":null},"defaultValue":"false"}],"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"OBJECT","name":"__Field","ofType":null}}},"isDeprecated":false,"deprecationReason":null},{"name":"interfaces","description":null,"args":[],"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"OBJECT","name":"__Type","ofType":null}}},"isDeprecated":false,"deprecationReason":null},{"name":"possibleTypes","description":null,"args":[],"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"OBJECT","name":"__Type","ofType":null}}},"isDeprecated":false,"deprecationReason":null},{"name":"enumValues","description":null,"args":[{"name":"includeDeprecated","description":null,"type":{"kind":"SCALAR","name":"Boolean","ofType":null},"defaultValue":"false"}],"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"OBJECT","name":"__EnumValue","ofType":null}}},"isDeprecated":false,"deprecationReason":null},{"name":"inputFields","description":null,"args":[],"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"OBJECT","name":"__InputValue","ofType":null}}},"isDeprecated":false,"deprecationReason":null},{"name":"ofType","description":null,"args":[],"type":{"kind":"OBJECT","name":"__Type","ofType":null},"isDeprecated":false,"deprecationReason":null},{"name":"isOneOf","description":null,"args":[],"type":{"kind":"SCALAR","name":"Boolean","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}
+problem:  arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation
+input:    type Query { a: Int }  (the introspection query; includeDeprecated: the default)
+response: {"name":"deprecated","description":"Marks an element of a GraphQL schema as no longer supported.","locations":["FIELD_DEFINITION","ENUM_VALUE"],"args":[{"name":"reason","description":"Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formatted in [Markdown](https://daringfireball.net/projects/markdown/).","type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"No longer supported\""}]}
 expected: [object Object]
 ```
 
 <a id="introspect-finding-3"></a>
 
-#### 3. `builtinAdditions`, `builtinDefinitions`, `directives`, `specifiedByURL`: the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query
+#### 3. `builtinDefinitions`: the introspection types lack __Type.specifiedByURL, __InputValue.isDeprecated, __InputValue.deprecationReason, __Directive.isRepeatable, __Directive.isDeprecated, __Directive.deprecationReason, __Type.inputFields(includeDeprecated:), __Field.args(includeDeprecated:), __Directive.args(includeDeprecated:) and __Schema.directives(includeDeprecated:), so the kit leaves them out of every query, and grades what it can see without them
 
-6 cases, in `minimal` (1), `interfaces` (1), `deprecation` (1), `roots` (1), `builtinScalars` (1), `order` (1).
+1 case, in `discovery` (1).
 
-- The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection))
 - The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (MUST, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
-- directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types (MUST, [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
-- specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL (MUST, [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy))
 
-The shortest case, from `minimal.defaults`:
+The shortest case, from `discovery`:
 
 ```
-problem:  added:fields at __Type, fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL
-input:    type Query { a: Int }  (the introspection query, October 2021 profile; includeDeprecated: the default)
-response: {"kind":"OBJECT","name":"__Type","description":"The fundamental unit of any GraphQL Schema is the type. There are many kinds of types in GraphQL as represented by the `__TypeKind` enum.\n\nDepending on the kind of a type, certain fields describe information about that type. Scalar types provide no information beyond a name and description, while Enum types provide their values. Object and Interface types provide the fields they describe. Abstract types, Union and Interface, provide the Object types possible at runtime. List and NonNull types compose other types.","fields":[{"name":"kind","description":null,"args":[],"type":{"kind":"NON_NULL","name":null,"ofType":{"kind":"ENUM","name":"__TypeKind","ofType":null}},"isDeprecated":false,"deprecationReason":null},{"name":"name","description":null,"args":[],"type":{"kind":"SCALAR","name":"String","ofType":null},"isDeprecated":false,"deprecationReason":null},{"name":"description","description":null,"args":[],"type":{"kind":"SCALAR","name":"String","ofType":null},"isDeprecated":false,"deprecationReason":null},{"name":"fields","description":null,"args":[{"name":"includeDeprecated","description":null,"type":{"kind":"SCALAR","name":"Boolean","ofType":null},"defaultValue":"false"}],"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"OBJECT","name":"__Field","ofType":null}}},"isDeprecated":false,"deprecationReason":null},{"name":"interfaces","description":null,"args":[],"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"OBJECT","name":"__Type","ofType":null}}},"isDeprecated":false,"deprecationReason":null},{"name":"possibleTypes","description":null,"args":[],"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"OBJECT","name":"__Type","ofType":null}}},"isDeprecated":false,"deprecationReason":null},{"name":"enumValues","description":null,"args":[{"name":"includeDeprecated","description":null,"type":{"kind":"SCALAR","name":"Boolean","ofType":null},"defaultValue":"false"}],"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"OBJECT","name":"__EnumValue","ofType":null}}},"isDeprecated":false,"deprecationReason":null},{"name":"inputFields","description":null,"args":[],"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"OBJECT","name":"__InputValue","ofType":null}}},"isDeprecated":false,"deprecationReason":null},{"name":"ofType","description":null,"args":[],"type":{"kind":"OBJECT","name":"__Type","ofType":null},"isDeprecated":false,"deprecationReason":null},{"name":"isOneOf","description":null,"args":[],"type":{"kind":"SCALAR","name":"Boolean","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}
-expected: [object Object]
+problem:  __Type.specifiedByURL, __InputValue.isDeprecated, __InputValue.deprecationReason, __Directive.isRepeatable, __Directive.isDeprecated, __Directive.deprecationReason, __Type.inputFields(includeDeprecated:), __Field.args(includeDeprecated:), __Directive.args(includeDeprecated:), __Schema.directives(includeDeprecated:)
+input:    the fields of each introspection type, with their arguments (the kit's IntrospectionFields query)
+response: {"data":{"a":{"fields":[{"name":"description","args":[]},{"name":"types","args":[]},{"name":"queryType","args":[]},{"name":"mutationType","args":[]},{"name":"subscriptionType","args":[]},{"name":"directives","args":[]}]},"b":{"fields":[{"name":"kind","args":[]},{"name":"name","args":[]},{"name":"description","args":[]},{"name":"fields","args":[{"name":"includeDeprecated"}]},{"name":"interfaces","args":[]},{"name":"possibleTypes","args":[]},{"name":"enumValues","args":[{"name":"includeDeprecated"}]},{"name":"inputFields","args":[]},{"name":"ofType","args":[]},{"name":"isOneOf","args":[]}]},"c":{"fields":[{"name":"name","args":[]},{"name":"description","args":[]},{"name":"args","args":[]},{"name":"type","args":[]},{"name":"isDeprecated","args":[]},{"name":"deprecationReason","args":[]}]},"d":{"fields":[{"name":"name","args":[]},{"name":"description","args":[]},{"name":"type","args":[]},{"name":"defaultValue","args":[]}]},"e":{"fields":[{"name":"name","args":[]},{"name":"description","args":[]},{"name":"isDeprecated","args":[]},{"name":"deprecationReason","args":[]}]},"f":{"fields":[{"name":"name","args":[]},{"name":"description","args":[]},{"name":"locations","args":[]},{"name":"args","args":[]}]}}}
+expected: the fields and arguments the spec defines, including __Type.specifiedByURL, __InputValue.isDeprecated, __InputValue.deprecationReason, __Directive.isRepeatable, __Directive.isDeprecated, __Directive.deprecationReason, __Type.inputFields(includeDeprecated:), __Field.args(includeDeprecated:), __Directive.args(includeDeprecated:) and __Schema.directives(includeDeprecated:)
 ```
 
 <a id="introspect-finding-4"></a>
 
-#### 4. `builtinAdditions`, `builtinDefinitions`, `builtinDirectives`, `directives`, `specifiedByURL`: directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types: differs from Introspection.tla; doesn't provide @specifiedBy; the built-in __Directive has a field October 2021 doesn't define; the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query
+#### 4. `builtinAdditions`, `builtinDefinitions`, `builtinDirectives`, `directives`: directives describes the schema's own directives (name, locations, isRepeatable), and returns any built-in directive the result shows is provided (@specifiedBy for a specifiedByURL, @oneOf for a true isOneOf); any of the service's own takes input types: differs from Introspection.tla; doesn't provide @specifiedBy; the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Directive has a field the spec doesn't define; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)
 
 1 case, in `rich` (1).
 
 - The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection))
 - The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (MUST, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
 - @skip and @include are provided, @specifiedBy when the schema has a custom scalar, @oneOf when it has a OneOf input object (SHOULD, [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.1](https://spec.graphql.org/draft/#sec-skip) [§3.13.2](https://spec.graphql.org/draft/#sec-include) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy) [§3.13.5](https://spec.graphql.org/draft/#sec-oneOf))
-- directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types (MUST, [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
-- specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL (MUST, [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy))
+- directives describes the schema's own directives (name, locations, isRepeatable), and returns any built-in directive the result shows is provided (@specifiedBy for a specifiedByURL, @oneOf for a true isOneOf); any of the service's own takes input types (MUST, [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
 
 The shortest case, from `rich.inc`:
 
 ```
-problem:  added:fields at __Directive, added:fields at __Type, builtinDirectives at @specifiedBy, directives at the root, fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL
-input:    """The schema""" schema { query: Q mutation: M } "The root" type Q { a("An argument" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: "gone"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X "Why" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date "Tags a field" directive @tag(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (the introspection query, October 2021 profile; includeDeprecated: true)
+problem:  added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), builtinDirectives at @specifiedBy, directives at @deprecated, directives at the root, enumValues at __DirectiveLocation
+input:    """The schema""" schema { query: Q mutation: M } "The root" type Q { a("An argument" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: "gone"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X "Why" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date "Labels a field" directive @label(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (the introspection query; includeDeprecated: true)
 response: {"__typename":"Q","description":"The schema","queryType":{"kind":"OBJECT","name":"Q"},"mutationType":{"kind":"OBJECT","name":"M"},"subscriptionType":null,"types":["E","Date","__Schema","String","__Type","__TypeKind","__Field","__InputValue","Boolean","__EnumValue","__Directive","__DirectiveLocation","Q","M","A","B","U","In","Pick","Int","ID"],"directives":["include","skip","deprecated"]}
 expected: [object Object]
 ```
 
 <a id="introspect-finding-5"></a>
 
-#### 5. `builtinAdditions`, `builtinDefinitions`, `builtinDirectives`, `directives`, `specifiedByURL`: directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types: differs from Introspection.tla; doesn't provide @specifiedBy; the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query
+#### 5. `builtinDefinitions`, `builtinDirectives`, `directives`: directives describes the schema's own directives (name, locations, isRepeatable), and returns any built-in directive the result shows is provided (@specifiedBy for a specifiedByURL, @oneOf for a true isOneOf); any of the service's own takes input types: differs from Introspection.tla; doesn't provide @specifiedBy; the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)
 
 1 case, in `rich` (1).
 
-- The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection))
 - The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (MUST, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
 - @skip and @include are provided, @specifiedBy when the schema has a custom scalar, @oneOf when it has a OneOf input object (SHOULD, [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.1](https://spec.graphql.org/draft/#sec-skip) [§3.13.2](https://spec.graphql.org/draft/#sec-include) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy) [§3.13.5](https://spec.graphql.org/draft/#sec-oneOf))
-- directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types (MUST, [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
-- specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL (MUST, [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy))
+- directives describes the schema's own directives (name, locations, isRepeatable), and returns any built-in directive the result shows is provided (@specifiedBy for a specifiedByURL, @oneOf for a true isOneOf); any of the service's own takes input types (MUST, [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
 
 The shortest case, from `rich.defaults`:
 
 ```
-problem:  added:fields at __Type, builtinDirectives at @specifiedBy, directives at the root, fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL
-input:    """The schema""" schema { query: Q mutation: M } "The root" type Q { a("An argument" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: "gone"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X "Why" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date "Tags a field" directive @tag(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (the introspection query, October 2021 profile; includeDeprecated: the default)
+problem:  arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), builtinDirectives at @specifiedBy, directives at @deprecated, directives at the root, enumValues at __DirectiveLocation
+input:    """The schema""" schema { query: Q mutation: M } "The root" type Q { a("An argument" x: Int = 3, y: [Int] = 1, z: In = {b: 2}): U, old: String @deprecated(reason: "gone"), d: Date } type M { m(p: Pick!): Boolean } type A { a: Int } type B { b: Int } union U = B | A enum E { X "Why" Y @deprecated } input In { a: Int = 1, b: Int, e: E = Y, old: String } input Pick { id: ID, name: String } scalar Date "Labels a field" directive @label(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY  (the introspection query; includeDeprecated: the default)
 response: {"__typename":"Q","description":"The schema","queryType":{"kind":"OBJECT","name":"Q"},"mutationType":{"kind":"OBJECT","name":"M"},"subscriptionType":null,"types":["E","Date","__Schema","String","__Type","__TypeKind","__Field","__InputValue","Boolean","__EnumValue","__Directive","__DirectiveLocation","Q","M","A","B","U","In","Pick","Int","ID"],"directives":["include","skip","deprecated"]}
 expected: [object Object]
 ```
 
 <a id="introspect-finding-6"></a>
 
-#### 6. `builtinAdditions`, `builtinDefinitions`, `defaultValue`, `directives`, `specifiedByURL`: defaultValue encodes the default value, and is null without one: differs from Introspection.tla; the built-in __Directive has a field October 2021 doesn't define; the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query
+#### 6. `builtinAdditions`, `builtinDefinitions`, `defaultValueOmitted`: defaultValue is null for an input value that has a default; the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Directive has a field the spec doesn't define; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)
 
 1 case, in `defaults` (1).
 
 - The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection))
 - The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (MUST, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
-- defaultValue encodes the default value, and is null without one (MUST, [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type))
-- directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types (MUST, [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
-- specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL (MUST, [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy))
+- defaultValue encodes the default value of an input value that has one, rather than returning null (SHOULD, [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type))
 
 The shortest case, from `defaults.inc`:
 
 ```
-problem:  added:fields at __Directive, added:fields at __Type, defaultValue at Query.f(n:), fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL
-input:    enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = "say \"hi\"", n: Int = null, l: [E!] = [X, Y]): Int }  (the introspection query, October 2021 profile; includeDeprecated: true)
-response: {"kind":"OBJECT","name":"Query","description":null,"fields":[{"name":"f","description":null,"args":[{"name":"x","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}},"defaultValue":"[1]"},{"name":"y","description":null,"type":{"kind":"SCALAR","name":"Float","ofType":null},"defaultValue":"1"},{"name":"z","description":null,"type":{"kind":"SCALAR","name":"ID","ofType":null},"defaultValue":"\"7\""},{"name":"w","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}}},"defaultValue":"[[1], [2]]"},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"I","ofType":null},"defaultValue":"{a: 1, b: 2, c: [1], e: Y, f: 2}"},{"name":"s","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"say \\\"hi\\\"\""},{"name":"n","description":null,"type":{"kind":"SCALAR","name":"Int","ofType":null},"defaultValue":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"ENUM","name":"E","ofType":null}}},"defaultValue":"[X, Y]"}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}
+problem:  added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), defaultValueOmitted at Query.f(n:), directives at @deprecated, enumValues at __DirectiveLocation
+input:    enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = "say \"hi\"", n: Int = null, l: [E!] = [X, Y]): Int }  (the introspection query; includeDeprecated: true)
+response: {"kind":"OBJECT","name":"Query","description":null,"isOneOf":null,"fields":[{"name":"f","description":null,"args":[{"name":"x","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}},"defaultValue":"[1]"},{"name":"y","description":null,"type":{"kind":"SCALAR","name":"Float","ofType":null},"defaultValue":"1"},{"name":"z","description":null,"type":{"kind":"SCALAR","name":"ID","ofType":null},"defaultValue":"\"7\""},{"name":"w","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}}},"defaultValue":"[[1], [2]]"},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"I","ofType":null},"defaultValue":"{a: 1, b: 2, c: [1], e: Y, f: 2}"},{"name":"s","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"say \\\"hi\\\"\""},{"name":"n","description":null,"type":{"kind":"SCALAR","name":"Int","ofType":null},"defaultValue":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"ENUM","name":"E","ofType":null}}},"defaultValue":"[X, Y]"}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}
 expected: [object Object]
 ```
 
 <a id="introspect-finding-7"></a>
 
-#### 7. `builtinAdditions`, `builtinDefinitions`, `defaultValue`, `directives`, `specifiedByURL`: defaultValue encodes the default value, and is null without one: differs from Introspection.tla; the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query
+#### 7. `builtinDefinitions`, `defaultValueOmitted`: defaultValue is null for an input value that has a default; the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)
 
 1 case, in `defaults` (1).
 
-- The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection))
 - The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (MUST, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
-- defaultValue encodes the default value, and is null without one (MUST, [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type))
-- directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types (MUST, [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
-- specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL (MUST, [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy))
+- defaultValue encodes the default value of an input value that has one, rather than returning null (SHOULD, [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type))
 
 The shortest case, from `defaults.defaults`:
 
 ```
-problem:  added:fields at __Type, defaultValue at Query.f(n:), fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL
-input:    enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = "say \"hi\"", n: Int = null, l: [E!] = [X, Y]): Int }  (the introspection query, October 2021 profile; includeDeprecated: the default)
-response: {"kind":"OBJECT","name":"Query","description":null,"fields":[{"name":"f","description":null,"args":[{"name":"x","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}},"defaultValue":"[1]"},{"name":"y","description":null,"type":{"kind":"SCALAR","name":"Float","ofType":null},"defaultValue":"1"},{"name":"z","description":null,"type":{"kind":"SCALAR","name":"ID","ofType":null},"defaultValue":"\"7\""},{"name":"w","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}}},"defaultValue":"[[1], [2]]"},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"I","ofType":null},"defaultValue":"{a: 1, b: 2, c: [1], e: Y, f: 2}"},{"name":"s","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"say \\\"hi\\\"\""},{"name":"n","description":null,"type":{"kind":"SCALAR","name":"Int","ofType":null},"defaultValue":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"ENUM","name":"E","ofType":null}}},"defaultValue":"[X, Y]"}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}
+problem:  arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), defaultValueOmitted at Query.f(n:), directives at @deprecated, enumValues at __DirectiveLocation
+input:    enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = "say \"hi\"", n: Int = null, l: [E!] = [X, Y]): Int }  (the introspection query; includeDeprecated: the default)
+response: {"kind":"OBJECT","name":"Query","description":null,"isOneOf":null,"fields":[{"name":"f","description":null,"args":[{"name":"x","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}},"defaultValue":"[1]"},{"name":"y","description":null,"type":{"kind":"SCALAR","name":"Float","ofType":null},"defaultValue":"1"},{"name":"z","description":null,"type":{"kind":"SCALAR","name":"ID","ofType":null},"defaultValue":"\"7\""},{"name":"w","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}}},"defaultValue":"[[1], [2]]"},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"I","ofType":null},"defaultValue":"{a: 1, b: 2, c: [1], e: Y, f: 2}"},{"name":"s","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"say \\\"hi\\\"\""},{"name":"n","description":null,"type":{"kind":"SCALAR","name":"Int","ofType":null},"defaultValue":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"ENUM","name":"E","ofType":null}}},"defaultValue":"[X, Y]"}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}
 expected: [object Object]
 ```
 
 <a id="introspect-finding-8"></a>
 
-#### 8. `builtinAdditions`, `builtinDefinitions`, `builtinDirectives`, `descriptions`, `directives`, `specifiedByURL`: descriptions are the schema's: differs from Introspection.tla; doesn't provide @specifiedBy; the built-in __Directive has a field October 2021 doesn't define; the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query
+#### 8. `builtinAdditions`, `builtinDefinitions`, `builtinDirectives`: doesn't provide @specifiedBy; the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Directive has a field the spec doesn't define; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)
 
 1 case, in `scalars` (1).
 
 - The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection))
 - The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (MUST, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
 - @skip and @include are provided, @specifiedBy when the schema has a custom scalar, @oneOf when it has a OneOf input object (SHOULD, [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.1](https://spec.graphql.org/draft/#sec-skip) [§3.13.2](https://spec.graphql.org/draft/#sec-include) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy) [§3.13.5](https://spec.graphql.org/draft/#sec-oneOf))
-- Descriptions are the schema's (MUST, [§3.2](https://spec.graphql.org/draft/#sec-Type-System-Descriptions) [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection))
-- directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types (MUST, [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
-- specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL (MUST, [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy))
 
 The shortest case, from `scalars.inc`:
 
 ```
-problem:  added:fields at __Directive, added:fields at __Type, builtinDirectives at @specifiedBy, description at Date, fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL
-input:    "A date" scalar Date @specifiedBy(url: "https://example.com/date") scalar Plain type Query { d: Date, p: Plain }  (the introspection query, October 2021 profile; includeDeprecated: true)
-response: {"kind":"SCALAR","name":"Date","description":null,"fields":null,"inputFields":null,"interfaces":null,"enumValues":null,"possibleTypes":null}
+problem:  added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), builtinDirectives at @specifiedBy, directives at @deprecated, enumValues at __DirectiveLocation
+input:    "A date" scalar Date @specifiedBy(url: "https://example.com/date") scalar Plain type Query { d: Date, p: Plain }  (the introspection query; includeDeprecated: true)
+response: "no directive specifiedBy"
 expected: [object Object]
 ```
 
 <a id="introspect-finding-9"></a>
 
-#### 9. `builtinAdditions`, `builtinDefinitions`, `builtinDirectives`, `descriptions`, `directives`, `specifiedByURL`: descriptions are the schema's: differs from Introspection.tla; doesn't provide @specifiedBy; the built-in __Directive isn't as October 2021 defines it (fields); the built-in __Type has a field October 2021 doesn't define; the built-in __Type isn't as October 2021 defines it (fields); the service has no __Directive.isRepeatable field, so the kit leaves it out of the query; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query
+#### 9. `builtinDefinitions`, `builtinDirectives`: doesn't provide @specifiedBy; the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)
 
 1 case, in `scalars` (1).
 
-- The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection))
 - The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (MUST, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
 - @skip and @include are provided, @specifiedBy when the schema has a custom scalar, @oneOf when it has a OneOf input object (SHOULD, [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.1](https://spec.graphql.org/draft/#sec-skip) [§3.13.2](https://spec.graphql.org/draft/#sec-include) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy) [§3.13.5](https://spec.graphql.org/draft/#sec-oneOf))
-- Descriptions are the schema's (MUST, [§3.2](https://spec.graphql.org/draft/#sec-Type-System-Descriptions) [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection))
-- directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types (MUST, [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
-- specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL (MUST, [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy))
 
 The shortest case, from `scalars.defaults`:
 
 ```
-problem:  added:fields at __Type, builtinDirectives at @specifiedBy, description at Date, fields at __Directive, fields at __Type, missingField at __Directive.isRepeatable, missingField at __Type.specifiedByURL
-input:    "A date" scalar Date @specifiedBy(url: "https://example.com/date") scalar Plain type Query { d: Date, p: Plain }  (the introspection query, October 2021 profile; includeDeprecated: the default)
-response: {"kind":"SCALAR","name":"Date","description":null,"fields":null,"inputFields":null,"interfaces":null,"enumValues":null,"possibleTypes":null}
+problem:  arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), builtinDirectives at @specifiedBy, directives at @deprecated, enumValues at __DirectiveLocation
+input:    "A date" scalar Date @specifiedBy(url: "https://example.com/date") scalar Plain type Query { d: Date, p: Plain }  (the introspection query; includeDeprecated: the default)
+response: "no directive specifiedBy"
 expected: [object Object]
 ```
 
 <a id="introspect-finding-10"></a>
 
-#### 10. `defaultValue`, `specifiedByURL`: defaultValue encodes the default value, and is null without one: differs from Introspection.tla; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query
+#### 10. `builtinAdditions`, `builtinDefinitions`, `directives`: doesn't return @oneOf in directives, though an input object's isOneOf shows it is provided (draft only); the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Directive has a field the spec doesn't define; the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)
 
-1 case, in `defaults` (1).
+1 case, in `oneOf` (1). All rely on grammar or rules that are only in the draft, not in October 2021.
 
-- defaultValue encodes the default value, and is null without one (MUST, [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type))
-- specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL (MUST, [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy))
+- The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection))
+- The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (MUST, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
+- directives describes the schema's own directives (name, locations, isRepeatable), and returns any built-in directive the result shows is provided (@specifiedBy for a specifiedByURL, @oneOf for a true isOneOf); any of the service's own takes input types (MUST, [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
 
-The shortest case, from `defaults.lookup`:
+The shortest case, from `oneOf.inc`:
 
 ```
-problem:  defaultValue at Query.f(n:), missingField at __Type.specifiedByURL
-input:    enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = "say \"hi\"", n: Int = null, l: [E!] = [X, Y]): Int }  (__type(name:) for Query, I, Unknown, October 2021 profile; includeDeprecated: true)
-response: {"__type(name: \"Query\")":{"kind":"OBJECT","name":"Query","description":null,"fields":[{"name":"f","description":null,"args":[{"name":"x","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}},"defaultValue":"[1]"},{"name":"y","description":null,"type":{"kind":"SCALAR","name":"Float","ofType":null},"defaultValue":"1"},{"name":"z","description":null,"type":{"kind":"SCALAR","name":"ID","ofType":null},"defaultValue":"\"7\""},{"name":"w","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}}},"defaultValue":"[[1], [2]]"},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"I","ofType":null},"defaultValue":"{a: 1, b: 2, c: [1], e: Y, f: 2}"},{"name":"s","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"say \\\"hi\\\"\""},{"name":"n","description":null,"type":{"kind":"SCALAR","name":"Int","ofType":null},"defaultValue":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"ENUM","name":"E","ofType":null}}},"defaultValue":"[X, Y]"}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}}
+problem:  added:fields at __Directive, arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, requiredDirective at @oneOf
+input:    [draft] input Pick @oneOf { id: ID, name: String } input Plain { x: Int! } type Query { a(p: Pick, q: Plain): Int }  (the introspection query; includeDeprecated: true)
+response: "no directive oneOf"
 expected: [object Object]
 ```
 
 <a id="introspect-finding-11"></a>
 
-#### 11. `descriptions`, `specifiedByURL`: descriptions are the schema's: differs from Introspection.tla; the service has no __Type.specifiedByURL field, so the kit leaves it out of the query
+#### 11. `builtinDefinitions`, `directives`: doesn't return @oneOf in directives, though an input object's isOneOf shows it is provided (draft only); the built-in @deprecated isn't as the draft defines it, but is as October 2021 does (directives); the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __DirectiveLocation isn't as the draft defines it, but is as October 2021 does (enumValues); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments)
 
-1 case, in `scalars` (1).
+1 case, in `oneOf` (1). All rely on grammar or rules that are only in the draft, not in October 2021.
 
-- Descriptions are the schema's (MUST, [§3.2](https://spec.graphql.org/draft/#sec-Type-System-Descriptions) [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection))
-- specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL (MUST, [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy))
+- The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (MUST, [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
+- directives describes the schema's own directives (name, locations, isRepeatable), and returns any built-in directive the result shows is provided (@specifiedBy for a specifiedByURL, @oneOf for a true isOneOf); any of the service's own takes input types (MUST, [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives))
 
-The shortest case, from `scalars.lookup`:
+The shortest case, from `oneOf.defaults`:
 
 ```
-problem:  description at Date, missingField at __Type.specifiedByURL
-input:    "A date" scalar Date @specifiedBy(url: "https://example.com/date") scalar Plain type Query { d: Date, p: Plain }  (__type(name:) for Date, Plain, String, Unknown, October 2021 profile; includeDeprecated: true)
-response: {"__type(name: \"Date\")":{"kind":"SCALAR","name":"Date","description":null,"fields":null,"inputFields":null,"interfaces":null,"enumValues":null,"possibleTypes":null}}
+problem:  arguments at @deprecated(reason:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), directives at @deprecated, enumValues at __DirectiveLocation, requiredDirective at @oneOf
+input:    [draft] input Pick @oneOf { id: ID, name: String } input Plain { x: Int! } type Query { a(p: Pick, q: Plain): Int }  (the introspection query; includeDeprecated: the default)
+response: "no directive oneOf"
+expected: [object Object]
+```
+
+<a id="introspect-finding-12"></a>
+
+#### 12. `defaultValueOmitted`: defaultValue is null for an input value that has a default
+
+1 case, in `defaults` (1).
+
+- defaultValue encodes the default value of an input value that has one, rather than returning null (SHOULD, [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type))
+
+The shortest case, from `defaults.lookup`:
+
+```
+problem:  defaultValueOmitted at Query.f(n:)
+input:    enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = "say \"hi\"", n: Int = null, l: [E!] = [X, Y]): Int }  (__type(name:) for Query, I, Unknown; includeDeprecated: true)
+response: {"__type(name: \"Query\")":{"kind":"OBJECT","name":"Query","description":null,"isOneOf":null,"fields":[{"name":"f","description":null,"args":[{"name":"x","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}},"defaultValue":"[1]"},{"name":"y","description":null,"type":{"kind":"SCALAR","name":"Float","ofType":null},"defaultValue":"1"},{"name":"z","description":null,"type":{"kind":"SCALAR","name":"ID","ofType":null},"defaultValue":"\"7\""},{"name":"w","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}}},"defaultValue":"[[1], [2]]"},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"I","ofType":null},"defaultValue":"{a: 1, b: 2, c: [1], e: Y, f: 2}"},{"name":"s","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"say \\\"hi\\\"\""},{"name":"n","description":null,"type":{"kind":"SCALAR","name":"Int","ofType":null},"defaultValue":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"ENUM","name":"E","ofType":null}}},"defaultValue":"[X, Y]"}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}}
 expected: [object Object]
 ```
 
@@ -1150,29 +1058,36 @@ expected: [object Object]
 
 | Check | Level | Spec | Result |
 | --- | :---: | :---: | :---: |
-| The response is a well-formed execution result: data, errors only as a non-empty list, extensions a map, nothing else (`envelope`) | MUST | [§7.1.1](https://spec.graphql.org/draft/#sec-Execution-Result) [§7.1.7](https://spec.graphql.org/draft/#sec-Extensions) [§7.1.8](https://spec.graphql.org/draft/#sec-Additional-Entries) | ✓ 28 |
-| The query executes, and its result has exactly the fields it selects, nulls included (`executes`) | MUST | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 28 |
-| queryType, mutationType and subscriptionType are the root operation types (`roots`) | MUST | [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§3.3.1](https://spec.graphql.org/draft/#sec-Root-Operation-Types) | ✓ 18 |
-| types is the set of all named types (`types`) | MUST | [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) | ✓ 18 |
-| types has the built-in scalars the schema references, and no others (`builtinScalars`) | MUST | [§3.5](https://spec.graphql.org/draft/#sec-Scalars) [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) | ✓ 18 |
-| __type(name:) returns the named type, and null for a name the schema doesn't have (`typeByName`) | MUST | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 10 |
-| Each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included (`typeKinds`) | MUST | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) | ✓ 28 |
-| An object's or interface's fields, with their types (`fields`) | MUST | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§4.2.3](https://spec.graphql.org/draft/#sec-The-Field-Type) | ✓ 28 |
-| Field and directive arguments, with their types (`arguments`) | MUST | [§4.2.3](https://spec.graphql.org/draft/#sec-The-Field-Type) [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) | ✓ 28 |
-| defaultValue encodes the default value, and is null without one (`defaultValue`) | MUST | [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type) | ✗ 3/28 |
-| An input object's inputFields, with their types (`inputFields`) | MUST | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type) | ✓ 28 |
-| An enum's enumValues (`enumValues`) | MUST | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§4.2.5](https://spec.graphql.org/draft/#sec-The-EnumValue-Type) | ✓ 28 |
-| interfaces, and possibleTypes for unions and interfaces (`interfaces`) | MUST | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) | ✓ 28 |
-| isDeprecated, deprecationReason and includeDeprecated; @deprecated is returned when the schema deprecates something (`deprecation`). Graded for fields and enum values only: the implementation answered the October 2021 query. | MUST (Oct 2021: fields and enum values only) | [§4.2.3](https://spec.graphql.org/draft/#sec-The-Field-Type) [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type) [§4.2.5](https://spec.graphql.org/draft/#sec-The-EnumValue-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.3](https://spec.graphql.org/draft/#sec-deprecated) | ✓ 28 |
-| specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL (`specifiedByURL`) | MUST | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy) | ✗ 28/28 |
-| isOneOf is true exactly for OneOf input objects; @oneOf is returned when one is (`isOneOf`). Not graded: the implementation answered the October 2021 query, and October 2021 has no OneOf input objects. | MUST (draft only) | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.10.1](https://spec.graphql.org/draft/#sec-OneOf-Input-Objects) [§3.13](https://spec.graphql.org/draft/#sec-Directives) | – |
-| Descriptions are the schema's (`descriptions`) | MUST | [§3.2](https://spec.graphql.org/draft/#sec-Type-System-Descriptions) [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✗ 3/28 |
-| directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types (`directives`) | MUST | [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✗ 18/18 |
-| @skip and @include are provided, @specifiedBy when the schema has a custom scalar, @oneOf when it has a OneOf input object (`builtinDirectives`) | SHOULD | [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.1](https://spec.graphql.org/draft/#sec-skip) [§3.13.2](https://spec.graphql.org/draft/#sec-include) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy) [§3.13.5](https://spec.graphql.org/draft/#sec-oneOf) | ! 4/18 |
-| The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (`builtinDefinitions`) | MUST | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✗ 18/28 |
-| The introspection types have no field, argument, enum value or type the spec doesn't define (`builtinAdditions`) | INFO | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | i 18/28 |
-| __typename names the root type, and no fields list includes it (`typename`) | MUST | [§4.1](https://spec.graphql.org/draft/#sec-Type-Name-Introspection) | ✓ 28 |
-| Fields, arguments, enum values, directives, members and interfaces come in source order (`order`). Not graded: the implementation answered the October 2021 query, and October 2021 has no Stable Ordering. | SHOULD (draft only) | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | – |
-| Anything else Introspection!Matches requires (`other`) | MUST | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 28 |
+| The response is a well-formed execution result: data, errors only as a non-empty list, extensions a map, nothing else (`envelope`) | MUST | [§7.1.1](https://spec.graphql.org/draft/#sec-Execution-Result) [§7.1.7](https://spec.graphql.org/draft/#sec-Extensions) [§7.1.8](https://spec.graphql.org/draft/#sec-Additional-Entries) | ✓ 39 |
+| The query executes, and its result has exactly the fields it selects, nulls included (`executes`) | MUST | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 36 |
+| queryType, mutationType and subscriptionType are the root operation types (`roots`) | MUST | [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§3.3.1](https://spec.graphql.org/draft/#sec-Root-Operation-Types) | ✓ 22 |
+| types is the set of all named types (`types`) | MUST | [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) | ✓ 22 |
+| types has the built-in scalars the schema references, and no others (`builtinScalars`) | MUST | [§3.5](https://spec.graphql.org/draft/#sec-Scalars) [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) | ✓ 22 |
+| __type(name:) returns the named type, and null for a name the schema doesn't have (`typeByName`) | MUST | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 13 |
+| Each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included (`typeKinds`) | MUST | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) | ✓ 36 |
+| An object's or interface's fields, with their types (`fields`) | MUST | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§4.2.3](https://spec.graphql.org/draft/#sec-The-Field-Type) | ✓ 35 |
+| Field and directive arguments, with their types (`arguments`) | MUST | [§4.2.3](https://spec.graphql.org/draft/#sec-The-Field-Type) [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) | ✓ 35 |
+| defaultValue is null for an input value without a default, and otherwise null or an encoding of the default (`defaultValue`) | MUST | [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type) | ✓ 35 |
+| defaultValue encodes the default value of an input value that has one, rather than returning null (`defaultValueOmitted`) | SHOULD | [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type) | ! 3/35 |
+| An input object's inputFields, with their types (`inputFields`) | MUST | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type) | ✓ 35 |
+| An enum's enumValues (`enumValues`) | MUST | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§4.2.5](https://spec.graphql.org/draft/#sec-The-EnumValue-Type) | ✓ 35 |
+| interfaces, and possibleTypes for unions and interfaces (`interfaces`) | MUST | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) | ✓ 35 |
+| isDeprecated, deprecationReason and includeDeprecated; @deprecated is returned when the schema deprecates something (`deprecation`) | MUST (Oct 2021: fields and enum values only) | [§4.2.3](https://spec.graphql.org/draft/#sec-The-Field-Type) [§4.2.4](https://spec.graphql.org/draft/#sec-The-InputValue-Type) [§4.2.5](https://spec.graphql.org/draft/#sec-The-EnumValue-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.3](https://spec.graphql.org/draft/#sec-deprecated) | ✓ 35 |
+| specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null (`specifiedByURL`) | MUST | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy) | ✓ 35 |
+| isOneOf is true exactly for OneOf input objects (`isOneOf`). Draft only: October 2021 has no OneOf input objects. | MUST (draft only) | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) [§3.10.1](https://spec.graphql.org/draft/#sec-OneOf-Input-Objects) | ✓ 35 |
+| A description the document gives is returned as it is, the schema's included (`descriptions`) | SHOULD | [§3.2](https://spec.graphql.org/draft/#sec-Type-System-Descriptions) [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 35 |
+| directives describes the schema's own directives (name, locations, isRepeatable), and returns any built-in directive the result shows is provided (@specifiedBy for a specifiedByURL, @oneOf for a true isOneOf); any of the service's own takes input types (`directives`) | MUST | [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✗ 4/22 (2 draft only) |
+| @skip and @include are provided, @specifiedBy when the schema has a custom scalar, @oneOf when it has a OneOf input object (`builtinDirectives`) | SHOULD | [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.1](https://spec.graphql.org/draft/#sec-skip) [§3.13.2](https://spec.graphql.org/draft/#sec-include) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy) [§3.13.5](https://spec.graphql.org/draft/#sec-oneOf) | ! 4/22 |
+| The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (`builtinDefinitions`) | MUST | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✗ 23/36 (22 draft only) |
+| The fields of the introspection types have the Non-Null wrapping the spec gives them (`builtinNullability`) | SHOULD | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 35 |
+| The introspection types have no field, argument, enum value or type the spec doesn't define (`builtinAdditions`) | INFO | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | i 11/35 (2 draft only) |
+| Under the October 2021 profile, a built-in definition that differs from October 2021's is as the draft defines it (`builtinEdition`). Graded only under the October 2021 profile. | INFO | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives) | – |
+| __typename names the root type, and no fields list includes it (`typename`) | MUST | [§4.1](https://spec.graphql.org/draft/#sec-Type-Name-Introspection) | ✓ 35 |
+| Fields, arguments, enum values, directives, members and interfaces come in source order (`order`). Draft only: October 2021 has no Stable Ordering. | SHOULD (draft only) | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 35 |
+| Anything else Introspection!Matches requires (`other`) | MUST | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 35 |
 
+- **Basis for `defaultValueOmitted`:** §4.2.4: "defaultValue may return a String encoding (using the GraphQL language) of the default value used by this input value in the condition a value is not provided at runtime. If this input value has no default value, returns null." By Appendix A, a lowercase "may" keeps its RFC 2119 meaning, so the encoding is optional; the intent is plainly that a default is encoded, which makes this a SHOULD. A string that isn't an encoding of the default, or one for an input value without a default, still fails defaultValue.
+- **Basis for `descriptions`:** §3.2: documentation is "written immediately alongside definitions in a TypeSystemDocument and made available via introspection", which has no key word, and §4.2 says of every description field that it "may return a String or null". So a description the document gives that is lost or replaced fails this SHOULD, and any description is accepted for a definition the document doesn't describe ("" or one of the service's own included).
+- **Basis for `builtinNullability`:** The types of the introspection fields are given only by the definitions §4.2 introduces with "Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below", which has no key word. The sections below say what each field returns ("isRepeatable must return a Boolean"), and a field whose type differs only in Non-Null can still return exactly that. Any other change of type stays under builtinDefinitions, a MUST.
 - **Basis for `builtinAdditions`:** No sentence of §4 forbids extending the introspection types. The nearest is "Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below", which uses no key word, and Appendix A says "A conforming implementation of GraphQL may provide additional functionality, but must not do so where explicitly disallowed". Leaving out or changing a definition stays a MUST, under builtinDefinitions.
+- **Basis for `builtinEdition`:** The kit grades against the draft; the October 2021 profile is a fallback for a service whose introspection types the draft's query can't ask. A built-in definition (or an addition) that is exactly the draft's breaks nothing the draft requires, so it is reported here, not under builtinDefinitions or builtinAdditions.
