@@ -426,7 +426,7 @@ release has).
 A strict run: 401 of 2139 results match the reference; 39 produced no
 response.
 
-- **A request error has `"data": null`** (`requestErrorNoData`, MUST, 1444
+- **A request error has `"data": null`** (`requestErrorNoData`, MUST, 1448
   vectors): `graphql.Result` declares `Data interface{} \`json:"data"\``
   without `omitempty` (types.go:11), so every request error graphql-go
   returns (a syntax error, a validation error, a variable that doesn't
@@ -453,7 +453,7 @@ response.
 - **Block strings** (`stringValue`, MUST, 3): `"""\ta\r\n\t\tb\r  c"""`
   gives `"b\nc"`: graphql-go's block string dedent mishandles CR line ends
   and tabs.
-- **Valid documents rejected at validation** (`acceptsValid`, MUST, 21): an
+- **Valid documents rejected at validation** (graded under `variables`, MUST, 21): an
   argument `b: Int! = 2` is required anyway (`{ pair }`), as under Validate;
   descriptions on operations don't parse (`descriptionsInert`, 8).
 - **Two subscription root fields are executed** (`onlyValidExecuted`,

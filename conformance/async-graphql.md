@@ -5,7 +5,7 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 **Notes** (hand-written, from outside the kit):
 
 - The adapter uses async-graphql's dynamic schema API (`async_graphql::dynamic`). Every execution finding comes from `async_graphql::dynamic`, which the derive-macro API doesn't use: resolver errors without a path, any error nulling all of `data`, a null list item completed as an object, fields resolved once per selection (a mutation root field twice), fragments on a union not applied, an integer ID passed through as a number, fragments at the subscription root ignored, and a response stream that ends after any event with an error. The derive API may behave differently; it does stop an error at a nullable field. See the [adapter's README](../adapters/async-graphql/README.md#known-async-graphql-deviations).
-- A source stream's failure can only be an error item in a Rust stream: async-graphql answers it with an error result, then completes the response stream normally (`failsWithSource`, `eventPerSourceEvent`). At a subscription's root the event is the root field's value, so `parentValue` grades nothing there.
+- A source stream's failure can only be an error item in a Rust stream: async-graphql answers it with an error result, then completes the response stream normally, which the kit accepts as completing with that error (the weaker reading of §6.2.3, so `failsWithSource` passes). At a subscription's root the event is the root field's value, so `parentValue` grades nothing there.
 - The adapter doesn't claim `uncoercible-results`, so `intFraction` is untested here, not passed. It claims only the execution area; async-graphql has no schema coordinate API.
 
 ## Execution

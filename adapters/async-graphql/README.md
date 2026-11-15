@@ -177,13 +177,13 @@ September 2026's.
   and the client hadn't cancelled. An `Err` item from the source ends it the
   same way, through `?` (`:237`).
 - **A source stream's failure is an error result, then the stream
-  completes (`failsWithSource`, MUST since September 2025, 4 streams;
-  `eventPerSourceEvent`, MUST, the same 4).** The source's `Err` item
-  becomes a `Response` with that error (`:237`, `:280-282`), and then the
-  response stream ends normally: a client gets a result for no event and a
-  normal completion, where §6.2.3.2 says it "must complete with that
-  error". `execute_stream` returns a `Stream<Item = Response>`, which has no
-  way to complete with an error.
+  completes.** The source's `Err` item becomes a `Response` with that error
+  (`:237`, `:280-282`), and then the response stream ends normally.
+  `execute_stream` returns a `Stream<Item = Response>`, which has no way to
+  complete with an error. §6.2.3 says the stream "must complete with that
+  error" but leaves how that reaches a client to the transport, so the kit
+  takes the weaker reading and accepts an error result followed by
+  completion: `failsWithSource` and `eventPerSourceEvent` pass.
 
 `resultCoercion` and `coercionErrorReported` pass for custom scalars: the
 validator's rejection is an execution error at the field's path. Every
