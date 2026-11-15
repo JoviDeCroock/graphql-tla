@@ -10,14 +10,14 @@
     "uncoercible-results"
   ],
   "provenance": {
-    "kit": "f0039322bf59",
+    "kit": "e67bcb49db84",
     "date": "2026-11-15",
     "strict": true,
     "random": 1500,
     "seed": 1,
     "exhaustive": true
   },
-  "checkerSelfTest": "passed (25 negative controls)",
+  "checkerSelfTest": "passed (30 negative controls)",
   "cases": {
     "submitted": 11972,
     "distinct": 2189,
@@ -31,16 +31,22 @@
       "level": "MUST",
       "spec": [
         {
+          "number": "6.3.1",
+          "title": "Executing the Root Selection Set",
+          "url": "https://spec.graphql.org/draft/#sec-Executing-the-Root-Selection-Set"
+        },
+        {
           "number": "6.3.3",
           "title": "Executing Collected Fields",
           "url": "https://spec.graphql.org/draft/#sec-Executing-Collected-Fields"
         },
         {
-          "number": "7.1.1",
-          "title": "Execution Result",
-          "url": "https://spec.graphql.org/draft/#sec-Execution-Result"
+          "number": "7.1.5",
+          "title": "Data",
+          "url": "https://spec.graphql.org/draft/#sec-Data"
         }
       ],
+      "basis": "No sentence says to respond only once execution is complete; the algorithms do. ExecuteRootSelectionSet (§6.3.1) returns {data} once ExecuteCollectedFields has run, and §6.3.3 says \"Execution will recursively resolve and complete the value of every entry in the collected fields map\". The draft's §7.1.5 adds: \"The response data is the result of accumulating the resolved result of all response positions during execution.\" Positions §6.3.3 lets an implementation cancel don't hold the response back.",
       "status": "pass",
       "cases": 2189,
       "failing": 0
@@ -66,6 +72,7 @@
           "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
         }
       ],
+      "basis": "When an error propagates to the root, §6.4.4 and §7.1.5 say data \"should be null\", in both editions. The kit still requires null, because no other value conforms: the execution result must have a data entry (§7.1.1), {} or a partial map leaves out an entry ExecuteCollectedFields must produce (§6.3.3), and a map with null at the failed root field breaks that field's Non-Null type.",
       "status": "pass",
       "cases": 2189,
       "failing": 0
@@ -109,6 +116,7 @@
       "id": "errorPathsUnique",
       "title": "No two errors share a response path",
       "level": "MUST",
+      "oct2021": "SHOULD",
       "spec": [
         {
           "number": "6.4.4",
@@ -116,6 +124,7 @@
           "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
         }
       ],
+      "basis": "The draft's §6.4.4: \"each error added to the errors list during execution must have a unique response path.\" October 2021's: \"only one error should be added to the errors list per field.\" Both editions say the errors list \"must not be further affected\" when a position is null because of an error already added.",
       "status": "pass",
       "cases": 2189,
       "failing": 0
@@ -137,7 +146,7 @@
     },
     {
       "id": "nullsExplained",
-      "title": "Every null an error caused comes with an error from its cause",
+      "title": "Every null an error caused comes with an error from one of its causes",
       "level": "MUST",
       "spec": [
         {
@@ -298,14 +307,9 @@
     },
     {
       "id": "resultCoercion",
-      "title": "A leaf value its type can't represent (a fraction for an Int, a non-finite Float, an unknown enum value) raises an execution error",
+      "title": "A non-finite Float or an unknown enum value raises an execution error",
       "level": "MUST",
       "spec": [
-        {
-          "number": "3.5.1",
-          "title": "Int",
-          "url": "https://spec.graphql.org/draft/#sec-Int"
-        },
         {
           "number": "3.5.2",
           "title": "Float",
@@ -322,8 +326,29 @@
           "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
         }
       ],
+      "status": "pass",
+      "cases": 685,
+      "failing": 0
+    },
+    {
+      "id": "intFraction",
+      "title": "A fraction returned for an Int (1.2) raises an execution error instead of being truncated",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5.1",
+          "title": "Int",
+          "url": "https://spec.graphql.org/draft/#sec-Int"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "basis": "§3.5.1 states the rule: services \"may coerce non-integer internal values to integers when reasonable without losing information, otherwise they must raise an execution error\". Its example applies it to this case: \"a floating-point number 1.2 should raise an execution error instead of being truncated to 1\". Truncating 1.2 loses information, so the rule's must applies. October 2021 has the same sentences, with \"field error\".",
       "status": "fail",
-      "cases": 926,
+      "cases": 384,
       "failing": 384
     },
     {
@@ -335,6 +360,21 @@
           "number": "6.4.3",
           "title": "Value Completion",
           "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "pass",
+      "cases": 6275,
+      "failing": 0
+    },
+    {
+      "id": "leafEncoding",
+      "title": "Leaf values use the JSON type §7.2.1 gives their GraphQL type (a number for Int 1, not \"1\")",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "7.2.1",
+          "title": "JSON Serialization",
+          "url": "https://spec.graphql.org/draft/#sec-JSON-Serialization"
         }
       ],
       "status": "pass",
@@ -403,8 +443,23 @@
     },
     {
       "id": "errorFormat",
-      "title": "Errors are maps with a message, and well-formed locations and extensions",
+      "title": "Errors are maps with a message, and extensions, if present, is a map",
       "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.6",
+          "title": "Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Errors"
+        }
+      ],
+      "status": "pass",
+      "cases": 9964,
+      "failing": 0
+    },
+    {
+      "id": "errorLocations",
+      "title": "An error's locations, if present, is a list of maps with line and column, both positive integers",
+      "level": "SHOULD",
       "spec": [
         {
           "number": "7.1.6",
@@ -433,7 +488,7 @@
     },
     {
       "id": "responsePosition",
-      "title": "Paths use field names and integer list indices",
+      "title": "Paths are lists of response names (aliases, not field names) and integer list indices",
       "level": "MUST",
       "oct2021": "SHOULD",
       "spec": [
@@ -443,8 +498,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Response-Position"
         }
       ],
+      "basis": "The draft's §7.1.4: \"The value for a response path must be a list of path segments\", with list indices \"0-indexed integers\", and an aliased field \"must use the aliased name\". October 2021's §7.1.6 says each of these with should: \"This field should be a list of path segments\", \"If the error happens in an aliased field, the path to the error should use the aliased name\".",
       "status": "pass",
-      "cases": 775,
+      "cases": 9964,
       "failing": 0
     },
     {
@@ -470,12 +526,22 @@
       "status": "pass",
       "cases": 11972,
       "failing": 0
+    },
+    {
+      "id": "disabledPropagation",
+      "title": "With error propagation off, an error nulls the position where it happened (graphql-js 17's @experimental_disableErrorPropagation)",
+      "level": "INFO",
+      "spec": [],
+      "basis": "Not a GraphQL rule: neither edition has execution without error propagation. §6.4.4 says: \"Since Non-Null response positions cannot be null, execution errors are propagated to be handled by the parent response position.\" Every failure in the noPropagation fixture counts here, never against a spec section, and never fails the run. Adapter protocol problems still count as protocol.",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
     }
   ],
   "findings": [
     {
       "checks": [
-        "resultCoercion"
+        "intFraction"
       ],
       "summary": "count is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
       "fixture": "leaves",
@@ -518,7 +584,7 @@
     },
     {
       "checks": [
-        "resultCoercion"
+        "intFraction"
       ],
       "summary": "… is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
       "fixture": "unions",
@@ -657,17 +723,13 @@
     },
     {
       "id": "noPropagation",
-      "spec": [
-        {
-          "number": "6.4.4",
-          "title": "Handling Execution Errors",
-          "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
-        }
-      ],
+      "spec": [],
       "status": "skipped",
       "reason": "needs error-propagation-off",
       "cases": 0,
-      "failing": 0
+      "failing": 0,
+      "informational": 0,
+      "note": "outside the spec (graphql-js 17's @experimental_disableErrorPropagation): its failures are informational, under disabledPropagation"
     },
     {
       "id": "nullPropagation",

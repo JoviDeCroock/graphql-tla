@@ -16,12 +16,16 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f0039322bf59",
+    "kit": "e67bcb49db84",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 166
+    "vectors": 168,
+    "graded": 166,
+    "skipped": {
+      "unspecified": 2
+    }
   },
-  "checkerSelfTest": "passed (335 negative controls)",
+  "checkerSelfTest": "passed (333 negative controls)",
   "cases": {
     "submitted": 166,
     "distinct": 166,
@@ -29,7 +33,7 @@
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 46,
+    "vectors": 52,
     "failing": 8
   },
   "checks": [
@@ -271,7 +275,9 @@
       ],
       "status": "pass",
       "cases": 4,
-      "failing": 0
+      "failing": 0,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have argument name uniqueness."
     },
     {
       "id": "argInputType",
@@ -327,7 +333,7 @@
         }
       ],
       "status": "fail",
-      "cases": 18,
+      "cases": 20,
       "failing": 4,
       "edition": "draft",
       "note": "Draft only: the October 2021 edition doesn't have default value validation."
@@ -458,9 +464,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Objects"
         }
       ],
-      "status": "fail",
+      "status": "pass",
       "cases": 2,
-      "failing": 1
+      "failing": 0
     },
     {
       "id": "implFieldCovariant",
@@ -790,8 +796,8 @@
         }
       ],
       "status": "fail",
-      "cases": 6,
-      "failing": 3
+      "cases": 4,
+      "failing": 1
     }
   ],
   "findings": [
@@ -835,25 +841,6 @@
       },
       "draftOnly": 4,
       "edition": "draft"
-    },
-    {
-      "checks": [
-        "directiveReferencesItselfIndirectly"
-      ],
-      "kind": "not enforced",
-      "summary": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule",
-      "cases": 3,
-      "fixtures": {
-        "directive": 3
-      },
-      "fixture": "directiveReferencesItselfIndirectly.3.invalid",
-      "example": {
-        "input": "directive @d(c: Color) on ENUM_VALUE enum Color { RED @d BLUE } type Query { a: Color }",
-        "response": {
-          "valid": true
-        },
-        "expected": "invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule"
-      }
     },
     {
       "checks": [
@@ -1028,28 +1015,6 @@
     },
     {
       "checks": [
-        "implExtraArgOptional"
-      ],
-      "kind": "over-strict",
-      "summary": "IMPL_EXTRA_ARG_OPTIONAL over-strict: rejects a valid schema one small edit away from one that breaks it",
-      "cases": 1,
-      "fixtures": {
-        "implementation": 1
-      },
-      "fixture": "implExtraArgOptional.1.valid",
-      "example": {
-        "input": "interface I { f: Int } type Query implements I { f(b: Int! = 1): Int }",
-        "response": {
-          "valid": false,
-          "errors": [
-            "Type ObjectGraphType with name 'Query' does not implement interface InterfaceGraphType with name 'I'. Field 'f' argument 'b' is not defined in the interface. Please define the argument to be optional (nullable), include it on the interface field, or remove it from the implementing field."
-          ]
-        },
-        "expected": "valid (TypeSystem!Verdict is empty)"
-      }
-    },
-    {
-      "checks": [
         "implFieldCovariant"
       ],
       "kind": "over-strict",
@@ -1146,6 +1111,25 @@
           "valid": true
         },
         "expected": "invalid: breaks DIRECTIVE_USES_ITSELF and no other rule"
+      }
+    },
+    {
+      "checks": [
+        "directiveReferencesItselfIndirectly"
+      ],
+      "kind": "not enforced",
+      "summary": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "directive": 1
+      },
+      "fixture": "directiveReferencesItselfIndirectly.2.invalid",
+      "example": {
+        "input": "directive @d(a: Int @e) on ARGUMENT_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION type Query { a: Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule"
       }
     }
   ],

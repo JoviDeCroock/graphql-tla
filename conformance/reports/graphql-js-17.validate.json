@@ -20,25 +20,25 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f0039322bf59",
+    "kit": "e67bcb49db84",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 3093,
-    "graded": 3087,
+    "vectors": 3100,
+    "graded": 3088,
     "skipped": {
-      "unspecified": 6
+      "unspecified": 12
     }
   },
   "checkerSelfTest": "passed (7 negative controls)",
   "cases": {
-    "submitted": 3087,
-    "distinct": 3087,
+    "submitted": 3088,
+    "distinct": 3088,
     "malformed": 0
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 59,
-    "failing": 3
+    "vectors": 206,
+    "failing": 2
   },
   "checks": [
     {
@@ -113,7 +113,7 @@
         }
       ],
       "status": "pass",
-      "cases": 57,
+      "cases": 59,
       "failing": 0
     },
     {
@@ -128,7 +128,7 @@
         }
       ],
       "status": "pass",
-      "cases": 22,
+      "cases": 25,
       "failing": 0
     },
     {
@@ -143,7 +143,7 @@
         }
       ],
       "status": "fail",
-      "cases": 678,
+      "cases": 674,
       "failing": 22
     },
     {
@@ -203,7 +203,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10,
+      "cases": 11,
       "failing": 0
     },
     {
@@ -504,9 +504,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Validation"
         }
       ],
-      "status": "fail",
-      "cases": 983,
-      "failing": 2,
+      "status": "pass",
+      "cases": 984,
+      "failing": 0,
       "basis": "a document is valid when it satisfies every rule of §5, and only invalid requests are kept from execution (§6.1.1); rejecting a valid document applies a rule the spec doesn't have"
     }
   ],
@@ -549,84 +549,6 @@
           "errors": []
         },
         "expected": "invalid: AllVariableUsagesAreAllowed [\"cat\"]"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "fieldSelectionMerging"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.3.2 Field Selection Merging; the rule it applied is a guess, since the kit doesn't read error messages",
-      "cases": 1,
-      "draftOnly": 0,
-      "fixtures": {
-        "merging": 1
-      },
-      "fixture": "merging",
-      "problem": "Fields \"a\" conflict because they have differing arguments. Use different aliases on the fields to fetch both if this was intentional.",
-      "example": {
-        "input": "FieldSelectionMerging-valid-11: { a: search(term: \"x\") { __typename } a: search(term: \"\"\"x\"\"\") { __typename } }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Fields \"a\" conflict because they have differing arguments. Use different aliases on the fields to fetch both if this was intentional.",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 3
-                },
-                {
-                  "line": 5,
-                  "column": 3
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "allVariableUsagesAreAllowed"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects valid documents, each one edit from a document that breaks only §5.8.5 All Variable Usages Are Allowed; the rule it applied is a guess, since the kit doesn't read error messages; all rely on the draft",
-      "cases": 1,
-      "draftOnly": 1,
-      "fixtures": {
-        "variables": 1
-      },
-      "fixture": "variables",
-      "problem": "Variable \"$v\" is of type \"ID\" but must be non-nullable to be used for OneOf Input Object \"Pick\".",
-      "example": {
-        "input": "[draft] AllVariableUsagesAreAllowed-valid-30: query Q($v: ID = \"1\") { echo(pick: {id: $v}) }",
-        "response": {
-          "valid": false,
-          "errors": [
-            {
-              "message": "Variable \"$v\" is of type \"ID\" but must be non-nullable to be used for OneOf Input Object \"Pick\".",
-              "locations": [
-                {
-                  "line": 1,
-                  "column": 9
-                },
-                {
-                  "line": 2,
-                  "column": 19
-                }
-              ]
-            }
-          ]
-        },
-        "expected": "valid"
       }
     }
   ],

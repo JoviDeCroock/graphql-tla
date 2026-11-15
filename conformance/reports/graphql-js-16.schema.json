@@ -19,12 +19,16 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f0039322bf59",
+    "kit": "e67bcb49db84",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 166
+    "vectors": 168,
+    "graded": 166,
+    "skipped": {
+      "unspecified": 2
+    }
   },
-  "checkerSelfTest": "passed (335 negative controls)",
+  "checkerSelfTest": "passed (333 negative controls)",
   "cases": {
     "submitted": 166,
     "distinct": 166,
@@ -32,8 +36,8 @@
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 46,
-    "failing": 19
+    "vectors": 52,
+    "failing": 20
   },
   "checks": [
     {
@@ -274,7 +278,9 @@
       ],
       "status": "pass",
       "cases": 4,
-      "failing": 0
+      "failing": 0,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have argument name uniqueness."
     },
     {
       "id": "argInputType",
@@ -330,8 +336,8 @@
         }
       ],
       "status": "fail",
-      "cases": 18,
-      "failing": 9,
+      "cases": 20,
+      "failing": 10,
       "edition": "draft",
       "note": "Draft only: the October 2021 edition doesn't have default value validation."
     },
@@ -793,8 +799,8 @@
         }
       ],
       "status": "fail",
-      "cases": 6,
-      "failing": 3
+      "cases": 4,
+      "failing": 1
     }
   ],
   "findings": [
@@ -804,9 +810,9 @@
       ],
       "kind": "not enforced",
       "summary": "ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule",
-      "cases": 9,
+      "cases": 10,
       "fixtures": {
-        "defaults": 9
+        "defaults": 10
       },
       "fixture": "argDefaultCompatible.1.invalid",
       "example": {
@@ -816,7 +822,7 @@
         },
         "expected": "invalid: breaks ARG_DEFAULT_COMPATIBLE and no other rule"
       },
-      "draftOnly": 9,
+      "draftOnly": 10,
       "edition": "draft"
     },
     {
@@ -858,25 +864,6 @@
       },
       "draftOnly": 3,
       "edition": "draft"
-    },
-    {
-      "checks": [
-        "directiveReferencesItselfIndirectly"
-      ],
-      "kind": "not enforced",
-      "summary": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule",
-      "cases": 3,
-      "fixtures": {
-        "directive": 3
-      },
-      "fixture": "directiveReferencesItselfIndirectly.3.invalid",
-      "example": {
-        "input": "directive @d(c: Color) on ENUM_VALUE enum Color { RED @d BLUE } type Query { a: Color }",
-        "response": {
-          "valid": true
-        },
-        "expected": "invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule"
-      }
     },
     {
       "checks": [
@@ -975,6 +962,25 @@
           "valid": true
         },
         "expected": "invalid: breaks DIRECTIVE_USES_ITSELF and no other rule"
+      }
+    },
+    {
+      "checks": [
+        "directiveReferencesItselfIndirectly"
+      ],
+      "kind": "not enforced",
+      "summary": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "directive": 1
+      },
+      "fixture": "directiveReferencesItselfIndirectly.2.invalid",
+      "example": {
+        "input": "directive @d(a: Int @e) on ARGUMENT_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION type Query { a: Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule"
       }
     }
   ],

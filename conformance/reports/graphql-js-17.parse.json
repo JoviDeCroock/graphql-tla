@@ -20,7 +20,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f0039322bf59",
+    "kit": "e67bcb49db84",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 1983
@@ -32,6 +32,10 @@
     "malformed": 0
   },
   "adapterProblems": 0,
+  "draftOnly": {
+    "vectors": 105,
+    "failing": 2
+  },
   "checks": [
     {
       "id": "sourceText",
@@ -510,14 +514,16 @@
         "lexer-examples": 1,
         "strings": 1
       },
+      "draftOnly": 2,
       "fixture": "lexer-examples",
       "example": {
-        "input": "\"{a(x: \\\"\\\\u{000000041}\\\")}\"",
+        "input": "[draft] \"{a(x: \\\"\\\\u{000000041}\\\")}\"",
         "response": {
           "ok": false
         },
         "expected": "{\"ok\":true}"
-      }
+      },
+      "edition": "draft"
     }
   ],
   "fixtures": [],

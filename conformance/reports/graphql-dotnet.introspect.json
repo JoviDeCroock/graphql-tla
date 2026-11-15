@@ -16,16 +16,18 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f0039322bf59",
+    "kit": "e67bcb49db84",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 34
+    "vectors": 38
   },
-  "checkerSelfTest": "passed (83 negative controls)",
+  "profile": "draft",
+  "profileNote": "The draft's introspection query was rejected (\"Unknown argument 'includeDeprecated' on field 'directives' of type '__Schema'.\"), and so was October 2021's (\"Cannot query field 'isRepeatable' on type '__Directive'.\"), so this run grades against the draft.",
+  "checkerSelfTest": "passed (130 negative controls)",
   "cases": {
-    "submitted": 34,
-    "distinct": 34,
-    "malformed": 34
+    "submitted": 38,
+    "distinct": 38,
+    "malformed": 38
   },
   "adapterProblems": 0,
   "checks": [
@@ -51,7 +53,7 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
+      "cases": 38,
       "failing": 0
     },
     {
@@ -66,8 +68,8 @@
         }
       ],
       "status": "fail",
-      "cases": 34,
-      "failing": 34
+      "cases": 38,
+      "failing": 38
     },
     {
       "id": "roots",
@@ -141,7 +143,7 @@
     },
     {
       "id": "typeKinds",
-      "title": "Each __Type has its type's kind, and its fields are null exactly where that kind requires",
+      "title": "Each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included",
       "level": "MUST",
       "spec": [
         {
@@ -271,7 +273,7 @@
     },
     {
       "id": "deprecation",
-      "title": "isDeprecated, deprecationReason and includeDeprecated; @deprecated is provided when the schema deprecates something",
+      "title": "isDeprecated, deprecationReason and includeDeprecated; @deprecated is returned when the schema deprecates something",
       "level": "MUST",
       "spec": [
         {
@@ -307,17 +309,23 @@
       ],
       "status": "untested",
       "cases": 0,
-      "failing": 0
+      "failing": 0,
+      "oct2021": "fields and enum values only"
     },
     {
       "id": "specifiedByURL",
-      "title": "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null",
+      "title": "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL",
       "level": "MUST",
       "spec": [
         {
           "number": "4.2.2",
           "title": "The \\_\\_Type Type",
           "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
         },
         {
           "number": "3.13.4",
@@ -331,7 +339,7 @@
     },
     {
       "id": "isOneOf",
-      "title": "isOneOf is true exactly for OneOf input objects",
+      "title": "isOneOf is true exactly for OneOf input objects; @oneOf is returned when one is",
       "level": "MUST",
       "spec": [
         {
@@ -343,11 +351,18 @@
           "number": "3.10.1",
           "title": "OneOf Input Objects",
           "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
         }
       ],
       "status": "untested",
       "cases": 0,
-      "failing": 0
+      "failing": 0,
+      "edition": "draft",
+      "note": "Draft only: October 2021 has no OneOf input objects."
     },
     {
       "id": "descriptions",
@@ -477,7 +492,9 @@
       ],
       "status": "untested",
       "cases": 0,
-      "failing": 0
+      "failing": 0,
+      "edition": "draft",
+      "note": "Draft only: October 2021 has no Stable Ordering."
     },
     {
       "id": "other",
@@ -501,13 +518,14 @@
         "executes"
       ],
       "summary": "the schema didn't build, the query failed, or the result doesn't have the fields the query selects",
-      "cases": 34,
+      "cases": 38,
       "fixtures": {
         "minimal": 3,
         "rich": 3,
         "interfaces": 3,
         "defaults": 3,
         "deprecation": 4,
+        "inputDeprecation": 4,
         "directiveDeprecation": 3,
         "roots": 3,
         "builtinScalars": 3,
@@ -517,6 +535,7 @@
       },
       "fixture": "minimal.inc",
       "problem": "the response has errors: Unknown argument 'includeDeprecated' on field 'directives' of type '__Schema'.; Cannot query field 'isRepeatable' on type '__Directive'.; Unknown argument 'includeDeprecated' on field 'args' of type '[__Directive!]!'.; Cannot query field 'isDeprecated' on type '__Directive'.; Cannot query field 'dep",
+      "draftOnly": 10,
       "example": {
         "input": "type Query { a: Int }  (the introspection query; includeDeprecated: true)",
         "response": {
@@ -606,7 +625,55 @@
                 "message": "Cannot query field 'specifiedByURL' on type '__Type'.",
                 "locations": [
                   {
-                    "line": 25,
+                    "line": 22,
+                    "column": 36
+                  }
+                ],
+                "extensions": {
+                  "code": "FIELDS_ON_CORRECT_TYPE",
+                  "codes": [
+                    "FIELDS_ON_CORRECT_TYPE"
+                  ],
+                  "number": "5.3.1"
+                }
+              },
+              {
+                "message": "Cannot query field 'specifiedByURL' on type '__Type'.",
+                "locations": [
+                  {
+                    "line": 22,
+                    "column": 190
+                  }
+                ],
+                "extensions": {
+                  "code": "FIELDS_ON_CORRECT_TYPE",
+                  "codes": [
+                    "FIELDS_ON_CORRECT_TYPE"
+                  ],
+                  "number": "5.3.1"
+                }
+              },
+              {
+                "message": "Cannot query field 'specifiedByURL' on type '__Type'.",
+                "locations": [
+                  {
+                    "line": 22,
+                    "column": 344
+                  }
+                ],
+                "extensions": {
+                  "code": "FIELDS_ON_CORRECT_TYPE",
+                  "codes": [
+                    "FIELDS_ON_CORRECT_TYPE"
+                  ],
+                  "number": "5.3.1"
+                }
+              },
+              {
+                "message": "Cannot query field 'specifiedByURL' on type '__Type'.",
+                "locations": [
+                  {
+                    "line": 31,
                     "column": 3
                   }
                 ],
@@ -622,7 +689,7 @@
                 "message": "Unknown argument 'includeDeprecated' on field 'args' of type '[__Field!]'.",
                 "locations": [
                   {
-                    "line": 30,
+                    "line": 36,
                     "column": 10
                   }
                 ],
@@ -638,7 +705,7 @@
                 "message": "Unknown argument 'includeDeprecated' on field 'inputFields' of type '__Type'.",
                 "locations": [
                   {
-                    "line": 35,
+                    "line": 41,
                     "column": 15
                   }
                 ],
@@ -654,7 +721,7 @@
                 "message": "Cannot query field 'isDeprecated' on type '__InputValue'.",
                 "locations": [
                   {
-                    "line": 51,
+                    "line": 57,
                     "column": 3
                   }
                 ],
@@ -670,7 +737,7 @@
                 "message": "Cannot query field 'deprecationReason' on type '__InputValue'.",
                 "locations": [
                   {
-                    "line": 52,
+                    "line": 58,
                     "column": 3
                   }
                 ],

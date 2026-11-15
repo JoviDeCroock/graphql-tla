@@ -19,7 +19,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f0039322bf59",
+    "kit": "e67bcb49db84",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 2036,
@@ -31,13 +31,17 @@
       "big JSON numbers graded under jsonNumbers"
     ]
   },
-  "checkerSelfTest": "passed (11675 negative controls)",
+  "checkerSelfTest": "passed (11673 negative controls)",
   "cases": {
     "submitted": 2036,
     "distinct": 2036,
     "malformed": 0
   },
   "adapterProblems": 0,
+  "draftOnly": {
+    "vectors": 25,
+    "failing": 0
+  },
   "checks": [
     {
       "id": "int",
@@ -337,6 +341,7 @@
       ],
       "summary": "accepts what §3.10 (Input Objects) rejects",
       "cases": 4,
+      "draftOnly": 0,
       "fixtures": {
         "literal": 3,
         "spec-example": 1
@@ -384,6 +389,7 @@
       ],
       "summary": "accepts what §3.5.2 (Float) rejects",
       "cases": 1,
+      "draftOnly": 0,
       "fixtures": {
         "literal": 1
       },
@@ -424,6 +430,7 @@
       ],
       "summary": "accepts what §3.5.2 (Float) rejects",
       "cases": 1,
+      "draftOnly": 0,
       "fixtures": {
         "literal": 1
       },
@@ -464,6 +471,7 @@
       ],
       "summary": "accepts what §3.5.3 (String) rejects",
       "cases": 1,
+      "draftOnly": 0,
       "fixtures": {
         "variable": 1
       },
@@ -504,6 +512,7 @@
       ],
       "summary": "accepts what §3.5.5 (ID) rejects",
       "cases": 1,
+      "draftOnly": 0,
       "fixtures": {
         "variable": 1
       },
@@ -544,6 +553,7 @@
       ],
       "summary": "accepts what §3.11 (List) rejects",
       "cases": 1,
+      "draftOnly": 0,
       "fixtures": {
         "literal": 1
       },

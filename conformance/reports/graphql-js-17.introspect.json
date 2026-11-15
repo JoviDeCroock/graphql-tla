@@ -20,15 +20,16 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f0039322bf59",
+    "kit": "e67bcb49db84",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 34
+    "vectors": 38
   },
-  "checkerSelfTest": "passed (83 negative controls)",
+  "profile": "draft",
+  "checkerSelfTest": "passed (130 negative controls)",
   "cases": {
-    "submitted": 34,
-    "distinct": 34,
+    "submitted": 38,
+    "distinct": 38,
     "malformed": 0
   },
   "adapterProblems": 0,
@@ -55,7 +56,7 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
+      "cases": 38,
       "failing": 0
     },
     {
@@ -70,7 +71,7 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
+      "cases": 38,
       "failing": 0
     },
     {
@@ -90,7 +91,7 @@
         }
       ],
       "status": "pass",
-      "cases": 22,
+      "cases": 24,
       "failing": 0
     },
     {
@@ -105,7 +106,7 @@
         }
       ],
       "status": "pass",
-      "cases": 22,
+      "cases": 24,
       "failing": 0
     },
     {
@@ -125,7 +126,7 @@
         }
       ],
       "status": "pass",
-      "cases": 22,
+      "cases": 24,
       "failing": 0
     },
     {
@@ -140,12 +141,12 @@
         }
       ],
       "status": "pass",
-      "cases": 12,
+      "cases": 14,
       "failing": 0
     },
     {
       "id": "typeKinds",
-      "title": "Each __Type has its type's kind, and its fields are null exactly where that kind requires",
+      "title": "Each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included",
       "level": "MUST",
       "spec": [
         {
@@ -155,7 +156,7 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
+      "cases": 38,
       "failing": 0
     },
     {
@@ -175,7 +176,7 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
+      "cases": 38,
       "failing": 0
     },
     {
@@ -200,7 +201,7 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
+      "cases": 38,
       "failing": 0
     },
     {
@@ -215,7 +216,7 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
+      "cases": 38,
       "failing": 0
     },
     {
@@ -235,7 +236,7 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
+      "cases": 38,
       "failing": 0
     },
     {
@@ -255,7 +256,7 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
+      "cases": 38,
       "failing": 0
     },
     {
@@ -270,12 +271,12 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
+      "cases": 38,
       "failing": 0
     },
     {
       "id": "deprecation",
-      "title": "isDeprecated, deprecationReason and includeDeprecated; @deprecated is provided when the schema deprecates something",
+      "title": "isDeprecated, deprecationReason and includeDeprecated; @deprecated is returned when the schema deprecates something",
       "level": "MUST",
       "spec": [
         {
@@ -310,12 +311,13 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
-      "failing": 0
+      "cases": 38,
+      "failing": 0,
+      "oct2021": "fields and enum values only"
     },
     {
       "id": "specifiedByURL",
-      "title": "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null",
+      "title": "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL",
       "level": "MUST",
       "spec": [
         {
@@ -324,18 +326,23 @@
           "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
         },
         {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        },
+        {
           "number": "3.13.4",
           "title": "@specifiedBy",
           "url": "https://spec.graphql.org/draft/#sec-specifiedBy"
         }
       ],
       "status": "pass",
-      "cases": 34,
+      "cases": 38,
       "failing": 0
     },
     {
       "id": "isOneOf",
-      "title": "isOneOf is true exactly for OneOf input objects",
+      "title": "isOneOf is true exactly for OneOf input objects; @oneOf is returned when one is",
       "level": "MUST",
       "spec": [
         {
@@ -347,11 +354,18 @@
           "number": "3.10.1",
           "title": "OneOf Input Objects",
           "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
         }
       ],
       "status": "pass",
-      "cases": 34,
-      "failing": 0
+      "cases": 38,
+      "failing": 0,
+      "edition": "draft",
+      "note": "Draft only: October 2021 has no OneOf input objects."
     },
     {
       "id": "descriptions",
@@ -370,7 +384,7 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
+      "cases": 38,
       "failing": 0
     },
     {
@@ -395,7 +409,7 @@
         }
       ],
       "status": "pass",
-      "cases": 22,
+      "cases": 24,
       "failing": 0
     },
     {
@@ -430,7 +444,7 @@
         }
       ],
       "status": "pass",
-      "cases": 22,
+      "cases": 24,
       "failing": 0
     },
     {
@@ -450,8 +464,8 @@
         }
       ],
       "status": "fail",
-      "cases": 34,
-      "failing": 22
+      "cases": 38,
+      "failing": 24
     },
     {
       "id": "typename",
@@ -465,7 +479,7 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
+      "cases": 38,
       "failing": 0
     },
     {
@@ -480,8 +494,10 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
-      "failing": 0
+      "cases": 38,
+      "failing": 0,
+      "edition": "draft",
+      "note": "Draft only: October 2021 has no Stable Ordering."
     },
     {
       "id": "other",
@@ -495,7 +511,7 @@
         }
       ],
       "status": "pass",
-      "cases": 34,
+      "cases": 38,
       "failing": 0
     }
   ],
@@ -505,13 +521,14 @@
         "builtinDefinitions"
       ],
       "summary": "the built-in __DirectiveLocation isn't as the spec defines it (enumValues)",
-      "cases": 22,
+      "cases": 24,
       "fixtures": {
         "minimal": 2,
         "rich": 2,
         "interfaces": 2,
         "defaults": 2,
         "deprecation": 2,
+        "inputDeprecation": 2,
         "directiveDeprecation": 2,
         "roots": 2,
         "builtinScalars": 2,
@@ -521,6 +538,7 @@
       },
       "fixture": "minimal.inc",
       "problem": "enumValues at __DirectiveLocation",
+      "draftOnly": 6,
       "example": {
         "input": "type Query { a: Int }  (the introspection query; includeDeprecated: true)",
         "response": {

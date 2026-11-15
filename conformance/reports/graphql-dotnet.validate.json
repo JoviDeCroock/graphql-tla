@@ -16,24 +16,24 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f0039322bf59",
+    "kit": "e67bcb49db84",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 3093,
-    "graded": 3087,
+    "vectors": 3100,
+    "graded": 3088,
     "skipped": {
-      "unspecified": 6
+      "unspecified": 12
     }
   },
   "checkerSelfTest": "passed (7 negative controls)",
   "cases": {
-    "submitted": 3087,
-    "distinct": 3087,
+    "submitted": 3088,
+    "distinct": 3088,
     "malformed": 0
   },
   "adapterProblems": 0,
   "draftOnly": {
-    "vectors": 59,
+    "vectors": 206,
     "failing": 24
   },
   "checks": [
@@ -109,7 +109,7 @@
         }
       ],
       "status": "fail",
-      "cases": 57,
+      "cases": 59,
       "failing": 15
     },
     {
@@ -124,7 +124,7 @@
         }
       ],
       "status": "pass",
-      "cases": 22,
+      "cases": 25,
       "failing": 0
     },
     {
@@ -139,7 +139,7 @@
         }
       ],
       "status": "fail",
-      "cases": 678,
+      "cases": 674,
       "failing": 22
     },
     {
@@ -199,7 +199,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10,
+      "cases": 11,
       "failing": 0
     },
     {
@@ -501,7 +501,7 @@
         }
       ],
       "status": "fail",
-      "cases": 983,
+      "cases": 984,
       "failing": 40,
       "basis": "a document is valid when it satisfies every rule of §5, and only invalid requests are kept from execution (§6.1.1); rejecting a valid document applies a rule the spec doesn't have"
     }
@@ -668,7 +668,7 @@
         "allVariableUsagesAreAllowed"
       ],
       "likelyOverStrict": true,
-      "summary": "rejects valid documents: §5.8.5 All Variable Usages Are Allowed is likely over-strict (7 valid siblings of 28 different invalid vectors rejected, 51 of the same family accepted)",
+      "summary": "rejects valid documents: §5.8.5 All Variable Usages Are Allowed is likely over-strict (7 valid siblings of 28 different invalid vectors rejected, 50 of the same family accepted)",
       "cases": 7,
       "draftOnly": 0,
       "fixtures": {

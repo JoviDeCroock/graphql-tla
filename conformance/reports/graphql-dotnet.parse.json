@@ -16,7 +16,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f0039322bf59",
+    "kit": "e67bcb49db84",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 1983
@@ -28,6 +28,10 @@
     "malformed": 0
   },
   "adapterProblems": 0,
+  "draftOnly": {
+    "vectors": 105,
+    "failing": 96
+  },
   "checks": [
     {
       "id": "sourceText",
@@ -507,15 +511,17 @@
         "variable-definitions": 1,
         "random-documents": 69
       },
+      "draftOnly": 73,
       "fixture": "parser-examples",
       "example": {
-        "input": "\"\\\"d\\\" query {a}\"",
+        "input": "[draft] \"\\\"d\\\" query {a}\"",
         "response": {
           "ok": false,
           "error": "Error parsing query: Unexpected String \"d\""
         },
         "expected": "{\"ok\":true}"
-      }
+      },
+      "edition": "draft"
     },
     {
       "checks": [
@@ -527,15 +533,17 @@
         "lexer-examples": 6,
         "strings": 3
       },
+      "draftOnly": 9,
       "fixture": "lexer-examples",
       "example": {
-        "input": "\"{a(x: \\\"\\\\uD83D\\\")}\"",
+        "input": "[draft] \"{a(x: \\\"\\\\uD83D\\\")}\"",
         "response": {
           "ok": true
         },
         "expected": "{\"ok\":false}",
         "sibling": "\"{a(x: \\\"\\\")}\", which the reference accepts"
-      }
+      },
+      "edition": "draft"
     },
     {
       "checks": [
@@ -568,15 +576,17 @@
         "field-suffixes": 1,
         "random-documents": 4
       },
+      "draftOnly": 8,
       "fixture": "parser-examples",
       "example": {
-        "input": "\"{}\"",
+        "input": "[draft] \"{}\"",
         "response": {
           "ok": false,
           "error": "Error parsing query: Expected Name, found }; for more information see http://spec.graphql.org/October2021/#Field"
         },
         "expected": "{\"ok\":true}"
-      }
+      },
+      "edition": "draft"
     },
     {
       "checks": [
@@ -588,15 +598,17 @@
         "lexer-examples": 2,
         "strings": 4
       },
+      "draftOnly": 6,
       "fixture": "strings",
       "example": {
-        "input": "\"{a(x: \\\"\\\\u{1F600}\\\")}\"",
+        "input": "[draft] \"{a(x: \\\"\\\\u{1F600}\\\")}\"",
         "response": {
           "ok": false,
           "error": "Error parsing query: Invalid character escape sequence: \\u{1F6."
         },
         "expected": "{\"ok\":true}"
-      }
+      },
+      "edition": "draft"
     },
     {
       "checks": [
