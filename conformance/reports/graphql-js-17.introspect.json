@@ -1,41 +1,61 @@
 {
-  "format": 1,
+  "format": 2,
   "area": "introspect",
   "implementation": "graphql-js 17.1.0",
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "coordinate",
     "custom-directives",
     "custom-scalar-literals",
+    "custom-scalar-results",
     "deferred-items",
     "error-propagation-off",
     "idle",
     "introspect",
     "invalid-results",
     "mutation",
+    "nested-fields",
+    "parent-values",
     "parse",
+    "parse-sdl",
+    "request-extensions",
+    "scalar-results",
     "schema",
+    "schema-extensions",
     "subscription",
+    "subscription-source",
+    "subscription-stream",
     "uncoercible-results",
     "unvalidated",
     "validate"
   ],
   "provenance": {
-    "kit": "71f0a24bdc40",
+    "kit": "f437858e472b",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 39,
-    "graded": 39,
+    "vectors": 71,
+    "graded": 71,
     "skipped": {}
   },
-  "profile": "draft",
-  "checkerSelfTest": "passed (176 negative controls)",
+  "profile": "September2026",
+  "checkerSelfTest": "passed (353 negative controls)",
   "cases": {
-    "submitted": 39,
-    "distinct": 39,
+    "submitted": 71,
+    "distinct": 71,
     "malformed": 0
   },
   "adapterProblems": 0,
+  "since": {
+    "September2025": {
+      "vectors": 16,
+      "failing": 10
+    },
+    "September2026": {
+      "vectors": 7,
+      "failing": 4
+    }
+  },
   "checks": [
     {
       "id": "envelope",
@@ -45,23 +65,23 @@
         {
           "number": "7.1.1",
           "title": "Execution Result",
-          "url": "https://spec.graphql.org/draft/#sec-Execution-Result"
+          "url": "https://spec.graphql.org/September2026/#sec-Execution-Result"
         },
         {
           "number": "7.1.7",
           "title": "Extensions",
-          "url": "https://spec.graphql.org/draft/#sec-Extensions"
+          "url": "https://spec.graphql.org/September2026/#sec-Extensions"
         },
         {
           "number": "7.1.8",
           "title": "Additional Entries",
-          "url": "https://spec.graphql.org/draft/#sec-Additional-Entries"
+          "url": "https://spec.graphql.org/September2026/#sec-Additional-Entries"
         }
       ],
       "status": "pass",
-      "cases": 39,
+      "cases": 71,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§7.1: \"An execution result must be a map.\" \"If any errors are raised during operation execution, the execution result must contain an entry with key errors. The value of this entry must be a non-empty list\". \"The extensions entry in an execution result or request error result, if set, must have a map as its value.\" \"the execution result and request error result maps must not contain any entries other than those described above.\""
     },
     {
       "id": "executes",
@@ -71,13 +91,13 @@
         {
           "number": "4.2",
           "title": "Schema Introspection",
-          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Introspection"
         }
       ],
       "status": "pass",
-      "cases": 39,
+      "cases": 71,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.2: \"The schema introspection system is accessible from the meta-fields __schema and __type which are accessible from the type of the root of a query operation\", with \"__schema: __Schema!\". Each field the kit selects is one §4.2 defines, so a request error, an execution error, a crash, or a result without a selected field fails to return what those definitions say each field returns."
     },
     {
       "id": "roots",
@@ -87,18 +107,18 @@
         {
           "number": "4.2.1",
           "title": "The \\_\\_Schema Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Schema-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Schema-Type"
         },
         {
           "number": "3.3.1",
           "title": "Root Operation Types",
-          "url": "https://spec.graphql.org/draft/#sec-Root-Operation-Types"
+          "url": "https://spec.graphql.org/September2026/#sec-Root-Operation-Types"
         }
       ],
       "status": "pass",
-      "cases": 24,
+      "cases": 42,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.2.1: \"queryType is the root type of a query operation.\" \"mutationType is the root type of a mutation operation, if supported. Otherwise null.\" The same for subscriptionType. Appendix A: \"Conformance requirements are described in this document via both descriptive assertions and key words with clearly defined meanings.\""
     },
     {
       "id": "types",
@@ -108,13 +128,29 @@
         {
           "number": "4.2.1",
           "title": "The \\_\\_Schema Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Schema-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Schema-Type"
         }
       ],
       "status": "pass",
-      "cases": 24,
+      "cases": 42,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.2.1: \"types must return the set of all named types contained within this schema. Any named type which can be found through a field of any introspection type must be included in this set.\" A type a field, argument, interface, union or root reaches, left out, or a type the schema doesn't have, fails this check. A type the document defines but nothing reaches is unreferencedTypes."
+    },
+    {
+      "id": "unreferencedTypes",
+      "title": "types includes, and __type(name:) finds, a type the document defines that nothing references",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "4.2.1",
+          "title": "The \\_\\_Schema Type",
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Schema-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 65,
+      "failing": 0,
+      "basis": "§4.2.1: \"types must return the set of all named types contained within this schema. Any named type which can be found through a field of any introspection type must be included in this set.\" The second sentence is about types found through fields; whether a type the document defines that no root, field, argument, interface, union or directive argument reaches is \"contained within this schema\" isn't settled by the text, which doesn't define the phrase. The plain reading is that a schema built from a document contains every type the document defines, so leaving one out is graded at the weaker level, a SHOULD."
     },
     {
       "id": "builtinScalars",
@@ -124,18 +160,18 @@
         {
           "number": "3.5",
           "title": "Scalars",
-          "url": "https://spec.graphql.org/draft/#sec-Scalars"
+          "url": "https://spec.graphql.org/September2026/#sec-Scalars"
         },
         {
           "number": "4.2.1",
           "title": "The \\_\\_Schema Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Schema-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Schema-Type"
         }
       ],
       "status": "pass",
-      "cases": 24,
+      "cases": 42,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.5: \"When returning the set of types from the __Schema introspection type, all referenced built-in scalars must be included. If a built-in scalar type is not referenced anywhere in a schema (there is no field, argument, or input field of that type) then it must not be included.\""
     },
     {
       "id": "typeByName",
@@ -145,13 +181,13 @@
         {
           "number": "4.2",
           "title": "Schema Introspection",
-          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Introspection"
         }
       ],
       "status": "pass",
-      "cases": 14,
+      "cases": 23,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.2: \"The schema introspection system is accessible from the meta-fields __schema and __type which are accessible from the type of the root of a query operation\", with \"__type(name: String!): __Type\". The spec gives no more prose for __type, so the kit takes its answer to be the named type's entry in types (§4.2.1: \"types must return the set of all named types contained within this schema\"), and null, which its nullable type allows, for a name no type has. A type the document defines that nothing references is unreferencedTypes."
     },
     {
       "id": "typeKinds",
@@ -161,13 +197,13 @@
         {
           "number": "4.2.2",
           "title": "The \\_\\_Type Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Type-Type"
         }
       ],
       "status": "pass",
-      "cases": 39,
+      "cases": 67,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.2.2, for each kind: \"kind must return __TypeKind.OBJECT\" (and so on) and \"All other fields must return {null}.\" For List and Non-Null: \"ofType must return a type of any kind.\" isOneOf, new in September 2025, is part of \"all other fields\" since then."
     },
     {
       "id": "fields",
@@ -177,18 +213,18 @@
         {
           "number": "4.2.2",
           "title": "The \\_\\_Type Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Type-Type"
         },
         {
           "number": "4.2.3",
           "title": "The \\_\\_Field Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Field-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Field-Type"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.2.2: \"fields must return the set of fields that can be selected for this type.\" §4.2.3: \"type must return a __Type that represents the type of value returned by this field.\""
     },
     {
       "id": "arguments",
@@ -198,23 +234,23 @@
         {
           "number": "4.2.3",
           "title": "The \\_\\_Field Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Field-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Field-Type"
         },
         {
           "number": "4.2.4",
           "title": "The \\_\\_InputValue Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__InputValue-Type"
         },
         {
           "number": "4.2.6",
           "title": "The \\_\\_Directive Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Directive-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Directive-Type"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.2.3: \"args returns a List of __InputValue representing the arguments this field accepts.\" §4.2.6: \"args returns a List of __InputValue representing the arguments this directive accepts.\" §4.2.4: \"type must return a __Type that represents the type this input value expects.\" Appendix A: \"Conformance requirements are described in this document via both descriptive assertions and key words with clearly defined meanings.\""
     },
     {
       "id": "defaultValue",
@@ -224,13 +260,13 @@
         {
           "number": "4.2.4",
           "title": "The \\_\\_InputValue Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__InputValue-Type"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.2.4: \"defaultValue may return a String encoding (using the GraphQL language) of the default value used by this input value in the condition a value is not provided at runtime. If this input value has no default value, returns null.\" A string that encodes another value, or one for an input value without a default, contradicts that. Appendix A: \"Conformance requirements are described in this document via both descriptive assertions and key words with clearly defined meanings.\""
     },
     {
       "id": "defaultValueOmitted",
@@ -240,14 +276,36 @@
         {
           "number": "4.2.4",
           "title": "The \\_\\_InputValue Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__InputValue-Type"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0,
       "basis": "§4.2.4: \"defaultValue may return a String encoding (using the GraphQL language) of the default value used by this input value in the condition a value is not provided at runtime. If this input value has no default value, returns null.\" By Appendix A, a lowercase \"may\" keeps its RFC 2119 meaning, so the encoding is optional; the intent is plainly that a default is encoded, which makes this a SHOULD. A string that isn't an encoding of the default, or one for an input value without a default, still fails defaultValue."
+    },
+    {
+      "id": "defaultValuePrinting",
+      "title": "A default value's strings are printed with control characters escaped, and supplementary characters, if escaped, as \\u{…}",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "2.10.4",
+          "title": "String Value",
+          "url": "https://spec.graphql.org/September2026/#sec-String-Value"
+        },
+        {
+          "number": "4.2.4",
+          "title": "The \\_\\_InputValue Type",
+          "url": "https://spec.graphql.org/September2026/#sec-The-__InputValue-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 65,
+      "failing": 0,
+      "since": "September2025",
+      "basis": "§2.10.4: \"When producing a StringValue, implementations should use escape sequences to represent non-printable control characters (U+0000 to U+001F and U+007F to U+009F).\" \"If an implementation chooses to escape a supplementary character, it should only use a variable-width unicode escape sequence.\" §4.2.4: \"defaultValue may return a String encoding (using the GraphQL language) of the default value\". So a string in the encoding that has a control character unescaped, or a surrogate pair of fixed-width escapes, fails this check. A block string can't escape anything, so one that holds a control character fails it too; read literally that would rule out every multi-line block string, so the kit takes the weaker reading and lets a block string hold tabs, line feeds and carriage returns. September 2025 introduced both sentences; the value the encoding stands for is graded by defaultValue.",
+      "note": "Since September 2025: October 2021 has no rule on producing a StringValue."
     },
     {
       "id": "inputFields",
@@ -257,18 +315,18 @@
         {
           "number": "4.2.2",
           "title": "The \\_\\_Type Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Type-Type"
         },
         {
           "number": "4.2.4",
           "title": "The \\_\\_InputValue Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__InputValue-Type"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.2.2: \"inputFields must return the set of input fields as a list of __InputValue.\" §4.2.4: \"type must return a __Type that represents the type this input value expects.\""
     },
     {
       "id": "enumValues",
@@ -278,18 +336,18 @@
         {
           "number": "4.2.2",
           "title": "The \\_\\_Type Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Type-Type"
         },
         {
           "number": "4.2.5",
           "title": "The \\_\\_EnumValue Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-EnumValue-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__EnumValue-Type"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.2.2: \"enumValues must return the set of enum values as a list of __EnumValue.\""
     },
     {
       "id": "interfaces",
@@ -299,13 +357,13 @@
         {
           "number": "4.2.2",
           "title": "The \\_\\_Type Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Type-Type"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.2.2: \"interfaces must return the set of interfaces that an object implements (if none, interfaces must return the empty set).\" For a union, \"possibleTypes returns the list of types that can be represented within this union\", and for an interface, \"possibleTypes returns the list of types that implement this interface\". Appendix A: \"Conformance requirements are described in this document via both descriptive assertions and key words with clearly defined meanings.\""
     },
     {
       "id": "deprecation",
@@ -315,39 +373,60 @@
         {
           "number": "4.2.3",
           "title": "The \\_\\_Field Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Field-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Field-Type"
         },
         {
           "number": "4.2.4",
           "title": "The \\_\\_InputValue Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__InputValue-Type"
         },
         {
           "number": "4.2.5",
           "title": "The \\_\\_EnumValue Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-EnumValue-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__EnumValue-Type"
         },
         {
           "number": "4.2.6",
           "title": "The \\_\\_Directive Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Directive-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Directive-Type"
         },
         {
           "number": "3.13",
           "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
         },
         {
           "number": "3.13.3",
           "title": "@deprecated",
-          "url": "https://spec.graphql.org/draft/#sec-deprecated"
+          "url": "https://spec.graphql.org/September2026/#sec--deprecated"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "oct2021": "fields and enum values only"
+      "basis": "§4.2.3: \"isDeprecated returns true if this field should no longer be used, otherwise false.\" \"deprecationReason returns the reason why this field is deprecated, or null if this field is not deprecated.\" (likewise §4.2.4 to §4.2.6), and each list \"Accepts the argument includeDeprecated which defaults to false. If true, deprecated fields are also returned.\" Appendix A: \"Conformance requirements are described in this document via both descriptive assertions and key words with clearly defined meanings.\" §3.13: \"GraphQL implementations that support the type system definition language must provide the @deprecated directive if representing deprecated portions of the schema.\" The reason of an item deprecated without one is the default of the service's own @deprecated(reason:); a default that differs from §3.13.3's fails builtinDefinitions only. September 2025 has the same sentences for fields, arguments, input fields and enum values (its §4.2.6 has no isDeprecated on __Directive, which is new in September 2026). October 2021 has them for fields and enum values only, and says \"deprecationReason optionally provides a reason why this field is deprecated\", so under the October 2021 profile a null reason is deprecationReasonOmitted."
+    },
+    {
+      "id": "deprecationReasonOmitted",
+      "title": "Under the October 2021 profile, a deprecated field or enum value has its reason, rather than null",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "4.2.3",
+          "title": "The \\_\\_Field Type",
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Field-Type"
+        },
+        {
+          "number": "4.2.5",
+          "title": "The \\_\\_EnumValue Type",
+          "url": "https://spec.graphql.org/September2026/#sec-The-__EnumValue-Type"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0,
+      "basis": "October 2021 §4.2.3 and §4.2.5: \"deprecationReason optionally provides a reason why this field is deprecated.\" That makes the reason optional, where September 2025 and September 2026 say \"returns the reason why this field is deprecated\" (a MUST, under deprecation). The intent is plainly that the reason the schema gives is returned, which makes null a SHOULD here; another string still fails deprecation.",
+      "note": "Graded only under the October 2021 profile."
     },
     {
       "id": "specifiedByURL",
@@ -357,18 +436,39 @@
         {
           "number": "4.2.2",
           "title": "The \\_\\_Type Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Type-Type"
         },
         {
           "number": "3.13.4",
           "title": "@specifiedBy",
-          "url": "https://spec.graphql.org/draft/#sec-specifiedBy"
+          "url": "https://spec.graphql.org/September2026/#sec--specifiedBy"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.2.2: \"specifiedByURL may return a String (in the form of a URL) for custom scalars, otherwise must be null.\" A URL other than the one @specifiedBy gives, or a URL on a built-in scalar, fails this check. Null for a scalar the document gives a URL is specifiedByURLOmitted."
+    },
+    {
+      "id": "specifiedByURLOmitted",
+      "title": "specifiedByURL returns the URL @specifiedBy gives a custom scalar, rather than null, when the service provides @specifiedBy",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Type-Type"
+        },
+        {
+          "number": "3.13.4",
+          "title": "@specifiedBy",
+          "url": "https://spec.graphql.org/September2026/#sec--specifiedBy"
+        }
+      ],
+      "status": "pass",
+      "cases": 65,
+      "failing": 0,
+      "basis": "§4.2.2: \"specifiedByURL may return a String (in the form of a URL) for custom scalars, otherwise must be null.\" By Appendix A, a lowercase \"may\" keeps its RFC 2119 meaning, so returning the URL is optional; the intent is plainly that the URL @specifiedBy gives is returned, which makes null a SHOULD, as for defaultValueOmitted. A service that doesn't provide @specifiedBy at all fails builtinDirectives instead."
     },
     {
       "id": "isOneOf",
@@ -378,20 +478,20 @@
         {
           "number": "4.2.2",
           "title": "The \\_\\_Type Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Type-Type"
         },
         {
           "number": "3.10.1",
           "title": "OneOf Input Objects",
-          "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-OneOf-Input-Objects"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "edition": "draft",
-      "note": "Draft only: October 2021 has no OneOf input objects."
+      "since": "September2025",
+      "basis": "§4.2.2: \"isOneOf must return true when representing a OneOf Input Object, otherwise false.\" September 2025 introduced OneOf Input Objects (§3.10.1) and isOneOf with this sentence.",
+      "note": "Since September 2025: October 2021 has no OneOf input objects."
     },
     {
       "id": "descriptions",
@@ -401,18 +501,17 @@
         {
           "number": "3.2",
           "title": "Type System Descriptions",
-          "url": "https://spec.graphql.org/draft/#sec-Type-System-Descriptions"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System-Descriptions"
         },
         {
           "number": "4.2",
           "title": "Schema Introspection",
-          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Introspection"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0,
       "basis": "§3.2: documentation is \"written immediately alongside definitions in a TypeSystemDocument and made available via introspection\", which has no key word, and §4.2 says of every description field that it \"may return a String or null\". So a description the document gives that is lost or replaced fails this SHOULD, and any description is accepted for a definition the document doesn't describe (\"\" or one of the service's own included)."
     },
     {
@@ -423,23 +522,23 @@
         {
           "number": "4.2.1",
           "title": "The \\_\\_Schema Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Schema-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Schema-Type"
         },
         {
           "number": "4.2.6",
           "title": "The \\_\\_Directive Type",
-          "url": "https://spec.graphql.org/draft/#sec-The-Directive-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-The-__Directive-Type"
         },
         {
           "number": "3.13",
           "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
         }
       ],
       "status": "pass",
-      "cases": 24,
+      "cases": 44,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.2.1: \"directives must return the set of all directives available within this schema including all built-in directives.\" §3.13: \"When introspecting a GraphQL service all provided directives, including any built-in directive, must be included in the set of returned directives.\" §4.2.6: \"locations returns a List of __DirectiveLocation representing the valid locations this directive may be placed\", and \"isRepeatable must return a Boolean that indicates if the directive may be used repeatedly at a single location.\" A directive's argument \"must accept a type where IsInputType(argumentType) returns true\" (§3.13, Type Validation)."
     },
     {
       "id": "builtinDirectives",
@@ -449,33 +548,33 @@
         {
           "number": "3.13",
           "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
         },
         {
           "number": "3.13.1",
           "title": "@skip",
-          "url": "https://spec.graphql.org/draft/#sec-skip"
+          "url": "https://spec.graphql.org/September2026/#sec--skip"
         },
         {
           "number": "3.13.2",
           "title": "@include",
-          "url": "https://spec.graphql.org/draft/#sec-include"
+          "url": "https://spec.graphql.org/September2026/#sec--include"
         },
         {
           "number": "3.13.4",
           "title": "@specifiedBy",
-          "url": "https://spec.graphql.org/draft/#sec-specifiedBy"
+          "url": "https://spec.graphql.org/September2026/#sec--specifiedBy"
         },
         {
           "number": "3.13.5",
           "title": "@oneOf",
-          "url": "https://spec.graphql.org/draft/#sec-oneOf"
+          "url": "https://spec.graphql.org/September2026/#sec--oneOf"
         }
       ],
       "status": "pass",
-      "cases": 24,
+      "cases": 44,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.13: \"GraphQL implementations should provide the @skip and @include directives.\" \"GraphQL implementations that support the type system definition language should provide the @specifiedBy directive if representing custom scalar definitions.\" \"... should provide the @oneOf directive if representing OneOf Input Objects.\" @oneOf is new in September 2025."
     },
     {
       "id": "builtinDefinitions",
@@ -485,35 +584,39 @@
         {
           "number": "4.2",
           "title": "Schema Introspection",
-          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Introspection"
         },
         {
           "number": "3.13",
           "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.2 gives the introspection types with \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", and the sections below say what each field returns (\"kind must return __TypeKind.OBJECT\", \"isRepeatable must return a Boolean\", \"args returns a List of __InputValue\"). A field, argument or enum value left out, or with another type, can't return what they say. §3.13: \"A built-in directive is any directive defined within this specification\", each with its definition (§3.13.1 to §3.13.5). Appendix A: \"Conformance requirements are described in this document via both descriptive assertions and key words with clearly defined meanings.\" Where only the Non-Null wrapping differs, and the result accepts or returns everything the spec's would, the difference is builtinNullability; an addition is builtinAdditions."
     },
     {
       "id": "builtinNullability",
-      "title": "The fields of the introspection types have the Non-Null wrapping the spec gives them",
+      "title": "The fields and arguments of the introspection types and built-in directives have the Non-Null wrapping the spec gives them",
       "level": "SHOULD",
       "spec": [
         {
           "number": "4.2",
           "title": "Schema Introspection",
-          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Introspection"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "basis": "The types of the introspection fields are given only by the definitions §4.2 introduces with \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", which has no key word. The sections below say what each field returns (\"isRepeatable must return a Boolean\"), and a field whose type differs only in Non-Null can still return exactly that. Any other change of type stays under builtinDefinitions, a MUST."
+      "basis": "The Non-Null wrapping of the introspection fields and arguments, and of the built-in directives' arguments, is given only by the definitions (§4.2 introduces them with \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", and §3.13.3 has \"directive @deprecated(reason: String! = \\\"No longer supported\\\")\"), which have no key word. The prose says what each field returns (\"isRepeatable must return a Boolean\") and, of each includeDeprecated, only \"Accepts the argument includeDeprecated which defaults to false\". A field whose type differs only in Non-Null can still return exactly that, and an argument that is nullable where the spec has Non-Null, with the same default, accepts every value the spec's does. So these are graded at the weaker level. An argument that is Non-Null where the spec's is nullable rejects requests the spec accepts, and stays under builtinDefinitions."
     },
     {
       "id": "builtinAdditions",
@@ -523,37 +626,39 @@
         {
           "number": "4.2",
           "title": "Schema Introspection",
-          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Introspection"
         }
       ],
       "status": "fail",
-      "cases": 38,
-      "failing": 24,
-      "failingDraftOnly": 6,
+      "cases": 65,
+      "failing": 42,
+      "failingSince": {
+        "September2025": 10,
+        "September2026": 4
+      },
       "basis": "No sentence of §4 forbids extending the introspection types. The nearest is \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", which uses no key word, and Appendix A says \"A conforming implementation of GraphQL may provide additional functionality, but must not do so where explicitly disallowed\". Leaving out or changing a definition stays a MUST, under builtinDefinitions."
     },
     {
       "id": "builtinEdition",
-      "title": "Under the October 2021 profile, a built-in definition that differs from October 2021's is as the draft defines it",
+      "title": "Under an older release's profile, a built-in definition that differs from that release's is as a later release defines it",
       "level": "INFO",
       "spec": [
         {
           "number": "4.2",
           "title": "Schema Introspection",
-          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Introspection"
         },
         {
           "number": "3.13",
           "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
         }
       ],
       "status": "untested",
       "cases": 0,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "basis": "The kit grades against the draft; the October 2021 profile is a fallback for a service whose introspection types the draft's query can't ask. A built-in definition (or an addition) that is exactly the draft's breaks nothing the draft requires, so it is reported here, not under builtinDefinitions or builtinAdditions.",
-      "note": "Graded only under the October 2021 profile."
+      "basis": "The kit grades September 2026, the latest release; the September 2025 and October 2021 profiles are for a service whose introspection types September 2026's query can't ask. A built-in definition (or an addition) that is exactly as a later release defines it breaks nothing that release requires, so it is reported here, labelled with that release, and not under builtinDefinitions or builtinAdditions.",
+      "note": "Graded only under an older release's profile."
     },
     {
       "id": "typename",
@@ -563,13 +668,13 @@
         {
           "number": "4.1",
           "title": "Type Name Introspection",
-          "url": "https://spec.graphql.org/draft/#sec-Type-Name-Introspection"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-Name-Introspection"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4.1: \"Type name introspection is accomplished via the meta-field __typename: String! on any Object, Interface, or Union. It returns the name of the concrete Object type at that point during operation execution.\" \"As a meta-field, __typename is implicit and does not appear in the fields list in any defined type.\""
     },
     {
       "id": "order",
@@ -579,15 +684,15 @@
         {
           "number": "4.2",
           "title": "Schema Introspection",
-          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Introspection"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "edition": "draft",
-      "note": "Draft only: October 2021 has no Stable Ordering."
+      "since": "September2025",
+      "basis": "§4 \"Stable Ordering\": \"When a schema is produced from a TypeSystemDocument, introspection should return items in the same source order for each element list: object fields, input object fields, arguments, enum values, directives, union member types, and implemented interfaces.\" September 2025 introduced this paragraph.",
+      "note": "Since September 2025: October 2021 has no Stable Ordering."
     },
     {
       "id": "other",
@@ -597,13 +702,13 @@
         {
           "number": "4.2",
           "title": "Schema Introspection",
-          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Introspection"
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 65,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "A difference Introspection!Matches finds that IntrospectChecks can't name. Matches compares with the result §4.2 defines, so a difference there is one from what §4.2's sentences require."
     }
   ],
   "findings": [
@@ -611,8 +716,8 @@
       "checks": [
         "builtinAdditions"
       ],
-      "summary": "the built-in __DirectiveLocation has an enum value the spec doesn't define",
-      "cases": 24,
+      "summary": "the built-in __DirectiveLocation has an enum value September 2026 doesn't define",
+      "cases": 42,
       "fixtures": {
         "minimal": 2,
         "rich": 2,
@@ -622,14 +727,26 @@
         "inputDeprecation": 2,
         "directiveDeprecation": 2,
         "roots": 2,
+        "unreferenced": 2,
         "builtinScalars": 2,
         "scalars": 2,
         "oneOf": 2,
-        "order": 2
+        "order": 2,
+        "interfaceDeprecation": 2,
+        "inputDeprecationAll": 2,
+        "directiveArgDeprecation": 2,
+        "locations": 2,
+        "directiveDefinitionLocation": 2,
+        "descriptions": 2,
+        "descriptionText": 2,
+        "printing": 2
       },
       "fixture": "minimal.inc",
       "problem": "added:enumValues at __DirectiveLocation",
-      "draftOnly": 6,
+      "since": {
+        "September2025": 10,
+        "September2026": 4
+      },
       "example": {
         "input": "type Query { a: Int }  (the introspection query; includeDeprecated: true)",
         "response": {

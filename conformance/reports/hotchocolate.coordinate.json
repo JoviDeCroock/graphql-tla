@@ -1,0 +1,383 @@
+{
+  "format": 2,
+  "area": "coordinate",
+  "implementation": "Hot Chocolate 15.1.21",
+  "capabilities": [
+    "coerce",
+    "coordinate",
+    "custom-directives",
+    "custom-scalar-literals",
+    "custom-scalar-results",
+    "exact-numbers",
+    "idle",
+    "introspect",
+    "invalid-results",
+    "mutation",
+    "nested-fields",
+    "parent-values",
+    "parse",
+    "parse-sdl",
+    "request-extensions",
+    "scalar-results",
+    "schema",
+    "schema-extensions",
+    "subscription",
+    "subscription-source",
+    "subscription-stream",
+    "uncoercible-results",
+    "validate"
+  ],
+  "provenance": {
+    "kit": "f437858e472b",
+    "date": "2026-11-15",
+    "strict": true,
+    "vectors": 203,
+    "graded": 203
+  },
+  "checkerSelfTest": "passed (12 negative controls)",
+  "cases": {
+    "submitted": 203,
+    "distinct": 203,
+    "malformed": 0,
+    "crashed": 3
+  },
+  "adapterProblems": 0,
+  "since": {
+    "September2025": {
+      "vectors": 203,
+      "failing": 40
+    }
+  },
+  "checks": [
+    {
+      "id": "grammar",
+      "title": "A schema coordinate is one of the five productions, and nothing else",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.14",
+          "title": "Schema Coordinates",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Coordinates"
+        }
+      ],
+      "since": "September2025",
+      "basis": "\"SchemaCoordinate :: TypeCoordinate | MemberCoordinate | ArgumentCoordinate | DirectiveCoordinate | DirectiveArgumentCoordinate\", with \"TypeCoordinate :: Name\", \"MemberCoordinate :: Name . Name\", \"ArgumentCoordinate :: Name . Name ( Name : )\", \"DirectiveCoordinate :: @ Name\" and \"DirectiveArgumentCoordinate :: @ Name ( Name : )\". A grammar production is a requirement on what parses (Appendix A: \"descriptive assertions\"). A coordinate the reference accepts and the implementation rejects fails here, whatever it resolves to.",
+      "status": "fail",
+      "cases": 48,
+      "failing": 3,
+      "failingSince": {
+        "September2025": 3
+      },
+      "note": "17 vectors whose resolution the spec leaves undefined are graded on their syntax only"
+    },
+    {
+      "id": "tokens",
+      "title": "Only Names and the punctuators ( ) . : @ are tokens",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.14",
+          "title": "Schema Coordinates",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Coordinates"
+        }
+      ],
+      "since": "September2025",
+      "basis": "\"SchemaCoordinateToken :: SchemaCoordinatePunctuator | Name\", \"SchemaCoordinatePunctuator :: one of ( ) . : @\", and \"A {SchemaCoordinate} is a self-contained grammar with its own set of lexical tokens, it is not contained within a {Document}. The source text of a SchemaCoordinate must be a sequence of {SourceCharacter}.\" So `$`, `!`, a string, a number and `...` as one token are not schema coordinate tokens.",
+      "status": "pass",
+      "cases": 15,
+      "failing": 0
+    },
+    {
+      "id": "noIgnored",
+      "title": "No whitespace, line terminator, comma, comment or byte order mark anywhere",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.14",
+          "title": "Schema Coordinates",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Coordinates"
+        }
+      ],
+      "since": "September2025",
+      "basis": "\"Unlike other GraphQL documents, {SchemaCoordinate} must not contain {Whitespace} or other {Ignored} grammars within the character sequence. This ensures that every schema coordinates has a single unambiguous and unique lexical form.\" Ignored is UnicodeBOM, Whitespace, LineTerminator, Comment and Comma (§2.1.7), at the start and the end as well as between tokens.",
+      "status": "fail",
+      "cases": 25,
+      "failing": 23,
+      "failingSince": {
+        "September2025": 23
+      }
+    },
+    {
+      "id": "resolvesTypes",
+      "title": "A type coordinate resolves to the named type, built-in scalars included, or to nothing",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.14",
+          "title": "Schema Coordinates",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Coordinates"
+        }
+      ],
+      "since": "September2025",
+      "basis": "TypeCoordinate: \"Return the type in {schema} named {typeName} if it exists.\" \"A schema coordinate may refer to either a defined or built-in schema element. For example, `String` ...\"; \"If the schema element cannot be found, the resolve function will not yield a value (without raising an error).\" Algorithm steps have the level of their algorithm (Appendix A). A built-in scalar no field, argument or input field refers to is unspecified (docs/kit/coordinate.md).",
+      "status": "pass",
+      "cases": 28,
+      "failing": 0
+    },
+    {
+      "id": "resolvesMembers",
+      "title": "A member coordinate resolves to the field, input field or enum value, or to nothing",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.14",
+          "title": "Schema Coordinates",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Coordinates"
+        }
+      ],
+      "since": "September2025",
+      "basis": "MemberCoordinate: \"If {type} is an Enum type: ... Return the enum value of {type} named {enumValueName} if it exists. Otherwise, if {type} is an Input Object type: ... Return the input field of {type} named {inputFieldName} if it exists. Otherwise: ... Return the field of {type} named {fieldName} if it exists.\"",
+      "status": "pass",
+      "cases": 28,
+      "failing": 0
+    },
+    {
+      "id": "resolvesArguments",
+      "title": "An argument coordinate resolves to the field's argument, or to nothing",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.14",
+          "title": "Schema Coordinates",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Coordinates"
+        }
+      ],
+      "since": "September2025",
+      "basis": "ArgumentCoordinate: \"Return the argument of {field} named {fieldArgumentName} if it exists.\"",
+      "status": "pass",
+      "cases": 17,
+      "failing": 0
+    },
+    {
+      "id": "resolvesDirectives",
+      "title": "A directive coordinate resolves to the directive, @deprecated included, or to nothing",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.14",
+          "title": "Schema Coordinates",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Coordinates"
+        }
+      ],
+      "since": "September2025",
+      "basis": "DirectiveCoordinate: \"Return the directive in {schema} named {directiveName} if it exists.\" The schema applies @deprecated, and \"GraphQL implementations that support the type system definition language must provide the `@deprecated` directive if representing deprecated portions of the schema\" (§3.13).",
+      "status": "fail",
+      "cases": 6,
+      "failing": 1,
+      "failingSince": {
+        "September2025": 1
+      }
+    },
+    {
+      "id": "resolvesDirectiveArguments",
+      "title": "A directive argument coordinate resolves to the directive's argument, or to nothing",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.14",
+          "title": "Schema Coordinates",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Coordinates"
+        }
+      ],
+      "since": "September2025",
+      "basis": "DirectiveArgumentCoordinate: \"Return the argument of {directive} named {directiveArgumentName} if it exists.\" §2.14's own example of a built-in element is `@deprecated(reason:)`.",
+      "status": "pass",
+      "cases": 6,
+      "failing": 0
+    },
+    {
+      "id": "missingContainers",
+      "title": "A coordinate whose type, field or directive isn't in the schema raises an error",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.14",
+          "title": "Schema Coordinates",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Coordinates"
+        }
+      ],
+      "since": "September2025",
+      "basis": "\"However, an error will be raised if any non-leaf nodes within a schema coordinate cannot be found in the schema.\" The algorithms: \"Assert: {type} must exist\", \"Assert: {field} must exist.\", \"Assert: {directive} must exist.\"",
+      "status": "fail",
+      "cases": 11,
+      "failing": 11,
+      "failingSince": {
+        "September2025": 11
+      }
+    },
+    {
+      "id": "containerKind",
+      "title": "A member or argument coordinate on a type of the wrong kind raises an error, as the Asserts say",
+      "level": "INFO",
+      "spec": [
+        {
+          "number": "2.14",
+          "title": "Schema Coordinates",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Coordinates"
+        }
+      ],
+      "since": "September2025",
+      "basis": "MemberCoordinate: \"Assert: {type} must exist, and must be an Enum, Input Object, Object or Interface type.\" ArgumentCoordinate: \"Assert: {type} must exist, and be an Object or Interface type.\" The prose names only one error, \"if any non-leaf nodes within a schema coordinate cannot be found\", and says that if the element \"cannot be found, the resolve function will not yield a value (without raising an error)\". For `Date.x` on a scalar, or `SearchCriteria.filter(x:)` on an input field, every non-leaf node is found, so the prose gives no element and no error, where the Asserts give an error. Both pass; the report records which one the implementation gives. An element, or a rejected coordinate, fails.",
+      "status": "pass",
+      "cases": 10,
+      "failing": 0,
+      "observed": {
+        "no element, as the prose says": 10
+      }
+    },
+    {
+      "id": "builtinDirectives",
+      "title": "@skip, @include, @specifiedBy and @oneOf resolve, with their arguments, though the schema doesn't define them",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "2.14",
+          "title": "Schema Coordinates",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Coordinates"
+        }
+      ],
+      "since": "September2025",
+      "basis": "\"A schema element can be ... a directive, or a directive argument defined within a schema (including built-in types and directives).\" Whether a schema has them is §3.13's: \"GraphQL implementations should provide the `@skip` and `@include` directives\", and \"should provide the `@specifiedBy` directive if representing custom scalar definitions\" and \"the `@oneOf` directive if representing OneOf Input Objects\", which the schema does.",
+      "status": "fail",
+      "cases": 9,
+      "failing": 2,
+      "failingSince": {
+        "September2025": 2
+      }
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "noIgnored"
+      ],
+      "summary": "accepts what §2.14 rejects: no whitespace, line terminator, comma, comment or byte order mark anywhere",
+      "cases": 23,
+      "fixtures": {
+        "ignored": 23
+      },
+      "since": {
+        "September2025": 23
+      },
+      "fixture": "ignored",
+      "example": {
+        "vector": "noIgnored.1",
+        "input": "[since September 2025] \" Business\" in schema business",
+        "response": {
+          "ok": true,
+          "resolved": {
+            "kind": "type",
+            "path": [
+              "Business"
+            ]
+          }
+        },
+        "expected": "rejected"
+      }
+    },
+    {
+      "checks": [
+        "missingContainers"
+      ],
+      "summary": "gives no element where §2.14's algorithm gives an error (missingContainers)",
+      "cases": 11,
+      "fixtures": {
+        "containers": 9,
+        "rooted": 2
+      },
+      "since": {
+        "September2025": 11
+      },
+      "fixture": "rooted",
+      "example": {
+        "vector": "missingContainers.11",
+        "input": "[since September 2025] \"root.me\" in schema rooted",
+        "response": {
+          "ok": true,
+          "resolved": null
+        },
+        "expected": "an error"
+      }
+    },
+    {
+      "kind": "crash",
+      "checks": [
+        "grammar"
+      ],
+      "summary": "crashes on a coordinate: a schema coordinate is one of the five productions, and nothing else",
+      "problem": "ArgumentException: The source text mustn't be null or empty. (Parameter 'sourceText')",
+      "cases": 3,
+      "fixtures": {
+        "grammar": 3
+      },
+      "since": {
+        "September2025": 3
+      },
+      "fixture": "grammar",
+      "example": {
+        "vector": "grammar.1",
+        "input": "[since September 2025] \"\" in schema business",
+        "response": "the adapter answered with an error: ArgumentException: The source text mustn't be null or empty. (Parameter 'sourceText')",
+        "expected": "rejected"
+      }
+    },
+    {
+      "checks": [
+        "builtinDirectives"
+      ],
+      "summary": "gives no element where §2.14's algorithm gives an element (builtinDirectives)",
+      "cases": 2,
+      "fixtures": {
+        "builtins": 2
+      },
+      "since": {
+        "September2025": 2
+      },
+      "fixture": "builtins",
+      "example": {
+        "vector": "builtinDirectives.3",
+        "input": "[since September 2025] \"@specifiedBy\" in schema business",
+        "response": {
+          "ok": true,
+          "resolved": null
+        },
+        "expected": "directive [\"specifiedBy\"]"
+      }
+    },
+    {
+      "checks": [
+        "resolvesDirectives"
+      ],
+      "summary": "gives no element where §2.14's algorithm gives an element (resolvesDirectives)",
+      "cases": 1,
+      "fixtures": {
+        "directives": 1
+      },
+      "since": {
+        "September2025": 1
+      },
+      "fixture": "directives",
+      "example": {
+        "vector": "resolvesDirectives.2",
+        "input": "[since September 2025] \"@cached\" in schema business",
+        "response": {
+          "ok": true,
+          "resolved": null
+        },
+        "expected": "directive [\"cached\"]"
+      }
+    }
+  ],
+  "fixtures": [],
+  "ok": false
+}

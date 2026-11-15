@@ -1,44 +1,60 @@
 {
-  "format": 1,
+  "format": 2,
   "area": "schema",
   "implementation": "graphql-core 3.2.14",
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "coordinate",
     "custom-directives",
     "custom-scalar-literals",
+    "custom-scalar-results",
     "deferred-items",
     "idle",
     "introspect",
     "invalid-results",
     "mutation",
+    "nested-fields",
+    "parent-values",
     "parse",
+    "parse-sdl",
+    "request-extensions",
+    "scalar-results",
     "schema",
+    "schema-extensions",
     "subscription",
+    "subscription-source",
+    "subscription-stream",
     "uncoercible-results",
     "unvalidated",
     "validate"
   ],
   "provenance": {
-    "kit": "71f0a24bdc40",
+    "kit": "f437858e472b",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 172,
-    "graded": 168,
+    "vectors": 495,
+    "graded": 490,
     "skipped": {
-      "unspecified": 4
+      "unspecified": 5
     }
   },
-  "checkerSelfTest": "passed (343 negative controls)",
+  "checkerSelfTest": "passed (992 negative controls)",
   "cases": {
-    "submitted": 168,
-    "distinct": 168,
+    "submitted": 490,
+    "distinct": 490,
     "malformed": 0
   },
   "adapterProblems": 0,
-  "draftOnly": {
-    "vectors": 36,
-    "failing": 13
+  "since": {
+    "September2025": {
+      "vectors": 66,
+      "failing": 19
+    },
+    "September2026": {
+      "vectors": 27,
+      "failing": 14
+    }
   },
   "checks": [
     {
@@ -49,13 +65,13 @@
         {
           "number": "3.3",
           "title": "Schema",
-          "url": "https://spec.graphql.org/draft/#sec-Schema"
+          "url": "https://spec.graphql.org/September2026/#sec-Schema"
         }
       ],
       "status": "pass",
-      "cases": 1,
+      "cases": 4,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.3: \"All types within a GraphQL schema must have unique names. No two provided types may have the same name.\""
     },
     {
       "id": "typeNameNotBuiltin",
@@ -65,13 +81,13 @@
         {
           "number": "3.3",
           "title": "Schema",
-          "url": "https://spec.graphql.org/draft/#sec-Schema"
+          "url": "https://spec.graphql.org/September2026/#sec-Schema"
         }
       ],
       "status": "fail",
-      "cases": 1,
-      "failing": 1,
-      "failingDraftOnly": 0
+      "cases": 3,
+      "failing": 3,
+      "basis": "§3.3: \"No provided type may have a name which conflicts with any built in types (including Scalar and Introspection types).\""
     },
     {
       "id": "typeNameReserved",
@@ -81,13 +97,13 @@
         {
           "number": "3.3",
           "title": "Schema",
-          "url": "https://spec.graphql.org/draft/#sec-Schema"
+          "url": "https://spec.graphql.org/September2026/#sec-Schema"
         }
       ],
       "status": "pass",
-      "cases": 1,
+      "cases": 6,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.3: \"All types and directives defined within a schema must not have a name which begins with \"__\" (two underscores)\""
     },
     {
       "id": "directiveNamesUnique",
@@ -97,13 +113,13 @@
         {
           "number": "3.3",
           "title": "Schema",
-          "url": "https://spec.graphql.org/draft/#sec-Schema"
+          "url": "https://spec.graphql.org/September2026/#sec-Schema"
         }
       ],
       "status": "pass",
       "cases": 1,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.3: \"All directives within a GraphQL schema must have unique names.\""
     },
     {
       "id": "directiveNameReserved",
@@ -113,13 +129,34 @@
         {
           "number": "3.3",
           "title": "Schema",
-          "url": "https://spec.graphql.org/draft/#sec-Schema"
+          "url": "https://spec.graphql.org/September2026/#sec-Schema"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
         }
       ],
       "status": "pass",
       "cases": 1,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.3: \"All types and directives defined within a schema must not have a name which begins with \"__\" (two underscores)\", and §3.13 Type Validation: \"The Directive must not have a name which begins with the characters \"__\" (two underscores).\""
+    },
+    {
+      "id": "schemaDefinitionUnique",
+      "title": "A document has at most one schema definition",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3",
+          "title": "Schema",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "basis": "§3.3: \"When using the type system definition language, a document must include at most one schema definition.\" The same sentence is in October 2021."
     },
     {
       "id": "queryRootProvided",
@@ -129,13 +166,13 @@
         {
           "number": "3.3.1",
           "title": "Root Operation Types",
-          "url": "https://spec.graphql.org/draft/#sec-Root-Operation-Types"
+          "url": "https://spec.graphql.org/September2026/#sec-Root-Operation-Types"
         }
       ],
       "status": "pass",
       "cases": 2,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.3.1: \"The query root operation type must be provided and must be an Object type.\""
     },
     {
       "id": "rootTypesAreObjects",
@@ -145,13 +182,13 @@
         {
           "number": "3.3.1",
           "title": "Root Operation Types",
-          "url": "https://spec.graphql.org/draft/#sec-Root-Operation-Types"
+          "url": "https://spec.graphql.org/September2026/#sec-Root-Operation-Types"
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 6,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.3.1: \"The query root operation type must be provided and must be an Object type.\" For mutation: \"If it is provided, it must be an Object type\", and \"Similarly\" for subscription. A root operation type the document names but doesn't define isn't an Object type."
     },
     {
       "id": "rootTypesDifferent",
@@ -161,13 +198,13 @@
         {
           "number": "3.3.1",
           "title": "Root Operation Types",
-          "url": "https://spec.graphql.org/draft/#sec-Root-Operation-Types"
+          "url": "https://spec.graphql.org/September2026/#sec-Root-Operation-Types"
         }
       ],
       "status": "fail",
-      "cases": 2,
-      "failing": 2,
-      "failingDraftOnly": 0
+      "cases": 4,
+      "failing": 4,
+      "basis": "§3.3.1: \"The query, mutation, and subscription root types must all be different types if provided.\""
     },
     {
       "id": "fieldsDefined",
@@ -177,18 +214,18 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
         },
         {
           "number": "3.7",
           "title": "Interfaces",
-          "url": "https://spec.graphql.org/draft/#sec-Interfaces"
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         }
       ],
       "status": "pass",
       "cases": 2,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.6 Type Validation: \"An Object type must define one or more fields.\" §3.7: \"An Interface type must define one or more fields.\""
     },
     {
       "id": "fieldNamesUnique",
@@ -198,18 +235,18 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
         },
         {
           "number": "3.7",
           "title": "Interfaces",
-          "url": "https://spec.graphql.org/draft/#sec-Interfaces"
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 3,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.6 Type Validation (and the same item of §3.7 for interfaces): \"The field must have a unique name within that Object type; no two fields may share the same name.\""
     },
     {
       "id": "fieldNameReserved",
@@ -219,18 +256,18 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
         },
         {
           "number": "3.7",
           "title": "Interfaces",
-          "url": "https://spec.graphql.org/draft/#sec-Interfaces"
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         }
       ],
       "status": "pass",
-      "cases": 1,
+      "cases": 3,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.6 Type Validation (and the same item of §3.7 for interfaces): \"The field must not have a name which begins with the characters \"__\" (two underscores).\""
     },
     {
       "id": "fieldOutputType",
@@ -240,18 +277,23 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         },
         {
           "number": "3.4.2",
           "title": "Input and Output Types",
-          "url": "https://spec.graphql.org/draft/#sec-Input-and-Output-Types"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-and-Output-Types"
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 4,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.6 Type Validation (and the same item of §3.7 for interfaces): \"The field must return a type where IsOutputType(fieldType) returns true.\" §3.4.2's IsOutputType returns true only for a Scalar, Object, Interface, Union or Enum type, and otherwise \"Return false\", so a type the document doesn't define fails it too."
     },
     {
       "id": "argNameReserved",
@@ -261,18 +303,23 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         },
         {
           "number": "3.13",
           "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 3,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.6, §3.7 and §3.13 Type Validation, for each argument of a field or directive: \"The argument must not have a name which begins with the characters \"__\" (two underscores).\""
     },
     {
       "id": "argNamesUnique",
@@ -282,20 +329,25 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         },
         {
           "number": "3.13",
           "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 3,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have argument name uniqueness"
+      "since": "September2025",
+      "note": "New in September 2025: October 2021 doesn't have argument name uniqueness",
+      "basis": "§3.6 and §3.7 Type Validation: \"The argument must have a unique name within that field; no two arguments may share the same name.\" §3.13: \"The argument must have a unique name within that Directive; no two arguments may share the same name.\" September 2025 has both sentences; October 2021's lists have neither."
     },
     {
       "id": "argInputType",
@@ -305,18 +357,28 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
         },
         {
           "number": "3.4.2",
           "title": "Input and Output Types",
-          "url": "https://spec.graphql.org/draft/#sec-Input-and-Output-Types"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-and-Output-Types"
         }
       ],
       "status": "pass",
-      "cases": 3,
+      "cases": 6,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.6, §3.7 and §3.13 Type Validation, for each argument of a field or directive: \"The argument must accept a type where IsInputType(argumentType) returns true.\" §3.4.2's IsInputType returns true only for a Scalar, Enum or Input Object type, and otherwise \"Return false\", so a type the document doesn't define fails it too."
     },
     {
       "id": "requiredArgNotDeprecated",
@@ -326,20 +388,20 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
         },
         {
           "number": "3.13.3",
           "title": "@deprecated",
-          "url": "https://spec.graphql.org/draft/#sec-deprecated"
+          "url": "https://spec.graphql.org/September2026/#sec--deprecated"
         }
       ],
       "status": "pass",
-      "cases": 3,
+      "cases": 4,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have deprecated arguments"
+      "since": "September2025",
+      "note": "New in September 2025: October 2021 doesn't have deprecated arguments",
+      "basis": "§3.6 Type Validation: \"If argument type is Non-Null and a default value is not defined: The @deprecated directive must not be applied to this argument.\" §3.13.3 states it for every argument, interface and directive arguments included: \"The @deprecated directive must not appear on required (non-null without a default) arguments or input object field definitions.\""
     },
     {
       "id": "argDefaultCompatible",
@@ -349,15 +411,48 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
+        },
+        {
+          "number": "3.5",
+          "title": "Scalars",
+          "url": "https://spec.graphql.org/September2026/#sec-Scalars"
+        },
+        {
+          "number": "3.9",
+          "title": "Enums",
+          "url": "https://spec.graphql.org/September2026/#sec-Enums"
+        },
+        {
+          "number": "3.10",
+          "title": "Input Objects",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Objects"
+        },
+        {
+          "number": "3.10.1",
+          "title": "OneOf Input Objects",
+          "url": "https://spec.graphql.org/September2026/#sec-OneOf-Input-Objects"
+        },
+        {
+          "number": "3.11",
+          "title": "List",
+          "url": "https://spec.graphql.org/September2026/#sec-List"
+        },
+        {
+          "number": "3.12",
+          "title": "Non-Null",
+          "url": "https://spec.graphql.org/September2026/#sec-Non-Null"
         }
       ],
       "status": "fail",
-      "cases": 10,
-      "failing": 10,
-      "failingDraftOnly": 10,
-      "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have default value validation"
+      "cases": 14,
+      "failing": 14,
+      "failingSince": {
+        "September2025": 14
+      },
+      "since": "September2025",
+      "note": "New in September 2025: October 2021 doesn't have default value validation",
+      "basis": "§3.6 Type Validation: \"If the argument has a default value it must be compatible with argumentType as per the coercion rules for that type.\" The coercion rules are each type's Input Coercion: §3.5 (\"If an input value does not match a coercion rule, a request error must be raised\"), §3.9, §3.10 (\"must not contain any entries with names not defined by a field of this input object type, otherwise a request error must be raised\"), §3.10.1 (\"must contain exactly one entry and that entry must not be null\"), §3.11 and §3.12. A required input field the default leaves out is incompatible by §3.12: \"If an argument or input-object field of a Non-Null type is not provided, is provided with the literal value null, ... then a request error must be raised.\" (§3.10's own sentence for that case says only \"an error should be raised\".)"
     },
     {
       "id": "implementsUnique",
@@ -367,18 +462,18 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
         },
         {
           "number": "3.7",
           "title": "Interfaces",
-          "url": "https://spec.graphql.org/draft/#sec-Interfaces"
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         }
       ],
       "status": "pass",
-      "cases": 1,
+      "cases": 2,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.6 Type Validation, a list \"This set of rules must be adhered to by every Object type\": \"An object type may declare that it implements one or more unique interfaces.\" §3.7: \"An interface type may declare that it implements one or more unique interfaces, but may not implement itself.\""
     },
     {
       "id": "implementsInterfaces",
@@ -388,18 +483,18 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
         },
         {
           "number": "3.7",
           "title": "Interfaces",
-          "url": "https://spec.graphql.org/draft/#sec-Interfaces"
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         }
       ],
       "status": "pass",
-      "cases": 1,
+      "cases": 3,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.6 Type Validation: \"An object type may declare that it implements one or more unique interfaces\" and \"For each interface declared implemented as interfaceType, IsValidImplementation(objectType, interfaceType) must be true\"; §3.7 says the same of interfaces. A type that isn't an interface, or isn't defined, can't be implemented."
     },
     {
       "id": "implementsItself",
@@ -409,13 +504,13 @@
         {
           "number": "3.7",
           "title": "Interfaces",
-          "url": "https://spec.graphql.org/draft/#sec-Interfaces"
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         }
       ],
       "status": "pass",
       "cases": 2,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.7 Type Validation: \"An interface type may declare that it implements one or more unique interfaces, but may not implement itself.\" The prose: \"Interface definitions must not contain cyclic references nor implement themselves.\""
     },
     {
       "id": "implTransitive",
@@ -425,13 +520,18 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 3,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.6 IsValidImplementation(type, implementedType), applied by \"For each interface declared implemented as interfaceType, IsValidImplementation(objectType, interfaceType) must be true\" (§3.6) and \"IsValidImplementation(implementingType, implementedType) must be true\" (§3.7): \"If implementedType declares it implements any interfaces, type must also declare it implements those interfaces.\" A cycle of interfaces breaks it, and §3.7's \"Interface definitions must not contain cyclic references nor implement themselves\"."
     },
     {
       "id": "implFieldProvided",
@@ -441,13 +541,28 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
+        },
+        {
+          "number": "3.6.3",
+          "title": "Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Object-Extensions"
+        },
+        {
+          "number": "3.7.1",
+          "title": "Interface Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Interface-Extensions"
         }
       ],
       "status": "pass",
-      "cases": 1,
+      "cases": 5,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.6 IsValidImplementation(type, implementedType), applied by \"For each interface declared implemented as interfaceType, IsValidImplementation(objectType, interfaceType) must be true\" (§3.6) and \"IsValidImplementation(implementingType, implementedType) must be true\" (§3.7): \"type must include a field of the same name for every field defined in implementedType.\" For extended types (tagged `schema-extensions`): §3.6.3, \"The resulting extended object type must be a super-set of all interfaces it implements\", and §3.7.1, \"Any Object or Interface type which implemented the previous Interface type must also be a super-set of the fields of the Interface type extension (which may be due to Object type extension).\""
     },
     {
       "id": "implArgProvided",
@@ -457,13 +572,18 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         }
       ],
       "status": "pass",
-      "cases": 1,
+      "cases": 2,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.6 IsValidImplementation(type, implementedType), applied by \"For each interface declared implemented as interfaceType, IsValidImplementation(objectType, interfaceType) must be true\" (§3.6) and \"IsValidImplementation(implementingType, implementedType) must be true\" (§3.7): \"field must include an argument of the same name for every argument defined in implementedField.\""
     },
     {
       "id": "implArgInvariant",
@@ -473,13 +593,18 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 5,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.6 IsValidImplementation(type, implementedType), applied by \"For each interface declared implemented as interfaceType, IsValidImplementation(objectType, interfaceType) must be true\" (§3.6) and \"IsValidImplementation(implementingType, implementedType) must be true\" (§3.7): \"That named argument on field must accept the same type (invariant) as that named argument on implementedField.\""
     },
     {
       "id": "implExtraArgOptional",
@@ -489,13 +614,18 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         }
       ],
       "status": "pass",
-      "cases": 1,
+      "cases": 2,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.6 IsValidImplementation(type, implementedType), applied by \"For each interface declared implemented as interfaceType, IsValidImplementation(objectType, interfaceType) must be true\" (§3.6) and \"IsValidImplementation(implementingType, implementedType) must be true\" (§3.7): \"field may include additional arguments not defined in implementedField, but any additional argument must not be required, e.g. must not be of a non-nullable type.\""
     },
     {
       "id": "implFieldCovariant",
@@ -505,13 +635,18 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         }
       ],
       "status": "pass",
-      "cases": 4,
+      "cases": 9,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.6 IsValidImplementation(type, implementedType), applied by \"For each interface declared implemented as interfaceType, IsValidImplementation(objectType, interfaceType) must be true\" (§3.6) and \"IsValidImplementation(implementingType, implementedType) must be true\" (§3.7): \"field must return a type which is equal to or a sub-type of (covariant) the return type of implementedField field's return type\""
     },
     {
       "id": "implDeprecation",
@@ -521,15 +656,23 @@
         {
           "number": "3.6",
           "title": "Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
         }
       ],
       "status": "fail",
-      "cases": 1,
-      "failing": 1,
-      "failingDraftOnly": 1,
-      "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have deprecation of implementing fields"
+      "cases": 2,
+      "failing": 2,
+      "failingSince": {
+        "September2025": 2
+      },
+      "since": "September2025",
+      "note": "New in September 2025: October 2021 doesn't have deprecation of implementing fields",
+      "basis": "§3.6 IsValidImplementation(type, implementedType), applied by \"For each interface declared implemented as interfaceType, IsValidImplementation(objectType, interfaceType) must be true\" (§3.6) and \"IsValidImplementation(implementingType, implementedType) must be true\" (§3.7): \"If field is deprecated then implementedField must also be deprecated.\""
     },
     {
       "id": "unionMembersDefined",
@@ -539,13 +682,13 @@
         {
           "number": "3.8",
           "title": "Unions",
-          "url": "https://spec.graphql.org/draft/#sec-Unions"
+          "url": "https://spec.graphql.org/September2026/#sec-Unions"
         }
       ],
       "status": "pass",
       "cases": 1,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.8 Type Validation: \"A Union type must include one or more unique member types.\""
     },
     {
       "id": "unionMembersUnique",
@@ -555,13 +698,13 @@
         {
           "number": "3.8",
           "title": "Unions",
-          "url": "https://spec.graphql.org/draft/#sec-Unions"
+          "url": "https://spec.graphql.org/September2026/#sec-Unions"
         }
       ],
       "status": "pass",
-      "cases": 1,
+      "cases": 2,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.8 Type Validation: \"A Union type must include one or more unique member types.\""
     },
     {
       "id": "unionMembersObjects",
@@ -571,13 +714,18 @@
         {
           "number": "3.8",
           "title": "Unions",
-          "url": "https://spec.graphql.org/draft/#sec-Unions"
+          "url": "https://spec.graphql.org/September2026/#sec-Unions"
+        },
+        {
+          "number": "3.8.1",
+          "title": "Union Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Union-Extensions"
         }
       ],
       "status": "pass",
-      "cases": 3,
+      "cases": 7,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.8 Type Validation: \"The member types of a Union type must all be Object base types; Scalar, Interface and Union types must not be member types of a Union.\" A member the document doesn't define isn't an Object type. §3.8.1 says the same of a union type extension's member types: \"The member types of a Union type extension must all be Object base types\"."
     },
     {
       "id": "enumValuesDefined",
@@ -587,13 +735,13 @@
         {
           "number": "3.9",
           "title": "Enums",
-          "url": "https://spec.graphql.org/draft/#sec-Enums"
+          "url": "https://spec.graphql.org/September2026/#sec-Enums"
         }
       ],
       "status": "pass",
       "cases": 1,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.9 Type Validation: \"An Enum type must define one or more unique enum values.\""
     },
     {
       "id": "enumValuesUnique",
@@ -603,13 +751,13 @@
         {
           "number": "3.9",
           "title": "Enums",
-          "url": "https://spec.graphql.org/draft/#sec-Enums"
+          "url": "https://spec.graphql.org/September2026/#sec-Enums"
         }
       ],
       "status": "pass",
       "cases": 1,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.9 Type Validation: \"An Enum type must define one or more unique enum values.\""
     },
     {
       "id": "enumValueNameReserved",
@@ -619,13 +767,13 @@
         {
           "number": "4",
           "title": "Introspection",
-          "url": "https://spec.graphql.org/draft/#sec-Introspection"
+          "url": "https://spec.graphql.org/September2026/#sec-Introspection"
         }
       ],
       "status": "pass",
       "cases": 1,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§4 Reserved Names: \"Otherwise, any Name within a GraphQL type system must not start with two underscores \"__\".\" §3.9 has no rule of its own about \"__\"."
     },
     {
       "id": "inputFieldsDefined",
@@ -635,13 +783,13 @@
         {
           "number": "3.10",
           "title": "Input Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Objects"
         }
       ],
       "status": "pass",
       "cases": 1,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.10 Type Validation: \"An Input Object type must define one or more input fields.\""
     },
     {
       "id": "inputFieldNamesUnique",
@@ -651,13 +799,13 @@
         {
           "number": "3.10",
           "title": "Input Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Objects"
         }
       ],
       "status": "pass",
       "cases": 1,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.10 Type Validation: \"The input field must have a unique name within that Input Object type; no two input fields may share the same name.\""
     },
     {
       "id": "inputFieldNameReserved",
@@ -667,13 +815,13 @@
         {
           "number": "3.10",
           "title": "Input Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Objects"
         }
       ],
       "status": "pass",
       "cases": 1,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.10 Type Validation: \"The input field must not have a name which begins with the characters \"__\" (two underscores).\""
     },
     {
       "id": "inputFieldInputType",
@@ -683,18 +831,18 @@
         {
           "number": "3.10",
           "title": "Input Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Objects"
         },
         {
           "number": "3.4.2",
           "title": "Input and Output Types",
-          "url": "https://spec.graphql.org/draft/#sec-Input-and-Output-Types"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-and-Output-Types"
         }
       ],
       "status": "pass",
-      "cases": 1,
+      "cases": 4,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.10 Type Validation: \"The input field must accept a type where IsInputType(inputFieldType) returns true.\""
     },
     {
       "id": "requiredInputFieldNotDeprecated",
@@ -704,20 +852,20 @@
         {
           "number": "3.10",
           "title": "Input Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Objects"
         },
         {
           "number": "3.13.3",
           "title": "@deprecated",
-          "url": "https://spec.graphql.org/draft/#sec-deprecated"
+          "url": "https://spec.graphql.org/September2026/#sec--deprecated"
         }
       ],
       "status": "pass",
       "cases": 1,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have deprecated input fields"
+      "since": "September2025",
+      "note": "New in September 2025: October 2021 doesn't have deprecated input fields",
+      "basis": "§3.10 Type Validation: \"If input field type is Non-Null and a default value is not defined: The @deprecated directive must not be applied to this input field.\" §3.13.3: \"The @deprecated directive must not appear on required (non-null without a default) arguments or input object field definitions.\""
     },
     {
       "id": "oneOfFieldNullable",
@@ -727,20 +875,25 @@
         {
           "number": "3.10",
           "title": "Input Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Objects"
         },
         {
           "number": "3.10.1",
           "title": "OneOf Input Objects",
-          "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-OneOf-Input-Objects"
+        },
+        {
+          "number": "3.10.2",
+          "title": "Input Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Extensions"
         }
       ],
       "status": "pass",
-      "cases": 1,
+      "cases": 4,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have OneOf input objects"
+      "since": "September2025",
+      "note": "New in September 2025: October 2021 doesn't have OneOf input objects",
+      "basis": "§3.10 Type Validation: \"If the Input Object is a OneOf Input Object then: The type of the input field must be nullable.\" §3.10.2, for an extension: \"If the original Input Object is a OneOf Input Object then: All fields of the Input Object type extension must be nullable.\""
     },
     {
       "id": "oneOfFieldNoDefault",
@@ -750,20 +903,25 @@
         {
           "number": "3.10",
           "title": "Input Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Objects"
         },
         {
           "number": "3.10.1",
           "title": "OneOf Input Objects",
-          "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-OneOf-Input-Objects"
+        },
+        {
+          "number": "3.10.2",
+          "title": "Input Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Extensions"
         }
       ],
       "status": "pass",
-      "cases": 1,
+      "cases": 3,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have OneOf input objects"
+      "since": "September2025",
+      "note": "New in September 2025: October 2021 doesn't have OneOf input objects",
+      "basis": "§3.10 Type Validation: \"If the Input Object is a OneOf Input Object then: ... The input field must not have a default value.\" §3.10.2, for an extension: \"If the original Input Object is a OneOf Input Object then: ... All fields of the Input Object type extension must not have default values.\""
     },
     {
       "id": "inputObjectUnbreakableCycle",
@@ -773,13 +931,16 @@
         {
           "number": "3.10",
           "title": "Input Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Objects"
         }
       ],
       "status": "fail",
-      "cases": 4,
-      "failing": 2,
-      "failingDraftOnly": 2
+      "cases": 5,
+      "failing": 3,
+      "failingSince": {
+        "September2026": 3
+      },
+      "basis": "§3.10 Type Validation: \"InputObjectHasUnbreakableCycle(inputObject) must be false.\" September 2025 and October 2021 have, as item 3: \"If an Input Object references itself either directly or through referenced Input Objects, at least one of the fields in the chain of references must be either a nullable or a List type.\" The two agree on plain input objects. Only September 2026's form (graphql-spec #1211) finds a cycle through OneOf input objects, whose fields are nullable, such as `input A @oneOf { b: B } input B @oneOf { a: A }`; the vectors whose verdict rests on it are tagged since September 2026."
     },
     {
       "id": "inputObjectDefaultValueCycle",
@@ -789,15 +950,15 @@
         {
           "number": "3.10",
           "title": "Input Objects",
-          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Objects"
         }
       ],
       "status": "fail",
       "cases": 4,
       "failing": 4,
-      "failingDraftOnly": 0,
-      "edition": "draft",
-      "note": "Draft only: the October 2021 edition doesn't have default value validation. 4 failing cases are crashes, which fail under October 2021 too"
+      "since": "September2025",
+      "note": "New in September 2025: October 2021 doesn't have default value validation. 4 failing cases are crashes, which fail under October 2021 too",
+      "basis": "§3.10 Type Validation: \"InputObjectDefaultValueHasCycle(inputObject) must be false.\""
     },
     {
       "id": "directiveLocationsDefined",
@@ -807,14 +968,15 @@
         {
           "number": "3.13",
           "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
         }
       ],
       "status": "untested",
       "cases": 0,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "note": "SDL can't write a directive without locations, so no vector breaks this rule"
+      "since": "September2025",
+      "note": "New in September 2025: October 2021 doesn't have the rule that a directive definition includes a location. SDL can't write a directive without locations, so no vector breaks this rule",
+      "basis": "§3.13 Type Validation: \"A Directive definition must include at least one DirectiveLocation.\" September 2025 has the same item; October 2021's list has no such item."
     },
     {
       "id": "directiveUsesItself",
@@ -824,13 +986,13 @@
         {
           "number": "3.13",
           "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
         }
       ],
       "status": "fail",
-      "cases": 2,
+      "cases": 3,
       "failing": 2,
-      "failingDraftOnly": 0
+      "basis": "§3.13 Type Validation: \"A Directive definition must not contain the use of a Directive which references itself directly.\""
     },
     {
       "id": "directiveReferencesItselfIndirectly",
@@ -840,13 +1002,491 @@
         {
           "number": "3.13",
           "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
+        }
+      ],
+      "status": "fail",
+      "cases": 4,
+      "failing": 3,
+      "basis": "§3.13 Type Validation: \"A Directive definition must not contain the use of a Directive which references itself indirectly by referencing a Type or Directive which transitively includes a reference to this Directive.\" The vectors that rest only on the prose, \"While defining a directive, it must not reference itself directly or indirectly\", aren't graded."
+    },
+    {
+      "id": "directivesDefined",
+      "title": "Every directive the document applies is defined, or built in",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
+        }
+      ],
+      "status": "pass",
+      "cases": 3,
+      "failing": 0,
+      "basis": "§3.13: \"Directives must only be used in the locations they are declared to belong in.\" The same sentence is in October 2021. A directive that is neither built in nor defined isn't declared to belong in any location. A service \"may provide any additional custom directive\", so the vectors use a name no service is likely to provide."
+    },
+    {
+      "id": "directiveLocationsValid",
+      "title": "Every directive the document applies is at a location it is declared for",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
+        }
+      ],
+      "status": "pass",
+      "cases": 28,
+      "failing": 0,
+      "basis": "§3.13: \"Directives must only be used in the locations they are declared to belong in.\" The same sentence is in October 2021. The built-in directives' locations are September 2026's (§3.13.1 to §3.13.5). @deprecated goes on arguments and input fields since September 2025, and on directive definitions since September 2026; a vector that applies it there is tagged with that release."
+    },
+    {
+      "id": "extensionTargetDefined",
+      "title": "A type extension extends a type that is defined",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5.6",
+          "title": "Scalar Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Scalar-Extensions"
+        },
+        {
+          "number": "3.6.3",
+          "title": "Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Object-Extensions"
+        },
+        {
+          "number": "3.7.1",
+          "title": "Interface Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Interface-Extensions"
+        },
+        {
+          "number": "3.8.1",
+          "title": "Union Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Union-Extensions"
+        },
+        {
+          "number": "3.9.1",
+          "title": "Enum Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Enum-Extensions"
+        },
+        {
+          "number": "3.10.2",
+          "title": "Input Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Extensions"
+        }
+      ],
+      "status": "pass",
+      "cases": 6,
+      "failing": 0,
+      "basis": "Each kind of type extension's Type Validation, item 1: \"The named type must already be defined and must be a Scalar type\" (§3.5.6), \"... an Object type\" (§3.6.3), \"... an Interface type\" (§3.7.1), \"... a Union type\" (§3.8.1), \"... an Enum type\" (§3.9.1), \"... a Input Object type\" (§3.10.2).",
+      "requires": [
+        "schema-extensions"
+      ]
+    },
+    {
+      "id": "extensionTargetKind",
+      "title": "A type extension extends a type of its own kind",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5.6",
+          "title": "Scalar Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Scalar-Extensions"
+        },
+        {
+          "number": "3.6.3",
+          "title": "Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Object-Extensions"
+        },
+        {
+          "number": "3.7.1",
+          "title": "Interface Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Interface-Extensions"
+        },
+        {
+          "number": "3.8.1",
+          "title": "Union Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Union-Extensions"
+        },
+        {
+          "number": "3.9.1",
+          "title": "Enum Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Enum-Extensions"
+        },
+        {
+          "number": "3.10.2",
+          "title": "Input Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Extensions"
+        }
+      ],
+      "status": "pass",
+      "cases": 6,
+      "failing": 0,
+      "basis": "Each kind of type extension's Type Validation, item 1: \"The named type must already be defined and must be a Scalar type\" (§3.5.6), \"... an Object type\" (§3.6.3), \"... an Interface type\" (§3.7.1), \"... a Union type\" (§3.8.1), \"... an Enum type\" (§3.9.1), \"... a Input Object type\" (§3.10.2).",
+      "requires": [
+        "schema-extensions"
+      ]
+    },
+    {
+      "id": "extensionItemsUnique",
+      "title": "A type extension's fields, values or member types are unique",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6.3",
+          "title": "Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Object-Extensions"
+        },
+        {
+          "number": "3.7.1",
+          "title": "Interface Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Interface-Extensions"
+        },
+        {
+          "number": "3.8.1",
+          "title": "Union Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Union-Extensions"
+        },
+        {
+          "number": "3.9.1",
+          "title": "Enum Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Enum-Extensions"
+        },
+        {
+          "number": "3.10.2",
+          "title": "Input Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Extensions"
+        }
+      ],
+      "status": "pass",
+      "cases": 5,
+      "failing": 0,
+      "basis": "§3.6.3: \"The fields of an Object type extension must have unique names; no two fields may share the same name.\" §3.7.1 says the same of an Interface type extension. §3.8.1: \"All member types of a Union type extension must be unique.\" §3.9.1: \"All values of an Enum type extension must be unique.\" §3.10.2: \"All fields of an Input Object type extension must have unique names.\"",
+      "requires": [
+        "schema-extensions"
+      ]
+    },
+    {
+      "id": "extensionItemsNew",
+      "title": "A type extension adds only fields, values or member types the type doesn't have",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6.3",
+          "title": "Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Object-Extensions"
+        },
+        {
+          "number": "3.7.1",
+          "title": "Interface Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Interface-Extensions"
+        },
+        {
+          "number": "3.8.1",
+          "title": "Union Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Union-Extensions"
+        },
+        {
+          "number": "3.9.1",
+          "title": "Enum Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Enum-Extensions"
+        },
+        {
+          "number": "3.10.2",
+          "title": "Input Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Extensions"
+        }
+      ],
+      "status": "pass",
+      "cases": 7,
+      "failing": 0,
+      "basis": "§3.6.3: \"Any fields of an Object type extension must not be already defined on the previous Object type.\" §3.7.1 says the same of an Interface type extension. §3.8.1: \"All member types of a Union type extension must not already be a member of the previous Union type.\" §3.9.1: \"All values of an Enum type extension must not already be a value of the previous Enum.\" §3.10.2: \"All fields of an Input Object type extension must not already be a field of the previous Input Object.\" The previous type is the type as extended so far. October 2021 says \"the original\" type instead of \"the previous\" one; a vector whose item an earlier extension adds is tagged since September 2025.",
+      "requires": [
+        "schema-extensions"
+      ]
+    },
+    {
+      "id": "extensionInterfacesNew",
+      "title": "An object type extension adds only interfaces the type doesn't implement",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6.3",
+          "title": "Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Object-Extensions"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "basis": "§3.6.3: \"Any interfaces provided must not be already implemented by the previous Object type.\" §3.7.1 has no such rule for interface type extensions.",
+      "requires": [
+        "schema-extensions"
+      ]
+    },
+    {
+      "id": "extensionDirectivesNotReapplied",
+      "title": "An extension doesn't apply a non-repeatable directive again",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3.2",
+          "title": "Schema Extension",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Extension"
+        },
+        {
+          "number": "3.5.6",
+          "title": "Scalar Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Scalar-Extensions"
+        },
+        {
+          "number": "3.6.3",
+          "title": "Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Object-Extensions"
+        },
+        {
+          "number": "3.7.1",
+          "title": "Interface Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Interface-Extensions"
+        },
+        {
+          "number": "3.8.1",
+          "title": "Union Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Union-Extensions"
+        },
+        {
+          "number": "3.9.1",
+          "title": "Enum Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Enum-Extensions"
+        },
+        {
+          "number": "3.10.2",
+          "title": "Input Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Extensions"
+        }
+      ],
+      "status": "pass",
+      "cases": 10,
+      "failing": 0,
+      "basis": "Every kind of extension's Type Validation: \"Any non-repeatable directives provided must not already apply to the previous Schema\" (§3.3.2), \"... the previous Scalar type\" (§3.5.6), \"... the previous Object type\" (§3.6.3), \"... the previous Interface type\" (§3.7.1), \"... the previous Union type\" (§3.8.1), \"... the previous Enum type\" (§3.9.1), \"... the previous Input Object type\" (§3.10.2). A directive applied by the definition or by an earlier extension already applies. October 2021 says \"the original\" instead of \"the previous\"; a vector whose directive only an earlier extension applies is tagged since September 2025.",
+      "requires": [
+        "schema-extensions"
+      ]
+    },
+    {
+      "id": "extensionOneOf",
+      "title": "An input object type extension doesn't apply @oneOf",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10.2",
+          "title": "Input Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Extensions"
+        },
+        {
+          "number": "3.10.1",
+          "title": "OneOf Input Objects",
+          "url": "https://spec.graphql.org/September2026/#sec-OneOf-Input-Objects"
         }
       ],
       "status": "fail",
       "cases": 2,
       "failing": 2,
-      "failingDraftOnly": 0
+      "failingSince": {
+        "September2025": 2
+      },
+      "since": "September2025",
+      "note": "New in September 2025: October 2021 doesn't have OneOf input objects",
+      "basis": "§3.10.2: \"The @oneOf directive must not be provided by an Input Object type extension.\"",
+      "requires": [
+        "schema-extensions"
+      ]
+    },
+    {
+      "id": "schemaExtensionDefined",
+      "title": "A schema extension extends a schema",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3.2",
+          "title": "Schema Extension",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Extension"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0,
+      "note": "Never graded: every vector that breaks it is unspecified: the spec doesn't say whether a document without a schema definition has a schema that is already defined",
+      "basis": "§3.3.2 Schema Validation: \"The Schema must already be defined.\" Whether a document with no schema definition, whose root operation types have the default names, has a schema that is \"already defined\", the spec doesn't say, so no vector is graded.",
+      "requires": [
+        "schema-extensions"
+      ]
+    },
+    {
+      "id": "specifiedByNotBuiltin",
+      "title": "@specifiedBy isn't applied to a built-in scalar",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.13.4",
+          "title": "@specifiedBy",
+          "url": "https://spec.graphql.org/September2026/#sec--specifiedBy"
+        },
+        {
+          "number": "3.5",
+          "title": "Scalars",
+          "url": "https://spec.graphql.org/September2026/#sec-Scalars"
+        },
+        {
+          "number": "3.5.6",
+          "title": "Scalar Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Scalar-Extensions"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "basis": "§3.13.4: \"It must not appear on built-in scalar types.\" §3.5: \"Built-in scalar types must not provide a scalar specification URL as they are specified by this document.\" A document can apply it to one only through a scalar type extension, `extend scalar Int @specifiedBy(url: \"…\")`. The spec doesn't say whether a built-in scalar may be extended at all (§3.5.6, \"The named type must already be defined\"); either way the schema is invalid, so an implementation that rejects every extension of a built-in scalar passes this check without checking @specifiedBy.",
+      "requires": [
+        "schema-extensions"
+      ]
+    },
+    {
+      "id": "directiveExtensionDefined",
+      "title": "A directive extension extends a defined directive",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.13.6",
+          "title": "Directive Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Directive-Extensions"
+        }
+      ],
+      "status": "pass",
+      "cases": 1,
+      "failing": 0,
+      "since": "September2026",
+      "note": "New in September 2026: October 2021 doesn't have directive extensions",
+      "basis": "§3.13.6 Type Validation: \"The previous directive must already be defined.\" New in September 2026, with directive extensions.",
+      "requires": [
+        "schema-extensions"
+      ]
+    },
+    {
+      "id": "directiveExtensionNotReapplied",
+      "title": "A directive extension doesn't apply a non-repeatable directive again",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.13.6",
+          "title": "Directive Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Directive-Extensions"
+        }
+      ],
+      "status": "pass",
+      "cases": 3,
+      "failing": 0,
+      "since": "September2026",
+      "note": "New in September 2026: October 2021 doesn't have directive extensions",
+      "basis": "§3.13.6 Type Validation: \"Any non-repeatable directives provided must not already apply to the previous directive.\"",
+      "requires": [
+        "schema-extensions"
+      ]
+    },
+    {
+      "id": "directiveExtensionUsesPrevious",
+      "title": "A directive extension doesn't apply the directive it extends",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.13.6",
+          "title": "Directive Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Directive-Extensions"
+        }
+      ],
+      "status": "pass",
+      "cases": 1,
+      "failing": 0,
+      "since": "September2026",
+      "note": "New in September 2026: October 2021 doesn't have directive extensions",
+      "basis": "§3.13.6 Type Validation: \"Any directives provided must not contain the use of a Directive which references the previous directive directly.\"",
+      "requires": [
+        "schema-extensions"
+      ]
+    },
+    {
+      "id": "directiveExtensionReferencesPrevious",
+      "title": "A directive extension doesn't reference the directive it extends through a type or directive",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.13.6",
+          "title": "Directive Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Directive-Extensions"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "since": "September2026",
+      "note": "New in September 2026: October 2021 doesn't have directive extensions",
+      "basis": "§3.13.6 Type Validation: \"Any directives provided must not contain the use of a Directive which references the previous directive indirectly by referencing a Type or Directive which transitively includes a reference to the previous Directive.\"",
+      "requires": [
+        "schema-extensions"
+      ]
+    },
+    {
+      "id": "directiveNotRepeated",
+      "title": "A definition doesn't apply a non-repeatable directive twice to one element",
+      "level": "INFO",
+      "spec": [
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
+        },
+        {
+          "number": "5.7.3",
+          "title": "Directives Are Unique per Location",
+          "url": "https://spec.graphql.org/September2026/#sec-Directives-Are-Unique-per-Location"
+        }
+      ],
+      "status": "pass",
+      "cases": 3,
+      "failing": 0,
+      "basis": "§3.13: \"A directive may be defined as repeatable by including the \"repeatable\" keyword. Repeatable directives are often useful when the same directive should be used with different arguments at a single location\". §3 states the rule against applying a non-repeatable directive again only for extensions (\"must not already apply to the previous ...\"), and §5.7.3 Directives Are Unique per Location only for executable documents (\"if a directive is not repeatable, then only one occurrence of it is allowed per location\"). §3 states no such rule for SDL: this check is informational, and never fails a run. It records whether an implementation rejects such a schema."
+    },
+    {
+      "id": "appliedDirectiveArguments",
+      "title": "A directive applied in SDL has the arguments its definition gives it",
+      "level": "INFO",
+      "spec": [
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
+        },
+        {
+          "number": "2.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Directives"
+        },
+        {
+          "number": "5.4",
+          "title": "Arguments",
+          "url": "https://spec.graphql.org/September2026/#sec-Validation.Arguments"
+        }
+      ],
+      "status": "fail",
+      "cases": 9,
+      "failing": 3,
+      "failingSince": {
+        "September2025": 1
+      },
+      "basis": "§3.13 defines a directive's arguments, such as `directive @specifiedBy(url: String!) on SCALAR` (§3.13.4), and §2.13 says \"Directives have a name along with a list of arguments which may accept values of any input type\". The rules that an argument is defined, given once, given when required, and of its type are §5.4's, which apply to executable documents. §3 states no such rule for SDL: this check is informational, and never fails a run. It records whether an implementation rejects such a schema."
     },
     {
       "id": "acceptsValid",
@@ -856,13 +1496,15 @@
         {
           "number": "3",
           "title": "Type System",
-          "url": "https://spec.graphql.org/draft/#sec-Type-System"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System"
         }
       ],
       "status": "fail",
-      "cases": 87,
-      "failing": 3,
-      "failingDraftOnly": 0,
+      "cases": 250,
+      "failing": 14,
+      "failingSince": {
+        "September2026": 11
+      },
       "basis": "a schema is invalid only when it breaks a Type Validation rule of §3 or §4's Reserved Names; rejecting, or crashing on, a schema that breaks none applies a rule the spec doesn't have"
     }
   ],
@@ -873,20 +1515,150 @@
         "argDefaultCompatible"
       ],
       "summary": "ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule",
-      "cases": 10,
+      "cases": 14,
       "fixtures": {
-        "defaults": 10
+        "defaults": 14
       },
       "fixture": "argDefaultCompatible.1.invalid",
       "example": {
-        "input": "[draft] type Query { f(x: Int = \"1\"): Int }",
+        "input": "[since September 2025] type Query { f(x: Int = \"1\"): Int }",
         "response": {
           "valid": true
         },
         "expected": "invalid: breaks ARG_DEFAULT_COMPATIBLE and no other rule"
       },
-      "draftOnly": 10,
-      "edition": "draft"
+      "since": {
+        "September2025": 14
+      }
+    },
+    {
+      "kind": "over-strict",
+      "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
+        "directiveExtensionDefined",
+        "directiveExtensionNotReapplied",
+        "directiveExtensionReferencesPrevious",
+        "directiveExtensionUsesPrevious",
+        "directiveLocationsValid"
+      ],
+      "likelyOverStrict": false,
+      "summary": "rejects 7 valid schemas with the same error, one edit from schemas that break directiveExtensionDefined, directiveExtensionNotReapplied, directiveExtensionReferencesPrevious, directiveExtensionUsesPrevious or directiveLocationsValid: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026",
+      "cases": 7,
+      "fixtures": {
+        "extension": 7
+      },
+      "fixture": "directiveExtensionNotReapplied.2.valid",
+      "problem": "Syntax Error: Unexpected Name 'directive'.",
+      "example": {
+        "input": "[since September 2026] directive @d on FIELD type Query { a: Int } extend directive @d @deprecated(reason: \"x\")",
+        "response": {
+          "valid": false,
+          "errors": [
+            "Syntax Error: Unexpected Name 'directive'.\n\nGraphQL request:1:52\n1 | directive @d on FIELD type Query { a: Int } extend directive @d @deprecated(reason: \"x\")\n  |                                                    ^"
+          ]
+        },
+        "expected": "valid (TypeSystem!Verdict is empty)"
+      },
+      "since": {
+        "September2026": 7
+      }
+    },
+    {
+      "kind": "not enforced",
+      "checks": [
+        "rootTypesDifferent"
+      ],
+      "summary": "ROOT_TYPES_DIFFERENT not enforced: accepts a schema that breaks only this rule",
+      "cases": 4,
+      "fixtures": {
+        "root": 3,
+        "extension": 1
+      },
+      "fixture": "rootTypesDifferent.2.invalid",
+      "example": {
+        "input": "schema { query: Q subscription: Q } type Q { a: Int } type S { a: Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks ROOT_TYPES_DIFFERENT and no other rule"
+      }
+    },
+    {
+      "kind": "over-strict",
+      "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
+        "directiveExtensionNotReapplied",
+        "directiveLocationsValid",
+        "directiveReferencesItselfIndirectly"
+      ],
+      "likelyOverStrict": false,
+      "summary": "rejects 4 valid schemas with the same error, one edit from schemas that break directiveExtensionNotReapplied, directiveLocationsValid or directiveReferencesItselfIndirectly: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026",
+      "cases": 4,
+      "fixtures": {
+        "directive": 3,
+        "extension": 1
+      },
+      "fixture": "directiveLocationsValid.19.valid",
+      "problem": "Syntax Error: Expected 'on', found '@'.",
+      "example": {
+        "input": "[since September 2026] directive @d @deprecated on FIELD type Query { a: Int }",
+        "response": {
+          "valid": false,
+          "errors": [
+            "Syntax Error: Expected 'on', found '@'.\n\nGraphQL request:1:14\n1 | directive @d @deprecated on FIELD type Query { a: Int }\n  |              ^"
+          ]
+        },
+        "expected": "valid (TypeSystem!Verdict is empty)"
+      },
+      "since": {
+        "September2026": 4
+      }
+    },
+    {
+      "kind": "not enforced",
+      "checks": [
+        "typeNameNotBuiltin"
+      ],
+      "summary": "TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule",
+      "cases": 3,
+      "fixtures": {
+        "names": 3
+      },
+      "fixture": "typeNameNotBuiltin.3.invalid",
+      "example": {
+        "input": "enum Boolean { YES NO } type Query { a: Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks TYPE_NAME_NOT_BUILTIN and no other rule"
+      }
+    },
+    {
+      "kind": "not enforced",
+      "checks": [
+        "inputObjectUnbreakableCycle"
+      ],
+      "summary": "INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule",
+      "cases": 3,
+      "fixtures": {
+        "input": 2,
+        "extension": 1
+      },
+      "fixture": "inputObjectUnbreakableCycle.5.invalid",
+      "example": {
+        "input": "[since September 2026] input A @oneOf { b: B } input B @oneOf { a: A } type Query { f(a: A): Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks INPUT_OBJECT_UNBREAKABLE_CYCLE and no other rule"
+      },
+      "since": {
+        "September2026": 3
+      }
     },
     {
       "kind": "crash",
@@ -930,42 +1702,65 @@
     {
       "kind": "not enforced",
       "checks": [
-        "rootTypesDifferent"
+        "directiveReferencesItselfIndirectly"
       ],
-      "summary": "ROOT_TYPES_DIFFERENT not enforced: accepts a schema that breaks only this rule",
-      "cases": 2,
+      "summary": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule",
+      "cases": 3,
       "fixtures": {
-        "root": 2
+        "directive": 3
       },
-      "fixture": "rootTypesDifferent.2.invalid",
+      "fixture": "directiveReferencesItselfIndirectly.2.invalid",
       "example": {
-        "input": "schema { query: Q subscription: Q } type Q { a: Int } type S { a: Int }",
+        "input": "directive @d(a: Int @e) on ARGUMENT_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION type Query { a: Int }",
         "response": {
           "valid": true
         },
-        "expected": "invalid: breaks ROOT_TYPES_DIFFERENT and no other rule"
+        "expected": "invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule"
       }
     },
     {
       "kind": "not enforced",
       "checks": [
-        "inputObjectUnbreakableCycle"
+        "appliedDirectiveArguments"
       ],
-      "summary": "INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule",
-      "cases": 2,
+      "summary": "APPLIED_DIRECTIVE_ARGUMENTS not enforced: accepts a schema that breaks only this rule (informational: §3 states no such rule)",
+      "cases": 3,
       "fixtures": {
-        "input": 2
+        "directive": 3
       },
-      "fixture": "inputObjectUnbreakableCycle.5.invalid",
+      "fixture": "appliedDirectiveArguments.3.invalid",
       "example": {
-        "input": "[draft] input A @oneOf { b: B } input B @oneOf { a: A } type Query { f(a: A): Int }",
+        "input": "[since September 2025] type Query { a: Int @deprecated(reason: null) }",
         "response": {
           "valid": true
         },
-        "expected": "invalid: breaks INPUT_OBJECT_UNBREAKABLE_CYCLE and no other rule"
+        "expected": "invalid: breaks APPLIED_DIRECTIVE_ARGUMENTS and no other rule"
       },
-      "draftOnly": 2,
-      "edition": "draft"
+      "since": {
+        "September2025": 1
+      }
+    },
+    {
+      "kind": "not enforced",
+      "checks": [
+        "implDeprecation"
+      ],
+      "summary": "IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule",
+      "cases": 2,
+      "fixtures": {
+        "implementation": 2
+      },
+      "fixture": "implDeprecation.1.invalid",
+      "example": {
+        "input": "[since September 2025] interface I { f: Int } type Query implements I { f: Int @deprecated }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks IMPL_DEPRECATION and no other rule"
+      },
+      "since": {
+        "September2025": 2
+      }
     },
     {
       "kind": "not enforced",
@@ -989,61 +1784,24 @@
     {
       "kind": "not enforced",
       "checks": [
-        "directiveReferencesItselfIndirectly"
+        "extensionOneOf"
       ],
-      "summary": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule",
+      "summary": "EXTENSION_ONEOF not enforced: accepts a schema that breaks only this rule",
       "cases": 2,
       "fixtures": {
-        "directive": 2
+        "extension": 2
       },
-      "fixture": "directiveReferencesItselfIndirectly.2.invalid",
+      "fixture": "extensionOneOf.1.invalid",
       "example": {
-        "input": "directive @d(a: Int @e) on ARGUMENT_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION type Query { a: Int }",
+        "input": "[since September 2025] input In { a: Int } type Query { f(i: In): Int } extend input In @oneOf",
         "response": {
           "valid": true
         },
-        "expected": "invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule"
+        "expected": "invalid: breaks EXTENSION_ONEOF and no other rule"
+      },
+      "since": {
+        "September2025": 2
       }
-    },
-    {
-      "kind": "not enforced",
-      "checks": [
-        "typeNameNotBuiltin"
-      ],
-      "summary": "TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule",
-      "cases": 1,
-      "fixtures": {
-        "names": 1
-      },
-      "fixture": "typeNameNotBuiltin.2.invalid",
-      "example": {
-        "input": "type Int { a: String } type Query { a: String }",
-        "response": {
-          "valid": true
-        },
-        "expected": "invalid: breaks TYPE_NAME_NOT_BUILTIN and no other rule"
-      }
-    },
-    {
-      "kind": "not enforced",
-      "checks": [
-        "implDeprecation"
-      ],
-      "summary": "IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule",
-      "cases": 1,
-      "fixtures": {
-        "implementation": 1
-      },
-      "fixture": "implDeprecation.1.invalid",
-      "example": {
-        "input": "[draft] interface I { f: Int } type Query implements I { f: Int @deprecated }",
-        "response": {
-          "valid": true
-        },
-        "expected": "invalid: breaks IMPL_DEPRECATION and no other rule"
-      },
-      "draftOnly": 1,
-      "edition": "draft"
     },
     {
       "kind": "crash",

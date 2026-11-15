@@ -1,45 +1,61 @@
 {
-  "format": 1,
+  "format": 2,
   "area": "validate",
   "implementation": "graphql-js 17.1.0",
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "coordinate",
     "custom-directives",
     "custom-scalar-literals",
+    "custom-scalar-results",
     "deferred-items",
     "error-propagation-off",
     "idle",
     "introspect",
     "invalid-results",
     "mutation",
+    "nested-fields",
+    "parent-values",
     "parse",
+    "parse-sdl",
+    "request-extensions",
+    "scalar-results",
     "schema",
+    "schema-extensions",
     "subscription",
+    "subscription-source",
+    "subscription-stream",
     "uncoercible-results",
     "unvalidated",
     "validate"
   ],
   "provenance": {
-    "kit": "71f0a24bdc40",
+    "kit": "f437858e472b",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 3100,
-    "graded": 3088,
+    "vectors": 3367,
+    "graded": 3354,
     "skipped": {
-      "unspecified": 12
+      "unspecified": 13
     }
   },
-  "checkerSelfTest": "passed (9 negative controls)",
+  "checkerSelfTest": "passed (15 negative controls)",
   "cases": {
-    "submitted": 3088,
-    "distinct": 3088,
+    "submitted": 3354,
+    "distinct": 3354,
     "malformed": 0
   },
   "adapterProblems": 0,
-  "draftOnly": {
-    "vectors": 178,
-    "failing": 2
+  "since": {
+    "September2025": {
+      "vectors": 248,
+      "failing": 2
+    },
+    "September2026": {
+      "vectors": 3,
+      "failing": 0
+    }
   },
   "checks": [
     {
@@ -50,13 +66,13 @@
         {
           "number": "5.1.1",
           "title": "Executable Definitions",
-          "url": "https://spec.graphql.org/draft/#sec-Executable-Definitions"
+          "url": "https://spec.graphql.org/September2026/#sec-Executable-Definitions"
         }
       ],
       "status": "pass",
-      "cases": 4,
+      "cases": 19,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"For each definition definition in the document: definition must be ExecutableDefinition (it must not be TypeSystemDefinitionOrExtension).\""
     },
     {
       "id": "operationTypeExistence",
@@ -66,13 +82,14 @@
         {
           "number": "5.2.1.1",
           "title": "Operation Type Existence",
-          "url": "https://spec.graphql.org/draft/#sec-Operation-Type-Existence"
+          "url": "https://spec.graphql.org/September2026/#sec-Operation-Type-Existence"
         }
       ],
       "status": "pass",
-      "cases": 12,
+      "cases": 15,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"For each operation definition operation in the document: Let rootOperationType be the root operation type in schema corresponding to the kind of operation. rootOperationType must exist.\" The rule is new in September 2025 (§5.2.1.1); October 2021 has no such rule, so its vectors have since September 2025.",
+      "since": "September2025"
     },
     {
       "id": "operationNameUniqueness",
@@ -82,13 +99,13 @@
         {
           "number": "5.2.2.1",
           "title": "Operation Name Uniqueness",
-          "url": "https://spec.graphql.org/draft/#sec-Operation-Name-Uniqueness"
+          "url": "https://spec.graphql.org/September2026/#sec-Operation-Name-Uniqueness"
         }
       ],
       "status": "pass",
       "cases": 6,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"If operationName exists: Let operations be all operation definitions in the document named operationName. operations must be a set of one.\""
     },
     {
       "id": "loneAnonymousOperation",
@@ -98,13 +115,13 @@
         {
           "number": "5.2.3.1",
           "title": "Lone Anonymous Operation",
-          "url": "https://spec.graphql.org/draft/#sec-Lone-Anonymous-Operation"
+          "url": "https://spec.graphql.org/September2026/#sec-Lone-Anonymous-Operation"
         }
       ],
       "status": "pass",
       "cases": 21,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"If operations is a set of more than 1: anonymous must be empty.\""
     },
     {
       "id": "singleRootField",
@@ -114,13 +131,13 @@
         {
           "number": "5.2.4.1",
           "title": "Single Root Field",
-          "url": "https://spec.graphql.org/draft/#sec-Single-Root-Field"
+          "url": "https://spec.graphql.org/September2026/#sec-Single-Root-Field"
         }
       ],
       "status": "pass",
-      "cases": 59,
+      "cases": 64,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"Let collectedFieldsMap be the result of CollectSubscriptionFields(subscriptionType, selectionSet). collectedFieldsMap must have exactly one entry, which must not be an introspection field.\" CollectSubscriptionFields: \"selection must not provide the @skip directive. selection must not provide the @include directive.\" September 2025 has the same text. October 2021 (its §5.2.3.1) collects the root fields with CollectFields and \"Let variableValues be the empty set\", so it applies @skip and @include instead of forbidding them: a selection with @include(if: $v) is dropped, one with @skip(if: $v) kept. A vector that only September 2025 and later reject has since September 2025."
     },
     {
       "id": "fieldSelections",
@@ -130,13 +147,13 @@
         {
           "number": "5.3.1",
           "title": "Field Selections",
-          "url": "https://spec.graphql.org/draft/#sec-Field-Selections"
+          "url": "https://spec.graphql.org/September2026/#sec-Field-Selections"
         }
       ],
       "status": "pass",
-      "cases": 25,
+      "cases": 34,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"For each selection in the document: Let fieldName be the target field of selection. fieldName must be defined on type in scope.\""
     },
     {
       "id": "fieldSelectionMerging",
@@ -146,13 +163,13 @@
         {
           "number": "5.3.2",
           "title": "Field Selection Merging",
-          "url": "https://spec.graphql.org/draft/#sec-Field-Selection-Merging"
+          "url": "https://spec.graphql.org/September2026/#sec-Field-Selection-Merging"
         }
       ],
       "status": "fail",
-      "cases": 674,
+      "cases": 677,
       "failing": 22,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"Let set be any selection set defined in the GraphQL document. FieldsInSetCanMerge(set) must be true.\" FieldsInSetCanMerge: \"SameResponseShape(fieldA, fieldB) must be true\", and, for the same parent type or a parent that isn't an Object type, \"fieldA and fieldB must have identical field names. fieldA and fieldB must have identical sets of arguments.\""
     },
     {
       "id": "leafFieldSelections",
@@ -162,13 +179,13 @@
         {
           "number": "5.3.3",
           "title": "Leaf Field Selections",
-          "url": "https://spec.graphql.org/draft/#sec-Leaf-Field-Selections"
+          "url": "https://spec.graphql.org/September2026/#sec-Leaf-Field-Selections"
         }
       ],
       "status": "pass",
-      "cases": 39,
+      "cases": 44,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"If selectionType is a scalar or enum: The subselection set of that selection must not be present. If selectionType is an interface, union, or object: The subselection set of that selection must be present.\" September 2025 says \"must be empty\" and \"must not be empty\", October 2021 \"must be empty\" and \"must NOT BE empty\": a MUST in every release. September 2026 reworded the rule when it added empty selection sets (§2.5 SelectionSet : { Selection* }, where the older releases have Selection+): \"An empty selection is a selection\", so `barkVolume {}` is invalid, and `human {}` is valid. The vectors with an empty selection set have since September 2026."
     },
     {
       "id": "argumentNames",
@@ -178,13 +195,13 @@
         {
           "number": "5.4.1",
           "title": "Argument Names",
-          "url": "https://spec.graphql.org/draft/#sec-Argument-Names"
+          "url": "https://spec.graphql.org/September2026/#sec-Argument-Names"
         }
       ],
       "status": "pass",
-      "cases": 8,
+      "cases": 10,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"For each argument in the document: ... Let argumentDefinition be the argument definition provided by the parent field or definition named argumentName. argumentDefinition must exist.\""
     },
     {
       "id": "argumentUniqueness",
@@ -194,13 +211,13 @@
         {
           "number": "5.4.2",
           "title": "Argument Uniqueness",
-          "url": "https://spec.graphql.org/draft/#sec-Argument-Uniqueness"
+          "url": "https://spec.graphql.org/September2026/#sec-Argument-Uniqueness"
         }
       ],
       "status": "pass",
       "cases": 6,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"Let arguments be all Arguments named argumentName in the Argument Set which contains argument. arguments must be the set containing only argument.\""
     },
     {
       "id": "requiredArguments",
@@ -210,13 +227,13 @@
         {
           "number": "5.4.3",
           "title": "Required Arguments",
-          "url": "https://spec.graphql.org/draft/#sec-Required-Arguments"
+          "url": "https://spec.graphql.org/September2026/#sec-Required-Arguments"
         }
       ],
       "status": "pass",
-      "cases": 11,
+      "cases": 17,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"If type is Non-Null and defaultValue does not exist: ... argument must exist. Let value be the value of argument. value must not be the null literal.\""
     },
     {
       "id": "fragmentNameUniqueness",
@@ -226,13 +243,13 @@
         {
           "number": "5.5.1.1",
           "title": "Fragment Name Uniqueness",
-          "url": "https://spec.graphql.org/draft/#sec-Fragment-Name-Uniqueness"
+          "url": "https://spec.graphql.org/September2026/#sec-Fragment-Name-Uniqueness"
         }
       ],
       "status": "pass",
-      "cases": 10,
+      "cases": 11,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"Let fragments be all fragment definitions in the document named fragmentName. fragments must be a set of one.\""
     },
     {
       "id": "fragmentSpreadTypeExistence",
@@ -242,13 +259,13 @@
         {
           "number": "5.5.1.2",
           "title": "Fragment Spread Type Existence",
-          "url": "https://spec.graphql.org/draft/#sec-Fragment-Spread-Type-Existence"
+          "url": "https://spec.graphql.org/September2026/#sec-Fragment-Spread-Type-Existence"
         }
       ],
       "status": "pass",
-      "cases": 12,
+      "cases": 13,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"For each named spread namedSpread in the document: Let fragment be the target of namedSpread. The target type of fragment must be defined in the schema.\""
     },
     {
       "id": "fragmentsOnObjectInterfaceOrUnionTypes",
@@ -258,13 +275,13 @@
         {
           "number": "5.5.1.3",
           "title": "Fragments on Object, Interface or Union Types",
-          "url": "https://spec.graphql.org/draft/#sec-Fragments-on-Object-Interface-or-Union-Types"
+          "url": "https://spec.graphql.org/September2026/#sec-Fragments-on-Object-Interface-or-Union-Types"
         }
       ],
       "status": "pass",
-      "cases": 14,
+      "cases": 18,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"For each fragment defined in the document: The target type of fragment must have kind UNION, INTERFACE, or OBJECT.\""
     },
     {
       "id": "fragmentsMustBeUsed",
@@ -274,13 +291,13 @@
         {
           "number": "5.5.1.4",
           "title": "Fragments Must Be Used",
-          "url": "https://spec.graphql.org/draft/#sec-Fragments-Must-Be-Used"
+          "url": "https://spec.graphql.org/September2026/#sec-Fragments-Must-Be-Used"
         }
       ],
       "status": "pass",
       "cases": 78,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"For each fragment defined in the document: fragment must be the target of at least one spread in the document.\""
     },
     {
       "id": "fragmentSpreadTargetDefined",
@@ -290,13 +307,13 @@
         {
           "number": "5.5.2.1",
           "title": "Fragment Spread Target Defined",
-          "url": "https://spec.graphql.org/draft/#sec-Fragment-Spread-Target-Defined"
+          "url": "https://spec.graphql.org/September2026/#sec-Fragment-Spread-Target-Defined"
         }
       ],
       "status": "pass",
       "cases": 9,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"For every namedSpread in the document: Let fragment be the target of namedSpread. fragment must be defined in the document.\""
     },
     {
       "id": "fragmentSpreadsMustNotFormCycles",
@@ -306,13 +323,13 @@
         {
           "number": "5.5.2.2",
           "title": "Fragment Spreads Must Not Form Cycles",
-          "url": "https://spec.graphql.org/draft/#sec-Fragment-Spreads-Must-Not-Form-Cycles"
+          "url": "https://spec.graphql.org/September2026/#sec-Fragment-Spreads-Must-Not-Form-Cycles"
         }
       ],
       "status": "pass",
       "cases": 54,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"For each fragmentDefinition in the document: ... DetectFragmentCycles(fragmentDefinition, visited).\" DetectFragmentCycles: \"visited must not contain spread.\""
     },
     {
       "id": "fragmentSpreadIsPossible",
@@ -322,13 +339,13 @@
         {
           "number": "5.5.2.3",
           "title": "Fragment Spread Is Possible",
-          "url": "https://spec.graphql.org/draft/#sec-Fragment-Spread-Is-Possible"
+          "url": "https://spec.graphql.org/September2026/#sec-Fragment-Spread-Is-Possible"
         }
       ],
       "status": "pass",
-      "cases": 36,
+      "cases": 38,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"Let applicableTypes be the intersection of GetPossibleTypes(fragmentType) and GetPossibleTypes(parentType). applicableTypes must not be empty.\""
     },
     {
       "id": "valuesOfCorrectType",
@@ -338,13 +355,39 @@
         {
           "number": "5.6.1",
           "title": "Values of Correct Type",
-          "url": "https://spec.graphql.org/draft/#sec-Values-of-Correct-Type"
+          "url": "https://spec.graphql.org/September2026/#sec-Values-of-Correct-Type"
+        },
+        {
+          "number": "3.5.2",
+          "title": "Float",
+          "url": "https://spec.graphql.org/September2026/#sec-Float"
+        }
+      ],
+      "status": "fail",
+      "cases": 295,
+      "failing": 5,
+      "basis": "Formal Specification: \"For each literal Input Value value in the document: Let type be the type expected in the position value is found. value must be coercible to type\" For a Float, §3.5.2 (the same in every release): \"If the input value otherwise represents a value not representable by finite IEEE 754 (e.g. NaN, Infinity, or a value outside the available precision), a request error must be raised.\" A literal too large for binary64, which rounds to Infinity (1e400), isn't coercible. A literal too small (1e-400) isn't graded: whether rounding it to 0 is \"outside the available precision\" the spec doesn't say."
+    },
+    {
+      "id": "intInputRange",
+      "title": "Int literals out of 32-bit range are rejected",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "3.5.1",
+          "title": "Int",
+          "url": "https://spec.graphql.org/September2026/#sec-Int"
+        },
+        {
+          "number": "5.6.1",
+          "title": "Values of Correct Type",
+          "url": "https://spec.graphql.org/September2026/#sec-Values-of-Correct-Type"
         }
       ],
       "status": "pass",
-      "cases": 282,
+      "cases": 4,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "§3.5.1 Int, Input Coercion: \"If the integer input value represents a value less than -2^31 or greater than or equal to 2^31, a request error should be raised.\" A SHOULD, the same in every release. §5.6.1 asks for a literal \"coercible to type\", so a service that follows the SHOULD rejects such a literal at validation. ID takes any integer, and Float has its own bound."
     },
     {
       "id": "inputObjectFieldNames",
@@ -354,14 +397,14 @@
         {
           "number": "5.6.2",
           "title": "Input Object Field Names",
-          "url": "https://spec.graphql.org/draft/#sec-Input-Object-Field-Names"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Field-Names"
         }
       ],
       "status": "subsumed",
       "cases": 11,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "note": "every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it, so a rejection can't be credited to this rule; accepting one fails both"
+      "note": "every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it, so a rejection can't be credited to this rule; accepting one fails both",
+      "basis": "Formal Specification: \"For each Input Object Field inputField in the document: ... inputFieldDefinition must exist.\""
     },
     {
       "id": "inputObjectFieldUniqueness",
@@ -371,13 +414,13 @@
         {
           "number": "5.6.3",
           "title": "Input Object Field Uniqueness",
-          "url": "https://spec.graphql.org/draft/#sec-Input-Object-Field-Uniqueness"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Field-Uniqueness"
         }
       ],
       "status": "pass",
-      "cases": 6,
+      "cases": 9,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"For every inputField in inputObject: ... Let fields be all Input Object Fields named name in inputObject. fields must be the set containing only inputField.\""
     },
     {
       "id": "inputObjectRequiredFields",
@@ -387,14 +430,14 @@
         {
           "number": "5.6.4",
           "title": "Input Object Required Fields",
-          "url": "https://spec.graphql.org/draft/#sec-Input-Object-Required-Fields"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Required-Fields"
         }
       ],
       "status": "subsumed",
       "cases": 8,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "note": "every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it, so a rejection can't be credited to this rule; accepting one fails both"
+      "note": "every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it, so a rejection can't be credited to this rule; accepting one fails both",
+      "basis": "Formal Specification: \"If type is Non-Null and defaultValue does not exist: ... field must exist. Let value be the value of field. value must not be the null literal.\""
     },
     {
       "id": "directivesAreDefined",
@@ -404,13 +447,13 @@
         {
           "number": "5.7.1",
           "title": "Directives Are Defined",
-          "url": "https://spec.graphql.org/draft/#sec-Directives-Are-Defined"
+          "url": "https://spec.graphql.org/September2026/#sec-Directives-Are-Defined"
         }
       ],
       "status": "pass",
-      "cases": 24,
+      "cases": 25,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"For every directive in a document: Let directiveName be the name of directive. Let directiveDefinition be the directive named directiveName. directiveDefinition must exist.\""
     },
     {
       "id": "directivesAreInValidLocations",
@@ -420,13 +463,13 @@
         {
           "number": "5.7.2",
           "title": "Directives Are in Valid Locations",
-          "url": "https://spec.graphql.org/draft/#sec-Directives-Are-in-Valid-Locations"
+          "url": "https://spec.graphql.org/September2026/#sec-Directives-Are-in-Valid-Locations"
         }
       ],
       "status": "pass",
-      "cases": 27,
+      "cases": 32,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"Let locations be the valid locations for directiveDefinition. Let adjacent be the AST node the directive affects. adjacent must be represented by an item within locations.\""
     },
     {
       "id": "directivesAreUniquePerLocation",
@@ -436,13 +479,13 @@
         {
           "number": "5.7.3",
           "title": "Directives Are Unique per Location",
-          "url": "https://spec.graphql.org/draft/#sec-Directives-Are-Unique-per-Location"
+          "url": "https://spec.graphql.org/September2026/#sec-Directives-Are-Unique-per-Location"
         }
       ],
       "status": "pass",
-      "cases": 10,
+      "cases": 14,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"Let directives be the set of Directives which apply to location and are not repeatable. ... namedDirectives must be a set of one.\""
     },
     {
       "id": "variableUniqueness",
@@ -452,13 +495,13 @@
         {
           "number": "5.8.1",
           "title": "Variable Uniqueness",
-          "url": "https://spec.graphql.org/draft/#sec-Variable-Uniqueness"
+          "url": "https://spec.graphql.org/September2026/#sec-Variable-Uniqueness"
         }
       ],
       "status": "pass",
-      "cases": 6,
+      "cases": 7,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"For every variable defined on operation: ... Let variables be the set of all variables named variableName on operation. variables must be a set of one.\""
     },
     {
       "id": "variablesAreInputTypes",
@@ -468,13 +511,13 @@
         {
           "number": "5.8.2",
           "title": "Variables Are Input Types",
-          "url": "https://spec.graphql.org/draft/#sec-Variables-Are-Input-Types"
+          "url": "https://spec.graphql.org/September2026/#sec-Variables-Are-Input-Types"
         }
       ],
       "status": "pass",
-      "cases": 4,
+      "cases": 10,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"For every variable on each operation: Let variableType be the type of variable. IsInputType(variableType) must be true.\""
     },
     {
       "id": "allVariableUsesDefined",
@@ -484,13 +527,13 @@
         {
           "number": "5.8.3",
           "title": "All Variable Uses Defined",
-          "url": "https://spec.graphql.org/draft/#sec-All-Variable-Uses-Defined"
+          "url": "https://spec.graphql.org/September2026/#sec-All-Variable-Uses-Defined"
         }
       ],
       "status": "pass",
       "cases": 15,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"For each variableUsage in scope, variable must be in operation's variable list.\" The same for every fragment the operation references transitively."
     },
     {
       "id": "allVariablesUsed",
@@ -500,13 +543,13 @@
         {
           "number": "5.8.4",
           "title": "All Variables Used",
-          "url": "https://spec.graphql.org/draft/#sec-All-Variables-Used"
+          "url": "https://spec.graphql.org/September2026/#sec-All-Variables-Used"
         }
       ],
       "status": "pass",
       "cases": 18,
       "failing": 0,
-      "failingDraftOnly": 0
+      "basis": "Formal Specification: \"Each variable in variables must be used at least once in either the operation scope itself or any fragment transitively referenced by that operation.\""
     },
     {
       "id": "allVariableUsagesAreAllowed",
@@ -516,13 +559,16 @@
         {
           "number": "5.8.5",
           "title": "All Variable Usages Are Allowed",
-          "url": "https://spec.graphql.org/draft/#sec-All-Variable-Usages-Are-Allowed"
+          "url": "https://spec.graphql.org/September2026/#sec-All-Variable-Usages-Are-Allowed"
         }
       ],
       "status": "fail",
-      "cases": 636,
+      "cases": 638,
       "failing": 2,
-      "failingDraftOnly": 2
+      "failingSince": {
+        "September2025": 2
+      },
+      "basis": "Formal Specification: \"For each variableUsage in variableUsages: ... IsVariableUsageAllowed(variableDefinition, variableUsage) must be true.\" IsNonNullPosition, and with it OneOf Input Objects, are new in September 2025: October 2021's IsVariableUsageAllowed has neither, so a variable in a OneOf Input Object's field isn't a Non-Null position there. The vectors that rest on it have since September 2025."
     },
     {
       "id": "acceptsValid",
@@ -532,14 +578,106 @@
         {
           "number": "5",
           "title": "Validation",
-          "url": "https://spec.graphql.org/draft/#sec-Validation"
+          "url": "https://spec.graphql.org/September2026/#sec-Validation"
+        },
+        {
+          "number": "6.1",
+          "title": "Executing Requests",
+          "url": "https://spec.graphql.org/September2026/#sec-Executing-Requests"
+        },
+        {
+          "number": "6.1.1",
+          "title": "Validating Requests",
+          "url": "https://spec.graphql.org/September2026/#sec-Validating-Requests"
         }
       ],
       "status": "pass",
-      "cases": 984,
+      "cases": 1045,
       "failing": 0,
-      "failingDraftOnly": 0,
-      "basis": "a document is valid when it satisfies every rule of §5, and only invalid requests are kept from execution (§6.1.1); rejecting a valid document applies a rule the spec doesn't have"
+      "basis": "§5 has no sentence that requires accepting; it only says \"operation execution should only occur for valid requests\". The requirement to go on comes from §6.1, which executes a request (\"The result of the request is determined by the result of executing this operation\"), and §6.1.1, which fails it only for validation errors: \"If validation errors are known, they should be reported in the list of \"errors\" in the response and the request must fail without operation execution.\" A document that satisfies every rule of §5 has none, so rejecting it applies a rule the spec doesn't have."
+    },
+    {
+      "id": "descriptionsInert",
+      "title": "Descriptions and comments don't change validation",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.2",
+          "title": "Descriptions",
+          "url": "https://spec.graphql.org/September2026/#sec-Descriptions"
+        },
+        {
+          "number": "2.1.4",
+          "title": "Insignificant Commas",
+          "url": "https://spec.graphql.org/September2026/#sec-Insignificant-Commas"
+        }
+      ],
+      "status": "pass",
+      "cases": 116,
+      "failing": 0,
+      "basis": "§2.2 (since September 2025): \"Descriptions in GraphQL executable documents are purely for documentation purposes. They MUST NOT affect the execution, validation, or response of a GraphQL document. It is safe to remove all descriptions and comments from executable documents without changing their behavior or results.\" §2.1.4 (every release): comments \"have no significance to the semantic meaning of a GraphQL Document\". Each twin is a vector of another check with a description on every operation, fragment and variable definition (since September 2025), or a comment after every line. It is graded only when the implementation answers its original right, or, for a crash, answers it without crashing, so a failure here is the description's or the comment's doing; a parser without descriptions crashes on the first kind."
+    },
+    {
+      "id": "fragmentSpreadReading",
+      "title": "Interface spreads where §5.5.2.3's formal text and prose disagree: which reading",
+      "level": "INFO",
+      "spec": [
+        {
+          "number": "5.5.2.3",
+          "title": "Fragment Spread Is Possible",
+          "url": "https://spec.graphql.org/September2026/#sec-Fragment-Spread-Is-Possible"
+        }
+      ],
+      "status": "pass",
+      "cases": 6,
+      "failing": 0,
+      "observed": {
+        "invalid (the formal text)": 2,
+        "valid (own scope, which the prose doesn't settle)": 4
+      },
+      "note": "invalid (the formal text): 2; valid (own scope, which the prose doesn't settle): 4",
+      "basis": "The formal text: \"Let applicableTypes be the intersection of GetPossibleTypes(fragmentType) and GetPossibleTypes(parentType). applicableTypes must not be empty.\" An interface no object type implements has no possible types, so it rejects every spread of one. The prose: \"an interface type fragment can always be spread into an interface scope which it implements\", and it doesn't say whether an interface may be spread into its own scope. Where an object type implements both, the readings agree, and those vectors are graded under fragmentSpreadIsPossible."
+    },
+    {
+      "id": "oneOfVariableReading",
+      "title": "Nullable variables with a default in a OneOf field, where §5.8.5's formal text and prose disagree: which reading",
+      "level": "INFO",
+      "spec": [
+        {
+          "number": "5.8.5",
+          "title": "All Variable Usages Are Allowed",
+          "url": "https://spec.graphql.org/September2026/#sec-All-Variable-Usages-Are-Allowed"
+        }
+      ],
+      "status": "pass",
+      "cases": 2,
+      "failing": 0,
+      "observed": {
+        "invalid (the prose)": 2
+      },
+      "note": "invalid (the prose): 2",
+      "basis": "The formal text allows a nullable variable in a non-null position when \"a default value exists for variableDefinition and is not the value null\", and IsNonNullPosition makes a OneOf Input Object's field such a position. The prose: \"Variables used for OneOf Input Object fields must be non-nullable.\""
+    },
+    {
+      "id": "identicalArgumentsReading",
+      "title": "Two fields of one response name whose arguments are identical under one reading of §5.3.2 only: which reading",
+      "level": "INFO",
+      "spec": [
+        {
+          "number": "5.3.2",
+          "title": "Field Selection Merging",
+          "url": "https://spec.graphql.org/September2026/#sec-Field-Selection-Merging"
+        }
+      ],
+      "status": "pass",
+      "cases": 5,
+      "failing": 0,
+      "observed": {
+        "invalid (their text)": 1,
+        "invalid (their literal values or their text)": 4
+      },
+      "note": "invalid (their text): 1; invalid (their literal values or their text): 4",
+      "basis": "FieldsInSetCanMerge: \"fieldA and fieldB must have identical sets of arguments\", without defining identical. The arguments can be compared by their literal values (the reference), by their text, or by their coerced values (defaults included)."
     }
   ],
   "findings": [
@@ -549,7 +687,6 @@
       ],
       "summary": "§5.3.2 Field Selection Merging isn't enforced: accepts documents that break only this rule",
       "cases": 22,
-      "draftOnly": 0,
       "fixtures": {
         "merging": 22
       },
@@ -565,17 +702,38 @@
     },
     {
       "checks": [
+        "valuesOfCorrectType"
+      ],
+      "summary": "§5.6.1 Values of Correct Type isn't enforced: accepts documents that break only this rule",
+      "cases": 5,
+      "fixtures": {
+        "twins": 5
+      },
+      "fixture": "twins",
+      "example": {
+        "input": "ValuesOfCorrectType-263: { echo(float: 1e400) }",
+        "response": {
+          "valid": true,
+          "errors": []
+        },
+        "expected": "invalid: ValuesOfCorrectType [\"value\"]"
+      }
+    },
+    {
+      "checks": [
         "allVariableUsagesAreAllowed"
       ],
-      "summary": "§5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; all rely on the draft",
+      "summary": "§5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; all rely on rules since September 2025",
       "cases": 2,
-      "draftOnly": 2,
+      "since": {
+        "September2025": 2
+      },
       "fixtures": {
         "spec": 2
       },
       "fixture": "spec",
       "example": {
-        "input": "[draft] AllVariableUsagesAreAllowed-spec-8: mutation addNullableCat($cat: CatInput) { addPet(pet: {cat: $cat}) { name } }",
+        "input": "[since September 2025] AllVariableUsagesAreAllowed-spec-8: mutation addNullableCat($cat: CatInput) { addPet(pet: {cat: $cat}) { name } }",
         "response": {
           "valid": true,
           "errors": []

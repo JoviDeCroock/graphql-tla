@@ -1,5 +1,5 @@
 {
-  "format": 1,
+  "format": 2,
   "area": "parse",
   "implementation": "juniper 0.18.0 (GraphQLType with TypeInfo)",
   "capabilities": [
@@ -7,31 +7,40 @@
     "idle",
     "introspect",
     "mutation",
+    "parent-values",
     "parse",
     "subscription",
+    "subscription-stream",
     "uncoercible-results",
     "validate"
   ],
   "provenance": {
-    "kit": "71f0a24bdc40",
+    "kit": "f437858e472b",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 2007,
-    "graded": 1992,
+    "vectors": 2847,
+    "graded": 2119,
     "skipped": {
+      "needs capability parse-sdl": 713,
       "unsupported by the adapter": 15
     }
   },
-  "checkerSelfTest": "passed (7 negative controls)",
+  "checkerSelfTest": "passed (10 negative controls)",
   "cases": {
-    "submitted": 1992,
-    "distinct": 1992,
+    "submitted": 2119,
+    "distinct": 2119,
     "malformed": 0
   },
   "adapterProblems": 0,
-  "draftOnly": {
-    "vectors": 113,
-    "failing": 10
+  "since": {
+    "September2025": {
+      "vectors": 126,
+      "failing": 2
+    },
+    "September2026": {
+      "vectors": 8,
+      "failing": 8
+    }
   },
   "checks": [
     {
@@ -42,13 +51,13 @@
         {
           "number": "2.1",
           "title": "Source Text",
-          "url": "https://spec.graphql.org/draft/#sec-Source-Text"
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Source-Text"
         }
       ],
+      "basis": "SourceCharacter :: \"Any Unicode scalar value\"; \"The source text of a GraphQL document must be a sequence of {SourceCharacter}.\"",
       "status": "pass",
-      "cases": 19,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 76,
+      "failing": 0
     },
     {
       "id": "whiteSpace",
@@ -58,13 +67,13 @@
         {
           "number": "2.1.1",
           "title": "White Space",
-          "url": "https://spec.graphql.org/draft/#sec-White-Space"
+          "url": "https://spec.graphql.org/September2026/#sec-White-Space"
         }
       ],
+      "basis": "Whitespace :: \"Horizontal Tab (U+0009)\" | \"Space (U+0020)\"",
       "status": "pass",
       "cases": 27,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "failing": 0
     },
     {
       "id": "lineTerminators",
@@ -74,13 +83,13 @@
         {
           "number": "2.1.2",
           "title": "Line Terminators",
-          "url": "https://spec.graphql.org/draft/#sec-Line-Terminators"
+          "url": "https://spec.graphql.org/September2026/#sec-Line-Terminators"
         }
       ],
+      "basis": "LineTerminator :: \"New Line (U+000A)\" | \"Carriage Return (U+000D)\" [lookahead != \"New Line (U+000A)\"] | \"Carriage Return (U+000D)\" \"New Line (U+000A)\"",
       "status": "pass",
       "cases": 31,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "failing": 0
     },
     {
       "id": "comments",
@@ -90,13 +99,13 @@
         {
           "number": "2.1.3",
           "title": "Comments",
-          "url": "https://spec.graphql.org/draft/#sec-Comments"
+          "url": "https://spec.graphql.org/September2026/#sec-Comments"
         }
       ],
+      "basis": "Comment :: `#` CommentChar* [lookahead != CommentChar]; CommentChar :: SourceCharacter but not LineTerminator",
       "status": "pass",
-      "cases": 21,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 46,
+      "failing": 0
     },
     {
       "id": "insignificantCommas",
@@ -106,13 +115,13 @@
         {
           "number": "2.1.4",
           "title": "Insignificant Commas",
-          "url": "https://spec.graphql.org/draft/#sec-Insignificant-Commas"
+          "url": "https://spec.graphql.org/September2026/#sec-Insignificant-Commas"
         }
       ],
+      "basis": "Comma :: ,; commas \"are used to improve the legibility of source text and separate lexical tokens but are otherwise syntactically and semantically insignificant within GraphQL documents.\"",
       "status": "pass",
-      "cases": 5,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 11,
+      "failing": 0
     },
     {
       "id": "lexicalTokens",
@@ -122,13 +131,13 @@
         {
           "number": "2.1.5",
           "title": "Lexical Tokens",
-          "url": "https://spec.graphql.org/draft/#sec-Lexical-Tokens"
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Source-Text.Lexical-Tokens"
         }
       ],
+      "basis": "Token :: Punctuator | Name | IntValue | FloatValue | StringValue; \"The character sequence must be described by a sequence of {Token} and {Ignored} lexical grammars.\"",
       "status": "pass",
-      "cases": 43,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 61,
+      "failing": 0
     },
     {
       "id": "ignoredTokens",
@@ -138,13 +147,13 @@
         {
           "number": "2.1.6",
           "title": "Ignored Tokens",
-          "url": "https://spec.graphql.org/draft/#sec-Ignored-Tokens"
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Source-Text.Ignored-Tokens"
         }
       ],
+      "basis": "Ignored :: UnicodeBOM | Whitespace | LineTerminator | Comment | Comma; \"Any amount of {Ignored} may appear before and after every lexical token.\"",
       "status": "pass",
-      "cases": 418,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 424,
+      "failing": 0
     },
     {
       "id": "punctuators",
@@ -154,13 +163,13 @@
         {
           "number": "2.1.7",
           "title": "Punctuators",
-          "url": "https://spec.graphql.org/draft/#sec-Punctuators"
+          "url": "https://spec.graphql.org/September2026/#sec-Punctuators"
         }
       ],
+      "basis": "Punctuator :: one of ! $ & ( ) ... : = @ [ ] { | }",
       "status": "pass",
       "cases": 40,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "failing": 0
     },
     {
       "id": "names",
@@ -170,13 +179,13 @@
         {
           "number": "2.1.8",
           "title": "Names",
-          "url": "https://spec.graphql.org/draft/#sec-Names"
+          "url": "https://spec.graphql.org/September2026/#sec-Names"
         }
       ],
+      "basis": "Name :: NameStart NameContinue* [lookahead != NameContinue]; NameStart :: Letter | `_`; NameContinue :: Letter | Digit | `_`",
       "status": "pass",
-      "cases": 14,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 15,
+      "failing": 0
     },
     {
       "id": "descriptions",
@@ -186,29 +195,29 @@
         {
           "number": "2.2",
           "title": "Descriptions",
-          "url": "https://spec.graphql.org/draft/#sec-Descriptions"
+          "url": "https://spec.graphql.org/September2026/#sec-Descriptions"
         }
       ],
+      "basis": "Description : StringValue; OperationDefinition : Description? OperationType Name? VariablesDefinition? Directives? SelectionSet | SelectionSet; FragmentDefinition : Description? fragment …; VariableDefinition : Description? Variable : …",
       "status": "pass",
       "cases": 121,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "failing": 0
     },
     {
       "id": "document",
-      "title": "A document is one or more executable definitions",
+      "title": "A document is one or more definitions of the kinds its grammar allows",
       "level": "MUST",
       "spec": [
         {
           "number": "2.3",
           "title": "Document",
-          "url": "https://spec.graphql.org/draft/#sec-Document"
+          "url": "https://spec.graphql.org/September2026/#sec-Document"
         }
       ],
+      "basis": "Document : Definition+; Definition : ExecutableDefinition | TypeSystemDefinitionOrExtension; ExecutableDocument : ExecutableDefinition+; ExecutableDefinition : OperationDefinition | FragmentDefinition",
       "status": "pass",
-      "cases": 98,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 110,
+      "failing": 0
     },
     {
       "id": "operations",
@@ -218,13 +227,13 @@
         {
           "number": "2.4",
           "title": "Operations",
-          "url": "https://spec.graphql.org/draft/#sec-Operations"
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Operations"
         }
       ],
+      "basis": "OperationDefinition : Description? OperationType Name? VariablesDefinition? Directives? SelectionSet | SelectionSet; OperationType : one of `query` `mutation` `subscription`",
       "status": "pass",
-      "cases": 101,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 102,
+      "failing": 0
     },
     {
       "id": "selectionSets",
@@ -234,13 +243,16 @@
         {
           "number": "2.5",
           "title": "Selection Sets",
-          "url": "https://spec.graphql.org/draft/#sec-Selection-Sets"
+          "url": "https://spec.graphql.org/September2026/#sec-Selection-Sets"
         }
       ],
+      "basis": "SelectionSet : { Selection* }; Selection : Field | FragmentSpread | InlineFragment",
       "status": "fail",
-      "cases": 95,
+      "cases": 97,
       "failing": 8,
-      "failingDraftOnly": 8
+      "failingSince": {
+        "September2026": 8
+      }
     },
     {
       "id": "fields",
@@ -250,13 +262,13 @@
         {
           "number": "2.6",
           "title": "Fields",
-          "url": "https://spec.graphql.org/draft/#sec-Fields"
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Fields"
         }
       ],
+      "basis": "Field : Alias? Name Arguments? Directives? SelectionSet?",
       "status": "pass",
-      "cases": 96,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 97,
+      "failing": 0
     },
     {
       "id": "arguments",
@@ -266,13 +278,13 @@
         {
           "number": "2.7",
           "title": "Arguments",
-          "url": "https://spec.graphql.org/draft/#sec-Arguments"
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Arguments"
         }
       ],
+      "basis": "Arguments[Const] : ( Argument[?Const]+ ); Argument[Const] : Name : Value[?Const]",
       "status": "pass",
       "cases": 111,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "failing": 0
     },
     {
       "id": "fieldAlias",
@@ -282,13 +294,13 @@
         {
           "number": "2.8",
           "title": "Field Alias",
-          "url": "https://spec.graphql.org/draft/#sec-Field-Alias"
+          "url": "https://spec.graphql.org/September2026/#sec-Field-Alias"
         }
       ],
+      "basis": "Alias : Name :",
       "status": "pass",
       "cases": 94,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "failing": 0
     },
     {
       "id": "fragments",
@@ -298,13 +310,13 @@
         {
           "number": "2.9",
           "title": "Fragments",
-          "url": "https://spec.graphql.org/draft/#sec-Fragments"
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Fragments"
         }
       ],
+      "basis": "FragmentSpread : ... FragmentName Directives?; FragmentDefinition : Description? fragment FragmentName TypeCondition Directives? SelectionSet; FragmentName : Name but not `on`",
       "status": "pass",
       "cases": 117,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "failing": 0
     },
     {
       "id": "typeConditions",
@@ -314,13 +326,13 @@
         {
           "number": "2.9.1",
           "title": "Type Conditions",
-          "url": "https://spec.graphql.org/draft/#sec-Type-Conditions"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-Conditions"
         }
       ],
+      "basis": "TypeCondition : on NamedType",
       "status": "pass",
       "cases": 112,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "failing": 0
     },
     {
       "id": "inlineFragments",
@@ -330,13 +342,13 @@
         {
           "number": "2.9.2",
           "title": "Inline Fragments",
-          "url": "https://spec.graphql.org/draft/#sec-Inline-Fragments"
+          "url": "https://spec.graphql.org/September2026/#sec-Inline-Fragments"
         }
       ],
+      "basis": "InlineFragment : ... TypeCondition? Directives? SelectionSet",
       "status": "pass",
-      "cases": 100,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 101,
+      "failing": 0
     },
     {
       "id": "inputValues",
@@ -346,13 +358,13 @@
         {
           "number": "2.10",
           "title": "Input Values",
-          "url": "https://spec.graphql.org/draft/#sec-Input-Values"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Values"
         }
       ],
+      "basis": "Value[Const] : [~Const] Variable | IntValue | FloatValue | StringValue | BooleanValue | NullValue | EnumValue | ListValue[?Const] | ObjectValue[?Const]",
       "status": "pass",
       "cases": 122,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "failing": 0
     },
     {
       "id": "intValue",
@@ -362,13 +374,13 @@
         {
           "number": "2.10.1",
           "title": "Int Value",
-          "url": "https://spec.graphql.org/draft/#sec-Int-Value"
+          "url": "https://spec.graphql.org/September2026/#sec-Int-Value"
         }
       ],
+      "basis": "IntValue :: IntegerPart [lookahead != {Digit, `.`, NameStart}]; IntegerPart :: NegativeSign? 0 | NegativeSign? NonZeroDigit Digit*; \"It must not have any leading {0}.\"",
       "status": "fail",
-      "cases": 46,
-      "failing": 15,
-      "failingDraftOnly": 0
+      "cases": 47,
+      "failing": 15
     },
     {
       "id": "floatValue",
@@ -378,13 +390,13 @@
         {
           "number": "2.10.2",
           "title": "Float Value",
-          "url": "https://spec.graphql.org/draft/#sec-Float-Value"
+          "url": "https://spec.graphql.org/September2026/#sec-Float-Value"
         }
       ],
+      "basis": "FloatValue :: IntegerPart FractionalPart ExponentPart | IntegerPart FractionalPart | IntegerPart ExponentPart, each [lookahead != {Digit, `.`, NameStart}]",
       "status": "pass",
-      "cases": 35,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 36,
+      "failing": 0
     },
     {
       "id": "booleanValue",
@@ -394,13 +406,13 @@
         {
           "number": "2.10.3",
           "title": "Boolean Value",
-          "url": "https://spec.graphql.org/draft/#sec-Boolean-Value"
+          "url": "https://spec.graphql.org/September2026/#sec-Boolean-Value"
         }
       ],
+      "basis": "BooleanValue : one of `true` `false`",
       "status": "pass",
-      "cases": 3,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 6,
+      "failing": 0
     },
     {
       "id": "stringValue",
@@ -410,13 +422,16 @@
         {
           "number": "2.10.4",
           "title": "String Value",
-          "url": "https://spec.graphql.org/draft/#sec-String-Value"
+          "url": "https://spec.graphql.org/September2026/#sec-String-Value"
         }
       ],
+      "basis": "StringValue :: `\"\"` [lookahead != `\"`] | `\"` StringCharacter+ `\"` | BlockString; \"The hexadecimal number encoded by a Unicode escape sequence must describe a _Unicode scalar value_, otherwise must result in a parse error.\"",
       "status": "fail",
-      "cases": 153,
+      "cases": 195,
       "failing": 10,
-      "failingDraftOnly": 2
+      "failingSince": {
+        "September2025": 2
+      }
     },
     {
       "id": "nullValue",
@@ -426,13 +441,13 @@
         {
           "number": "2.10.5",
           "title": "Null Value",
-          "url": "https://spec.graphql.org/draft/#sec-Null-Value"
+          "url": "https://spec.graphql.org/September2026/#sec-Null-Value"
         }
       ],
+      "basis": "NullValue : `null`",
       "status": "pass",
-      "cases": 2,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 4,
+      "failing": 0
     },
     {
       "id": "enumValue",
@@ -442,13 +457,13 @@
         {
           "number": "2.10.6",
           "title": "Enum Value",
-          "url": "https://spec.graphql.org/draft/#sec-Enum-Value"
+          "url": "https://spec.graphql.org/September2026/#sec-Enum-Value"
         }
       ],
+      "basis": "EnumValue : Name but not `true`, `false` or `null`",
       "status": "pass",
-      "cases": 14,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 16,
+      "failing": 0
     },
     {
       "id": "listValue",
@@ -458,13 +473,13 @@
         {
           "number": "2.10.7",
           "title": "List Value",
-          "url": "https://spec.graphql.org/draft/#sec-List-Value"
+          "url": "https://spec.graphql.org/September2026/#sec-List-Value"
         }
       ],
+      "basis": "ListValue[Const] : [ ] | [ Value[?Const]+ ]",
       "status": "pass",
-      "cases": 102,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 104,
+      "failing": 0
     },
     {
       "id": "inputObjectValues",
@@ -474,13 +489,13 @@
         {
           "number": "2.10.8",
           "title": "Input Object Values",
-          "url": "https://spec.graphql.org/draft/#sec-Input-Object-Values"
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Values"
         }
       ],
+      "basis": "ObjectValue[Const] : { } | { ObjectField[?Const]+ }; ObjectField[Const] : Name : Value[?Const]",
       "status": "pass",
-      "cases": 107,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 109,
+      "failing": 0
     },
     {
       "id": "variables",
@@ -490,13 +505,13 @@
         {
           "number": "2.11",
           "title": "Variables",
-          "url": "https://spec.graphql.org/draft/#sec-Variables"
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Variables"
         }
       ],
+      "basis": "Variable : $ Name; VariablesDefinition : ( VariableDefinition+ ); VariableDefinition : Description? Variable : Type DefaultValue? Directives[Const]?; DefaultValue : = Value[Const]",
       "status": "fail",
-      "cases": 158,
-      "failing": 2,
-      "failingDraftOnly": 0
+      "cases": 159,
+      "failing": 2
     },
     {
       "id": "typeReferences",
@@ -506,13 +521,13 @@
         {
           "number": "2.12",
           "title": "Type References",
-          "url": "https://spec.graphql.org/draft/#sec-Type-References"
+          "url": "https://spec.graphql.org/September2026/#sec-Type-References"
         }
       ],
+      "basis": "Type : NamedType | ListType | NonNullType; NamedType : Name; ListType : [ Type ]; NonNullType : NamedType ! | ListType !",
       "status": "pass",
-      "cases": 114,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "cases": 115,
+      "failing": 0
     },
     {
       "id": "directives",
@@ -522,13 +537,334 @@
         {
           "number": "2.13",
           "title": "Directives",
-          "url": "https://spec.graphql.org/draft/#sec-Directives"
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Directives"
         }
       ],
+      "basis": "Directives[Const] : Directive[?Const]+; Directive[Const] : @ Name Arguments[?Const]?",
       "status": "pass",
       "cases": 112,
-      "failing": 0,
-      "failingDraftOnly": 0
+      "failing": 0
+    },
+    {
+      "id": "typeSystemDocuments",
+      "title": "Type system documents hold type system definitions, and extension documents extensions too",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.1",
+          "title": "Type System Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System-Extensions"
+        }
+      ],
+      "basis": "TypeSystemDocument : TypeSystemDefinition+ (§3); TypeSystemExtensionDocument : TypeSystemDefinitionOrExtension+; TypeSystemDefinitionOrExtension : TypeSystemDefinition | TypeSystemExtension (§3.1)",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "typeSystemDescriptions",
+      "title": "Descriptions on type system definitions and their parts, not on extensions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.2",
+          "title": "Type System Descriptions",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System-Descriptions"
+        }
+      ],
+      "basis": "Description : StringValue, where a production allows one: every type system definition, FieldDefinition, InputValueDefinition and EnumValueDefinition starts with Description?, and no extension does",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "schemaDefinition",
+      "title": "Schema definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3",
+          "title": "Schema",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema"
+        }
+      ],
+      "basis": "SchemaDefinition : Description? schema Directives[Const]? { RootOperationTypeDefinition+ }; RootOperationTypeDefinition : OperationType : NamedType",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "schemaExtension",
+      "title": "Schema extensions add directives or root operation types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3.2",
+          "title": "Schema Extension",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Extension"
+        }
+      ],
+      "basis": "SchemaExtension : extend schema Directives[Const]? { RootOperationTypeDefinition+ } | extend schema Directives[Const] [lookahead != `{`]",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "typeExtensions",
+      "title": "A type extension names a kind of type",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.4.3",
+          "title": "Type Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-Extensions"
+        }
+      ],
+      "basis": "TypeExtension : ScalarTypeExtension | ObjectTypeExtension | InterfaceTypeExtension | UnionTypeExtension | EnumTypeExtension | InputObjectTypeExtension",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "scalarDefinition",
+      "title": "Scalar definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5",
+          "title": "Scalars",
+          "url": "https://spec.graphql.org/September2026/#sec-Scalars"
+        }
+      ],
+      "basis": "ScalarTypeDefinition : Description? scalar Name Directives[Const]?",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "scalarExtension",
+      "title": "Scalar extensions add directives",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5.6",
+          "title": "Scalar Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Scalar-Extensions"
+        }
+      ],
+      "basis": "ScalarTypeExtension : extend scalar Name Directives[Const]",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "objectDefinition",
+      "title": "Object definitions, implemented interfaces and field definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
+        }
+      ],
+      "basis": "ObjectTypeDefinition : Description? type Name ImplementsInterfaces? Directives[Const]? FieldsDefinition | Description? type Name ImplementsInterfaces? Directives[Const]? [lookahead != `{`]; ImplementsInterfaces : ImplementsInterfaces & NamedType | implements `&`? NamedType; FieldsDefinition : { FieldDefinition+ }; FieldDefinition : Description? Name ArgumentsDefinition? : Type Directives[Const]?",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "argumentsDefinition",
+      "title": "Argument definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6.1",
+          "title": "Field Arguments",
+          "url": "https://spec.graphql.org/September2026/#sec-Field-Arguments"
+        }
+      ],
+      "basis": "ArgumentsDefinition : ( InputValueDefinition+ ); InputValueDefinition : Description? Name : Type DefaultValue? Directives[Const]?",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "objectExtension",
+      "title": "Object extensions add interfaces, directives or fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6.3",
+          "title": "Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Object-Extensions"
+        }
+      ],
+      "basis": "ObjectTypeExtension : extend type Name ImplementsInterfaces? Directives[Const]? FieldsDefinition | extend type Name ImplementsInterfaces? Directives[Const] [lookahead != `{`] | extend type Name ImplementsInterfaces [lookahead != `{`]",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "interfaceDefinition",
+      "title": "Interface definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
+        }
+      ],
+      "basis": "InterfaceTypeDefinition : Description? interface Name ImplementsInterfaces? Directives[Const]? FieldsDefinition | Description? interface Name ImplementsInterfaces? Directives[Const]? [lookahead != `{`]",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "interfaceExtension",
+      "title": "Interface extensions add interfaces, directives or fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.7.1",
+          "title": "Interface Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Interface-Extensions"
+        }
+      ],
+      "basis": "InterfaceTypeExtension : extend interface Name ImplementsInterfaces? Directives[Const]? FieldsDefinition | extend interface Name ImplementsInterfaces? Directives[Const] [lookahead != `{`] | extend interface Name ImplementsInterfaces [lookahead != `{`]",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "unionDefinition",
+      "title": "Union definitions and their member types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.8",
+          "title": "Unions",
+          "url": "https://spec.graphql.org/September2026/#sec-Unions"
+        }
+      ],
+      "basis": "UnionTypeDefinition : Description? union Name Directives[Const]? UnionMemberTypes?; UnionMemberTypes : UnionMemberTypes | NamedType | = `|`? NamedType",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "unionExtension",
+      "title": "Union extensions add directives or member types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.8.1",
+          "title": "Union Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Union-Extensions"
+        }
+      ],
+      "basis": "UnionTypeExtension : extend union Name Directives[Const]? UnionMemberTypes | extend union Name Directives[Const]",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "enumDefinition",
+      "title": "Enum definitions and their values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.9",
+          "title": "Enums",
+          "url": "https://spec.graphql.org/September2026/#sec-Enums"
+        }
+      ],
+      "basis": "EnumTypeDefinition : Description? enum Name Directives[Const]? EnumValuesDefinition | Description? enum Name Directives[Const]? [lookahead != `{`]; EnumValuesDefinition : { EnumValueDefinition+ }; EnumValueDefinition : Description? EnumValue Directives[Const]?",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "enumExtension",
+      "title": "Enum extensions add directives or values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.9.1",
+          "title": "Enum Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Enum-Extensions"
+        }
+      ],
+      "basis": "EnumTypeExtension : extend enum Name Directives[Const]? EnumValuesDefinition | extend enum Name Directives[Const] [lookahead != `{`]",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "inputObjectDefinition",
+      "title": "Input object definitions and their fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10",
+          "title": "Input Objects",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Objects"
+        }
+      ],
+      "basis": "InputObjectTypeDefinition : Description? input Name Directives[Const]? InputFieldsDefinition | Description? input Name Directives[Const]? [lookahead != `{`]; InputFieldsDefinition : { InputValueDefinition+ }",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "inputObjectExtension",
+      "title": "Input object extensions add directives or fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10.2",
+          "title": "Input Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Extensions"
+        }
+      ],
+      "basis": "InputObjectTypeExtension : extend input Name Directives[Const]? InputFieldsDefinition | extend input Name Directives[Const] [lookahead != `{`]",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "directiveDefinition",
+      "title": "Directive definitions and their locations",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
+        }
+      ],
+      "basis": "DirectiveDefinition : Description? directive @ Name ArgumentsDefinition? Directives[Const]? `repeatable`? on DirectiveLocations; DirectiveLocations : DirectiveLocations | DirectiveLocation | `|`? DirectiveLocation; DirectiveLocation : ExecutableDirectiveLocation | TypeSystemDirectiveLocation, each one of a list of names",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "directiveExtension",
+      "title": "Directive extensions add directives",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.13.6",
+          "title": "Directive Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Directive-Extensions"
+        }
+      ],
+      "basis": "DirectiveExtension : extend directive @ Name Directives[Const]",
+      "since": "September2026",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
     }
   ],
   "findings": [
@@ -563,16 +899,17 @@
         "field-suffixes": 1,
         "random-documents": 4
       },
-      "draftOnly": 8,
+      "since": {
+        "September2026": 8
+      },
       "fixture": "parser-examples",
       "example": {
-        "input": "[draft] \"{}\"",
+        "input": "[since September 2026] \"{}\"",
         "response": {
           "ok": false
         },
         "expected": "{\"ok\":true}"
-      },
-      "edition": "draft"
+      }
     },
     {
       "checks": [
@@ -585,7 +922,9 @@
         "strings": 1,
         "block-strings": 3
       },
-      "draftOnly": 2,
+      "since": {
+        "September2025": 2
+      },
       "fixture": "lexer-examples",
       "example": {
         "input": "\"{a(x: \\\"\\\"\\\"\\\\\\\"\\\"\\\"\\\"\\\"\\\")}\"",
