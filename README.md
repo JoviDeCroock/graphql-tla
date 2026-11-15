@@ -249,3 +249,9 @@ Reading and running graphql-js 16.15.0 and 17.1.0 while writing these specs turn
 ## Writing specs
 
 See [docs/writing-specs.md](docs/writing-specs.md) for the layout, the mutant format, and the tla-ts pitfalls this repo ran into.
+
+## Results website
+
+The deployable Preact frontend lives in [`website/`](website/README.md). Run
+`npm run website:dev` locally or `npm run website:build` to generate static assets
+for Cloudflare Pages or Workers. It shows the latest checked-in conformance reports.

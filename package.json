@@ -12,20 +12,28 @@
     "check:graphql-js": "node scripts/check-conformance.mjs",
     "check:differentials": "node scripts/differential-lexer.mjs && node scripts/differential-validation.mjs && node scripts/differential-coercion.mjs && node scripts/differential-type-system.mjs",
     "check:mutants": "node scripts/differential-lexer.mjs --mutants && node scripts/differential-validation.mjs --mutants && node scripts/differential-coercion.mjs --mutants && node scripts/differential-type-system.mjs --mutants",
-    "typecheck": "tsc",
+    "typecheck": "tsc && tsc -p website/tsconfig.json",
     "conformance": "node scripts/conformance-reports.mjs",
-    "check:vectors": "node scripts/check-vectors.mjs"
+    "check:vectors": "node scripts/check-vectors.mjs",
+    "website:dev": "vite website",
+    "website:build": "tsc -p website/tsconfig.json && vite build website",
+    "website:preview": "vite preview website",
+    "website:test": "node --test website/test/*.test.mjs"
   },
   "devDependencies": {
     "graphql16": "npm:graphql@16.15.0",
     "graphql17": "npm:graphql@17.1.0",
     "tla-ts": "0.0.10",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vite": "^8.3.8"
   },
   "engines": {
     "node": ">=22"
   },
   "bin": {
     "graphql-tla": "kit/cli.mjs"
+  },
+  "dependencies": {
+    "preact": "^11.2.0"
   }
 }
