@@ -15,6 +15,7 @@ import { AREAS } from "../kit/areas.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
 const dir = mkdtempSync(join(tmpdir(), "graphql-tla-reports-"));
+const read = (path) => JSON.parse(readFileSync(path, "utf8"));
 const strip = (report) => JSON.stringify({ ...report, provenance: { ...report.provenance, kit: undefined, date: undefined } }, null, 1);
 let failed = 0;
 try {
@@ -37,10 +38,14 @@ try {
       } else if (!existsSync(committed)) {
         console.error(`✗ ${name}: no committed report; run npm run conformance`);
         failed++;
-      } else if (JSON.parse(readFileSync(join(dir, name), "utf8")).ok !== (status === 0)) {
+      } else if (read(committed).format !== read(join(dir, name)).format) {
+        // A report format change (kit/report.mjs REPORT_FORMAT) needs every report regenerated.
+        console.error(`✗ ${name}: the committed report is format ${read(committed).format}, the kit writes format ${read(join(dir, name)).format}; run npm run conformance`);
+        failed++;
+      } else if (read(join(dir, name)).ok !== (status === 0)) {
         console.error(`✗ ${name}: the report's ok doesn't match the run's exit status (${status})`);
         failed++;
-      } else if (strip(JSON.parse(readFileSync(join(dir, name), "utf8"))) !== strip(JSON.parse(readFileSync(committed, "utf8")))) {
+      } else if (strip(read(join(dir, name))) !== strip(read(committed))) {
         console.error(`✗ ${name}: differs from the committed report; run npm run conformance and review the change`);
         failed++;
       } else console.log(`✓ ${name}`);

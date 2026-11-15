@@ -1,6 +1,6 @@
 // The introspect area's self-test: responses built from the reference's
-// expected ones, which the checker must judge as stated, under both
-// profiles. Each vector's own expected response must pass, another
+// expected ones, which the checker must judge as stated, under every
+// profile. Each vector's own expected response must pass, another
 // vector's must fail, and each response broken on purpose must fail the
 // check it targets ("only": that check and no other). A few changes the
 // spec allows must pass, so that the checker isn't stricter than the spec
@@ -9,7 +9,7 @@
 
 import { Crash } from "../areas.mjs";
 import { fullResponse } from "./data.mjs";
-import { DISCOVERY_ALIASES, DISCOVERY_QUERY, PROFILES, TYPE_REF_DEPTH, neededArgs, neededFields, schemaQuery } from "./query.mjs";
+import { DISCOVERY_ALIASES, DISCOVERY_QUERY, PRIMARY, PROFILES, TYPE_REF_DEPTH, neededArgs, neededFields, schemaQuery } from "./query.mjs";
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -63,9 +63,10 @@ const dropDirectives = (...names) => (s) => (s.directives = s.directives.filter(
 // [vector id, name, the check it must fail ("pass": none), change,
 // options]. change gets the response's __schema (for a __schema vector),
 // its data, and the response; `rejected` answers with errors instead.
-// Options: only (no other check may fail), profile (default "draft"), and
-// provided (for a lookup: the built-in directives the service returned for
-// the schema's __schema).
+// Options: only (no other check may fail), profile (default
+// "September2026"), provided (for a lookup: the built-in directives the
+// service returned for the schema's __schema), and since (the release each
+// failing check must rest on, or null for none).
 const BROKEN = [
   ["rich.inc", "reorders an object's fields", "order", (s) => type(s, "Q").fields.reverse()],
   ["rich.inc", "drops an enum value", "enumValues", (s) => type(s, "E").enumValues.shift()],
@@ -95,7 +96,7 @@ const BROKEN = [
   ["order.inc", "reorders a type's interfaces", "order", (s) => type(s, "O").interfaces.reverse()],
   ["order.inc", "reorders a field's arguments", "order", (s) => field(s, "Query", "m").args.reverse()],
   ["rich.inc", "reorders a union's possible types", "order", (s) => type(s, "U").possibleTypes.reverse()],
-  ["rich.inc", "gives an object possibleTypes", "typeKinds", (s) => (type(s, "A").possibleTypes = []), { draftOnly: false }],
+  ["rich.inc", "gives an object possibleTypes", "typeKinds", (s) => (type(s, "A").possibleTypes = []), { since: null }],
   [
     "rich.inc",
     "lists __typename as a field",
@@ -113,7 +114,42 @@ const BROKEN = [
   ["rich.inc", "drops a built-in scalar it references", "builtinScalars", (s) => s.types.splice(s.types.findIndex((t) => t.name === "Int"), 1)],
   ["rich.inc", "adds a built-in scalar nothing references", "builtinScalars", (s) => s.types.push({ ...clone(type(s, "Int")), name: "Float" })],
   ["oneOf.inc", "drops isOneOf", "isOneOf", (s) => (type(s, "Pick").isOneOf = false)],
-  ["scalars.inc", "drops specifiedByURL", "specifiedByURL", (s) => (type(s, "Date").specifiedByURL = null)],
+  // §4.2.2: "specifiedByURL may return a String (in the form of a URL)"
+  ["scalars.inc", "drops specifiedByURL, though it provides @specifiedBy", "specifiedByURLOmitted", (s) => (type(s, "Date").specifiedByURL = null), { only: true }],
+  ["scalars.lookup", "drops specifiedByURL for __type(name:), though it provides @specifiedBy", "specifiedByURLOmitted", (s, d) => (d.t0.specifiedByURL = null), { only: true }],
+  ["scalars.inc", "gives a scalar without @specifiedBy a URL", "specifiedByURL", (s) => (type(s, "Plain").specifiedByURL = "https://example.com/plain"), { only: true }],
+  // A type the document defines that nothing references (§4.2.1 doesn't
+  // settle whether it is "contained within this schema").
+  ["unreferenced.inc", "leaves out a type nothing references", "unreferencedTypes", (s) => s.types.splice(s.types.findIndex((t) => t.name === "Orphan"), 1), { only: true }],
+  ["unreferenced.lookup", "answers null for a type nothing references", "unreferencedTypes", (s, d) => (d.t1 = null), { only: true }],
+  ["roots.inc", "leaves out Mutation, which the query root references", "types", (s) => s.types.splice(s.types.findIndex((t) => t.name === "Mutation"), 1)],
+  ["roots.lookup", "answers null for Mutation, which the query root references", "typeByName", (s, d) => (d.t2 = null), { only: true }],
+  ["interfaces.inc", "leaves out User, which only Node's possibleTypes reach", "types", (s) => s.types.splice(s.types.findIndex((t) => t.name === "User"), 1)],
+  // The reason of an item deprecated without one is the default of the
+  // service's own @deprecated(reason:): a different default counts once,
+  // under builtinDefinitions.
+  [
+    "deprecation.inc",
+    "gives @deprecated(reason:) another default, and reports it for a field deprecated without a reason",
+    "builtinDefinitions",
+    (s) => {
+      directive(s, "deprecated").args[0].defaultValue = '"No longer supported."';
+      field(s, "Query", "a").deprecationReason = "No longer supported.";
+    },
+    { only: true, since: null },
+  ],
+  ["deprecation.inc", "reports another reason for a field deprecated without one", "deprecation", (s) => (field(s, "Query", "a").deprecationReason = "No longer supported."), { only: true }],
+  [
+    "deprecation.inc",
+    "gives @deprecated(reason:) another default, and reports another reason for a field deprecated with one",
+    ["builtinDefinitions", "deprecation"],
+    (s) => {
+      directive(s, "deprecated").args[0].defaultValue = '"No longer supported."';
+      field(s, "Query", "b").deprecationReason = "No longer supported.";
+    },
+  ],
+  // Since September 2025, deprecationReason "returns the reason".
+  ["deprecation.inc", "reports null for a deprecated field's reason", "deprecation", (s) => (field(s, "Query", "b").deprecationReason = null), { only: true }],
   ["rich.inc", "changes a built-in directive's locations", "builtinDefinitions", (s) => directive(s, "skip").locations.pop()],
   ["rich.inc", "changes an introspection field's type", "builtinDefinitions", (s) => (field(s, "__Type", "fields").type = field(s, "__Type", "fields").type.ofType)],
   ["minimal.inc", "names the wrong type in the root's __typename", "typename", (s, d) => (d.__typename = "Mutation")],
@@ -125,7 +161,7 @@ const BROKEN = [
   ["rich.inc", "doesn't provide @specifiedBy, in a schema with a custom scalar without a URL", "builtinDirectives", dropDirectives("specifiedBy"), { only: true }],
   // A directive the result shows is provided must be returned (§3.13).
   ["scalars.inc", "doesn't return @specifiedBy, though Date has a URL", "directives", dropDirectives("specifiedBy"), { only: true }],
-  ["oneOf.inc", "doesn't return @oneOf, though Pick is OneOf", "directives", dropDirectives("oneOf"), { only: true, draftOnly: true }],
+  ["oneOf.inc", "doesn't return @oneOf, though Pick is OneOf", "directives", dropDirectives("oneOf"), { only: true, since: "September2025" }],
   ["scalars.inc", "doesn't return @specifiedBy, and gives Date another URL", ["directives", "specifiedByURL"], (s) => {
     dropDirectives("specifiedBy")(s);
     type(s, "Date").specifiedByURL = "https://example.com/other";
@@ -160,9 +196,11 @@ const BROKEN = [
   ["oneOf.inc", "rejects a schema that applies @oneOf", "builtinDirectives", rejected, { only: true }],
   ["rich.inc", "rejects a schema that needs no optional directive", "executes", rejected],
   ["defaults.inc", "crashes (the adapter answers with an error)", "executes", crash, { only: true }],
-  ["inputDeprecation.inc", "crashes on a draft-only schema", "executes", crash, { only: true, draftOnly: true }],
-  // A schema with syntax only the draft's grammar has: a request error isn't
-  // graded, data: null is.
+  // A crash fails in every release, even on a vector only a later release
+  // can express.
+  ["inputDeprecation.inc", "crashes on a schema new in September 2025", "executes", crash, { only: true, since: null }],
+  // A schema with syntax only September 2026's grammar has: a request error
+  // isn't graded, data: null is.
   ["directiveDeprecation.inc", "rejects a schema that applies a directive to a directive definition", "pass", rejected, { unbuilt: true }],
   ["directiveDeprecation.inc", "fails executing a schema that applies a directive to a directive definition, with data: null", "executes", executionFailure, { only: true }],
   // data: null with errors is an execution failure, not a request error.
@@ -247,15 +285,56 @@ const BROKEN = [
   ],
   ["rich.inc", "changes the type of an introspection field, with the same name", "builtinDefinitions", (s) => (field(s, "__Field", "name").type = nonNull(named("Boolean"))), { only: true }],
   // A built-in field's type that differs only in Non-Null is a SHOULD.
-  ["rich.inc", "makes __Directive.isRepeatable nullable", "builtinNullability", (s) => (field(s, "__Directive", "isRepeatable").type = named("Boolean")), { only: true, draftOnly: false }],
-  ["rich.inc", "makes __InputValue.isDeprecated, which October 2021 doesn't have, nullable", "builtinNullability", (s) => (field(s, "__InputValue", "isDeprecated").type = named("Boolean")), { only: true, draftOnly: true }],
+  ["rich.inc", "makes __Directive.isRepeatable nullable", "builtinNullability", (s) => (field(s, "__Directive", "isRepeatable").type = named("Boolean")), { only: true, since: null }],
+  ["rich.inc", "makes __InputValue.isDeprecated, which October 2021 doesn't have, nullable", "builtinNullability", (s) => (field(s, "__InputValue", "isDeprecated").type = named("Boolean")), { only: true, since: "September2025" }],
+  ["rich.inc", "makes __Directive.isDeprecated, which September 2025 doesn't have, nullable", "builtinNullability", (s) => (field(s, "__Directive", "isDeprecated").type = named("Boolean")), { only: true, since: "September2026" }],
   ["rich.lookup", "makes a field of the document's nullable", "fields", (s, d) => (d.t0.fields[0].type = d.t0.fields[0].type.kind === "NON_NULL" ? d.t0.fields[0].type.ofType : nonNull(d.t0.fields[0].type)), { only: true }],
-  // Under the draft, a built-in that is October 2021's, or that October 2021
-  // doesn't define, rests on the draft alone.
-  ["rich.inc", "gives __Type.fields(includeDeprecated:) October 2021's Boolean", "builtinDefinitions", (s) => (field(s, "__Type", "fields").args[0].type = named("Boolean")), { only: true, draftOnly: true }],
-  ["rich.inc", "gives __Field.args(includeDeprecated:), which October 2021 doesn't have, the type Boolean", "builtinDefinitions", (s) => (field(s, "__Field", "args").args[0].type = named("Boolean")), { only: true, draftOnly: true }],
-  ["rich.inc", "gives @skip a location neither edition has", "builtinDefinitions", (s) => directive(s, "skip").locations.push("QUERY"), { only: true, draftOnly: false }],
-  // A service that lacks a field or argument the draft defines: the absence
+  // A built-in that is as an older release defines it, or that it doesn't
+  // define, rests on the release after it.
+  // A built-in argument that is nullable where the spec's is Non-Null, with
+  // the same default, accepts everything the spec's does: a SHOULD, as for
+  // fields.
+  ["rich.inc", "gives __Type.fields(includeDeprecated:) October 2021's Boolean", "builtinNullability", (s) => (field(s, "__Type", "fields").args[0].type = named("Boolean")), { only: true, since: "September2025" }],
+  ["rich.inc", "gives __Field.args(includeDeprecated:), which October 2021 doesn't have, the type Boolean", "builtinNullability", (s) => (field(s, "__Field", "args").args[0].type = named("Boolean")), { only: true, since: "September2025" }],
+  ["rich.inc", "gives __Schema.directives(includeDeprecated:), which September 2025 doesn't have, the type Boolean", "builtinNullability", (s) => (field(s, "__Schema", "directives").args[0].type = named("Boolean")), { only: true, since: "September2026" }],
+  ["rich.inc", "gives @deprecated(reason:) October 2021's String", "builtinNullability", (s) => (directive(s, "deprecated").args[0].type = named("String")), { only: true, since: "September2025" }],
+  ["rich.inc", "gives @skip(if:) the type Boolean", "builtinNullability", (s) => (directive(s, "skip").args[0].type = named("Boolean")), { only: true, since: null }],
+  ["rich.inc", "gives @skip(if:) the type String!", "builtinDefinitions", (s) => (directive(s, "skip").args[0].type = nonNull(named("String"))), { only: true, since: null }],
+  ["oneOf.inc", "makes an input field of the document's nullable", "inputFields", (s) => (type(s, "Plain").inputFields[0].type = named("Int")), { only: true }],
+  ["rich.inc", "gives @skip a location no edition has", "builtinDefinitions", (s) => directive(s, "skip").locations.push("QUERY"), { only: true, since: null }],
+  // A location left out of a built-in directive rests on the release after
+  // the newest one whose definition doesn't have it either; one added that
+  // no edition has rests on none.
+  [
+    "minimal.inc",
+    "gives @deprecated September 2025's four locations (no DIRECTIVE_DEFINITION)",
+    "builtinDefinitions",
+    (s) => (directive(s, "deprecated").locations = directive(s, "deprecated").locations.filter((l) => l !== "DIRECTIVE_DEFINITION")),
+    { only: true, since: "September2026" },
+  ],
+  ["minimal.inc", "gives @deprecated October 2021's two locations", "builtinDefinitions", (s) => (directive(s, "deprecated").locations = ["FIELD_DEFINITION", "ENUM_VALUE"]), { only: true, since: "September2025" }],
+  ["minimal.inc", "gives @deprecated September 2026's locations without ENUM_VALUE", "builtinDefinitions", (s) => (directive(s, "deprecated").locations = directive(s, "deprecated").locations.filter((l) => l !== "ENUM_VALUE")), { only: true, since: null }],
+  ["minimal.inc", "gives @deprecated a location no edition has", "builtinDefinitions", (s) => directive(s, "deprecated").locations.push("FIELD"), { only: true, since: null }],
+  [
+    "minimal.inc",
+    "gives @deprecated September 2025's four locations, and one no edition has",
+    "builtinDefinitions",
+    (s) => (directive(s, "deprecated").locations = [...directive(s, "deprecated").locations.filter((l) => l !== "DIRECTIVE_DEFINITION"), "FIELD"]),
+    { only: true, since: null },
+  ],
+  // A service whose built-in directives and introspection types are
+  // exactly September 2025's fails only what September 2026 introduced.
+  [
+    "inputDeprecation.inc",
+    "answers September 2025's @deprecated and __DirectiveLocation, with the missing September 2026 fields filled in",
+    "builtinDefinitions",
+    (s) => {
+      directive(s, "deprecated").locations = directive(s, "deprecated").locations.filter((l) => l !== "DIRECTIVE_DEFINITION");
+      type(s, "__DirectiveLocation").enumValues = type(s, "__DirectiveLocation").enumValues.filter((v) => v.name !== "DIRECTIVE_DEFINITION");
+    },
+    { only: true, since: "September2026" },
+  ],
+  // A service that lacks a field or argument September 2026 defines: the absence
   // counts once per run (run.mjs), not in each result, and what it hides
   // isn't graded. The rest still is.
   ["oneOf.inc", "has no __Type.isOneOf", "pass", lacks("__Type", "isOneOf"), { missing: ["__Type.isOneOf"] }],
@@ -337,14 +416,14 @@ const BROKEN = [
   ["rich.lookup", "leaves out a selected ofType", "executes", (s, d) => delete d.t0.fields[0].args[0].type.ofType],
   ["rich.lookup", "answers errors: []", "envelope", (s, d, r) => (r.errors = [])],
   // §4.2.2: a List or Non-Null type's other fields are null
-  ["wrappers", "gives a Non-Null type a description", "typeKinds", (s, d) => (wrapperOf(d, "types").description = "x"), { only: true, draftOnly: false }],
+  ["wrappers", "gives a Non-Null type a description", "typeKinds", (s, d) => (wrapperOf(d, "types").description = "x"), { only: true, since: null }],
   ["wrappers", "gives a List type fields: []", "typeKinds", (s, d) => (wrapperOf(d, "types").ofType.fields = []), { only: true }],
-  ["wrappers", "gives a Non-Null type isOneOf: false", "typeKinds", (s, d) => (wrapperOf(d, "queryType").isOneOf = false), { only: true, draftOnly: true }],
-  // isOneOf is only the draft's: null where it shouldn't be, or the other
-  // way round, rests on the draft.
-  ["rich.inc", "gives a scalar isOneOf: false", "typeKinds", (s) => (type(s, "Date").isOneOf = false), { only: true, draftOnly: true }],
-  ["rich.inc", "gives a built-in scalar isOneOf: false", "typeKinds", (s) => (type(s, "Int").isOneOf = false), { only: true, draftOnly: true }],
-  ["rich.inc", "gives an input object isOneOf: null", "typeKinds", (s) => (type(s, "In").isOneOf = null), { only: true, draftOnly: true }],
+  ["wrappers", "gives a Non-Null type isOneOf: false", "typeKinds", (s, d) => (wrapperOf(d, "queryType").isOneOf = false), { only: true, since: "September2025" }],
+  // isOneOf is new in September 2025: null where it shouldn't be, or the
+  // other way round, rests on it.
+  ["rich.inc", "gives a scalar isOneOf: false", "typeKinds", (s) => (type(s, "Date").isOneOf = false), { only: true, since: "September2025" }],
+  ["rich.inc", "gives a built-in scalar isOneOf: false", "typeKinds", (s) => (type(s, "Int").isOneOf = false), { only: true, since: "September2025" }],
+  ["rich.inc", "gives an input object isOneOf: null", "typeKinds", (s) => (type(s, "In").isOneOf = null), { only: true, since: "September2025" }],
   ["wrappers", "leaves out a wrapper's selected interfaces", "executes", (s, d) => delete wrapperOf(d, "types").interfaces],
   ["wrappers", "rejects the query", "executes", rejected, { only: true }],
   // The wrapper types must come from each of __Schema's fields.
@@ -361,28 +440,69 @@ const BROKEN = [
     },
     { only: true },
   ],
+  // The September 2025 profile
+  ...[
+    // A built-in that is as September 2026 defines it is informational.
+    [
+      "minimal.inc",
+      "gives @deprecated September 2026's five locations",
+      "builtinEdition",
+      (s) => directive(s, "deprecated").locations.push("DIRECTIVE_DEFINITION"),
+      { only: true, since: "September2026" },
+    ],
+    [
+      "minimal.inc",
+      "lists September 2026's __Directive.isDeprecated among __Directive's fields",
+      "builtinEdition",
+      (s) => type(s, "__Directive").fields.push({ ...extraField("isDeprecated"), type: nonNull(named("Boolean")) }),
+      { only: true, since: "September2026" },
+    ],
+    ["minimal.inc", "has DIRECTIVE_DEFINITION among __DirectiveLocation's values", "builtinEdition", (s) => type(s, "__DirectiveLocation").enumValues.push(extraValue("DIRECTIVE_DEFINITION")), { only: true, since: "September2026" }],
+    // One that is October 2021's rests on September 2025.
+    ["minimal.inc", "gives @deprecated October 2021's two locations", "builtinDefinitions", (s) => (directive(s, "deprecated").locations = ["FIELD_DEFINITION", "ENUM_VALUE"]), { only: true, since: "September2025" }],
+    ["minimal.inc", "gives @deprecated(reason:) October 2021's String", "builtinNullability", (s) => (directive(s, "deprecated").args[0].type = named("String")), { only: true, since: "September2025" }],
+    ["minimal.inc", "gives __Type.fields(includeDeprecated:) October 2021's Boolean", "builtinNullability", (s) => (field(s, "__Type", "fields").args[0].type = named("Boolean")), { only: true, since: "September2025" }],
+    ["minimal.inc", "gives @deprecated a location no edition has", "builtinDefinitions", (s) => directive(s, "deprecated").locations.push("FIELD"), { only: true, since: null }],
+    ["minimal.inc", "adds a field to __Type that no edition defines", "builtinAdditions", (s) => type(s, "__Type").fields.push(extraField("extra")), { only: true, since: null }],
+    // September 2025: deprecationReason "returns the reason".
+    ["deprecation.inc", "reports null for a deprecated field's reason", "deprecation", (s) => (field(s, "Query", "b").deprecationReason = null), { only: true, since: null }],
+    ["inputDeprecation.inc", "reports a deprecated argument as not deprecated", "deprecation", (s) => Object.assign(field(s, "Query", "b").args[0], { isDeprecated: false, deprecationReason: null }), { only: true, since: "September2025" }],
+    ["oneOf.inc", "drops isOneOf", "isOneOf", (s) => (type(s, "Pick").isOneOf = false), { only: true, since: "September2025" }],
+    ["order.inc", "reorders an object's fields", "order", (s) => type(s, "Query").fields.reverse(), { only: true, since: "September2025" }],
+    ["minimal.inc", "answers __Directive.isDeprecated, which the September 2025 query doesn't select", "executes", (s) => (directive(s, "skip").isDeprecated = false)],
+    ["oneOf.inc", "has no __Type.isOneOf", "pass", lacks("__Type", "isOneOf"), { missing: ["__Type.isOneOf"] }],
+    ["wrappers", "gives a List type fields: []", "typeKinds", (s, d) => (wrapperOf(d, "types").ofType.fields = []), { only: true }],
+  ].map(([id, name, check, change, options = {}]) => [id, `September 2025: ${name}`, check, change, { ...options, profile: "September2025" }]),
   // The October 2021 profile
   ...[
-    // A built-in that is as the draft defines it is informational.
+    // A built-in that is as a later release defines it is informational,
+    // and rests on the first release that defines it so.
     [
       "minimal.inc",
-      "gives @deprecated the draft's locations",
+      "gives @deprecated September 2026's locations",
       "builtinEdition",
       (s) => directive(s, "deprecated").locations.push("ARGUMENT_DEFINITION", "INPUT_FIELD_DEFINITION", "DIRECTIVE_DEFINITION"),
-      { only: true },
+      { only: true, since: "September2026" },
     ],
-    ["minimal.inc", "gives @deprecated a location neither edition has", "builtinDefinitions", (s) => directive(s, "deprecated").locations.push("FIELD"), { only: true }],
-    ["minimal.inc", "gives @deprecated(reason:) the draft's String!", "builtinEdition", (s) => (directive(s, "deprecated").args[0].type = nonNull(named("String"))), { only: true }],
-    ["minimal.inc", "gives __Type.fields(includeDeprecated:) the draft's Boolean!", "builtinEdition", (s) => (field(s, "__Type", "fields").args[0].type = nonNull(named("Boolean"))), { only: true }],
+    ["minimal.inc", "gives @deprecated a location no edition has", "builtinDefinitions", (s) => directive(s, "deprecated").locations.push("FIELD"), { only: true, since: null }],
+    ["minimal.inc", "gives @deprecated September 2025's four locations", "builtinEdition", (s) => directive(s, "deprecated").locations.push("ARGUMENT_DEFINITION", "INPUT_FIELD_DEFINITION"), { only: true, since: "September2025" }],
+    ["minimal.inc", "leaves ENUM_VALUE out of @deprecated", "builtinDefinitions", (s) => directive(s, "deprecated").locations.pop(), { only: true, since: null }],
+    ["minimal.inc", "gives @skip(if:) the type Boolean", "builtinNullability", (s) => (directive(s, "skip").args[0].type = named("Boolean")), { only: true }],
+    // October 2021: deprecationReason "optionally provides a reason".
+    ["deprecation.inc", "reports null for a deprecated field's reason", "deprecationReasonOmitted", (s) => (field(s, "Query", "b").deprecationReason = null), { only: true }],
+    ["deprecation.lookup", "reports null for a deprecated enum value's reason, for __type(name:)", "deprecationReasonOmitted", (s, d) => (d.t2.enumValues.find((v) => v.name === "B").deprecationReason = null), { only: true }],
+    ["deprecation.inc", "reports another reason for a deprecated field", "deprecation", (s) => (field(s, "Query", "b").deprecationReason = "Use d"), { only: true }],
+    ["minimal.inc", "gives @deprecated(reason:) the String! of September 2025 and 2026", "builtinEdition", (s) => (directive(s, "deprecated").args[0].type = nonNull(named("String"))), { only: true, since: "September2025" }],
+    ["minimal.inc", "gives __Type.fields(includeDeprecated:) the Boolean! of September 2025 and 2026", "builtinEdition", (s) => (field(s, "__Type", "fields").args[0].type = nonNull(named("Boolean"))), { only: true, since: "September2025" }],
     [
       "minimal.inc",
-      "lists the draft's __Type.isOneOf among __Type's fields",
+      "lists __Type.isOneOf, new in September 2025, among __Type's fields",
       "builtinEdition",
       (s) => type(s, "__Type").fields.push({ name: "isOneOf", description: null, args: [], type: named("Boolean"), isDeprecated: false, deprecationReason: null }),
-      { only: true },
+      { only: true, since: "September2025" },
     ],
-    ["minimal.inc", "has DIRECTIVE_DEFINITION among __DirectiveLocation's values", "builtinEdition", (s) => type(s, "__DirectiveLocation").enumValues.push(extraValue("DIRECTIVE_DEFINITION")), { only: true }],
-    ["minimal.inc", "adds a field to __Type that neither edition defines", "builtinAdditions", (s) => type(s, "__Type").fields.push(extraField("extra")), { only: true }],
+    ["minimal.inc", "has DIRECTIVE_DEFINITION, new in September 2026, among __DirectiveLocation's values", "builtinEdition", (s) => type(s, "__DirectiveLocation").enumValues.push(extraValue("DIRECTIVE_DEFINITION")), { only: true, since: "September2026" }],
+    ["minimal.inc", "adds a field to __Type that no edition defines", "builtinAdditions", (s) => type(s, "__Type").fields.push(extraField("extra")), { only: true, since: null }],
     // A service that lacks a field (graphql-dotnet lacks both): the absence
     // counts once per run, and the rest is graded.
     ["rich.inc", "has no __Directive.isRepeatable", "pass", lacks("__Directive", "isRepeatable"), { missing: ["__Directive.isRepeatable"] }],
@@ -397,7 +517,7 @@ const BROKEN = [
     ["wrappers", "gives a List type a specifiedByURL", "typeKinds", (s, d) => (wrapperOf(d, "types").ofType.specifiedByURL = "u"), { only: true }],
     ["rich.lookup", "answers null for a type the schema has", "typeByName", (s, d) => (d.t1 = null)],
     ["deprecation.lookup.defaults", "returns a deprecated value when includeDeprecated is false", "deprecation", (s, d) => d.t2.enumValues.push({ name: "B", description: null, isDeprecated: true, deprecationReason: "Gone" })],
-  ].map(([id, name, check, change, options = {}]) => [id, `October 2021: ${name}`, check, change, { ...options, profile: "oct2021" }]),
+  ].map(([id, name, check, change, options = {}]) => [id, `October 2021: ${name}`, check, change, { ...options, profile: "October2021" }]),
 ];
 
 // The innermost type ref the query selects, at the TypeRef fragment's depth.
@@ -430,7 +550,7 @@ export const CONTROLS = (vectors, builtins) => {
   const byId = new Map(vectors.map((v) => [v.id, v]));
   const controls = [];
   for (const profile of PROFILES) {
-    const asked = profile === "draft" ? vectors : vectors.filter((v) => v.query2021);
+    const asked = vectors.filter((v) => v.queries[profile]);
     asked.forEach((v, i) => {
       const own = fullResponse(v, builtins, profile);
       controls.push({ name: "its own expected response", vector: v, profile, response: own, check: "pass" });
@@ -438,18 +558,19 @@ export const CONTROLS = (vectors, builtins) => {
       if (JSON.stringify(other) !== JSON.stringify(own)) controls.push({ name: "another vector's expected response", vector: v, profile, response: other, check: "any" });
     });
   }
-  for (const [id, name, check, change, { only = false, profile = "draft", provided, missing = [], draftOnly, unbuilt } = {}] of BROKEN) {
+  for (const [id, name, check, change, { only = false, profile = PRIMARY, provided, missing = [], since, unbuilt } = {}] of BROKEN) {
     const v = byId.get(id);
     if (!v) throw new Error(`no vector ${id} for a control`);
+    if (!v.queries[profile]) throw new Error(`the vector ${id} has no ${profile} query, for a control`);
     let response = clone(fullResponse(v, builtins, profile));
     if (change.replaces) response = change();
     else change(response.data.__schema, response.data, response);
-    controls.push({ name, vector: v, profile, response, check, only, missing, draftOnly, unbuilt, ...(provided ? { provided: new Set(provided) } : {}) });
+    controls.push({ name, vector: v, profile, response, check, only, missing, since, unbuilt, ...(provided ? { provided: new Set(provided) } : {}) });
   }
   controls.push({
     name: "answers with errors",
     vector: vectors[0],
-    profile: "draft",
+    profile: PRIMARY,
     response: { errors: [{ message: "Cannot query field" }] },
     check: "executes",
   });
@@ -463,7 +584,7 @@ export const PROFILE_CONTROLS = (vectors, builtins) => {
   const probe = vectors[0];
   const failure = { data: null, errors: [{ message: "Cannot query field", path: ["__schema"] }] };
   const requestError = { errors: [{ message: "Cannot query field" }] };
-  const answered = fullResponse(probe, builtins, "oct2021");
+  const answered = fullResponse(probe, builtins, "October2021");
   // DISCOVERY_QUERY's answer for a service with a profile's fields and
   // arguments, plus `extra`, without `lacking`.
   const discovered = (profile, lacking, extra = []) => {
@@ -482,66 +603,72 @@ export const PROFILE_CONTROLS = (vectors, builtins) => {
   };
   // An answer for one query, a request error for every other.
   const only = (answers) => (q) => answers.get(q) ?? requestError;
+  const q = probe.queries;
   const dotnet = ["__Type.specifiedByURL", "__Directive.isRepeatable"];
-  const draftOnly = [
-    "__InputValue.isDeprecated",
-    "__InputValue.deprecationReason",
-    "__Directive.isDeprecated",
-    "__Directive.deprecationReason",
-    "__Type.inputFields(includeDeprecated:)",
-    "__Field.args(includeDeprecated:)",
-    "__Directive.args(includeDeprecated:)",
-    "__Schema.directives(includeDeprecated:)",
-  ];
-  const juniper = ["__Directive.isDeprecated", "__Directive.deprecationReason", "__Schema.directives(includeDeprecated:)"];
-  const draftWithout = (missing) => schemaQuery("draft", probe.includeDeprecated, missing);
+  // What September 2025's query needs that October 2021's types don't have.
+  const since2025 = ["__InputValue.isDeprecated", "__InputValue.deprecationReason", "__Type.inputFields(includeDeprecated:)", "__Field.args(includeDeprecated:)", "__Directive.args(includeDeprecated:)"];
+  // What September 2026's query needs that September 2025's types don't have.
+  const since2026 = ["__Directive.isDeprecated", "__Directive.deprecationReason", "__Schema.directives(includeDeprecated:)"];
+  const without = (profile, missing) => schemaQuery(profile, probe.includeDeprecated, missing);
   return [
     {
-      name: "an answer for the draft's query keeps the draft profile",
-      answer: only(new Map([[probe.query, answered]])),
-      profile: "draft",
+      name: "an answer for September 2026's query keeps the September 2026 profile",
+      answer: only(new Map([[q.September2026, answered]])),
+      profile: "September2026",
       missing: [],
     },
     {
-      name: "errors with data: null for the draft's query, unreadable fields, and an answer for October 2021's, selects October 2021",
-      answer: only(new Map([[probe.query, failure], [probe.query2021, answered]])),
-      profile: "oct2021",
+      name: "September 2026's query rejected, and September 2025's answered, selects September 2025",
+      answer: only(new Map([[q.September2025, answered], [q.October2021, answered]])),
+      profile: "September2025",
       missing: [],
     },
     {
-      name: "a request error for the draft's query, and an answer for October 2021's, selects October 2021",
-      answer: only(new Map([[probe.query2021, answered]])),
-      profile: "oct2021",
+      name: "errors with data: null for September 2026's and September 2025's queries, unreadable fields, and an answer for October 2021's, selects October 2021",
+      answer: only(new Map([[q.September2026, failure], [q.September2025, failure], [q.October2021, answered]])),
+      profile: "October2021",
       missing: [],
     },
     {
-      name: "the draft's query rejected, and __Type lacks isOneOf, selects the draft without it",
-      answer: only(new Map([[DISCOVERY_QUERY, discovered("draft", ["__Type.isOneOf"])], [draftWithout(["__Type.isOneOf"]), answered], [probe.query2021, answered]])),
-      profile: "draft",
+      name: "a request error for the later releases' queries, and an answer for October 2021's, selects October 2021",
+      answer: only(new Map([[q.October2021, answered]])),
+      profile: "October2021",
+      missing: [],
+    },
+    {
+      name: "both later releases' queries rejected, and __Type lacks isOneOf, selects September 2026 without it",
+      answer: only(new Map([[DISCOVERY_QUERY, discovered("September2026", ["__Type.isOneOf"])], [without("September2026", ["__Type.isOneOf"]), answered], [without("September2025", ["__Type.isOneOf"]), answered], [q.October2021, answered]])),
+      profile: "September2026",
       missing: ["__Type.isOneOf"],
     },
     {
-      name: "the draft's query rejected, and the introspection types lack __Schema.directives(includeDeprecated:) and __Directive's deprecation, selects the draft without them",
-      answer: only(new Map([[DISCOVERY_QUERY, discovered("draft", juniper)], [draftWithout(juniper), answered]])),
-      profile: "draft",
-      missing: juniper,
+      name: "both later releases' queries rejected, and the introspection types are September 2025's without __Type.isOneOf, selects September 2025 without it",
+      answer: only(
+        new Map([
+          [DISCOVERY_QUERY, discovered("September2025", ["__Type.isOneOf"])],
+          [without("September2026", ["__Type.isOneOf", ...since2026]), answered],
+          [without("September2025", ["__Type.isOneOf"]), answered],
+        ]),
+      ),
+      profile: "September2025",
+      missing: ["__Type.isOneOf"],
     },
     {
-      name: "the draft's query rejected, and the introspection types are October 2021's without __Type.specifiedByURL and __Directive.isRepeatable, selects the draft without them",
-      answer: only(new Map([[DISCOVERY_QUERY, discovered("oct2021", dotnet, ["__Type.isOneOf"])], [draftWithout([...dotnet, ...draftOnly]), answered]])),
-      profile: "draft",
-      missing: [...dotnet, ...draftOnly],
+      name: "both later releases' queries rejected, and the introspection types are October 2021's with __Type.isOneOf and without __Type.specifiedByURL and __Directive.isRepeatable, selects September 2025 without what they lack",
+      answer: only(new Map([[DISCOVERY_QUERY, discovered("October2021", dotnet, ["__Type.isOneOf"])], [without("September2025", [...dotnet, ...since2025]), answered]])),
+      profile: "September2025",
+      missing: [...dotnet, ...since2025],
     },
     {
-      name: "the draft's query without what the service lacks rejected too, and October 2021's answered, selects October 2021",
-      answer: only(new Map([[DISCOVERY_QUERY, discovered("draft", ["__Type.isOneOf"])], [probe.query2021, answered]])),
-      profile: "oct2021",
+      name: "the later releases' queries without what the service lacks rejected too, and October 2021's answered, selects October 2021",
+      answer: only(new Map([[DISCOVERY_QUERY, discovered("September2025", ["__Type.isOneOf"])], [q.October2021, answered]])),
+      profile: "October2021",
       missing: [],
     },
     {
-      name: "both rejected, and the introspection types lack __Type.kind, without which nothing can be graded, keeps the draft profile",
-      answer: only(new Map([[DISCOVERY_QUERY, discovered("draft", ["__Type.kind"])]])),
-      profile: "draft",
+      name: "every query rejected, and the introspection types lack __Type.kind, without which nothing can be graded, keeps the September 2026 profile",
+      answer: only(new Map([[DISCOVERY_QUERY, discovered("September2026", ["__Type.kind"])]])),
+      profile: "September2026",
       missing: [],
     },
   ];

@@ -162,6 +162,54 @@ export const schemaData = (sdl) => {
   return { description, types, directives, schemaDef, operations };
 };
 
+// The DirectiveLocation of each kind of definition a directive can be
+// applied to in SDL (§3.13 TypeSystemDirectiveLocation).
+const LOCATION = {
+  SchemaDefinition: "SCHEMA",
+  ScalarTypeDefinition: "SCALAR",
+  ObjectTypeDefinition: "OBJECT",
+  FieldDefinition: "FIELD_DEFINITION",
+  InputValueDefinition: "ARGUMENT_DEFINITION",
+  InterfaceTypeDefinition: "INTERFACE",
+  UnionTypeDefinition: "UNION",
+  EnumTypeDefinition: "ENUM",
+  EnumValueDefinition: "ENUM_VALUE",
+  InputObjectTypeDefinition: "INPUT_OBJECT",
+  DirectiveDefinition: "DIRECTIVE_DEFINITION",
+};
+
+// Every directive the document applies, as [name, location], in document
+// order. An input value is an argument, except an input object's field.
+const usesOf = (doc) => {
+  const uses = [];
+  const visit = (node, inputObject = false) => {
+    const location =
+      node.kind === "InputValueDefinition" && inputObject ? "INPUT_FIELD_DEFINITION" : LOCATION[node.kind];
+    for (const d of node.directives ?? []) uses.push({ name: d.name.value, location });
+    const own = node.kind === "InputObjectTypeDefinition";
+    for (const f of node.fields ?? []) visit(f, own);
+    for (const a of node.arguments ?? []) if (a.kind === "InputValueDefinition") visit(a);
+    for (const v of node.values ?? []) visit(v);
+  };
+  for (const def of doc.definitions) visit(def);
+  return uses;
+};
+
+// schemaData with TypeSystem.tla's two optional fields, for the schema
+// area's verdicts: how many schema definitions the document has (§3.3, "at
+// most one"), and where it applies each directive (§3.13, "Directives must
+// only be used in the locations they are declared to belong in"). The
+// introspect area keeps to schemaData, so its schemas aren't judged by
+// these two rules.
+export const schemaVerdictData = (sdl) => {
+  const doc = graphql.parse(sdl);
+  return {
+    ...schemaData(sdl),
+    schemaDefinitions: doc.definitions.filter((d) => d.kind === "SchemaDefinition").length,
+    uses: usesOf(doc),
+  };
+};
+
 // ---------------------------------------------------------------------------
 // TLA+ text
 

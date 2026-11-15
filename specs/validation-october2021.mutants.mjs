@@ -2,7 +2,7 @@
 // (SingleRootFieldOctober2021), each caught by October2021ExamplesHold.
 // They live apart from validation.mutants.mjs because
 // scripts/differential-validation.mjs runs those against graphql-js, which
-// checks only the draft's rules.
+// checks only September 2026's rules.
 
 const file = "Validation.tla";
 

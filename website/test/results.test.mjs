@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import {
-  collectReports, summarize, selectChecks, selectFindings, verdict, areasOf, draftOnlyLabel, levelText,
-  exampleLines, profileText, draftOnlyText, noteParts, findingSeverity, VERDICT_LABELS,
+  collectReports, summarize, selectChecks, selectFindings, verdict, areasOf, sinceLabel, sinceText, sinceSentence, levelText,
+  exampleLines, profileText, sinceReportText, noteParts, findingSeverity, editionName, GRADED, GRADED_TEXT, VERDICT_LABELS,
 } from '../src/results.mjs';
 const dir = new URL('../../conformance/reports/', import.meta.url);
 const files = readdirSync(dir).filter(f => f.endsWith('.json'));
@@ -56,20 +56,54 @@ test('verdicts keep MUST, SHOULD and INFO apart', () => {
   assert.equal(VERDICT_LABELS.should, 'should');
   for (const c of all) assert.ok(VERDICT_LABELS[verdict(c)], `${c.id} has a label`);
 });
-test('a check failing only in draft-only cases is labelled as such, at its own level', () => {
-  const failing = reports.flatMap(r => r.checks).filter(c => c.status === 'fail');
-  const draft = failing.filter(c => c.failingDraftOnly);
-  assert.ok(draft.length > 0, 'some report has draft-only failures');
-  for (const c of failing) {
-    const label = draftOnlyLabel(c);
-    if (!c.failingDraftOnly) assert.equal(label, null);
-    else assert.equal(label, c.failingDraftOnly >= c.failing ? 'all draft only' : `${c.failingDraftOnly} draft only`);
-  }
-  assert.equal(draftOnlyLabel({ status: 'fail', level: 'SHOULD', failing: 2, failingDraftOnly: 2 }), 'all draft only');
-  assert.equal(verdict({ status: 'fail', level: 'SHOULD', failing: 2, failingDraftOnly: 2 }), 'should');
-  assert.equal(levelText({ level: 'MUST', edition: 'draft' }), 'MUST (draft only)');
-  assert.equal(levelText({ level: 'SHOULD', oct2021: 'MAY' }), 'SHOULD (Oct 2021: MAY)');
-  for (const c of selectChecks(reports, 'all', 'all', '')) assert.equal(c.draftLabel, draftOnlyLabel(c));
+// Synthetic format 2 reports: the committed reports may predate the format.
+const synthetic = {
+  area: 'parse', implementation: 'Impl', cases: { distinct: 10 }, adapterProblems: 0,
+  checks: [
+    { id: 'm', title: 'M', level: 'MUST', status: 'fail', cases: 10, failing: 4, failingSince: { September2025: 3, September2026: 1 } },
+    { id: 's', title: 'S', level: 'SHOULD', status: 'fail', cases: 10, failing: 2, failingSince: { September2026: 2 } },
+    { id: 'o', title: 'O', level: 'MUST', status: 'fail', cases: 10, failing: 2, failingSince: { September2025: 1 } },
+    { id: 'p', title: 'P', level: 'MUST', status: 'pass', cases: 10, failing: 0, failingSince: {} },
+    { id: 'e', title: 'E', level: 'MUST', status: 'fail', cases: 10, failing: 1, levels: { September2025: 'SHOULD', October2021: 'SHOULD' } },
+  ],
+  findings: [
+    { checks: ['m'], cases: 4, since: { September2025: 3, September2026: 1 }, fixtures: { f: 4 }, fixture: 'f', example: { input: '[since September 2025] x', response: {} } },
+    { checks: ['s'], cases: 2, since: { September2026: 2 }, fixtures: { f: 2 }, fixture: 'f', example: { input: '[since September 2026] y', response: {} } },
+    { checks: ['o'], cases: 2, fixtures: { f: 2 }, fixture: 'f', example: { input: 'z', response: {} } },
+  ],
+};
+test('the graded edition is September 2026, the latest release', () => {
+  assert.equal(GRADED, 'September2026');
+  assert.equal(GRADED_TEXT, 'September 2026 (latest release)');
+  assert.equal(editionName('October2021'), 'October 2021');
+});
+test('failing cases are counted by the release that introduced their rules, at the check\'s own level', () => {
+  const [m, s, o, p] = synthetic.checks;
+  assert.equal(sinceLabel(m), '3 since September 2025, 1 new in September 2026');
+  assert.equal(sinceLabel(s), 'all new in September 2026');
+  assert.equal(sinceLabel(o), '1 since September 2025');
+  assert.equal(sinceLabel(p), null);
+  assert.equal(sinceLabel({ status: 'fail', failing: 2 }), null);
+  assert.equal(verdict(s), 'should');
+  assert.equal(sinceText({ September2025: 2 }, 2), 'all since September 2025');
+  assert.equal(sinceSentence(m.failingSince, m.failing, 'the failing cases'), '3 of the failing cases rely on grammar or rules introduced in September 2025 and 1 on ones introduced in September 2026, not in October 2021.');
+  assert.equal(sinceSentence(s.failingSince, s.failing, 'them'), 'All of them rely on grammar or rules introduced in September 2026, not in October 2021.');
+  assert.equal(sinceSentence(undefined, 2, 'them'), null);
+  const shown = selectChecks([synthetic], 'all', 'all', '');
+  for (const c of shown) assert.equal(c.sinceLabel, sinceLabel(c));
+  assert.deepEqual(selectChecks([synthetic], 'all', 'should', '').map(c => c.id), ['s']);
+});
+test('a check\'s level is September 2026\'s, with the releases whose level differs', () => {
+  assert.equal(levelText({ level: 'MUST' }), 'MUST');
+  assert.equal(levelText(synthetic.checks[4]), 'MUST (SHOULD in September 2025 and October 2021)');
+  assert.equal(levelText({ level: 'MUST', levels: { October2021: 'SHOULD' } }), 'MUST (SHOULD in October 2021)');
+  assert.equal(levelText({ level: 'MUST', since: 'September2025' }), 'MUST (since September 2025)');
+  assert.equal(levelText({ level: 'SHOULD', since: 'September2026', levels: { September2025: 'MAY' } }), 'SHOULD (new in September 2026; MAY in September 2025)');
+});
+test('findings carry their cases on newer rules, by release', () => {
+  const shown = selectFindings([synthetic], 'all', 'all', '');
+  assert.deepEqual(shown.map(f => f.sinceLabel), ['3 since September 2025, 1 new in September 2026', 'all new in September 2026', null]);
+  assert.deepEqual(shown.map(f => f.verdict), ['fail', 'should', 'fail']);
 });
 test('filters area, status and case-insensitive text together', () => {
   const selected = reports.filter(r => r.key === 'graphql-js-17');
@@ -79,7 +113,7 @@ test('filters area, status and case-insensitive text together', () => {
   assert.deepEqual(selectChecks(selected, 'all', 'all', 'not-a-real-check-title'), []);
   assert.equal(selectChecks(selected, 'all', 'all', '').length, selected.flatMap(r => r.checks).length);
 });
-test('every finding is shown, with its level, crash and draft-only labels and its example', () => {
+test('every finding is shown, with its level, crash and release labels and its example', () => {
   const findings = selectFindings(reports, 'all', 'all', '');
   assert.equal(findings.length, reports.reduce((n, r) => n + r.findings.length, 0));
   assert.equal(findings.filter(f => f.crash).length, reports.flatMap(r => r.findings).filter(f => f.kind === 'crash').length);
@@ -89,7 +123,7 @@ test('every finding is shown, with its level, crash and draft-only labels and it
     assert.equal(shown.index, i + 1);
     assert.equal(shown.summary, f.summary);
     assert.equal(shown.verdict, findingSeverity(f, r.checks));
-    assert.equal(shown.draftLabel, f.draftOnly ? (f.draftOnly >= f.cases ? 'all draft only' : `${f.draftOnly} draft only`) : null);
+    assert.equal(shown.sinceLabel, sinceText(f.since, f.cases));
   });
   for (const v of ['fail', 'should', 'info']) {
     assert.equal(selectFindings(reports, 'all', v, '').length, findings.filter(f => f.verdict === v).length);
@@ -104,17 +138,19 @@ test('every finding is shown, with its level, crash and draft-only labels and it
   assert.equal(lines.expected, withExpected.example.expected);
   for (const f of findings) assert.ok(exampleLines(f).some(([label]) => label === 'response' || label === 'stream'));
 });
-test('profiles, profile notes and draft-only counts are shown', () => {
-  const profiled = reports.filter(r => r.profile);
-  assert.ok(profiled.length > 0, 'some report has an introspection profile');
-  for (const r of profiled) {
+test('profiles, profile notes and counts of vectors on newer rules are shown', () => {
+  assert.equal(profileText({}), null);
+  assert.equal(profileText({ profile: 'September2026' }), "the September 2026 edition's introspection types (latest release)");
+  assert.equal(profileText({ profile: 'September2025', profileNote: 'It answered the September 2025 query' }), "the September 2025 edition's introspection types. It answered the September 2025 query");
+  assert.equal(profileText({ profile: 'October2021' }), "the October 2021 edition's introspection types");
+  for (const r of reports.filter(r => r.profile)) {
     const text = profileText(r);
-    assert.ok(text.includes(r.profile === 'draft' ? "the draft's" : r.profile));
     if (r.profileNote) assert.ok(text.endsWith(r.profileNote));
   }
-  assert.ok(profiled.some(r => r.profileNote), 'some report has a profile note');
-  for (const r of reports.filter(r => !r.profile)) assert.equal(profileText(r), null);
-  for (const r of reports.filter(r => r.draftOnly)) assert.ok(draftOnlyText(r).includes(String(r.draftOnly.vectors ?? r.draftOnly)));
+  assert.equal(sinceReportText({}), null);
+  assert.equal(sinceReportText({ since: { September2025: { vectors: 120, failing: 3 }, September2026: { vectors: 10, failing: 0 } } }),
+    'since September 2025, 3 of 120 vectors failing; new in September 2026, 0 of 10 vectors failing');
+  assert.equal(sinceReportText({ since: { September2026: { vectors: 1, failing: 1 } } }), 'new in September 2026, 1 of 1 vector failing');
 });
 test('hand-written notes keep their text and resolve their links against the repository', () => {
   const base = 'https://example.org/repo/conformance/';

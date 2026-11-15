@@ -8,17 +8,19 @@
 // wrong answer counts against that section's check, and toward one finding:
 // "accepts what §X rejects" or "rejects what §X accepts".
 //
-// A vector whose verdict differs under the October 2021 edition carries
-// `edition: "draft"`. Findings count their draft-only vectors, and so does
-// the report.
+// The verdicts are September 2026's. A vector whose verdict differs under an
+// older release carries `since`, the first release whose text gives its
+// verdict ("September2025" or "September2026"). Checks count their failing
+// vectors per release (`failingSince`), findings theirs (`since`), and so
+// does the report.
 //
 // A crash is a third kind of failure: the adapter answered a vector with an
 // `error` (docs/kit-areas.md, "Protocol"). It fails the vector's check,
 // whatever the vector's verdict, since the implementation gave none, and
 // counts toward its own finding: "crashes on a source §X accepts" or
-// "rejects". It is never counted as an agreement. Nor is it ever draft
-// only: every source is an input the parser must answer, in either edition,
-// so a crash fails in both, even on a vector whose verdict is draft only.
+// "rejects". It is never counted as an agreement. Nor is it ever counted
+// by release: every source is an input the parser must answer, in every
+// release, so a crash fails in all of them, even on a vector with `since`.
 //
 // An adapter whose transport can't carry a lone surrogate (a JSON parser
 // that refuses one) answers { unsupported: "why" } for a source that holds
@@ -109,31 +111,37 @@ export const sortAnswers = (all, raw) => {
 };
 
 const quote = (source) => JSON.stringify(source);
+
+// The releases a vector's `since` can name, oldest first, and how a report
+// writes one.
+export const RELEASES = ["September2025", "September2026"];
+const releaseName = (release) => release.replace(/(\d{4})$/, " $1");
+const count = (counts, release) => void (counts[release] = (counts[release] ?? 0) + 1);
 const shorter = (a, b) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0);
 
 // Compares answers with the vectors. answers[i] is the adapter's result
 // for vectors[i]: { ok } and anything else it sent, or a Crash.
 export const judge = (vectors, answers) => {
   const byId = new Map(vectors.map((v) => [v.id, v]));
-  const stats = new Map(CHECKS.map((c) => [c.number, { cases: 0, failing: 0, failingDraftOnly: 0 }]));
+  const stats = new Map(CHECKS.map((c) => [c.number, { cases: 0, failing: 0, failingSince: {} }]));
   const findings = new Map();
   const failed = [];
   const crashed = [];
   const malformed = [];
   const found = (key, vector, finding) => {
-    const f = findings.get(key) ?? { ...finding, cases: 0, fixtures: {}, draftOnly: 0 };
+    const f = findings.get(key) ?? { ...finding, cases: 0, fixtures: {}, since: {} };
     f.cases++;
     f.fixtures[vector.family] = (f.fixtures[vector.family] ?? 0) + 1;
-    // A crash fails in every edition (see the top of this file).
-    const draftOnly = vector.edition === "draft" && key !== "malformed" && finding.kind !== "crash";
-    if (draftOnly) f.draftOnly++;
+    // A crash fails in every release (see the top of this file).
+    const since = key !== "malformed" && finding.kind !== "crash" ? vector.since : undefined;
+    if (since) count(f.since, since);
     if (!f.shortest || shorter(vector.source, f.shortest) < 0) {
       const sibling = byId.get(vector.sibling);
       f.shortest = vector.source;
       f.fixture = vector.family;
       if (finding.kind === "crash") f.problem = finding.problem;
       f.example = {
-        input: `${draftOnly ? "[draft] " : ""}${quote(vector.source)}`,
+        input: `${since ? `[since ${releaseName(since)}] ` : ""}${quote(vector.source)}`,
         response: finding.response,
         expected: JSON.stringify(vector.expected),
         ...(sibling ? { sibling: `${quote(sibling.source)}, which the reference ${sibling.expected.ok ? "accepts" : "rejects"}` } : {}),
@@ -174,7 +182,7 @@ export const judge = (vectors, answers) => {
     failed.push(i);
     const check = byNumber.get(v.spec[0]);
     stats.get(check.number).failing++;
-    if (v.edition === "draft") stats.get(check.number).failingDraftOnly++;
+    if (v.since) count(stats.get(check.number).failingSince, v.since);
     const s = section(check.number);
     found(`${check.number}\u0000${v.expected.ok}`, v, {
       checks: [check.id],
@@ -182,10 +190,8 @@ export const judge = (vectors, answers) => {
       response: answer,
     });
   });
-  // A finding whose vectors are all draft only is tagged as such.
   for (const f of findings.values()) {
-    if (f.draftOnly === f.cases) f.edition = "draft";
-    if (f.draftOnly === 0) delete f.draftOnly;
+    if (Object.keys(f.since).length === 0) delete f.since;
   }
   return {
     failed,
@@ -211,7 +217,7 @@ export const grade = (all, raw) => {
       status: s.failing > 0 ? "fail" : s.cases > 0 ? "pass" : "untested",
       cases: s.cases,
       failing: s.failing,
-      failingDraftOnly: s.failingDraftOnly,
+      ...(Object.keys(s.failingSince).length ? { failingSince: s.failingSince } : {}),
     };
   });
   // Every check is a MUST, so --strict changes nothing here.
@@ -244,10 +250,19 @@ export const selfTest = (vectors) => {
   const spared = [...primaries].filter((s) => crash.stats.get(s).failing === 0);
   if (spared.length) problems.push(`with every vector crashed, ${spared.map((s) => `§${s}`).join(", ")} still pass`);
   if (crash.findings.some((f) => f.kind !== "crash")) problems.push("a crash counts toward a finding that isn't a crash");
-  // ... and none of those crashes is draft only, though some vectors are.
-  const draftCrashes = [...crash.stats.values()].reduce((n, s) => n + s.failingDraftOnly, 0);
-  if (!vectors.some((v) => v.edition === "draft") || draftCrashes > 0 || crash.findings.some((f) => f.draftOnly || f.edition === "draft" || f.example.input.startsWith("[draft]"))) {
-    problems.push(`with every vector crashed, ${draftCrashes} crashes count as draft only`);
+  // ... and none of those crashes is counted by release, though some
+  // vectors have `since`.
+  const releaseCrashes = [...crash.stats.values()].reduce((n, s) => n + Object.values(s.failingSince).reduce((a, b) => a + b, 0), 0);
+  if (!vectors.some((v) => v.since) || releaseCrashes > 0 || crash.findings.some((f) => f.since || f.example.input.startsWith("[since"))) {
+    problems.push(`with every vector crashed, ${releaseCrashes} crashes count as failing only since a release`);
+  }
+  // Flipped verdicts on vectors with `since` count toward that release,
+  // in the check, the finding and the example.
+  const tagged = vectors.filter((v) => v.since);
+  const flippedSince = [...flipped.stats.values()].reduce((n, s) => n + Object.values(s.failingSince).reduce((a, b) => a + b, 0), 0);
+  const findingSince = flipped.findings.reduce((n, f) => n + Object.values(f.since ?? {}).reduce((a, b) => a + b, 0), 0);
+  if (flippedSince !== tagged.length || findingSince !== tagged.length) {
+    problems.push(`with every verdict flipped, ${flippedSince} of ${tagged.length} failures with \`since\` count toward their release (${findingSince} in findings)`);
   }
   // Every vector answered `unsupported`: only those whose source holds a
   // lone surrogate go ungraded, every other one is a crash, and the run
@@ -259,7 +274,7 @@ export const selfTest = (vectors) => {
     problems.push(`with every vector answered unsupported, ${refused.unsupported.length} of ${lone.length} sources with a lone surrogate go ungraded and ${refused.result.crashed.length} of ${n - lone.length} others crash`);
   }
   if (grade(lone, lone.map(() => ({ unsupported: "lone surrogate: control" }))).ok) problems.push("a run that grades no vector passes");
-  return { problems, controls: 7 };
+  return { problems, controls: 8 };
 };
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -274,9 +289,14 @@ export const run = async ({ adapter, strict, log }) => {
   if (vectors.length === 0) log("✗ no vector was graded");
   const test = selfTest(all);
 
-  const draft = (f) => (f.draftOnly ? ` (${f.draftOnly === f.cases ? "all" : f.draftOnly} draft only)` : "");
+  const since = (f) =>
+    f.since
+      ? ` (${Object.entries(f.since)
+          .map(([release, n]) => `${n === f.cases ? "all" : n} since ${releaseName(release)}`)
+          .join(", ")})`
+      : "";
   for (const f of result.findings) {
-    log(`✗ ${f.summary}: ${plural(f.cases, "vector")}${draft(f)}, such as ${f.example.input} (answered ${JSON.stringify(f.example.response)})`);
+    log(`✗ ${f.summary}: ${plural(f.cases, "vector")}${since(f)}, such as ${f.example.input} (answered ${JSON.stringify(f.example.response)})`);
   }
   const agree = vectors.length - result.failed.length - result.crashed.length - result.malformed.length;
   const crashes = result.crashed.length ? `; ${result.crashed.length} crashed` : "";
@@ -297,11 +317,13 @@ export const run = async ({ adapter, strict, log }) => {
     checkerSelfTest: test.problems.length === 0 ? `passed (${test.controls} negative controls)` : "failed",
     cases: { submitted: vectors.length, distinct: new Set(vectors.map((v) => v.source)).size, malformed: result.malformed.length },
     adapterProblems: result.malformed.length,
-    draftOnly: {
-      vectors: vectors.filter((v) => v.edition === "draft").length,
-      // Crashes fail in every edition, so they never count here.
-      failing: result.failed.filter((i) => vectors[i].edition === "draft").length,
-    },
+    // Crashes fail in every release, so they never count here.
+    since: Object.fromEntries(
+      RELEASES.map((release) => [
+        release,
+        { vectors: vectors.filter((v) => v.since === release).length, failing: result.failed.filter((i) => vectors[i].since === release).length },
+      ]).filter(([, s]) => s.vectors > 0),
+    ),
     checks,
     findings: result.findings,
     fixtures: [],

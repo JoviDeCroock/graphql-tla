@@ -12,23 +12,32 @@
 // Every verdict is a count from a report. The only hand-written text is the
 // notes in implementations.json, which are labelled as such.
 //
-// Usage: node scripts/conformance-sheet.mjs [--check]
+// Usage: node scripts/conformance-sheet.mjs [--check] [--dir DIR]
+//
+// --dir reads DIR/implementations.json and DIR/reports and writes the
+// sheets to DIR instead of conformance/ (the tests use it).
 
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { basename, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AREAS } from "../kit/areas.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
-const dir = join(root, "conformance");
+const dirFlag = process.argv.indexOf("--dir");
+const dir = dirFlag === -1 ? join(root, "conformance") : resolve(process.argv[dirFlag + 1]);
 const sections = JSON.parse(readFileSync(join(root, "kit/spec-sections.json"), "utf8"));
 const registry = JSON.parse(readFileSync(join(dir, "implementations.json"), "utf8")).implementations;
 
+// The report format this sheet reads (kit/report.mjs REPORT_FORMAT). Format
+// 2 labels failing cases by the release that introduced their rules; a
+// format 1 report ("draft only") can't be read that way, so the sheet
+// refuses to build from one.
+export const FORMAT = 2;
 const reports = readdirSync(join(dir, "reports"))
   .filter((f) => f.endsWith(".json"))
   .sort()
   // <key>.json for execution, <key>.<area>.json for the other areas.
-  .map((f) => ({ key: basename(f, ".json").split(".")[0], ...JSON.parse(readFileSync(join(dir, "reports", f), "utf8")) }))
+  .map((f) => ({ file: f, key: basename(f, ".json").split(".")[0], ...JSON.parse(readFileSync(join(dir, "reports", f), "utf8")) }))
   .sort((a, b) => AREAS.indexOf(a.area) - AREAS.indexOf(b.area));
 const keys = [...new Set(reports.map((r) => r.key))].sort(
   (a, b) => registry.findIndex((x) => x.key === a) - registry.findIndex((x) => x.key === b),
@@ -52,34 +61,68 @@ const fixtureList = (f) =>
 
 // A failing check's severity: a MUST (or the kit's own ADAPTER checks)
 // fails, a SHOULD is a should, an INFO check is informational. Each has
-// its symbol, whatever edition the failing cases rely on.
+// its symbol, whatever release the failing cases' rules come from.
 export const severity = (level) => (level === "SHOULD" ? "SHOULD" : level === "INFO" ? "INFO" : "MUST");
 const SYMBOL = { MUST: "✗", SHOULD: "!", INFO: "i" };
-// Whether every failing case of a check relies on the draft.
-const allDraftOnly = (c) => c.failingDraftOnly > 0 && c.failingDraftOnly >= c.failing;
-const draftNote = (c) => (c.failingDraftOnly ? (allDraftOnly(c) ? " (all draft only)" : ` (${c.failingDraftOnly} draft only)`) : "");
+
+// Editions. The kit grades the latest release, September 2026. The
+// releases after October 2021 that introduced rules the kit grades, oldest
+// first: reports count failing cases by the one that introduced their rule
+// (`failingSince`, a finding's `since`), and a case the October 2021
+// edition already decides the same way has none.
+export const GRADED = "September2026";
+export const RELEASES = ["September2025", "September2026"];
+// "September2026" as prose: "September 2026".
+export const editionName = (edition) => edition.replace(/^([A-Za-z]+)(\d{4})$/, "$1 $2");
+// How a count of cases relying on a release's rules is worded: "since
+// September 2025", or "new in September 2026" for the graded release.
+export const sinceWords = (edition) => `${edition === GRADED ? "new in" : "since"} ${editionName(edition)}`;
+const sinceEntries = (since) => RELEASES.map((e) => [e, since?.[e] ?? 0]).filter(([, n]) => n > 0);
+const sinceTotal = (since) => sinceEntries(since).reduce((n, [, k]) => n + k, 0);
+// The first release whose rules every one of `total` failing cases needs
+// (the earliest that has any of them), or null if some case fails under
+// October 2021's rules too.
+export const failsFrom = (since, total) => (total > 0 && sinceTotal(since) >= total ? sinceEntries(since)[0][0] : null);
+// "3 since September 2025, 1 new in September 2026"; "all new in September
+// 2026" when every one of `total` cases relies on one release.
+export const sinceText = (since, total) => {
+  const entries = sinceEntries(since);
+  if (entries.length === 1 && entries[0][1] >= total) return `all ${sinceWords(entries[0][0])}`;
+  return entries.map(([e, n]) => `${n} ${sinceWords(e)}`).join(", ");
+};
+const sinceNote = (c) => (sinceEntries(c.failingSince).length ? ` (${sinceText(c.failingSince, c.failing)})` : "");
 
 // A check's cell: ✓ N (passed in all N cases), ✗ n/N (broke a MUST in n of
 // N), ! n/N (a SHOULD), i n/N (an informational check differed), each with
-// how many of the n rely on the draft; ~ inconclusive, ⊂ subsumed by
-// another check, – not exercised.
+// how many of the n rely on rules introduced after October 2021, by
+// release; ~ inconclusive, ⊂ subsumed by another check, – not exercised.
 export const cell = (check) => {
   if (!check) return "n/a";
-  if (check.status === "fail") return `${SYMBOL[severity(check.level)]} ${check.failing}/${check.cases}${draftNote(check)}`;
+  if (check.status === "fail") return `${SYMBOL[severity(check.level)]} ${check.failing}/${check.cases}${sinceNote(check)}`;
   if (check.status === "pass") return `✓ ${check.cases}`;
   if (check.status === "inconclusive") return `~ ${check.cases}`;
   if (check.status === "subsumed") return "⊂";
   return "–";
 };
 
-// A check's level, with how the October 2021 edition differs.
-const levelText = (c) => (c.oct2021 ? `${c.level} (Oct 2021: ${c.oct2021})` : c.edition === "draft" ? `${c.level} (draft only)` : c.level);
+// A check's level: September 2026's, then the release that introduced the
+// check's rule if it is newer than October 2021, then each older release
+// whose wording gives another level (`levels`), grouped by level:
+// "MUST (SHOULD in September 2025 and October 2021)".
+export const levelText = (c) => {
+  const notes = [];
+  if (c.since) notes.push(sinceWords(c.since));
+  const byLevel = new Map();
+  for (const [edition, level] of Object.entries(c.levels ?? {})) byLevel.set(level, [...(byLevel.get(level) ?? []), editionName(edition)]);
+  for (const [level, editions] of byLevel) notes.push(`${level} in ${editions.join(" and ")}`);
+  return notes.length ? `${c.level} (${notes.join("; ")})` : c.level;
+};
 
 const legend = [
   "- **✓ N:** every one of the N cases it applied to satisfied it.",
   "- **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.",
   "- **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.",
-  "- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.",
+  "- **(k since September 2025, j new in September 2026), (all …):** k of the n failing cases rely on grammar or rules introduced in September 2025, and j on ones introduced in September 2026; none of them is in the October 2021 edition. The symbol still gives the check's level.",
   "- **~:** inconclusive (see the implementation's page).",
   "- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).",
   "- **–:** never exercised: the adapter lacks the capability, or no case reached it.",
@@ -89,9 +132,11 @@ const legend = [
 // A section's verdict, from the checks that cite it (fixtures only say a
 // section was exercised). Failing checks are named in groups, worst level
 // first: ✗ for MUSTs, ! for SHOULDs, i for informational checks, each group
-// split into the checks that fail outright and those that fail only in
-// draft-only cases ("(draft only)"). With no MUST or SHOULD failing, the
-// verdict leads with ✓ if a check passed (~ if one was inconclusive).
+// split into the checks that fail under October 2021's rules too and those
+// whose failing cases all rely on newer rules, by the first release they
+// fail in ("(since September 2025)", "(new in September 2026)"). With no
+// MUST or SHOULD failing, the verdict leads with ✓ if a check passed (~ if
+// one was inconclusive).
 export const sectionVerdict = (checks) => {
   if (checks.length === 0) return null;
   const failed = checks.filter((c) => c.status === "fail");
@@ -99,10 +144,12 @@ export const sectionVerdict = (checks) => {
   const groups = [];
   for (const level of ["MUST", "SHOULD", "INFO"]) {
     const at = failed.filter((c) => severity(c.level) === level);
-    const outright = at.filter((c) => !allDraftOnly(c));
-    const draft = at.filter(allDraftOnly);
+    const outright = at.filter((c) => !failsFrom(c.failingSince, c.failing));
     if (outright.length) groups.push(`${SYMBOL[level]} ${ids(outright)}`);
-    if (draft.length) groups.push(`${SYMBOL[level]} (draft only) ${ids(draft)}`);
+    for (const release of RELEASES) {
+      const newer = at.filter((c) => failsFrom(c.failingSince, c.failing) === release);
+      if (newer.length) groups.push(`${SYMBOL[level]} (${sinceWords(release)}) ${ids(newer)}`);
+    }
   }
   if (failed.some((c) => severity(c.level) !== "INFO")) return groups.join("; ");
   const base = checks.some((c) => c.status === "pass") ? "✓" : checks.some((c) => c.status === "inconclusive") ? "~" : groups.length ? null : "–";
@@ -131,12 +178,35 @@ export const fixtureCell = (fixture, report) => {
 };
 
 // A finding's level, as a label: none for a MUST, else "(SHOULD)" or
-// "(informational)"; and "(draft only)" when every case relies on the draft.
+// "(informational)"; and "(since September 2025)" or "(new in September
+// 2026)" when every case relies on rules introduced after October 2021,
+// naming the first release they all fail in.
 export const findingLabels = (f, checks) => {
   const levels = f.checks.map((id) => severity(checks.find((c) => c.id === id)?.level));
   const worst = levels.length === 0 || levels.includes("MUST") ? "MUST" : levels.includes("SHOULD") ? "SHOULD" : "INFO";
-  return [worst === "SHOULD" && "(SHOULD)", worst === "INFO" && "(informational)", f.draftOnly && f.draftOnly >= f.cases && "(draft only)"].filter(Boolean);
+  const from = failsFrom(f.since, f.cases);
+  return [worst === "SHOULD" && "(SHOULD)", worst === "INFO" && "(informational)", from && `(${sinceWords(from)})`].filter(Boolean);
 };
+// A finding's cases that rely on rules introduced after October 2021, as a
+// sentence, or "".
+export const findingSinceText = (f) => {
+  const entries = sinceEntries(f.since);
+  if (!entries.length) return "";
+  if (entries.length === 1 && entries[0][1] >= f.cases) return `All rely on grammar or rules introduced in ${editionName(entries[0][0])}, not in October 2021.`;
+  const parts = entries.map(([e, n], i) => (i === 0 ? `${n} of them rely on grammar or rules introduced in ${editionName(e)}` : `${n} on ones introduced in ${editionName(e)}`));
+  return `${parts.join(" and ")}, not in October 2021.`;
+};
+// A report's vectors that rely on rules introduced after October 2021
+// (`since`: { release: { vectors, failing } }), as a sentence, or null.
+export const reportSinceText = (r) => {
+  const entries = RELEASES.filter((e) => r.since?.[e]?.vectors || r.since?.[e]?.failing).map((e) => [e, r.since[e]]);
+  if (!entries.length) return null;
+  return entries.map(([e, { vectors = 0, failing = 0 }]) => `${sinceWords(e)}, ${failing} of ${plural(vectors, "vector")} failing`).join("; ");
+};
+// Which edition's introspection types a report graded, from its profile
+// ("September2026", "September2025", "October2021").
+export const profileText = (r) =>
+  r.profile ? `the ${editionName(r.profile)} edition's introspection types${r.profile === GRADED ? " (latest release)" : ""}${r.profileNote ? `. ${r.profileNote}` : ""}` : null;
 
 const caveats = [
   "Read it with these limits in mind:",
@@ -144,14 +214,14 @@ const caveats = [
   "- **Small fixtures.** A ✓ means no case the kit tried broke the rule, not that the implementation is correct. The cell gives the number of cases it rests on.",
   "- **One oracle.** The TLA+ references were checked against graphql-js only (differentially, and through the negative controls, which are graphql-js cases broken on purpose). A bug the reference shares with graphql-js would show as ✓ everywhere.",
   "- **Unreviewed adapters.** The kit's authors wrote every adapter, and no implementation's maintainers have reviewed theirs yet. A failure may be the adapter's, not the implementation's. Each adapter's README says how it maps the protocol onto its implementation.",
-  "- **Draft text.** Levels are the draft's. Where the October 2021 edition differs, the check says so.",
+  "- **Edition.** The kit grades the September 2026 edition, the latest release: its rules and its levels. Where September 2025 or October 2021 gives a check another level, its level says so. Failing cases that rely on grammar or rules introduced after October 2021 are counted by the release that introduced them, \"since September 2025\" or \"new in September 2026\", so an implementation of an older edition can tell them apart.",
 ];
 
 const matrix = () => {
   const lines = [
     "# Conformance sheet",
     "",
-    "Which parts of the [GraphQL spec](https://spec.graphql.org/draft/) each implementation was checked against, and what it breaks. Every verdict comes from a report written by the [conformance kit](../docs/conformance.md), which drives the implementation through an adapter and checks each response against the TLA+ reference. Section numbers are from " +
+    "Which parts of the [GraphQL spec](https://spec.graphql.org/September2026/), September 2026 (latest release), each implementation was checked against, and what it breaks. Every verdict comes from a report written by the [conformance kit](../docs/conformance.md), which drives the implementation through an adapter and checks each response against the TLA+ reference. Section numbers are from " +
       sections.source +
       ". Regenerate with `npm run conformance`.",
     "",
@@ -214,7 +284,7 @@ const matrix = () => {
   lines.push(
     "## By spec section",
     "",
-    "A section's verdict comes from the checks that cite it, and names the ones that failed, worst level first: ✗ for a MUST, ! for a SHOULD, i for an informational check that differed. Within a level, **(draft only)** marks the checks whose failing cases all rely on the draft, not the October 2021 edition. With no MUST or SHOULD failing, ✓ means every check that ran passed or only differed informationally, ~ that one was inconclusive and – that none was exercised. Sections that fixtures exercise but no check targets have no verdict of their own; their fixtures' verdicts are above.",
+    "A section's verdict comes from the checks that cite it, and names the ones that failed, worst level first: ✗ for a MUST, ! for a SHOULD, i for an informational check that differed. Within a level, **(since September 2025)** and **(new in September 2026)** mark the checks whose failing cases all rely on grammar or rules introduced after October 2021, by the first release they fail in. With no MUST or SHOULD failing, ✓ means every check that ran passed or only differed informationally, ~ that one was inconclusive and – that none was exercised. Sections that fixtures exercise but no check targets have no verdict of their own; their fixtures' verdicts are above.",
     "",
     ...header(["Section", ...keys.map(nameOf)]),
   );
@@ -255,8 +325,8 @@ const page = (key) => {
       const why = Object.entries(p0.skipped ?? {}).map(([reason, n]) => `${n} ${reason}`).join(", ");
       lines.push(`- **Vectors:** ${p0.graded} of ${p0.vectors} graded${why ? ` (not graded: ${why})` : ""}`);
     }
-    if (r.profile) lines.push(`- **Profile:** ${r.profile === "draft" ? "the draft's introspection types" : `the ${r.profile} edition's introspection types`}${r.profileNote ? `. ${r.profileNote}` : ""}`);
-    if (r.draftOnly) lines.push(`- **Draft only:** ${typeof r.draftOnly === "object" ? `${r.draftOnly.failing ?? 0} of the failing vectors (of ${r.draftOnly.vectors} draft-only vectors)` : r.draftOnly} rely on grammar or rules only in the draft`);
+    if (r.profile) lines.push(`- **Profile:** ${profileText(r)}`);
+    if (reportSinceText(r)) lines.push(`- **Vectors relying on rules after October 2021:** ${reportSinceText(r)}`);
     lines.push(`- **Adapter problems:** ${r.adapterProblems || "none"}`);
     lines.push(`- **Checker self-test:** ${r.checkerSelfTest}`);
     const p = r.provenance;
@@ -273,7 +343,7 @@ const page = (key) => {
         "",
         `#### ${i + 1}. ${checks.map((c) => `\`${c.id}\``).join(", ") || "malformed result"}${f.summary ? `: ${f.summary}` : ""}`,
         "",
-        `${plural(f.cases, "case")}, in ${Object.entries(f.fixtures).sort((a, b) => b[1] - a[1]).map(([id, n]) => `\`${id}\` (${n})`).join(", ")}.${f.draftOnly ? ` ${f.draftOnly === f.cases ? "All" : `${f.draftOnly} of them`} rely on grammar or rules that are only in the draft, not in October 2021.` : ""}`,
+        `${plural(f.cases, "case")}, in ${Object.entries(f.fixtures).sort((a, b) => b[1] - a[1]).map(([id, n]) => `\`${id}\` (${n})`).join(", ")}.${findingSinceText(f) ? ` ${findingSinceText(f)}` : ""}`,
         "",
       );
       if (f.hint?.length) lines.push(`Each rejected document is one edit from a document that breaks only ${f.hint.map((id) => `\`${id}\``).join(" or ")}${f.likelyOverStrict ? ", so that rule is likely over-strict" : "; which rule the implementation applied is a guess"}.`, "");
@@ -319,6 +389,11 @@ const page = (key) => {
 
 // Writes the sheets when run, not when a test imports the helpers above.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const old = reports.filter((r) => r.format !== FORMAT);
+  if (old.length) {
+    console.error(`✗ ${plural(old.length, "report")} in ${relative(process.cwd(), join(dir, "reports"))} ${old.length === 1 ? "isn't" : "aren't"} format ${FORMAT} (${old.slice(0, 3).map((r) => `${r.file}: format ${r.format}`).join(", ")}${old.length > 3 ? ", …" : ""}); regenerate them with npm run conformance`);
+    process.exit(1);
+  }
   const outputs = new Map([[join(dir, "README.md"), matrix()], ...keys.map((k) => [join(dir, `${k}.md`), page(k)])]);
   if (process.argv.includes("--check")) {
     const stale = [...outputs].filter(([path, text]) => !existsSync(path) || readFileSync(path, "utf8") !== text);

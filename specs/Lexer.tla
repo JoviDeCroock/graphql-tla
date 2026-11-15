@@ -1,8 +1,9 @@
 ---- MODULE Lexer ----
 (***************************************************************************)
 (* The lexical grammar of GraphQL and its static semantics, written by     *)
-(* hand from the spec (https://spec.graphql.org/draft/, §2.1 Source Text,  *)
-(* §2.10 Input Values: IntValue, FloatValue, StringValue, BlockString).     *)
+(* hand from the September 2026 edition of the spec                        *)
+(* (https://spec.graphql.org/September2026/, §2.1 Source Text, §2.10 Input *)
+(* Values: IntValue, FloatValue, StringValue, BlockString).                 *)
 (*                                                                         *)
 (* Everything here is a pure operator over plain data:                     *)
 (*                                                                         *)

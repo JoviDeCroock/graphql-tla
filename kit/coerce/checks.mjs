@@ -12,13 +12,21 @@
 // vector's does (kit/coerce/run.mjs, attribute).
 
 export const CHECKS = [
-  { id: "int", title: "Int accepts only integer input values", level: "MUST", spec: ["3.5.1"] },
+  {
+    id: "int",
+    title: "Int accepts only integer input values",
+    level: "MUST",
+    spec: ["3.5.1"],
+    basis:
+      "\"When expected as an input type, only integer input values are accepted. All other input values, including strings with numeric content, must raise a request error indicating an incorrect type.\" What an integer input value is, for JSON, is §3.5's descriptive assertion: numbers \"are interpreted as an integer input value if they have an empty fractional part (e.g. 1.0) and otherwise as floating-point input value\", which Appendix A counts as a conformance requirement (\"descriptive assertions and key words\"); the \"e.g.\" is the example, the sentence is not. Accepting an integer input value is CoerceVariableValues' and CoerceArgumentValues' (\"If value cannot be coerced ..., raise a request error\", otherwise coerce it), algorithm steps Appendix A gives the algorithm's level. October 2021 says the same.",
+  },
   {
     id: "intRange",
     title: "Int rejects integers outside the signed 32-bit range",
     level: "SHOULD",
     spec: ["3.5.1"],
-    basis: "\"If the integer input value represents a value less than -2^31 or greater than or equal to 2^31, a request error should be raised.\"",
+    basis:
+      "\"If the integer input value represents a value less than -2^31 or greater than or equal to 2^31, a request error should be raised.\" October 2021 says the same. A literal out of range is also not \"coercible\" (§5.6.1), so an adapter that validates may refuse it at validation: a request error passes there as well as the reference's field error, and only a resolved value fails.",
   },
   {
     id: "float",
@@ -26,22 +34,23 @@ export const CHECKS = [
     level: "MUST",
     spec: ["3.5.2"],
     basis:
-      "A fractional value is kept as its decimal, which the vectors only use with at most 15 significant digits. Integers a double can't hold exactly are floatPrecision's.",
+      "\"When expected as an input type, both integer and float input values are accepted. ... All other input values, including strings with numeric content, must raise a request error indicating an incorrect type. If the input value otherwise represents a value not representable by finite IEEE 754 (e.g. NaN, Infinity, or a value outside the available precision), a request error must be raised.\" October 2021 says the same. A non-finite value such as the literal 1e400 is a MUST failure here; an adapter that validates may refuse that literal at validation (it isn't \"coercible\", §5.6.1) or at coercion, and only a resolved value fails. A fractional value is kept as its decimal, which the vectors only use with at most 15 significant digits. What \"outside the available precision\" covers is floatPrecision's.",
   },
   {
     id: "floatPrecision",
-    title: "Float rejects an integer a double can't hold exactly",
-    level: "SHOULD",
+    title: "Float and an integer a double can't hold exactly: refused, or rounded to the nearest double",
+    level: "INFO",
     spec: ["3.5.2"],
     basis:
-      "The sentence says a request error \"must be raised\" for \"a value outside the available precision\", but which values that covers is Coercion.tla's reading (an integral value must be exactly representable). A fraction such as 0.1 has no exact double either, and is accepted, so the text doesn't settle it, and the check takes the weaker level.",
+      "The sentence says a request error \"must be raised\" for \"a value outside the available precision\", a term the spec doesn't define. A fraction such as 0.1 has no exact double either, and every implementation rounds it, so the term can't mean every value without an exact double. Coercion.tla's default reading refuses an integer input value a double can't hold exactly (99999999999999999999, 2^53 + 1); its floatRounded switch rounds it to the nearest double, as 0.1 is. Both readings pass, and the report records which happened. It never fails the run. October 2021 says the same.",
   },
   {
     id: "string",
     title: "String accepts only string input values",
     level: "MUST",
     spec: ["3.5.3"],
-    basis: "A JSON string with a lone surrogate is graded under loneSurrogates, not here.",
+    basis:
+      "\"When expected as an input type, only valid Unicode string input values are accepted. All other input values must raise a request error indicating an incorrect type.\" October 2021 says the same. A JSON string with a lone surrogate is graded under loneSurrogates, not here, since the spec doesn't define a valid Unicode string.",
   },
   {
     id: "stringValue",
@@ -49,9 +58,15 @@ export const CHECKS = [
     level: "MUST",
     spec: ["2.10.4"],
     basis:
-      "§2.10.4's Static Semantics give a StringValue's Unicode text: each escape sequence's value, and for a block string BlockStringValue(), which removes the common indentation and the leading and trailing blank lines. They have no key word, but they define the value §3.5.3 then accepts, and the draft says \"Errors encountered during this evaluation ... must result in a parsing error\". The vectors use only escapes and block strings whose text is the same in both editions (no braced or surrogate pair escapes). Expected texts come from Lexer.tla.",
+      "§2.10.4's Static Semantics give a StringValue's Unicode text: each escape sequence's value, and for a block string BlockStringValue(), which removes the common indentation and the leading and trailing blank lines. They have no key word, but they are written as algorithm steps (\"Return the Unicode text by ...\"), which Appendix A gives the level of the algorithm, they define the value §3.5.3 then accepts, and September 2025 and September 2026 say \"Errors encountered during this evaluation ... must result in a parsing error\". The vectors use only escapes and block strings whose text is the same in every edition (no braced or surrogate pair escapes). One holds a raw U+1F600, which October 2021's SourceCharacter (U+0009, U+000A, U+000D, U+0020–U+FFFF), read literally as the parse area reads it, leaves out: that vector relies on September 2025's SourceCharacter, any Unicode scalar value (`since`). Expected texts come from Lexer.tla.",
   },
-  { id: "boolean", title: "Boolean accepts only boolean input values", level: "MUST", spec: ["3.5.4"] },
+  {
+    id: "boolean",
+    title: "Boolean accepts only boolean input values",
+    level: "MUST",
+    spec: ["3.5.4"],
+    basis: "\"When expected as an input type, only boolean input values are accepted. All other input values must raise a request error indicating an incorrect type.\" October 2021 says the same.",
+  },
   {
     id: "idCoerced",
     title: "String and integer input values are coerced to ID strings",
@@ -60,22 +75,28 @@ export const CHECKS = [
     basis:
       "\"any string (such as \\\"4\\\") or integer (such as 4 or -4) input value should be coerced to ID\". The format of an ID made from an integer is the service's: any string that writes the integer's exact value passes, such as \"1e+21\" for 10^21.",
   },
-  { id: "id", title: "ID rejects input values other than strings and integers", level: "MUST", spec: ["3.5.5"] },
+  {
+    id: "id",
+    title: "ID rejects input values other than strings and integers",
+    level: "MUST",
+    spec: ["3.5.5"],
+    basis: "\"Any other input value, including float input values (such as 4.0), must raise a request error indicating an incorrect type.\" October 2021 says the same.",
+  },
   {
     id: "enum",
     title: "Enums accept their own values, and reject string literals and unknown values",
     level: "MUST",
     spec: ["3.9"],
     basis:
-      "String literals must be rejected. For JSON variables, \"strings may be interpreted as the enum input value with the same name\": a MAY, so taking the string and rejecting it both pass.",
+      "\"GraphQL string literals must not be accepted as an enum input and instead raise a request error.\" For JSON variables, \"strings may be interpreted as the enum input value with the same name\": a MAY, so taking the string and rejecting it both pass. An unknown value or another kind of input value can't be coerced, so CoerceVariableValues and CoerceArgumentValues raise an error (the vectors also cite §6.1.2 or §6.4.1). October 2021 says the same.",
   },
   {
     id: "inputObject",
     title: "Input objects: an object of defined fields, required fields, variables in fields",
     level: "MUST",
-    spec: ["3.10"],
+    spec: ["3.10", "3.12"],
     basis:
-      "The \"must\" sentences: the value must be an object without undefined fields, a variable's runtime value must be used, and §3.12 makes a missing Non-Null field an error that must be raised. Field defaults are a \"should\", graded by inputFieldDefaults.",
+      "§3.10: \"The value for an input object should be an input object literal or an unordered map supplied by a variable, otherwise a request error must be raised. In either case, the input object literal or unordered map must not contain any entries with names not defined by a field of this input object type, otherwise a request error must be raised.\" and \"If a variable is provided for an input object field, the runtime value of that variable must be used. If the runtime value is null and the field type is non-null, an execution error must be raised.\" A missing Non-Null field: §3.10 says \"If no default value is provided and the input object field's type is non-null, an error should be raised\", but §3.12 says \"If an argument or input-object field of a Non-Null type is not provided, is provided with the literal value null, or is provided with a variable that was either not provided a value at runtime, or was provided the value null, then a request error must be raised.\" Both are normative prose about the same case; §3.12's is the stronger and more specific requirement, and accepting such a value would break it, so the check is a MUST and those vectors cite §3.12. Field defaults are a \"should\", graded by inputFieldDefaults. October 2021 says the same (\"a field error must be raised\" for the null variable).",
   },
   {
     id: "inputFieldDefaults",
@@ -91,7 +112,7 @@ export const CHECKS = [
     level: "MUST",
     spec: ["3.10.1"],
     basis:
-      "§3.10.1 (the draft only): the value \"must contain exactly one entry and that entry must not be null or the null literal, otherwise a request error must be raised\", and \"The resulting coerced map must contain exactly one entry and the value for that entry must not be null, otherwise an execution error must be raised.\" The vectors are §3.10.1's table of examples and a few more, on a schema of their own (the vectors' `schema: \"oneOf\"`), all draft-only.",
+      "§3.10.1, new in September 2025 (October 2021 has no OneOf Input Objects): the value \"must contain exactly one entry and that entry must not be null or the null literal, otherwise a request error must be raised\", and \"The resulting coerced map must contain exactly one entry and the value for that entry must not be null, otherwise an execution error must be raised.\" The vectors are §3.10.1's table of examples and a few more, on a schema of their own (the vectors' `schema: \"oneOf\"`), all `since` September 2025. September 2026 says the same.",
   },
   {
     id: "list",
@@ -99,27 +120,47 @@ export const CHECKS = [
     level: "MUST",
     spec: ["3.11"],
     basis:
-      "An item that isn't a list, where the item type is a list, is coerced as a list of one: \"list values are accepted only when each item in the list can be accepted by the list's item type\", and a value that is \"not a list\" is accepted by a list type as \"a list of size one\". That prose is the same in both editions. October 2021's table of examples says \"Error: Incorrect item value\" for [1, 2, 3] as [[Int]], but examples are non-normative (\"Examples in this document are non-normative\"), and the draft's table gives [[1], [2], [3]]. So these vectors aren't draft-only, and the table's answer fails this check under a finding of its own.",
+      "An item that isn't a list, where the item type is a list, is coerced as a list of one: \"list values are accepted only when each item in the list can be accepted by the list's item type\", and a value that is \"not a list\" is accepted by a list type as \"a list of size one\". That prose is the same in every edition. October 2021's table of examples says \"Error: Incorrect item value\" for [1, 2, 3] as [[Int]], but examples are non-normative (\"Examples in this document are non-normative\"), and the tables of September 2025 and September 2026 give [[1], [2], [3]]. So these vectors carry no `since`, and the table's answer fails this check under a finding of its own. A list item that is a variable whose runtime value isn't a list, where the item type is a list ([$x, [$x]] for [[Int]] with $x: Int), is only in an invalid document (§5.8.5), and the spec doesn't say whether the value is used as it is (§6.4.1's Note: variable values are already coerced) or wrapped as \"a list of size one\": both pass, for adapters that execute invalid documents.",
   },
-  { id: "nonNull", title: "Non-Null rejects null", level: "MUST", spec: ["3.12"] },
+  {
+    id: "nonNull",
+    title: "Non-Null rejects null",
+    level: "MUST",
+    spec: ["3.12"],
+    basis:
+      "\"If an argument or input-object field of a Non-Null type is not provided, is provided with the literal value null, or is provided with a variable that was either not provided a value at runtime, or was provided the value null, then a request error must be raised.\" October 2021 says the same.",
+  },
   {
     id: "variables",
     title: "CoerceVariableValues: defaults, missing and null values, and failures as request errors",
     level: "MUST",
     spec: ["6.1.2"],
+    basis:
+      "The algorithm's steps: a missing variable with a default gets \"the result of coercing defaultValue\"; \"Otherwise if variableType is a Non-Nullable type, and either hasValue is not true or value is null, raise a request error\"; a null value is kept; \"If value cannot be coerced according to the input coercion rules of variableType, raise a request error.\" Algorithm steps have the algorithm's level (Appendix A). September 2025 says the same. October 2021 adds the default as it is (see the vectors `since` September 2025) and otherwise says the same.",
   },
   {
     id: "arguments",
-    title: "CoerceArgumentValues: defaults, missing variables, and failures as field errors",
+    title: "CoerceArgumentValues: defaults, missing variables, and null for Non-Null arguments",
     level: "MUST",
     spec: ["6.4.1"],
+    basis:
+      "The algorithm's steps: an argument with no value, or whose variable has no runtime value, gets \"the result of coercing defaultValue\" if it has one; an explicit null is kept; a variable's value is used as it is; a literal is coerced; \"Otherwise if argumentType is a Non-Nullable type, and either hasValue is not true or value is null, raise an execution error.\" Algorithm steps have the algorithm's level (Appendix A). Whether a failure is an execution error or a request error is argumentErrorKind's. September 2025 says the same. October 2021 adds the default as it is (see the vectors `since` September 2025) and otherwise says the same.",
+  },
+  {
+    id: "argumentErrorKind",
+    title: "A value CoerceArgumentValues can't coerce is a field error, not a request error",
+    level: "SHOULD",
+    spec: ["6.4.1"],
+    basis:
+      "The input coercion rules call the failure a request error (§3.5: \"If an input value does not match a coercion rule, a request error must be raised\"; §3.12: \"... then a request error must be raised\"). CoerceArgumentValues says \"raise an execution error\", and September 2026 settles the conflict with a SHOULD (September 2025 has the same sentence): \"Any request error raised as a result of input coercion during CoerceArgumentValues() should be treated instead as an execution error.\" So a request error where the reference gives a field error fails only this SHOULD. Except where §3.10 or §3.10.1 itself says \"an execution error must be raised\" (a variable in an input object literal whose runtime value is null at a Non-Null field; a OneOf literal whose one entry is a variable with a null or no runtime value): those vectors (`executionErrorRequired`) fail their own check. October 2021's CoerceArgumentValues says \"raise a field error\" and has no such sentence, while its §3.5 and §3.12 still say a request error must be raised; the kit takes the weaker reading there too, the same SHOULD.",
   },
   {
     id: "getOperation",
     title: "GetOperation: the operation operationName names, or the only one, else a request error",
     level: "MUST",
     spec: ["6.1"],
-    basis: "Includes a mutation running on the mutation root type, and only the selected operation's variables being coerced.",
+    basis:
+      "GetOperation: \"If operationName is null: If document contains exactly one operation. Return the Operation contained in the document. Otherwise raise a request error requiring operationName.\" and \"Let operation be the Operation named operationName in document. If operation was not found, raise a request error.\" Includes a mutation running on the mutation root type, and only the selected operation's variables being coerced. Algorithm steps have the algorithm's level (Appendix A). October 2021 says the same.",
   },
   {
     id: "invalidNotExecuted",
@@ -151,7 +192,7 @@ export const CHECKS = [
     level: "MUST",
     spec: ["7.1.3"],
     basis:
-      "The draft: \"The request error result map must not contain an entry with key {\"data\"}.\" October 2021, §7.1: \"If the request failed before execution, due to a syntax error, missing information, or validation error, this entry must not be present.\" and §7.1.2: \"If a request error is raised, execution does not begin and the data entry in the response must not be present.\" Its §7.1.1 also says \"should not be present\", but the two MUST sentences are the ones about request errors, so the check is a MUST in both editions. A request error with \"data\": null is still a request error for the vector's own check, and fails this one.",
+      "September 2026 and September 2025, §7.1.3: \"The request error result map must not contain an entry with key {\"data\"}.\" October 2021, §7.1: \"If the request failed before execution, due to a syntax error, missing information, or validation error, this entry must not be present.\" and §7.1.2: \"If a request error is raised, execution does not begin and the data entry in the response must not be present.\" Its §7.1.1 also says \"should not be present\", but the two MUST sentences are the ones about request errors, so the check is a MUST in every edition. A request error with \"data\": null is still a request error for the vector's own check, and fails this one.",
   },
   {
     id: "responds",
@@ -159,7 +200,7 @@ export const CHECKS = [
     level: "MUST",
     spec: ["7"],
     basis:
-      "\"When a GraphQL service receives a request, it must return a well-formed response.\" October 2021 says the same. The adapter answers with an `error` when the implementation produced no response at all, for example because it threw. Execution's check of the same name grades the same sentence. A vector whose reference answer is a request error, under a MUST check, counts that against its own check instead: a request error is a response, so no response doesn't match it. Every other vector exercises this check.",
+      "\"When a GraphQL service receives a request, it must return a well-formed response.\" October 2021 says the same. The adapter answers with an `error` when the implementation produced no response at all, for example because it threw. Execution's check of the same name grades the same sentence. No response says nothing about the coercion rule the vector is about, so it always counts here, whatever the reference's answer; the finding names that rule as a hint. Every vector exercises this check.",
   },
   {
     id: "fieldErrorPath",
@@ -167,7 +208,7 @@ export const CHECKS = [
     level: "MUST",
     spec: ["7.1.6", "7.1.4"],
     basis:
-      "§7.1.6: an error that \"can be associated to a particular field in the GraphQL result ... must contain an entry with the key {\"path\"} with a response path which describes the response position which raised the error\". §7.1.4: a response path names response positions, not arguments. A result whose data holds the field as null, with one error and no resolver call, is a field error whatever its path. If that is the answer the vector expects, a path other than the field's fails this check. Every vector that accepts a field error exercises it.",
+      "§7.1.6: an error that \"can be associated to a particular field in the GraphQL result ... must contain an entry with the key {\"path\"} with a response path which describes the response position which raised the error\". §7.1.4: a response path names response positions, not arguments. A result whose data holds the field as null, with one error and no resolver call, is a field error whatever its path. If that is the answer the vector expects, a path other than the field's fails this check. Every vector that accepts a field error exercises it. October 2021's §7.1.2 keeps the must: the error \"must contain an entry with the key path that details the path of the response field which experienced the error\". Its shoulds there are about the path's form (\"should be a list of path segments\", indices \"should be 0-indexed integers\"), not about which field it names, so a path to the argument (`[\"v\"]`) fails a MUST in every edition. September 2025 and September 2026 have the same §7.1.6 sentence.",
   },
   {
     id: "errorFormat",
@@ -183,7 +224,23 @@ export const CHECKS = [
     level: "MUST",
     spec: ["7.1.1"],
     basis:
-      "The same check as execution's. The draft, §7.1.1: \"If any errors are raised during operation execution, the execution result must contain an entry with key {\"errors\"}. The value of this entry must be a non-empty list ... If the request completed without raising any errors, this entry must not be present.\" October 2021, §7.1: \"If the request raised any errors, the response map must contain an entry with key errors. ... If the request completed without raising any errors, this entry must not be present.\" Its §7.1.2 also says \"should not be present\", but the §7.1 MUST is the sentence about the entry, so the check is a MUST in both editions, as in execution. A value with \"errors\": [] is still a value for the vector's own check, and fails this one. Every vector exercises it.",
+      "The same check as execution's. September 2026, §7.1.1: \"If any errors are raised during operation execution, the execution result must contain an entry with key {\"errors\"}. The value of this entry must be a non-empty list ... If the request completed without raising any errors, this entry must not be present.\" October 2021, §7.1: \"If the request raised any errors, the response map must contain an entry with key errors. ... If the request completed without raising any errors, this entry must not be present.\" Its §7.1.2 also says \"should not be present\", but the §7.1 MUST is the sentence about the entry, so the check is a MUST in every edition, as in execution. September 2025 says the same (\"If execution raised any errors ...\"). A value with \"errors\": [] is still a value for the vector's own check, and fails this one. Every vector exercises it.",
+  },
+  {
+    id: "additionalEntries",
+    title: "The result has no entries besides data, errors and extensions",
+    level: "MUST",
+    spec: ["7.1.8"],
+    basis:
+      "\"To ensure future changes to the protocol do not break existing services and clients, the execution result and request error result maps must not contain any entries other than those described above.\" October 2021, §7.1: \"the top level response map must not contain any entries other than the three described above\". The same check as execution's, applied to every result here, request errors included. A result with another top-level entry is still classified, and fails this check wherever its outcome would otherwise pass. Every vector exercises it.",
+  },
+  {
+    id: "extensions",
+    title: "extensions, when present, is a map",
+    level: "MUST",
+    spec: ["7.1.7"],
+    basis:
+      "\"The \\\"extensions\\\" entry in an execution result or request error result, if set, must have a map as its value.\" October 2021, §7.1: \"This entry, if set, must have a map as its value.\" The same check as execution's. A result whose top-level extensions isn't a map is still classified, and fails this check wherever its outcome would otherwise pass. Every vector exercises it.",
   },
   {
     id: "loneSurrogates",
@@ -215,15 +272,25 @@ export const POLICIES = {
   // others.
   missingListItemError: { level: "unspecified" },
   missingListItemDropped: { level: "unspecified" },
-  // October 2021's answer to a draft-only vector (Coercion.tla's
-  // coerceDefaults switch): recognised, but it fails the vector's check,
-  // since draft-only vectors are graded like any other.
+  // "a value outside the available precision" (§3.5.2) isn't defined: the
+  // default reading refuses an integer a double can't hold exactly; this
+  // one rounds it (floatPrecision, informational).
+  floatRounded: { level: "unspecified" },
+  // A list item that is a variable whose runtime value isn't a list, where
+  // the item type is a list (only in an invalid document, §5.8.5): the
+  // default reading uses the value as it is (§6.4.1's Note); this one
+  // wraps it, as §3.11 wraps any other such value.
+  variableItemWrapped: { level: "unspecified" },
+  // October 2021's answer to a vector whose rule is new since then
+  // (`since`; Coercion.tla's coerceDefaults switch): recognised, but it
+  // fails the vector's check, since such vectors are graded like any
+  // other.
   oct2021: { level: "edition" },
   // The answer October 2021's §3.11 table of examples gives for an item
   // that isn't a list where the item type is a list (Coercion.tla's
   // nestedListItems switch). The table is non-normative, and §3.11's prose,
-  // the same in both editions, gives the other answer: recognised, but it
-  // fails the vector's check in both editions. With `validating`, the
+  // the same in every edition, gives the other answer: recognised, but it
+  // fails the vector's check in every edition. With `validating`, the
   // answer of a service whose validator follows the table too (§5.6.1 asks
   // for literals to be coercible): a request error, graded only for
   // adapters without `unvalidated`.

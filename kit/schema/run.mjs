@@ -16,9 +16,14 @@
 // an implementation that throws inside schema building, and whose adapter
 // reports that as an error, crashes. On an invalid schema a crash fails the
 // rule, as accepting it would; on a valid one it fails acceptsValid. A
-// crash is never draft only: whatever a schema's verdict in October 2021,
-// a crash isn't it. An adapter that turns every exception into
-// `valid: false` hides its crashes as rejections.
+// crash is never tagged by release: whatever a schema's verdict in an
+// older release, a crash isn't it. An adapter that turns every exception
+// into `valid: false` hides its crashes as rejections.
+//
+// The expected answers are September 2026's. A vector tagged `since` a
+// release relies on rules or syntax that release introduced; a failure on
+// it that is a verdict is counted under that release, so an
+// implementation of an older one can tell those apart.
 //
 // Vectors marked `unspecified` rest on a reading the spec's formal text
 // doesn't settle. They aren't sent to the adapter or graded.
@@ -28,7 +33,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Crash, answerOrCrash, crashResponse } from "../areas.mjs";
 import { REPORT_FORMAT, provenance, section } from "../report.mjs";
-import { RULE, RULES, UNWRITABLE } from "./rules.mjs";
+import { RELEASES, RULE, RULES, UNWRITABLE, releaseName } from "./rules.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
 
@@ -58,15 +63,28 @@ export const judge = (vector, answer) => {
   return vector.expected.valid ? "over-strict" : "not enforced";
 };
 
-// Whether a failing vector is draft only: an implementation of October
-// 2021 could give that answer and still follow its edition. A crash never
-// is (docs/kit/schema.md, "Editions").
-export const draftOnly = (vector, verdict) => vector.edition === "draft" && verdict !== "crash" && verdict !== "pass" && verdict !== "malformed";
+// The release a failing vector relies on, if any: an implementation of
+// the release before it could give that answer and still follow its
+// edition. A crash never relies on one (docs/kit/schema.md, "Editions").
+export const failingSince = (vector, verdict) =>
+  vector.since !== undefined && verdict !== "crash" && verdict !== "pass" && verdict !== "malformed" ? vector.since : undefined;
+
+// Counts by release, without zeros, in release order.
+const countsByRelease = (counts) => Object.fromEntries(RELEASES.filter((r) => counts[r] > 0).map((r) => [r, counts[r]]));
+const bump = (counts, release) => {
+  if (release !== undefined) counts[release] = (counts[release] ?? 0) + 1;
+};
+const sum = (counts) => Object.values(counts).reduce((n, k) => n + k, 0);
+// "2 since September 2025, 1 since September 2026"
+const sinceText = (counts) =>
+  RELEASES.filter((r) => counts[r] > 0)
+    .map((r) => `${counts[r]} since ${releaseName(r)}`)
+    .join(", ");
 
 // The check for valid schemas. kit/spec-sections.json has no entry for §3
 // itself, so it is cited here.
 export const ACCEPTS_VALID = "acceptsValid";
-const TYPE_SYSTEM = { number: "3", title: "Type System", url: "https://spec.graphql.org/draft/#sec-Type-System" };
+const TYPE_SYSTEM = { number: "3", title: "Type System", url: "https://spec.graphql.org/September2026/#sec-Type-System" };
 
 // The implementation's message for a rejection or a crash: the first
 // error's first line.
@@ -108,14 +126,20 @@ const list = (names) => (names.length <= 2 ? names.join(" or ") : `${names.slice
 // siblings is accepted, is likely over-strict; a message shared by the
 // siblings of different rules points at one cause, not at any of them.
 const validSummary = (f) => {
-  const draft = f.draftOnly ? `; ${f.draftOnly === f.cases ? "all" : `${f.draftOnly} of ${f.cases}`} rely on the draft` : "";
+  const tagged = sum(f.since);
+  const releases = Object.keys(f.since);
+  const since = !tagged
+    ? ""
+    : tagged === f.cases && releases.length === 1
+      ? `; all rely on ${releaseName(releases[0])}`
+      : `; of ${f.cases}, ${sinceText(f.since)}`;
   const n = f.cases === 1 ? "a valid schema" : `${f.cases} valid schemas`;
   if (f.kind === "crash") return `crashes on ${n} instead of accepting ${f.cases === 1 ? "it" : "them"}; hint: ${list(f.hint)}, the rule${f.hint.length === 1 ? "" : "s"} their invalid siblings break`;
   if (f.hint.length > 1) {
-    return `rejects ${n} with the same error, one edit from schemas that break ${list(f.hint)}: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked${draft}`;
+    return `rejects ${n} with the same error, one edit from schemas that break ${list(f.hint)}: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked${since}`;
   }
-  if (f.likelyOverStrict) return `rejects ${n} with the same error, each one edit from a schema that breaks only ${f.hint[0]}, while another valid sibling of it is accepted: ${f.hint[0]} is likely over-strict${draft}`;
-  return `rejects ${n}, one edit from ${f.cases === 1 ? "a schema" : "schemas"} that break${f.cases === 1 ? "s" : ""} only ${f.hint[0]}; which rule it applied is a guess: the message says what the implementation checked${draft}`;
+  if (f.likelyOverStrict) return `rejects ${n} with the same error, each one edit from a schema that breaks only ${f.hint[0]}, while another valid sibling of it is accepted: ${f.hint[0]} is likely over-strict${since}`;
+  return `rejects ${n}, one edit from ${f.cases === 1 ? "a schema" : "schemas"} that break${f.cases === 1 ? "s" : ""} only ${f.hint[0]}; which rule it applied is a guess: the message says what the implementation checked${since}`;
 };
 
 // The checker's self-test: deliberately wrong answers it must flag, and
@@ -145,15 +169,21 @@ const selfTest = (vectors) => {
   const right = () => vectors.map((v) => ({ valid: v.expected.valid }));
   const report = (answers) => buildReport({ vectors, answers, strict: false, implementation: "self-test", capabilities: [], selfTestText: "" });
   const check = (r, id) => r.checks.find((c) => c.id === id);
-  // A crash on a draft-only invalid schema is a failure under October 2021
-  // too.
-  const draftInvalid = vectors.find((v) => v.edition === "draft" && !v.expected.valid);
-  if (draftInvalid) {
+  // A crash on an invalid schema tagged with a release is a failure under
+  // older releases too; accepting it is counted under its release.
+  for (const release of RELEASES) {
+    const tagged = vectors.find((v) => v.since === release && !v.expected.valid);
+    if (!tagged) continue;
     const answers = right();
-    answers[vectors.indexOf(draftInvalid)] = crash(draftInvalid);
-    const r = report(answers);
-    control(r.draftOnly.failing !== 0 || check(r, RULE.get(draftInvalid.rule).id).failingDraftOnly !== 0, `a crash on ${draftInvalid.id} counted as draft only`);
-    control(r.findings.some((f) => f.edition === "draft" || f.draftOnly), `the finding for a crash on ${draftInvalid.id} is marked draft only`);
+    answers[vectors.indexOf(tagged)] = crash(tagged);
+    let r = report(answers);
+    const failing = (r) => Object.values(r.since).some((s) => s.failing !== 0) || check(r, RULE.get(tagged.rule).id).failingSince !== undefined;
+    control(failing(r), `a crash on ${tagged.id} counted as relying on ${releaseName(release)}`);
+    control(r.findings.some((f) => f.since), `the finding for a crash on ${tagged.id} is tagged by release`);
+    answers[vectors.indexOf(tagged)] = { valid: true };
+    r = report(answers);
+    control(r.since[release]?.failing !== 1 || check(r, RULE.get(tagged.rule).id).failingSince?.[release] !== 1, `accepting ${tagged.id} wasn't counted as relying on ${releaseName(release)}`);
+    control(!r.findings.some((f) => f.since?.[release] === 1), `the finding for accepting ${tagged.id} has no since count`);
   }
   // A rejected valid schema fails acceptsValid, not its pair's rule; a
   // crash on one does too.
@@ -182,8 +212,8 @@ const selfTest = (vectors) => {
 };
 
 export const buildReport = ({ vectors, answers, strict, implementation, capabilities, selfTestText, total = vectors.length, skipped = {} }) => {
-  const stats = new Map(RULES.map((r) => [r.rule, { cases: 0, failing: 0, failingDraftOnly: 0 }]));
-  const accepts = { cases: 0, failing: 0, failingDraftOnly: 0 };
+  const stats = new Map(RULES.map((r) => [r.rule, { cases: 0, failing: 0, failingSince: {} }]));
+  const accepts = { cases: 0, failing: 0, failingSince: {} };
   const findings = new Map();
   const judged = vectors.map((v, i) => ({ vector: v, answer: answers[i], verdict: judge(v, answers[i]) }));
   let malformed = 0;
@@ -208,8 +238,8 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
     s.cases++;
     if (verdict === "pass") continue;
     s.failing++;
-    const draft = draftOnly(v, verdict);
-    if (draft) s.failingDraftOnly++;
+    const since = failingSince(v, verdict);
+    bump(s.failingSince, since);
     const r = RULE.get(v.rule);
     const crash = answer instanceof Crash;
     const message = messageOf(answer);
@@ -219,7 +249,7 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
       ? `valid\u0000${verdict}\u0000${message === undefined ? `rule ${v.rule}` : `message ${messageShape(message, v.sdl)}`}`
       : `${v.rule}\u0000${verdict}${crash ? `\u0000${messageShape(message, v.sdl)}` : ""}`;
     const example = {
-      input: `${draft ? "[draft] " : ""}${v.sdl}`,
+      input: `${since ? `[since ${releaseName(since)}] ` : ""}${v.sdl}`,
       response: crash ? crashResponse(answer) : answer,
       expected: v.expected.valid ? "valid (TypeSystem!Verdict is empty)" : `invalid: breaks ${v.rule} and no other rule`,
     };
@@ -232,13 +262,13 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
       members: [],
       cases: 0,
       fixtures: {},
-      draftOnly: 0,
+      since: {},
     };
     f.cases++;
     f.members.push(v);
     f.rules.add(r.id);
     f.fixtures[v.family] = (f.fixtures[v.family] ?? 0) + 1;
-    if (draft) f.draftOnly++;
+    bump(f.since, since);
     if (f.length === undefined || v.sdl.length < f.length) Object.assign(f, { fixture: v.id, example, length: v.sdl.length, problem: message });
     findings.set(key, f);
   }
@@ -270,9 +300,7 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
       fixture: f.fixture,
       ...(f.problem !== undefined ? { problem: f.problem } : {}),
       example: f.example,
-      ...(f.draftOnly ? { draftOnly: f.draftOnly } : {}),
-      // A finding whose every vector is draft only.
-      ...(f.draftOnly && f.draftOnly === f.cases ? { edition: "draft" } : {}),
+      ...(sum(f.since) ? { since: countsByRelease(f.since) } : {}),
     };
   });
 
@@ -285,16 +313,27 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
     checkerSelfTest: selfTestText,
     cases: { submitted: vectors.length, distinct: vectors.length, malformed },
     adapterProblems: malformed,
-    draftOnly: {
-      vectors: vectors.filter((v) => v.edition === "draft").length,
-      failing: judged.filter((j) => draftOnly(j.vector, j.verdict)).length,
-    },
+    since: Object.fromEntries(
+      RELEASES.map((release) => [
+        release,
+        {
+          vectors: vectors.filter((v) => v.since === release).length,
+          failing: judged.filter((j) => failingSince(j.vector, j.verdict) === release).length,
+        },
+      ]).filter(([, c]) => c.vectors > 0),
+    ),
     checks: [
       ...RULES.map((r) => {
         const s = stats.get(r.rule);
-        // A draft-only rule's failures that aren't draft only: crashes,
-        // which October 2021 doesn't allow either.
-        const crashes = s.failing - s.failingDraftOnly;
+        // A new rule's failures that aren't counted under its release:
+        // crashes, which older releases don't allow either.
+        const crashes = s.failing - sum(s.failingSince);
+        const notes = [
+          ...(r.since
+            ? [`New in ${releaseName(r.since)}: October 2021 doesn't have ${r.feature}${crashes > 0 ? `. ${plural(crashes, "failing case")} ${crashes === 1 ? "is a crash, which fails" : "are crashes, which fail"} under October 2021 too` : ""}`]
+            : []),
+          ...(UNWRITABLE[r.rule] ? [UNWRITABLE[r.rule]] : []),
+        ];
         return {
           id: r.id,
           title: r.title,
@@ -303,14 +342,10 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
           status: s.failing > 0 ? "fail" : s.cases > 0 ? "pass" : "untested",
           cases: s.cases,
           failing: s.failing,
-          failingDraftOnly: s.failingDraftOnly,
-          ...(r.edition
-            ? {
-                edition: r.edition,
-                note: `Draft only: the October 2021 edition doesn't have ${r.draft}${crashes > 0 ? `. ${plural(crashes, "failing case")} ${crashes === 1 ? "is a crash, which fails" : "are crashes, which fail"} under October 2021 too` : ""}`,
-              }
-            : {}),
-          ...(UNWRITABLE[r.rule] ? { note: UNWRITABLE[r.rule] } : {}),
+          ...(sum(s.failingSince) ? { failingSince: countsByRelease(s.failingSince) } : {}),
+          ...(r.since ? { since: r.since } : {}),
+          ...(notes.length ? { note: notes.join(". ") } : {}),
+          basis: r.basis,
         };
       }),
       {
@@ -321,7 +356,7 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
         status: accepts.failing > 0 ? "fail" : accepts.cases > 0 ? "pass" : "untested",
         cases: accepts.cases,
         failing: accepts.failing,
-        failingDraftOnly: accepts.failingDraftOnly,
+        ...(sum(accepts.failingSince) ? { failingSince: countsByRelease(accepts.failingSince) } : {}),
         basis:
           "a schema is invalid only when it breaks a Type Validation rule of §3 or §4's Reserved Names; rejecting, or crashing on, a schema that breaks none applies a rule the spec doesn't have",
       },
@@ -356,8 +391,8 @@ export const run = async ({ adapter, strict, log = console.log }) => {
   const crashes = answers.filter((a) => a instanceof Crash).length;
   const notGraded = skipped.unspecified ? `; ${skipped.unspecified} unspecified not graded` : "";
   log(`${passed === vectors.length ? "✓" : "✗"} ${passed} of ${vectors.length} schemas judged as TypeSystem.tla judges them${crashes ? ` (${crashes} crashed)` : ""}${notGraded}`);
-  const draft = (f) => (f.draftOnly ? `, ${f.draftOnly === f.cases ? "all" : f.draftOnly} draft only` : "");
-  for (const f of report.findings) log(`  ✗ ${f.summary} (${plural(f.cases, "schema")}${draft(f)}, e.g. ${f.fixture}: ${f.example.input})`);
+  const since = (f) => (f.since ? `, ${sinceText(f.since)}` : "");
+  for (const f of report.findings) log(`  ✗ ${f.summary} (${plural(f.cases, "schema")}${since(f)}, e.g. ${f.fixture}: ${f.example.input})`);
   const tested = report.checks.filter((c) => c.status !== "untested").length;
   log(`  ${tested - failingChecks.length} of ${tested} checks pass; ${report.checks.length - tested} untested`);
   if (test.problems.length === 0) log(`✓ the checker catches all ${test.controls} negative controls`);

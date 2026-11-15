@@ -1,7 +1,8 @@
 ---- MODULE Validation ----
 (***************************************************************************)
 (* GraphQL validation, written by hand from the spec's formal              *)
-(* specifications (https://spec.graphql.org/draft/, §5).                    *)
+(* specifications (the September 2026 edition,                             *)
+(* https://spec.graphql.org/September2026/, §5).                            *)
 (*                                                                         *)
 (* Every rule is a pure operator over plain data, named after the rule it  *)
 (* states, and returns the set of its violations: {} means the document    *)
@@ -80,7 +81,7 @@ SchemaMetaFields ==
 IsSchemaMetaField(S, typeName, fieldName) ==
   fieldName \in DOMAIN SchemaMetaFields /\ typeName = S.roots.query /\ typeName # ""
 
-\* The types those meta-fields return: the draft's "Schema Introspection
+\* The types those meta-fields return: September 2026's "Schema Introspection
 \* Schema" (§4.2), which "is itself represented as a GraphQL schema". Like
 \* the meta-fields, they are implicit: a schema record lists only its own
 \* types, and Check adds these, with the String and Boolean scalars they
@@ -433,9 +434,9 @@ SingleRootField(S, D) ==
   IN IF S.roots.subscription = "" THEN {}
      ELSE {D[i].name : i \in {j \in OperationIndices(D) : D[j].operation = "subscription" /\ ~holds(D[j])}}
 
-\* The October 2021 edition's rule, which isn't one of Rules: the draft
-\* forbids @skip and @include at a subscription's root, where October 2021
-\* applies them. Its §5.2.3.1 Single root field: "Let {variableValues} be
+\* The October 2021 edition's rule, which isn't one of Rules: since
+\* September 2025 the spec forbids @skip and @include at a subscription's
+\* root, where October 2021 applies them. Its §5.2.3.1 Single root field: "Let {variableValues} be
 \* the empty set. Let {groupedFieldSet} be the result of
 \* {CollectFields(subscriptionType, selectionSet, variableValues)}.
 \* {groupedFieldSet} must have exactly one entry, which must not be an
@@ -446,7 +447,8 @@ SingleRootField(S, D) ==
 \* with the value {true}". With no variable values only the literal {true}
 \* counts: @skip(if: true) drops a selection, and so does any @include
 \* whose if isn't the literal true. scripts/generate-vectors-validate.mjs
-\* uses it to tell which Single Root Field vectors only the draft rejects.
+\* uses it to tell which Single Root Field vectors only September 2025 and
+\* later reject (`since` September 2025).
 IfIsTrue(directive) ==
   \E j \in DOMAIN directive.arguments :
     /\ directive.arguments[j].name = "if"
@@ -1175,8 +1177,12 @@ Hello ==
    roots |-> [query |-> "Query", mutation |-> "", subscription |-> ""]]
 
 \* A vector: the rule, the schema, the document, and whether the spec says it
-\* is valid under that rule.
-V(rule, schema, doc, valid) == [rule |-> rule, schema |-> schema, doc |-> doc, valid |-> valid]
+\* is valid under that rule. V is one of the spec's own examples; Added is a
+\* document this module adds beside them, which the spec doesn't contain (the
+\* kit publishes those apart from the spec's examples).
+V(rule, schema, doc, valid) ==
+  [rule |-> rule, schema |-> schema, doc |-> doc, valid |-> valid, added |-> FALSE]
+Added(rule, schema, doc, valid) == [V(rule, schema, doc, valid) EXCEPT !.added = TRUE]
 
 Dog(set) == <<Q("", <<>>, <<FS("dog", set)>>)>>
 DogFragment(name, set) == <<Frag(name, "Dog", set)>>
@@ -1222,7 +1228,7 @@ OperationVectors == <<
            WithDirs(F("disallowedSecondRootField"), <<Dir("skip", <<A("if", Var("bool"))>>)>>)>>)>>, FALSE),
   V("SingleRootField", Examples, <<Sub("sub", <<F("__typename")>>)>>, FALSE),
   \* Not one of the spec's examples: @include alone still isn't allowed.
-  V("SingleRootField", Examples,
+  Added("SingleRootField", Examples,
     <<Op("subscription", "sub", <<VarDef("bool", NN(BooleanT))>>,
          <<WithDirs(NewMessage, <<Dir("include", <<A("if", Var("bool"))>>)>>)>>)>>, FALSE)
 >>
@@ -1292,10 +1298,10 @@ FieldVectors == <<
     <<Q("directQueryOnObjectWithEmptySelection", <<>>, <<FS("human", <<>>)>>)>>, TRUE),
   \* Not the spec's examples: String! and String on exclusive types, and two
   \* fields whose merged selection sets conflict.
-  V("FieldSelectionMerging", Examples,
+  Added("FieldSelectionMerging", Examples,
     <<Frag("conflictingNullability", "Pet",
            <<On("Dog", <<As("x", F("name"))>>), On("Cat", <<As("x", F("nickname"))>>)>>)>>, FALSE),
-  V("FieldSelectionMerging", Examples,
+  Added("FieldSelectionMerging", Examples,
     <<Q("conflictingSubfields", <<>>, <<FS("dog", <<As("x", F("name"))>>), FS("dog", <<As("x", F("__typename"))>>)>>)>>, FALSE)
 >>
 
@@ -1327,9 +1333,9 @@ ArgumentVectors == <<
   V("RequiredArguments", Examples, <<Frag("missingRequiredArg", "Arguments", <<F("nonNullBooleanArgField")>>)>>, FALSE),
   V("RequiredArguments", Examples,
     <<Frag("missingRequiredArg", "Arguments", <<FA("nonNullBooleanArgField", <<A("nonNullBooleanArg", Null)>>)>>)>>, FALSE),
-  \* "An argument is required if the argument type is non-null and does not
-  \* have a default value."
-  V("RequiredArguments", Examples,
+  \* Not the spec's example: "An argument is required if the argument type is
+  \* non-null and does not have a default value."
+  Added("RequiredArguments", Examples,
     <<Frag("optionalNonNullArg", "Arguments", <<F("optionalNonNullBooleanArgField")>>)>>, TRUE)
 >>
 
@@ -1355,9 +1361,9 @@ FragmentVectors == <<
     <<Frag("inlineFragOnScalar", "Dog", <<On("Boolean", <<F("somethingElse")>>)>>)>>, FALSE),
   V("FragmentsMustBeUsed", Examples, <<Frag("nameFragment", "Dog", <<F("name")>>)>> \o Dog(<<F("name")>>), FALSE),
   V("FragmentsMustBeUsed", Examples, Dog(<<Spread("nameFragment")>>) \o <<Frag("nameFragment", "Dog", <<F("name")>>)>>, TRUE),
-  \* Each is "the target of at least one spread", though no operation reaches
-  \* them; graphql-js reports both.
-  V("FragmentsMustBeUsed", Examples,
+  \* Not the spec's example. Each is "the target of at least one spread",
+  \* though no operation reaches them; graphql-js reports both.
+  Added("FragmentsMustBeUsed", Examples,
     Dog(<<F("name")>>) \o <<Frag("a", "Dog", <<Spread("b")>>), Frag("b", "Dog", <<Spread("a")>>)>>, TRUE),
   V("FragmentSpreadTargetDefined", Examples, Dog(<<Spread("undefinedFragment")>>), FALSE),
   V("FragmentSpreadTargetDefined", Examples, Dog(<<Spread("nameFragment")>>) \o <<Frag("nameFragment", "Dog", <<F("name")>>)>>, TRUE),
@@ -1428,17 +1434,22 @@ ValueVectors == <<
   V("InputObjectFieldNames", Examples,
     <<Q("", <<>>, <<WithArgs(FS("findDog", <<F("name")>>),
                              <<A("searchBy", ObjectOf(<<A("favoriteCookieFlavor", StrV("Bacon"))>>))>>)>>)>>, FALSE),
-  V("InputObjectFieldUniqueness", Examples,
+  \* Not the spec's examples: its counter-example, `field(arg: { field: true,
+  \* field: false })`, is on a field the example schema doesn't have. The same
+  \* on findDog, and a valid sibling.
+  Added("InputObjectFieldUniqueness", Examples,
     <<Q("", <<>>, <<WithArgs(FS("findDog", <<F("name")>>),
                              <<A("searchBy", ObjectOf(<<A("name", StrV("a")), A("name", StrV("b"))>>))>>)>>)>>, FALSE),
-  V("InputObjectFieldUniqueness", Examples,
+  Added("InputObjectFieldUniqueness", Examples,
     <<Q("", <<>>, <<WithArgs(FS("findDog", <<F("name")>>),
                              <<A("searchBy", ObjectOf(<<A("name", StrV("a")), A("owner", StrV("b"))>>))>>)>>)>>, TRUE),
-  V("InputObjectRequiredFields", Examples,
+  \* Not the spec's examples (§5.6.4 has none): addPet with literal input
+  \* objects, named after §5.8.5's addCat.
+  Added("InputObjectRequiredFields", Examples,
     AddPet("addCat", <<>>, ObjectOf(<<A("cat", ObjectOf(<<A("name", StrV("Brontie"))>>))>>)), TRUE),
-  V("InputObjectRequiredFields", Examples,
+  Added("InputObjectRequiredFields", Examples,
     AddPet("addCat", <<>>, ObjectOf(<<A("cat", ObjectOf(<<A("nickname", StrV("B"))>>))>>)), FALSE),
-  V("InputObjectRequiredFields", Examples,
+  Added("InputObjectRequiredFields", Examples,
     AddPet("addCat", <<>>, ObjectOf(<<A("cat", ObjectOf(<<A("name", Null)>>))>>)), FALSE)
 >>
 
@@ -1454,8 +1465,9 @@ DirectiveVectors == <<
     <<Q("", <<VarDefault("foo", BooleanT, BoolV("true")), VarDefault("bar", BooleanT, BoolV("false"))>>,
         <<WithDirs(FS("field", <<F("subfieldA")>>), <<Dir("skip", <<A("if", Var("foo"))>>)>>),
           WithDirs(FS("field", <<F("subfieldB")>>), <<Dir("skip", <<A("if", Var("bar"))>>)>>)>>)>>, TRUE),
-  V("DirectivesAreDefined", Examples, Dog(<<WithDirs(F("name"), <<Dir("unknown", <<>>)>>)>>), FALSE),
-  V("DirectivesAreDefined", Examples, Dog(<<WithDirs(F("name"), <<Dir("include", <<A("if", BoolV("true"))>>)>>)>>), TRUE)
+  \* Not the spec's examples: §5.7.1 has none.
+  Added("DirectivesAreDefined", Examples, Dog(<<WithDirs(F("name"), <<Dir("unknown", <<>>)>>)>>), FALSE),
+  Added("DirectivesAreDefined", Examples, Dog(<<WithDirs(F("name"), <<Dir("include", <<A("if", BoolV("true"))>>)>>)>>), TRUE)
 >>
 
 VariableVectors == <<
@@ -1549,9 +1561,9 @@ Vectors ==
     @@ ("directives" :> DirectiveVectors) @@ ("variables" :> VariableVectors)
 
 \* October 2021's Single root field (SingleRootFieldOctober2021): its own
-\* examples, and @skip and @include at the root, which the draft forbids
-\* and October 2021 applies with no variable values. Kept out of Vectors,
-\* which holds the draft's examples.
+\* examples, and @skip and @include at the root, which September 2025 and
+\* September 2026 forbid and October 2021 applies with no variable values.
+\* Kept out of Vectors, which holds September 2026's examples.
 SkipIf(value) == <<Dir("skip", <<A("if", value)>>)>>
 IncludeIf(value) == <<Dir("include", <<A("if", value)>>)>>
 BoolVar == <<VarDef("bool", NN(BooleanT))>>
@@ -1564,7 +1576,7 @@ October2021Vectors == <<
     <<Sub("sub", <<Spread("multipleSubscriptions")>>),
       Frag("multipleSubscriptions", "Subscription", <<NewMessage, F("disallowedSecondRootField")>>)>>, FALSE),
   V("SingleRootFieldOctober2021", Examples, <<Sub("sub", <<F("__typename")>>)>>, FALSE),
-  \* The draft's requiredRuntimeValidation: only the second field is collected.
+  \* September 2026's requiredRuntimeValidation: only the second field is collected.
   V("SingleRootFieldOctober2021", Examples,
     <<Op("subscription", "requiredRuntimeValidation", BoolVar,
          <<WithDirs(NewMessage, IncludeIf(Var("bool"))),

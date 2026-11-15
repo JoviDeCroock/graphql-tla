@@ -18,9 +18,15 @@
 //     "Protocol"), gives no verdict. On an invalid vector it fails the rules
 //     the vector breaks, as accepting it would; on a valid one it fails
 //     acceptsValid. Crashes have their own findings, and never count as an
-//     agreement. A crash fails in every edition that can build the vector's
-//     schema, so it is draft-only only when the schema has a OneOf Input
-//     Object, whatever the vector's verdict rests on.
+//     agreement. A crash fails in every release that can take the vector's
+//     input, so it counts toward a release (`failingSince`) only when the
+//     schema has a OneOf Input Object (since September 2025) or the
+//     document has grammar new in September 2026 (`syntax`), whatever
+//     release the vector's verdict rests on.
+//
+// The verdicts and levels are September 2026's. A vector whose verdict
+// differs under October 2021 carries `since`: the first release whose text
+// gives its verdict.
 //
 // A rule whose every vector also breaks another rule can't earn a pass: a
 // rejection may be the other rule's doing. Its check is "subsumed" instead.
@@ -46,10 +52,69 @@ export const loadVectors = () => JSON.parse(readFileSync(join(root, "kit/validat
 export const checkId = (rule) => rule[0].toLowerCase() + rule.slice(1);
 
 // The check for valid vectors. §5's introduction: a document is valid when
-// it satisfies every rule, and only invalid ones are kept from execution.
+// it satisfies every rule, and only invalid ones are kept from execution;
+// §6.1 executes a request, and §6.1.1 fails only one with validation errors.
 // kit/spec-sections.json has no entry for §5 itself, so it is cited here.
 export const ACCEPTS_VALID = "acceptsValid";
-const VALIDATION = { number: "5", title: "Validation", url: "https://spec.graphql.org/draft/#sec-Validation" };
+const VALIDATION = { number: "5", title: "Validation", url: "https://spec.graphql.org/September2026/#sec-Validation" };
+
+// The sentences each rule's check rests on: the rule's Formal Specification
+// in September 2026, whose "must" makes every check a MUST. Every older
+// release that has the rule says it with "must" too, so no check has
+// `levels`; where a release changed the rule, the basis says how. `since`
+// names the release that introduced a rule after October 2021.
+const FORMAL = (text) => `Formal Specification: "${text}"`;
+export const BASIS = {
+  ExecutableDefinitions: { basis: FORMAL("For each definition definition in the document: definition must be ExecutableDefinition (it must not be TypeSystemDefinitionOrExtension).") },
+  OperationTypeExistence: {
+    basis:
+      FORMAL("For each operation definition operation in the document: Let rootOperationType be the root operation type in schema corresponding to the kind of operation. rootOperationType must exist.") +
+      " The rule is new in September 2025 (§5.2.1.1); October 2021 has no such rule, so its vectors have since September 2025.",
+    since: "September2025",
+  },
+  OperationNameUniqueness: { basis: FORMAL("If operationName exists: Let operations be all operation definitions in the document named operationName. operations must be a set of one.") },
+  LoneAnonymousOperation: { basis: FORMAL("If operations is a set of more than 1: anonymous must be empty.") },
+  SingleRootField: {
+    basis:
+      FORMAL("Let collectedFieldsMap be the result of CollectSubscriptionFields(subscriptionType, selectionSet). collectedFieldsMap must have exactly one entry, which must not be an introspection field.") +
+      ' CollectSubscriptionFields: "selection must not provide the @skip directive. selection must not provide the @include directive." September 2025 has the same text. October 2021 (its §5.2.3.1) collects the root fields with CollectFields and "Let variableValues be the empty set", so it applies @skip and @include instead of forbidding them: a selection with @include(if: $v) is dropped, one with @skip(if: $v) kept. A vector that only September 2025 and later reject has since September 2025.',
+  },
+  FieldSelections: { basis: FORMAL("For each selection in the document: Let fieldName be the target field of selection. fieldName must be defined on type in scope.") },
+  FieldSelectionMerging: {
+    basis: FORMAL("Let set be any selection set defined in the GraphQL document. FieldsInSetCanMerge(set) must be true.") + ' FieldsInSetCanMerge: "SameResponseShape(fieldA, fieldB) must be true", and, for the same parent type or a parent that isn\'t an Object type, "fieldA and fieldB must have identical field names. fieldA and fieldB must have identical sets of arguments."',
+  },
+  LeafFieldSelections: {
+    basis:
+      FORMAL("If selectionType is a scalar or enum: The subselection set of that selection must not be present. If selectionType is an interface, union, or object: The subselection set of that selection must be present.") +
+      ' September 2025 says "must be empty" and "must not be empty", October 2021 "must be empty" and "must NOT BE empty": a MUST in every release. September 2026 reworded the rule when it added empty selection sets (§2.5 SelectionSet : { Selection* }, where the older releases have Selection+): "An empty selection is a selection", so `barkVolume {}` is invalid, and `human {}` is valid. The vectors with an empty selection set have since September 2026.',
+  },
+  ArgumentNames: { basis: FORMAL("For each argument in the document: ... Let argumentDefinition be the argument definition provided by the parent field or definition named argumentName. argumentDefinition must exist.") },
+  ArgumentUniqueness: { basis: FORMAL("Let arguments be all Arguments named argumentName in the Argument Set which contains argument. arguments must be the set containing only argument.") },
+  RequiredArguments: { basis: FORMAL("If type is Non-Null and defaultValue does not exist: ... argument must exist. Let value be the value of argument. value must not be the null literal.") },
+  FragmentNameUniqueness: { basis: FORMAL("Let fragments be all fragment definitions in the document named fragmentName. fragments must be a set of one.") },
+  FragmentSpreadTypeExistence: { basis: FORMAL("For each named spread namedSpread in the document: Let fragment be the target of namedSpread. The target type of fragment must be defined in the schema.") },
+  FragmentsOnObjectInterfaceOrUnionTypes: { basis: FORMAL("For each fragment defined in the document: The target type of fragment must have kind UNION, INTERFACE, or OBJECT.") },
+  FragmentsMustBeUsed: { basis: FORMAL("For each fragment defined in the document: fragment must be the target of at least one spread in the document.") },
+  FragmentSpreadTargetDefined: { basis: FORMAL("For every namedSpread in the document: Let fragment be the target of namedSpread. fragment must be defined in the document.") },
+  FragmentSpreadsMustNotFormCycles: { basis: FORMAL("For each fragmentDefinition in the document: ... DetectFragmentCycles(fragmentDefinition, visited).") + ' DetectFragmentCycles: "visited must not contain spread."' },
+  FragmentSpreadIsPossible: { basis: FORMAL("Let applicableTypes be the intersection of GetPossibleTypes(fragmentType) and GetPossibleTypes(parentType). applicableTypes must not be empty.") },
+  ValuesOfCorrectType: { basis: FORMAL("For each literal Input Value value in the document: Let type be the type expected in the position value is found. value must be coercible to type") },
+  InputObjectFieldNames: { basis: FORMAL("For each Input Object Field inputField in the document: ... inputFieldDefinition must exist.") },
+  InputObjectFieldUniqueness: { basis: FORMAL("For every inputField in inputObject: ... Let fields be all Input Object Fields named name in inputObject. fields must be the set containing only inputField.") },
+  InputObjectRequiredFields: { basis: FORMAL("If type is Non-Null and defaultValue does not exist: ... field must exist. Let value be the value of field. value must not be the null literal.") },
+  DirectivesAreDefined: { basis: FORMAL("For every directive in a document: Let directiveName be the name of directive. Let directiveDefinition be the directive named directiveName. directiveDefinition must exist.") },
+  DirectivesAreInValidLocations: { basis: FORMAL("Let locations be the valid locations for directiveDefinition. Let adjacent be the AST node the directive affects. adjacent must be represented by an item within locations.") },
+  DirectivesAreUniquePerLocation: { basis: FORMAL("Let directives be the set of Directives which apply to location and are not repeatable. ... namedDirectives must be a set of one.") },
+  VariableUniqueness: { basis: FORMAL("For every variable defined on operation: ... Let variables be the set of all variables named variableName on operation. variables must be a set of one.") },
+  VariablesAreInputTypes: { basis: FORMAL("For every variable on each operation: Let variableType be the type of variable. IsInputType(variableType) must be true.") },
+  AllVariableUsesDefined: { basis: FORMAL("For each variableUsage in scope, variable must be in operation's variable list.") + " The same for every fragment the operation references transitively." },
+  AllVariablesUsed: { basis: FORMAL("Each variable in variables must be used at least once in either the operation scope itself or any fragment transitively referenced by that operation.") },
+  AllVariableUsagesAreAllowed: {
+    basis:
+      FORMAL("For each variableUsage in variableUsages: ... IsVariableUsageAllowed(variableDefinition, variableUsage) must be true.") +
+      " IsNonNullPosition, and with it OneOf Input Objects, are new in September 2025: October 2021's IsVariableUsageAllowed has neither, so a variable in a OneOf Input Object's field isn't a Non-Null position there. The vectors that rest on it have since September 2025.",
+  },
+};
 
 // A finding names a rule as likely over-strict only when at least this many
 // of its valid siblings, each paired with a different invalid vector, are
@@ -57,14 +122,22 @@ const VALIDATION = { number: "5", title: "Validation", url: "https://spec.graphq
 export const SEVERAL = 3;
 
 const brokenRules = (vector) => Object.keys(vector.violations ?? {}).sort();
-const isDraft = (vector) => vector.edition === "draft";
 
-// Whether a failure is draft-only. A wrong verdict is when the vector's
-// verdict rests on the draft. A crash is a failure in any edition that can
-// take the input: every document parses under both editions, so only a
-// schema with a OneOf Input Object (new in the draft) makes it draft-only.
-const draftInput = (data, vector) => /@oneOf\b/.test(data.schemas[vector.schema]);
-const failsOnlyInDraft = (data, j) => (j.status === "crash" ? draftInput(data, j.vector) : isDraft(j.vector));
+// The releases a vector's `since` can name, oldest first, and how a report
+// writes one.
+export const RELEASES = ["September2025", "September2026"];
+const releaseName = (release) => release.replace(/(\d{4})$/, " $1");
+const count = (counts, release) => void (counts[release] = (counts[release] ?? 0) + 1);
+
+// The first release that can take a vector's input: September 2026 for a
+// document with an empty selection set (`syntax`), September 2025 for a
+// schema with a OneOf Input Object, none for any other.
+const inputSince = (data, vector) =>
+  vector.syntax !== undefined ? "September2026" : /@oneOf\b/.test(data.schemas[vector.schema]) ? "September2025" : undefined;
+// The release a failure counts toward, if any. A wrong verdict counts toward
+// the release the vector's verdict rests on. A crash is a failure in every
+// release that can take the input, so it counts toward the first of them.
+const failureSince = (data, j) => (j.status === "crash" ? inputSince(data, j.vector) : j.vector.since);
 
 // The wording of an error message, for grouping rejections: its first
 // line, with quoted text, bracketed paths and numbers left out, so
@@ -148,15 +221,16 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
 
   // Per rule: the invalid vectors that exercised it, how many of them break
   // it alone, and how many were accepted.
-  const stats = new Map(Object.keys(rules).map((r) => [r, { cases: 0, alone: 0, failing: 0, failingDraftOnly: 0 }]));
-  const accepts = { cases: 0, failing: 0, failingDraftOnly: 0 };
+  const stats = new Map(Object.keys(rules).map((r) => [r, { cases: 0, alone: 0, failing: 0, failingSince: {} }]));
+  const accepts = { cases: 0, failing: 0, failingSince: {} };
   for (const j of judged) {
     if (j.status === "malformed") continue;
     if (j.vector.expected.valid) {
       accepts.cases++;
       if (j.status !== "pass") {
         accepts.failing++;
-        if (failsOnlyInDraft(data, j)) accepts.failingDraftOnly++;
+        const since = failureSince(data, j);
+        if (since) count(accepts.failingSince, since);
       }
       continue;
     }
@@ -166,7 +240,8 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
       if (j.rules.length === 1) s.alone++;
       if (j.status !== "pass") {
         s.failing++;
-        if (failsOnlyInDraft(data, j)) s.failingDraftOnly++;
+        const since = failureSince(data, j);
+        if (since) count(s.failingSince, since);
       }
     }
   }
@@ -187,11 +262,12 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
         : `${j.status}\u0000${j.vector.expected.valid}\u0000${j.rules.join(",")}`;
     const f = findings.get(key) ?? {
       kind: j.status, valid: j.vector.expected.valid, rules: j.rules, byMessage: message !== undefined,
-      hints: new Map(), cases: 0, draft: 0, fixtures: {}, members: [], best: j,
+      hints: new Map(), cases: 0, since: {}, fixtures: {}, members: [], best: j,
     };
     f.cases++;
     for (const r of j.rules) f.hints.set(r, (f.hints.get(r) ?? 0) + 1);
-    if (failsOnlyInDraft(data, j)) f.draft++;
+    const since = failureSince(data, j);
+    if (since) count(f.since, since);
     f.members.push(j);
     f.fixtures[j.vector.family] = (f.fixtures[j.vector.family] ?? 0) + 1;
     const rank = (x) => [x.vector.family === "spec" ? 0 : 1, x.vector.document.length];
@@ -225,32 +301,33 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
 
   const summary = (f) => {
     const names = f.rules.map((r) => cite(r, rules));
-    const draft = f.draft > 0 ? `; ${f.draft === f.cases ? "all" : `${f.draft} of ${f.cases}`} rely on the draft` : "";
+    const releases = Object.entries(f.since).map(([release, n]) => `${n === f.cases ? "all" : `${n} of ${f.cases}`} rely on rules since ${releaseName(release)}`);
+    const byRelease = releases.length ? `; ${releases.join(", ")}` : "";
     if (f.kind === "crash") {
       return f.valid
-        ? `crashes on valid documents instead of accepting them; hint: ${names.join(" or ")}, the rules their invalid siblings break${draft}`
-        : `crashes on documents that break ${names.length === 1 ? `only ${names[0]}` : `only ${names.join(" and ")}`}, instead of rejecting them${draft}`;
+        ? `crashes on valid documents instead of accepting them; hint: ${names.join(" or ")}, the rules their invalid siblings break${byRelease}`
+        : `crashes on documents that break ${names.length === 1 ? `only ${names[0]}` : `only ${names.join(" and ")}`}, instead of rejecting them${byRelease}`;
     }
     if (f.kind === "rejected-valid") {
       const e = evidence(f);
       if (f.byMessage && !f.oneHint) {
         const counted = f.rules.slice(0, 4).map((r) => `${cite(r, rules)} (${f.hints.get(r)})`);
         const more = f.rules.length > 4 ? ` and ${plural(f.rules.length - 4, "other rule")}` : "";
-        return `rejects valid documents, all with the same error message; their invalid siblings break ${counted.join(", ")}${more}, so the hints point at no one rule: the message says what the implementation objected to${draft}`;
+        return `rejects valid documents, all with the same error message; their invalid siblings break ${counted.join(", ")}${more}, so the hints point at no one rule: the message says what the implementation objected to${byRelease}`;
       }
       if (e.likely) {
-        return `rejects valid documents: ${names.join(" or ")} is likely over-strict (${f.cases} valid siblings of ${e.partners} different invalid vectors rejected, ${e.accepted} of the same family accepted)${draft}`;
+        return `rejects valid documents: ${names.join(" or ")} is likely over-strict (${f.cases} valid siblings of ${e.partners} different invalid vectors rejected, ${e.accepted} of the same family accepted)${byRelease}`;
       }
       const spec = f.members.filter((j) => j.vector.family === "spec").length;
       const near =
         spec === f.cases
           ? `the spec's own examples of documents valid under ${names.join(" and ")}`
           : `each one edit from a document that breaks ${names.length === 1 ? `only ${names[0]}` : `${names.join(" and ")}`}${spec ? ", or the spec's example of a document valid under it" : ""}`;
-      return `rejects valid documents, ${near}; the rule it applied is a guess, since the kit doesn't interpret error messages${draft}`;
+      return `rejects valid documents, ${near}; the rule it applied is a guess, since the kit doesn't interpret error messages${byRelease}`;
     }
     return f.rules.length === 1
-      ? `${names[0]} isn't enforced: accepts documents that break only this rule${draft}`
-      : `${names.join(" and ")} aren't enforced: accepts documents that break only these rules, so neither caught them${draft}`;
+      ? `${names[0]} isn't enforced: accepts documents that break only this rule${byRelease}`
+      : `${names.join(" and ")} aren't enforced: accepts documents that break only these rules, so neither caught them${byRelease}`;
   };
   const expected = (vector) =>
     vector.expected.valid
@@ -279,7 +356,12 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
     checkerSelfTest: selfTest ? `passed (${controls} negative controls)` : "failed",
     cases: { submitted: judged.length, distinct: judged.length, malformed },
     adapterProblems: malformed,
-    draftOnly: { vectors: judged.filter((j) => isDraft(j.vector)).length, failing: failing.filter((j) => failsOnlyInDraft(data, j)).length },
+    since: Object.fromEntries(
+      RELEASES.map((release) => [
+        release,
+        { vectors: judged.filter((j) => j.vector.since === release).length, failing: failing.filter((j) => failureSince(data, j) === release).length },
+      ]).filter(([, s]) => s.vectors > 0 || s.failing > 0),
+    ),
     checks: [
       ...Object.keys(rules).map((rule) => {
         const s = stats.get(rule);
@@ -291,21 +373,22 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
           status: status(s),
           cases: s.cases,
           failing: s.failing,
-          failingDraftOnly: s.failingDraftOnly,
+          ...(Object.keys(s.failingSince).length ? { failingSince: s.failingSince } : {}),
           ...(notes[rule] ? { note: notes[rule] } : {}),
+          ...BASIS[rule],
         };
       }),
       {
         id: ACCEPTS_VALID,
         title: "Valid documents are accepted",
         level: "MUST",
-        spec: [VALIDATION],
+        spec: [VALIDATION, section("6.1"), section("6.1.1")],
         status: accepts.failing > 0 ? "fail" : accepts.cases > 0 ? "pass" : "untested",
         cases: accepts.cases,
         failing: accepts.failing,
-        failingDraftOnly: accepts.failingDraftOnly,
+        ...(Object.keys(accepts.failingSince).length ? { failingSince: accepts.failingSince } : {}),
         basis:
-          "a document is valid when it satisfies every rule of §5, and only invalid requests are kept from execution (§6.1.1); rejecting a valid document applies a rule the spec doesn't have",
+          '§5 has no sentence that requires accepting; it only says "operation execution should only occur for valid requests". The requirement to go on comes from §6.1, which executes a request ("The result of the request is determined by the result of executing this operation"), and §6.1.1, which fails it only for validation errors: "If validation errors are known, they should be reported in the list of "errors" in the response and the request must fail without operation execution." A document that satisfies every rule of §5 has none, so rejecting it applies a rule the spec doesn\'t have.',
       },
     ],
     findings: [...findings.values()]
@@ -320,12 +403,12 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
           ...(crash && f.valid ? { hint: f.rules.map(checkId) } : {}),
           summary: summary(f),
           cases: f.cases,
-          draftOnly: f.draft,
+          ...(Object.keys(f.since).length ? { since: f.since } : {}),
           fixtures: f.fixtures,
           fixture: f.best.vector.family,
           ...(crash ? { problem: f.best.answer.message } : f.best.answer?.errors?.[0]?.message ? { problem: String(f.best.answer.errors[0].message) } : {}),
           example: {
-            input: `${failsOnlyInDraft(data, f.best) ? "[draft] " : ""}${f.best.vector.id}: ${oneLine(f.best.vector.document)}`,
+            input: `${failureSince(data, f.best) ? `[since ${releaseName(failureSince(data, f.best))}] ` : ""}${f.best.vector.id}: ${oneLine(f.best.vector.document)}`,
             response: crash ? crashResponse(f.best.answer) : f.best.answer,
             expected: expected(f.best.vector),
           },
@@ -420,6 +503,41 @@ export const selfTest = (data, vectors = gradedVectors(data).graded) => {
       const credited = r.checks.filter((c) => c.status === "pass" || c.status === "subsumed");
       if (credited.length > 0) failures.push(`${name}: the report still credits ${credited.map((c) => c.id).join(", ")}`);
       if (r.findings.some((f) => f.kind !== "crash")) failures.push(`${name}: a crash counts toward a finding that isn't a crash`);
+    },
+    // A crash counts toward a release only where October 2021 can't take
+    // the input: on a document with an empty selection set it counts
+    // toward September 2026, on a schema with a OneOf Input Object toward
+    // September 2025, and on a vector with `since` whose input October 2021
+    // takes, toward none. A wrong verdict counts toward the vector's own
+    // `since`.
+    () => {
+      const name = "crashes and wrong verdicts by release";
+      const syntax = vectors.find((v) => v.syntax !== undefined);
+      const oneOf = vectors.find((v) => v.syntax === undefined && inputSince(data, v) === "September2025");
+      const plain = vectors.find((v) => v.since && !inputSince(data, v));
+      const failingIn = (r) => Object.entries(r.since).filter(([, s]) => s.failing > 0).map(([release, s]) => `${release}:${s.failing}`).join(",");
+      for (const [v, crash, want] of [
+        [syntax, true, "September2026:1"],
+        [oneOf, true, "September2025:1"],
+        [plain, true, ""],
+        [plain, false, `${plain?.since}:1`],
+        [syntax, false, `${syntax?.since}:1`],
+      ]) {
+        if (!v) {
+          failures.push(`${name}: no vector to try`);
+          continue;
+        }
+        const answers = vectors.map((w, i) => (w !== v ? right[i] : crash ? new Crash("SyntaxError") : { valid: !w.expected.valid }));
+        const r = report(answers);
+        // The same release in the report, in every check the vector
+        // fails, and in its finding.
+        const inChecks = [...new Set(r.checks.filter((c) => c.failing > 0).map((c) => Object.entries(c.failingSince ?? {}).map(([release, n]) => `${release}:${n}`).join(",")))];
+        const inFindings = r.findings.map((f) => Object.entries(f.since ?? {}).map(([release, n]) => `${release}:${n}`).join(","));
+        const got = [failingIn(r), ...inChecks, ...inFindings];
+        if (got.some((g) => g !== want)) {
+          failures.push(`${name}: a ${crash ? "crash" : "wrong verdict"} on ${v.id} counts as ${got.map((g) => g || "no release").join(" / ")} (report / checks / findings), not ${want || "no release"}`);
+        }
+      }
     },
     () => {
       const name = "valid as a string";
@@ -530,7 +648,9 @@ export const check = (data, vectors, answers, { strict = false, log = console.lo
   const crashed = judged.filter((j) => j.status === "crash").length;
   log(`${passed === judged.length ? "✓" : "✗"} ${passed} of ${judged.length} answers agree with the reference${crashed ? `; ${crashed} crashed` : ""}`);
   if (passed < judged.length - malformed) {
-    log(`  ${report.draftOnly.failing} of the ${judged.length - malformed - passed} failing vectors rely on the draft (of ${report.draftOnly.vectors} draft-only vectors graded)`);
+    for (const [release, s] of Object.entries(report.since)) {
+      log(`  ${s.failing} of the ${judged.length - malformed - passed} failing vectors rely on rules since ${releaseName(release)} (of ${s.vectors} such vectors graded)`);
+    }
   }
   const subsumed = report.checks.filter((c) => c.status === "subsumed");
   if (subsumed.length > 0) log(`~ subsumed, can't pass alone: ${subsumed.map((c) => c.id).join(", ")}`);

@@ -27,8 +27,11 @@ const nullable = (type) => (graphql.isNonNullType(type) ? type.ofType : type);
 
 // What a resolver for a value of this type may produce. With
 // `invalidResults` (the fixture asks for it and the adapter can), also
-// results of the wrong shape: an object for a scalar, a leaf for a list, and
-// a runtime type that isn't one of an abstract type's possible types.
+// results of the wrong shape: an object for a scalar and a leaf for a list.
+// Not a runtime type that isn't one of an abstract type's possible types:
+// ResolveAbstractType (§6.4.3) is "the internal method provided by the type
+// system", and no release says what happens when it returns a type that
+// isn't a member, so no response to it could be graded.
 // With `uncoercible` (the fixture asks for invalid results and the adapter
 // has `uncoercible-results`), also a value the leaf type can't represent:
 // a fraction for an Int, a non-finite number for a Float, a name that isn't
@@ -61,10 +64,7 @@ export const choicesFor = (fixture, type, invalidResults, uncoercible = false) =
   }
   if (!graphql.isAbstractType(inner)) return [NULL, ERROR, ...objects([inner.name])];
   const possible = fixture.schema.getPossibleTypes(inner).map((t) => t.name);
-  const others = Object.values(fixture.schema.getTypeMap())
-    .filter((t) => graphql.isObjectType(t) && !t.name.startsWith("__") && !possible.includes(t.name))
-    .map((t) => t.name);
-  return [NULL, ERROR, ...objects(possible.sort()), ...(invalidResults ? objects(others.sort()) : [])];
+  return [NULL, ERROR, ...objects(possible.sort())];
 };
 
 // For an adapter without `deferred-items`, a list's items come with the

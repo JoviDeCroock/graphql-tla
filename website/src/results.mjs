@@ -23,17 +23,54 @@ export const VERDICT_LABELS = {
   pass: 'pass', fail: 'fail', should: 'should', info: 'informational',
   untested: 'untested', inconclusive: 'inconclusive', subsumed: 'subsumed',
 };
-// How many of a failing check's cases rely on grammar or rules only in the
-// draft, worded as the sheet's "(all draft only)" and "(n draft only)".
-export function draftOnlyLabel(check) {
-  if (check.status !== 'fail' || !check.failingDraftOnly) return null;
-  return check.failingDraftOnly >= check.failing ? 'all draft only' : `${check.failingDraftOnly} draft only`;
+// Editions, as the conformance sheet reads them (report format 2). The kit
+// grades the latest release, September 2026. RELEASES are the releases
+// after October 2021 that introduced rules the kit grades, oldest first;
+// reports count failing cases by the one that introduced their rule
+// (a check's `failingSince`, a finding's `since`).
+export const GRADED = 'September2026';
+export const RELEASES = ['September2025', 'September2026'];
+// "September2026" as prose: "September 2026".
+export function editionName(edition) {
+  return edition.replace(/^([A-Za-z]+)(\d{4})$/, '$1 $2');
 }
-// A check's level, with how the October 2021 edition differs, as the sheet
-// prints it.
+export const GRADED_TEXT = `${editionName(GRADED)} (latest release)`;
+// "since September 2025", or "new in September 2026" for the graded release.
+export function sinceWords(edition) {
+  return `${edition === GRADED ? 'new in' : 'since'} ${editionName(edition)}`;
+}
+const sinceEntries = since => RELEASES.map(e => [e, since?.[e] ?? 0]).filter(([, n]) => n > 0);
+// How many of `total` failing cases rely on rules introduced after October
+// 2021, by release, worded as the sheet's cells: "3 since September 2025,
+// 1 new in September 2026", or "all new in September 2026". Null if none.
+export function sinceText(since, total) {
+  const entries = sinceEntries(since);
+  if (!entries.length) return null;
+  if (entries.length === 1 && entries[0][1] >= total) return `all ${sinceWords(entries[0][0])}`;
+  return entries.map(([e, n]) => `${n} ${sinceWords(e)}`).join(', ');
+}
+// The same as a sentence about `subject` ("the failing cases", "them").
+export function sinceSentence(since, total, subject) {
+  const entries = sinceEntries(since);
+  if (!entries.length) return null;
+  if (entries.length === 1 && entries[0][1] >= total) return `All of ${subject} rely on grammar or rules introduced in ${editionName(entries[0][0])}, not in October 2021.`;
+  const parts = entries.map(([e, n], i) => i === 0 ? `${n} of ${subject} rely on grammar or rules introduced in ${editionName(e)}` : `${n} on ones introduced in ${editionName(e)}`);
+  return `${parts.join(' and ')}, not in October 2021.`;
+}
+// A failing check's cases on newer rules, as the sheet's cell words them.
+export function sinceLabel(check) {
+  return check.status === 'fail' ? sinceText(check.failingSince, check.failing) : null;
+}
+// A check's level: September 2026's, then the release that introduced the
+// check's rule if it is newer than October 2021, then each older release
+// whose wording gives another level, as the sheet prints it.
 export function levelText(check) {
-  if (check.oct2021) return `${check.level} (Oct 2021: ${check.oct2021})`;
-  return check.edition === 'draft' ? `${check.level} (draft only)` : check.level;
+  const notes = [];
+  if (check.since) notes.push(sinceWords(check.since));
+  const byLevel = new Map();
+  for (const [edition, level] of Object.entries(check.levels ?? {})) byLevel.set(level, [...(byLevel.get(level) ?? []), editionName(edition)]);
+  for (const [level, editions] of byLevel) notes.push(`${level} in ${editions.join(' and ')}`);
+  return notes.length ? `${check.level} (${notes.join('; ')})` : check.level;
 }
 export function summarize(reports) {
   const checks = reports.flatMap(r => r.checks);
@@ -55,7 +92,7 @@ export function summarize(reports) {
 const matches = (text, query) => text.toLowerCase().includes(query.trim().toLowerCase());
 export function selectChecks(reports, area, status, query) {
   return reports.filter(r => area === 'all' || r.area === area)
-    .flatMap(r => r.checks.map(check => ({ ...check, area: r.area, verdict: verdict(check), draftLabel: draftOnlyLabel(check) })))
+    .flatMap(r => r.checks.map(check => ({ ...check, area: r.area, verdict: verdict(check), sinceLabel: sinceLabel(check) })))
     .filter(c => (status === 'all' || c.verdict === status) && matches(`${c.id} ${c.title} ${c.area}`, query));
 }
 // A finding's severity: the worst level among the checks it breaks. A
@@ -73,7 +110,7 @@ export function selectFindings(reports, area, status, query) {
       index: i + 1,
       verdict: findingSeverity(f, r.checks),
       crash: f.kind === 'crash',
-      draftLabel: f.draftOnly ? (f.draftOnly >= f.cases ? 'all draft only' : `${f.draftOnly} draft only`) : null,
+      sinceLabel: sinceText(f.since, f.cases),
       levels: f.checks.map(id => r.checks.find(c => c.id === id)).filter(Boolean),
     })))
     .filter(f => (status === 'all' || f.verdict === status) &&
@@ -94,17 +131,20 @@ export function exampleLines(finding) {
     e.expected && ['expected', e.expected],
   ].filter(Boolean);
 }
-// Which introspection edition a report graded, as the sheet words it.
+// Which edition's introspection types a report graded, from its profile
+// ("September2026", "September2025", "October2021"), as the sheet words it.
 export function profileText(report) {
   if (!report.profile) return null;
-  const edition = report.profile === 'draft' ? "the draft's introspection types" : `the ${report.profile} edition's introspection types`;
-  return `${edition}${report.profileNote ? `. ${report.profileNote}` : ''}`;
+  const latest = report.profile === GRADED ? ' (latest release)' : '';
+  return `the ${editionName(report.profile)} edition's introspection types${latest}${report.profileNote ? `. ${report.profileNote}` : ''}`;
 }
-// How many failing vectors of a report rely on the draft.
-export function draftOnlyText(report) {
-  const d = report.draftOnly;
-  if (!d) return null;
-  return `${typeof d === 'object' ? `${d.failing ?? 0} of the failing vectors (of ${d.vectors} draft-only vectors)` : d} rely on grammar or rules only in the draft`;
+// How many of a report's vectors rely on rules introduced after October
+// 2021, and how many of those fail, by release (`since`: { release:
+// { vectors, failing } }).
+export function sinceReportText(report) {
+  const entries = RELEASES.filter(e => report.since?.[e]?.vectors || report.since?.[e]?.failing).map(e => [e, report.since[e]]);
+  if (!entries.length) return null;
+  return entries.map(([e, { vectors = 0, failing = 0 }]) => `${sinceWords(e)}, ${failing} of ${vectors} vector${vectors === 1 ? '' : 's'} failing`).join('; ');
 }
 // A hand-written note's Markdown, split into text, code and links. Links
 // are relative to conformance/, where the sheet prints the notes.

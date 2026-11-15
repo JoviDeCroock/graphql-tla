@@ -1,12 +1,15 @@
-// The introspection queries the kit sends, for two profiles:
+// The introspection queries the kit sends, for three profiles, one per
+// release (docs/kit/introspect.md, Profiles):
 //
-// - "draft": the usual full query (the one graphql-js's
-//   getIntrospectionQuery writes with every option on), with every field
-//   the draft's introspection types have.
-// - "oct2021": the same, without what the October 2021 edition doesn't
-//   have: __Type.isOneOf, __InputValue.isDeprecated and deprecationReason,
+// - "September2026", the edition the kit grades: the usual full query (the
+//   one graphql-js's getIntrospectionQuery writes with every option on),
+//   with every field September 2026's introspection types have.
+// - "September2025": the same, without what September 2025 doesn't have:
 //   __Directive.isDeprecated and deprecationReason, and includeDeprecated
-//   on args, inputFields and directives.
+//   on __Schema.directives.
+// - "October2021": without what October 2021 doesn't have either:
+//   __Type.isOneOf, __InputValue.isDeprecated and deprecationReason, and
+//   includeDeprecated on args and inputFields.
 //
 // schemaQuery selects __typename at the root and __schema, every list
 // with includeDeprecated: true, or without the argument, so that lists
@@ -20,10 +23,13 @@
 // `missing` names fields of the introspection types a service lacks
 // ("__Directive.isRepeatable"), and arguments
 // ("__Schema.directives(includeDeprecated:)"), found by DISCOVERY_QUERY
-// when it rejects the draft's query. The queries then leave them out
+// when it rejects the profiles' queries. The queries then leave them out
 // (selection, argsOf).
 
-export const PROFILES = ["draft", "oct2021"];
+// Newest first: the order the kit tries them in.
+export const PROFILES = ["September2026", "September2025", "October2021"];
+// The edition the kit grades.
+export const PRIMARY = PROFILES[0];
 
 // How many levels of ofType the TypeRef fragment selects.
 export const TYPE_REF_DEPTH = 9;
@@ -34,7 +40,7 @@ export const WRAPPER_DEPTH = 3;
 // The fields each profile selects, per introspection type. `wrapper` is a
 // __Type in the Wrapper fragment, whose list fields select only `name`.
 export const SELECTED = {
-  draft: {
+  September2026: {
     data: ["__typename", "__schema"],
     schema: ["description", "queryType", "mutationType", "subscriptionType", "types", "directives"],
     type: ["kind", "name", "description", "specifiedByURL", "isOneOf", "fields", "inputFields", "interfaces", "enumValues", "possibleTypes"],
@@ -44,7 +50,17 @@ export const SELECTED = {
     directive: ["name", "description", "isRepeatable", "locations", "args", "isDeprecated", "deprecationReason"],
     wrapper: ["kind", "name", "description", "specifiedByURL", "isOneOf", "fields", "interfaces", "possibleTypes", "enumValues", "inputFields", "ofType"],
   },
-  oct2021: {
+  September2025: {
+    data: ["__typename", "__schema"],
+    schema: ["description", "queryType", "mutationType", "subscriptionType", "types", "directives"],
+    type: ["kind", "name", "description", "specifiedByURL", "isOneOf", "fields", "inputFields", "interfaces", "enumValues", "possibleTypes"],
+    field: ["name", "description", "args", "type", "isDeprecated", "deprecationReason"],
+    inputValue: ["name", "description", "type", "defaultValue", "isDeprecated", "deprecationReason"],
+    enumValue: ["name", "description", "isDeprecated", "deprecationReason"],
+    directive: ["name", "description", "isRepeatable", "locations", "args"],
+    wrapper: ["kind", "name", "description", "specifiedByURL", "isOneOf", "fields", "interfaces", "possibleTypes", "enumValues", "inputFields", "ofType"],
+  },
+  October2021: {
     data: ["__typename", "__schema"],
     schema: ["description", "queryType", "mutationType", "subscriptionType", "types", "directives"],
     type: ["kind", "name", "description", "specifiedByURL", "fields", "inputFields", "interfaces", "enumValues", "possibleTypes"],
@@ -82,12 +98,12 @@ export const selection = (profile, missing = []) => {
 // The lists that take includeDeprecated, each as the argument's name in
 // `missing`, and the profiles whose queries pass it.
 export const INCLUDE_DEPRECATED = {
-  fields: { arg: "__Type.fields(includeDeprecated:)", profiles: ["draft", "oct2021"] },
-  enumValues: { arg: "__Type.enumValues(includeDeprecated:)", profiles: ["draft", "oct2021"] },
-  inputFields: { arg: "__Type.inputFields(includeDeprecated:)", profiles: ["draft"] },
-  fieldArgs: { arg: "__Field.args(includeDeprecated:)", profiles: ["draft"] },
-  directiveArgs: { arg: "__Directive.args(includeDeprecated:)", profiles: ["draft"] },
-  directives: { arg: "__Schema.directives(includeDeprecated:)", profiles: ["draft"] },
+  fields: { arg: "__Type.fields(includeDeprecated:)", profiles: PROFILES },
+  enumValues: { arg: "__Type.enumValues(includeDeprecated:)", profiles: PROFILES },
+  inputFields: { arg: "__Type.inputFields(includeDeprecated:)", profiles: ["September2026", "September2025"] },
+  fieldArgs: { arg: "__Field.args(includeDeprecated:)", profiles: ["September2026", "September2025"] },
+  directiveArgs: { arg: "__Directive.args(includeDeprecated:)", profiles: ["September2026", "September2025"] },
+  directives: { arg: "__Schema.directives(includeDeprecated:)", profiles: ["September2026"] },
 };
 
 // The arguments each field of the introspection types must take for a

@@ -333,6 +333,7 @@ SchemaFieldsOf(B0) ==
 
 SchemaFieldsAreAnswered == ~done =>
   /\ SchemaFieldsMatch(B, SchemaFieldsOf(B))
+  /\ SchemaFieldsMatch(Sep2025Builtins, SchemaFieldsOf(Sep2025Builtins))
   /\ SchemaFieldsMatch(Oct2021Builtins, SchemaFieldsOf(Oct2021Builtins))
   /\ SchemaFieldsMatch(B, Reverse(SchemaFieldsOf(B)))
   \* A field of the service's own is allowed.
@@ -342,6 +343,69 @@ SchemaFieldsAreAnswered == ~done =>
   /\ ~SchemaFieldsMatch(B, Tail(SchemaFieldsOf(B)))
   /\ ~SchemaFieldsMatch(B, Append(SchemaFieldsOf(B), SchemaFieldsOf(B)[2]))
   /\ ~SchemaFieldsMatch(B, [SchemaFieldsOf(B) EXCEPT ![2].type = NamedChain("OBJECT", "__Type")])
+
+-----------------------------------------------------------------------------
+(* The September 2025 edition *)
+
+B25 == Sep2025Builtins
+\* S has nothing September 2025 can't express: no directive definition has
+\* a directive applied.
+R25(inc) == SchemaResult(S, B25, inc)
+TypeOf25(name) == ByName(R25(FALSE).types, Some(name))
+\* A result as `actual`, for schema S0 and built-ins B0.
+ActualOf(S0, B0, e) ==
+  [description |-> e.description, queryType |-> e.queryType,
+   mutationType |-> e.mutationType, subscriptionType |-> e.subscriptionType,
+   types |-> e.types, directives |-> e.directives,
+   builtinTypeNames |-> {n \in TypeNames(S0, B0) : IsBuiltinTypeName(n)},
+   builtinDirectiveNames |-> BuiltinDirectiveNames(B0)]
+NNBoolean == <<NonNull, Ref1("SCALAR", "Boolean")>>
+
+\* September 2025's §4.2 and §3.13.
+Sep2025BuiltinsFollowTheEdition == ~done =>
+  /\ Names(R25(FALSE).directives) = <<"d", "skip", "include", "deprecated", "specifiedBy", "oneOf">>
+  /\ LET dep == ByName(R25(FALSE).directives, "deprecated") IN
+     /\ Range(dep.locations) = {"FIELD_DEFINITION", "ARGUMENT_DEFINITION", "INPUT_FIELD_DEFINITION", "ENUM_VALUE"}
+     /\ Len(dep.locations) = 4
+     /\ dep.args[1].type = <<NonNull, Ref1("SCALAR", "String")>>
+     /\ dep.args[1].defaultValue = Some(Value("string", "No longer supported", <<>>, <<>>))
+  /\ Len(TypeOf25("__DirectiveLocation").enumValues[1]) = 19
+  /\ "DIRECTIVE_DEFINITION" \notin Range(Names(TypeOf25("__DirectiveLocation").enumValues[1]))
+  /\ "isOneOf" \in Range(Names(TypeOf25("__Type").fields[1]))
+  /\ Names(TypeOf25("__InputValue").fields[1])
+       = <<"name", "description", "type", "defaultValue", "isDeprecated", "deprecationReason">>
+  /\ Names(TypeOf25("__Directive").fields[1]) = <<"name", "description", "isRepeatable", "locations", "args">>
+  \* "includeDeprecated: Boolean! = false" on __Type.fields, enumValues and
+  \* inputFields, __Field.args and __Directive.args, and not on
+  \* __Schema.directives.
+  /\ \A t \in {"__Type", "__Field", "__Directive", "__Schema"} :
+       \A f \in Range(TypeOf25(t).fields[1]) :
+         IF \/ t = "__Type" /\ f.name \in {"fields", "enumValues", "inputFields"}
+            \/ t \in {"__Field", "__Directive"} /\ f.name = "args"
+         THEN /\ Names(f.args) = <<"includeDeprecated">>
+              /\ f.args[1].type = NNBoolean
+         ELSE f.args = <<>>
+
+\* What the kit's September 2025 profile relies on.
+Sep2025ProfileIsSound == ~done =>
+  /\ IsSep2025Schema(S)
+  \* A deprecated directive, or any directive applied to a directive
+  \* definition, puts a schema out of reach.
+  /\ ~IsSep2025Schema([S EXCEPT !.directives[1].deprecated = <<"x">>])
+  /\ ~IsSep2025Schema([S EXCEPT !.directives[1].directives = {"d"}])
+  \* For such a schema the fields only September 2026 has are fixed, and
+  \* the document's types are September 2026's, so a query that doesn't
+  \* select them loses nothing.
+  /\ \A inc \in BOOLEAN :
+       LET r == R25(inc) IN
+       /\ \A d \in Range(r.directives) : ~d.isDeprecated /\ d.deprecationReason = None
+       /\ \A t \in Range(Result(inc).types) :
+            ~IsBuiltinTypeName(t.name[1]) => ByName(r.types, t.name) = t
+  \* A September 2025 result matches September 2025's definitions, and
+  \* not September 2026's or October 2021's.
+  /\ Mismatches(S, B25, FALSE, TRUE, ActualOf(S, B25, R25(FALSE))) = {}
+  /\ Mismatches(S, B25, TRUE, TRUE, ActualOf(S, B25, R25(TRUE))) = {}
+  /\ Mismatches(S, B, FALSE, TRUE, ActualOf(S, B25, R25(FALSE))) # {}
 
 -----------------------------------------------------------------------------
 (* The October 2021 edition *)
@@ -392,14 +456,15 @@ Oct2021BuiltinsFollowTheEdition == ~done =>
 Oct2021ProfileIsSound == ~done =>
   /\ IsValidSchema(S21)
   /\ IsOct2021Schema(S21)
-  \* Each draft-only feature on its own puts a schema out of reach.
+  \* Each feature introduced after October 2021 on its own puts a schema
+  \* out of reach.
   /\ ~IsOct2021Schema([S21 EXCEPT !.types[9].oneOf = TRUE])
   /\ ~IsOct2021Schema([S21 EXCEPT !.types[9].inputFields[2].deprecated = <<"x">>])
   /\ ~IsOct2021Schema([S21 EXCEPT !.types[1].fields[3].args[2].deprecated = <<"x">>])
   /\ ~IsOct2021Schema([S21 EXCEPT !.directives[1].args[2].deprecated = <<"x">>])
   /\ ~IsOct2021Schema([S21 EXCEPT !.directives[1].deprecated = <<"x">>])
-  \* For such a schema the fields only the draft has are fixed, so a query
-  \* that doesn't select them loses nothing.
+  \* For such a schema the fields only later editions have are fixed, so a
+  \* query that doesn't select them loses nothing.
   /\ \A inc \in BOOLEAN :
        LET r == SchemaResult(S21, B21, inc) IN
        /\ \A t \in Range(r.types) : t.isOneOf = IF t.kind = "INPUT_OBJECT" THEN Some(FALSE) ELSE None
@@ -407,8 +472,8 @@ Oct2021ProfileIsSound == ~done =>
        /\ \A d \in Range(r.directives) :
             /\ ~d.isDeprecated /\ d.deprecationReason = None
             /\ \A j \in DOMAIN d.args : ~d.args[j].isDeprecated /\ d.args[j].deprecationReason = None
-  \* An October 2021 result matches October 2021's definitions, and not the
-  \* draft's.
+  \* An October 2021 result matches October 2021's definitions, and not
+  \* September 2026's.
   /\ Mismatches(S21, B21, FALSE, TRUE, Actual21(R21(FALSE))) = {}
   /\ Mismatches(S21, B21, TRUE, TRUE, Actual21(R21(TRUE))) = {}
   /\ Mismatches(S21, B, FALSE, TRUE, Actual21(R21(FALSE))) # {}

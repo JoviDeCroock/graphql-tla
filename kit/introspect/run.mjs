@@ -8,19 +8,23 @@
 // checked in JS first (data.mjs). An adapter `error` is a crash, which
 // fails executes.
 //
-// Profiles (chooseProfile): the kit asks the first vector with the draft's
-// query. If that is rejected, it asks which fields and arguments the
-// introspection types have, and asks the draft's query without the ones
-// the service lacks, if the kit can do without them; then October 2021's
-// query, and October 2021's without what the service lacks. What the
-// service lacks counts once per run, under builtinDefinitions.
+// Profiles (chooseProfile): the kit grades September 2026, the latest
+// release. It asks the first vector with September 2026's query, then
+// September 2025's. If both are rejected, it asks which fields and
+// arguments the introspection types have, and asks September 2026's or
+// September 2025's query without the ones the service lacks, if the kit
+// can do without them; then October 2021's query, and October 2021's
+// without what the service lacks. What the service lacks counts once per
+// run, under builtinDefinitions. Failing cases that rest on rules a release
+// after October 2021 introduced are counted by that release (`since`).
 
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Crash, answerOrCrash, crashResponse } from "../areas.mjs";
 import { REPORT_FORMAT, provenance, section } from "../report.mjs";
-import { chunked, evaluateModule, moduleFooter, pool, schemaData, tla } from "../schema/tla.mjs";
+import * as graphql from "graphql17";
+import { chunked, evaluateModule, moduleFooter, parseDefault, pool, schemaData, tla } from "../schema/tla.mjs";
 import {
   BUILTIN_DIRECTIVES,
   BUILTIN_SCALARS,
@@ -35,26 +39,141 @@ import {
   wrappersCaseOf,
 } from "./data.mjs";
 import { CONTROLS, PROFILE_CONTROLS } from "./controls.mjs";
-import { DISCOVERY_ALIASES, DISCOVERY_QUERY, INCLUDE_DEPRECATED, isArgument, lookupQuery, neededArgs, neededFields, schemaQuery, wrappersQuery } from "./query.mjs";
+import { DISCOVERY_ALIASES, DISCOVERY_QUERY, INCLUDE_DEPRECATED, PRIMARY, PROFILES, isArgument, lookupQuery, neededArgs, neededFields, schemaQuery, wrappersQuery } from "./query.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
 const checksModule = readFileSync(join(root, "kit/introspect/IntrospectChecks.tla"), "utf8");
 
 export const loadVectors = () => JSON.parse(readFileSync(join(root, "kit/introspect/vectors.json"), "utf8"));
 
-// [id, title, level, sections, edition notes]. `edition: "draft"` marks a
-// check only the draft has; `oct2021` says how October 2021 differs.
+// The editions, oldest first. A failing case that rests on rules a release
+// after October 2021 introduced is counted by that release (`since`).
+export const EDITIONS = [...PROFILES].reverse();
+export const RELEASES = EDITIONS.slice(1);
+// "September2026" as prose: "September 2026".
+export const editionName = (edition) => edition.replace(/(\d{4})$/, " $1");
+const editionIndex = (edition) => EDITIONS.indexOf(edition);
+// The release after `edition`.
+const nextEdition = (edition) => EDITIONS[editionIndex(edition) + 1];
+// The later and the earliest of releases; undefined is October 2021 (no
+// `since`).
+const later = (a, b) => (a === undefined ? b : b === undefined ? a : editionIndex(a) > editionIndex(b) ? a : b);
+const earliest = (labels) => (labels.length === 0 || labels.some((l) => l === undefined) ? undefined : labels.reduce((a, b) => (editionIndex(a) < editionIndex(b) ? a : b)));
+
+// [id, title, level, sections, notes]. Every check has a `basis`, quoting
+// the sentences it rests on (September 2026's text). `since` marks a check
+// whose rule a release after October 2021 introduced, and `feature` names
+// it. `profileNotes` says how a check is graded under an older release's
+// profile.
+const DESCRIPTIVE = 'Appendix A: "Conformance requirements are described in this document via both descriptive assertions and key words with clearly defined meanings."';
 export const CHECKS = [
-  ["envelope", "The response is a well-formed execution result: data, errors only as a non-empty list, extensions a map, nothing else", "MUST", ["7.1.1", "7.1.7", "7.1.8"]],
-  ["executes", "The query executes, and its result has exactly the fields it selects, nulls included", "MUST", ["4.2"]],
-  ["roots", "queryType, mutationType and subscriptionType are the root operation types", "MUST", ["4.2.1", "3.3.1"]],
-  ["types", "types is the set of all named types", "MUST", ["4.2.1"]],
-  ["builtinScalars", "types has the built-in scalars the schema references, and no others", "MUST", ["3.5", "4.2.1"]],
-  ["typeByName", "__type(name:) returns the named type, and null for a name the schema doesn't have", "MUST", ["4.2"]],
-  ["typeKinds", "Each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included", "MUST", ["4.2.2"]],
-  ["fields", "An object's or interface's fields, with their types", "MUST", ["4.2.2", "4.2.3"]],
-  ["arguments", "Field and directive arguments, with their types", "MUST", ["4.2.3", "4.2.4", "4.2.6"]],
-  ["defaultValue", "defaultValue is null for an input value without a default, and otherwise null or an encoding of the default", "MUST", ["4.2.4"]],
+  [
+    "envelope",
+    "The response is a well-formed execution result: data, errors only as a non-empty list, extensions a map, nothing else",
+    "MUST",
+    ["7.1.1", "7.1.7", "7.1.8"],
+    {
+      basis:
+        '§7.1: "An execution result must be a map." "If any errors are raised during operation execution, the execution result must contain an entry with key errors. The value of this entry must be a non-empty list". "The extensions entry in an execution result or request error result, if set, must have a map as its value." "the execution result and request error result maps must not contain any entries other than those described above."',
+    },
+  ],
+  [
+    "executes",
+    "The query executes, and its result has exactly the fields it selects, nulls included",
+    "MUST",
+    ["4.2"],
+    {
+      basis:
+        '§4.2: "The schema introspection system is accessible from the meta-fields __schema and __type which are accessible from the type of the root of a query operation", with "__schema: __Schema!". Each field the kit selects is one §4.2 defines, so a request error, an execution error, a crash, or a result without a selected field fails to return what those definitions say each field returns.',
+    },
+  ],
+  [
+    "roots",
+    "queryType, mutationType and subscriptionType are the root operation types",
+    "MUST",
+    ["4.2.1", "3.3.1"],
+    {
+      basis: `§4.2.1: "queryType is the root type of a query operation." "mutationType is the root type of a mutation operation, if supported. Otherwise null." The same for subscriptionType. ${DESCRIPTIVE}`,
+    },
+  ],
+  [
+    "types",
+    "types is the set of all named types",
+    "MUST",
+    ["4.2.1"],
+    {
+      basis:
+        '§4.2.1: "types must return the set of all named types contained within this schema. Any named type which can be found through a field of any introspection type must be included in this set." A type a field, argument, interface, union or root reaches, left out, or a type the schema doesn\'t have, fails this check. A type the document defines but nothing reaches is unreferencedTypes.',
+    },
+  ],
+  [
+    "unreferencedTypes",
+    "types includes, and __type(name:) finds, a type the document defines that nothing references",
+    "SHOULD",
+    ["4.2.1"],
+    {
+      basis:
+        '§4.2.1: "types must return the set of all named types contained within this schema. Any named type which can be found through a field of any introspection type must be included in this set." The second sentence is about types found through fields; whether a type the document defines that no root, field, argument, interface, union or directive argument reaches is "contained within this schema" isn\'t settled by the text, which doesn\'t define the phrase. The plain reading is that a schema built from a document contains every type the document defines, so leaving one out is graded at the weaker level, a SHOULD.',
+    },
+  ],
+  [
+    "builtinScalars",
+    "types has the built-in scalars the schema references, and no others",
+    "MUST",
+    ["3.5", "4.2.1"],
+    {
+      basis:
+        '§3.5: "When returning the set of types from the __Schema introspection type, all referenced built-in scalars must be included. If a built-in scalar type is not referenced anywhere in a schema (there is no field, argument, or input field of that type) then it must not be included."',
+    },
+  ],
+  [
+    "typeByName",
+    "__type(name:) returns the named type, and null for a name the schema doesn't have",
+    "MUST",
+    ["4.2"],
+    {
+      basis:
+        '§4.2: "The schema introspection system is accessible from the meta-fields __schema and __type which are accessible from the type of the root of a query operation", with "__type(name: String!): __Type". The spec gives no more prose for __type, so the kit takes its answer to be the named type\'s entry in types (§4.2.1: "types must return the set of all named types contained within this schema"), and null, which its nullable type allows, for a name no type has. A type the document defines that nothing references is unreferencedTypes.',
+    },
+  ],
+  [
+    "typeKinds",
+    "Each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included",
+    "MUST",
+    ["4.2.2"],
+    {
+      basis:
+        '§4.2.2, for each kind: "kind must return __TypeKind.OBJECT" (and so on) and "All other fields must return {null}." For List and Non-Null: "ofType must return a type of any kind." isOneOf, new in September 2025, is part of "all other fields" since then.',
+    },
+  ],
+  [
+    "fields",
+    "An object's or interface's fields, with their types",
+    "MUST",
+    ["4.2.2", "4.2.3"],
+    {
+      basis:
+        '§4.2.2: "fields must return the set of fields that can be selected for this type." §4.2.3: "type must return a __Type that represents the type of value returned by this field."',
+    },
+  ],
+  [
+    "arguments",
+    "Field and directive arguments, with their types",
+    "MUST",
+    ["4.2.3", "4.2.4", "4.2.6"],
+    {
+      basis: `§4.2.3: "args returns a List of __InputValue representing the arguments this field accepts." §4.2.6: "args returns a List of __InputValue representing the arguments this directive accepts." §4.2.4: "type must return a __Type that represents the type this input value expects." ${DESCRIPTIVE}`,
+    },
+  ],
+  [
+    "defaultValue",
+    "defaultValue is null for an input value without a default, and otherwise null or an encoding of the default",
+    "MUST",
+    ["4.2.4"],
+    {
+      basis: `§4.2.4: "defaultValue may return a String encoding (using the GraphQL language) of the default value used by this input value in the condition a value is not provided at runtime. If this input value has no default value, returns null." A string that encodes another value, or one for an input value without a default, contradicts that. ${DESCRIPTIVE}`,
+    },
+  ],
   [
     "defaultValueOmitted",
     "defaultValue encodes the default value of an input value that has one, rather than returning null",
@@ -65,18 +184,84 @@ export const CHECKS = [
         '§4.2.4: "defaultValue may return a String encoding (using the GraphQL language) of the default value used by this input value in the condition a value is not provided at runtime. If this input value has no default value, returns null." By Appendix A, a lowercase "may" keeps its RFC 2119 meaning, so the encoding is optional; the intent is plainly that a default is encoded, which makes this a SHOULD. A string that isn\'t an encoding of the default, or one for an input value without a default, still fails defaultValue.',
     },
   ],
-  ["inputFields", "An input object's inputFields, with their types", "MUST", ["4.2.2", "4.2.4"]],
-  ["enumValues", "An enum's enumValues", "MUST", ["4.2.2", "4.2.5"]],
-  ["interfaces", "interfaces, and possibleTypes for unions and interfaces", "MUST", ["4.2.2"]],
+  [
+    "inputFields",
+    "An input object's inputFields, with their types",
+    "MUST",
+    ["4.2.2", "4.2.4"],
+    { basis: '§4.2.2: "inputFields must return the set of input fields as a list of __InputValue." §4.2.4: "type must return a __Type that represents the type this input value expects."' },
+  ],
+  [
+    "enumValues",
+    "An enum's enumValues",
+    "MUST",
+    ["4.2.2", "4.2.5"],
+    { basis: '§4.2.2: "enumValues must return the set of enum values as a list of __EnumValue."' },
+  ],
+  [
+    "interfaces",
+    "interfaces, and possibleTypes for unions and interfaces",
+    "MUST",
+    ["4.2.2"],
+    {
+      basis: `§4.2.2: "interfaces must return the set of interfaces that an object implements (if none, interfaces must return the empty set)." For a union, "possibleTypes returns the list of types that can be represented within this union", and for an interface, "possibleTypes returns the list of types that implement this interface". ${DESCRIPTIVE}`,
+    },
+  ],
   [
     "deprecation",
     "isDeprecated, deprecationReason and includeDeprecated; @deprecated is returned when the schema deprecates something",
     "MUST",
     ["4.2.3", "4.2.4", "4.2.5", "4.2.6", "3.13", "3.13.3"],
-    { oct2021: "fields and enum values only" },
+    {
+      profileNotes: {
+        September2025: "September 2025 deprecates fields, arguments, input fields and enum values, but not directives, so this check covers no directive.",
+        October2021:
+          'October 2021 deprecates only fields and enum values, so this check covers those, and a null deprecationReason for a deprecated one fails deprecationReasonOmitted, a SHOULD, since October 2021 says "deprecationReason optionally provides a reason".',
+      },
+      basis: `§4.2.3: "isDeprecated returns true if this field should no longer be used, otherwise false." "deprecationReason returns the reason why this field is deprecated, or null if this field is not deprecated." (likewise §4.2.4 to §4.2.6), and each list "Accepts the argument includeDeprecated which defaults to false. If true, deprecated fields are also returned." ${DESCRIPTIVE} §3.13: "GraphQL implementations that support the type system definition language must provide the @deprecated directive if representing deprecated portions of the schema." The reason of an item deprecated without one is the default of the service's own @deprecated(reason:); a default that differs from §3.13.3's fails builtinDefinitions only. September 2025 has the same sentences for fields, arguments, input fields and enum values (its §4.2.6 has no isDeprecated on __Directive, which is new in September 2026). October 2021 has them for fields and enum values only, and says "deprecationReason optionally provides a reason why this field is deprecated", so under the October 2021 profile a null reason is deprecationReasonOmitted.`,
+    },
   ],
-  ["specifiedByURL", "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null", "MUST", ["4.2.2", "3.13.4"]],
-  ["isOneOf", "isOneOf is true exactly for OneOf input objects", "MUST", ["4.2.2", "3.10.1"], { edition: "draft", draft: "OneOf input objects" }],
+  [
+    "deprecationReasonOmitted",
+    "Under the October 2021 profile, a deprecated field or enum value has its reason, rather than null",
+    "SHOULD",
+    ["4.2.3", "4.2.5"],
+    {
+      basis:
+        'October 2021 §4.2.3 and §4.2.5: "deprecationReason optionally provides a reason why this field is deprecated." That makes the reason optional, where September 2025 and September 2026 say "returns the reason why this field is deprecated" (a MUST, under deprecation). The intent is plainly that the reason the schema gives is returned, which makes null a SHOULD here; another string still fails deprecation.',
+    },
+  ],
+  [
+    "specifiedByURL",
+    "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null",
+    "MUST",
+    ["4.2.2", "3.13.4"],
+    {
+      basis:
+        '§4.2.2: "specifiedByURL may return a String (in the form of a URL) for custom scalars, otherwise must be null." A URL other than the one @specifiedBy gives, or a URL on a built-in scalar, fails this check. Null for a scalar the document gives a URL is specifiedByURLOmitted.',
+    },
+  ],
+  [
+    "specifiedByURLOmitted",
+    "specifiedByURL returns the URL @specifiedBy gives a custom scalar, rather than null, when the service provides @specifiedBy",
+    "SHOULD",
+    ["4.2.2", "3.13.4"],
+    {
+      basis:
+        '§4.2.2: "specifiedByURL may return a String (in the form of a URL) for custom scalars, otherwise must be null." By Appendix A, a lowercase "may" keeps its RFC 2119 meaning, so returning the URL is optional; the intent is plainly that the URL @specifiedBy gives is returned, which makes null a SHOULD, as for defaultValueOmitted. A service that doesn\'t provide @specifiedBy at all fails builtinDirectives instead.',
+    },
+  ],
+  [
+    "isOneOf",
+    "isOneOf is true exactly for OneOf input objects",
+    "MUST",
+    ["4.2.2", "3.10.1"],
+    {
+      since: "September2025",
+      feature: "OneOf input objects",
+      basis: '§4.2.2: "isOneOf must return true when representing a OneOf Input Object, otherwise false." September 2025 introduced OneOf Input Objects (§3.10.1) and isOneOf with this sentence.',
+    },
+  ],
   [
     "descriptions",
     "A description the document gives is returned as it is, the schema's included",
@@ -92,27 +277,38 @@ export const CHECKS = [
     "directives describes the schema's own directives (name, locations, isRepeatable), and returns any built-in directive the result shows is provided (@specifiedBy for a specifiedByURL, @oneOf for a true isOneOf); any of the service's own takes input types",
     "MUST",
     ["4.2.1", "4.2.6", "3.13"],
+    {
+      basis:
+        '§4.2.1: "directives must return the set of all directives available within this schema including all built-in directives." §3.13: "When introspecting a GraphQL service all provided directives, including any built-in directive, must be included in the set of returned directives." §4.2.6: "locations returns a List of __DirectiveLocation representing the valid locations this directive may be placed", and "isRepeatable must return a Boolean that indicates if the directive may be used repeatedly at a single location." A directive\'s argument "must accept a type where IsInputType(argumentType) returns true" (§3.13, Type Validation).',
+    },
   ],
   [
     "builtinDirectives",
     "@skip and @include are provided, @specifiedBy when the schema has a custom scalar, @oneOf when it has a OneOf input object",
     "SHOULD",
     ["3.13", "3.13.1", "3.13.2", "3.13.4", "3.13.5"],
+    {
+      basis:
+        '§3.13: "GraphQL implementations should provide the @skip and @include directives." "GraphQL implementations that support the type system definition language should provide the @specifiedBy directive if representing custom scalar definitions." "... should provide the @oneOf directive if representing OneOf Input Objects." @oneOf is new in September 2025.',
+    },
   ],
   [
     "builtinDefinitions",
     "The introspection types and built-in directives are as the spec defines them, with nothing left out or changed",
     "MUST",
     ["4.2", "3.13"],
+    {
+      basis: `§4.2 gives the introspection types with "Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below", and the sections below say what each field returns ("kind must return __TypeKind.OBJECT", "isRepeatable must return a Boolean", "args returns a List of __InputValue"). A field, argument or enum value left out, or with another type, can't return what they say. §3.13: "A built-in directive is any directive defined within this specification", each with its definition (§3.13.1 to §3.13.5). ${DESCRIPTIVE} Where only the Non-Null wrapping differs, and the result accepts or returns everything the spec's would, the difference is builtinNullability; an addition is builtinAdditions.`,
+    },
   ],
   [
     "builtinNullability",
-    "The fields of the introspection types have the Non-Null wrapping the spec gives them",
+    "The fields and arguments of the introspection types and built-in directives have the Non-Null wrapping the spec gives them",
     "SHOULD",
-    ["4.2"],
+    ["4.2", "3.13"],
     {
       basis:
-        'The types of the introspection fields are given only by the definitions §4.2 introduces with "Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below", which has no key word. The sections below say what each field returns ("isRepeatable must return a Boolean"), and a field whose type differs only in Non-Null can still return exactly that. Any other change of type stays under builtinDefinitions, a MUST.',
+        'The Non-Null wrapping of the introspection fields and arguments, and of the built-in directives\' arguments, is given only by the definitions (§4.2 introduces them with "Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below", and §3.13.3 has "directive @deprecated(reason: String! = \\"No longer supported\\")"), which have no key word. The prose says what each field returns ("isRepeatable must return a Boolean") and, of each includeDeprecated, only "Accepts the argument includeDeprecated which defaults to false". A field whose type differs only in Non-Null can still return exactly that, and an argument that is nullable where the spec has Non-Null, with the same default, accepts every value the spec\'s does. So these are graded at the weaker level. An argument that is Non-Null where the spec\'s is nullable rejects requests the spec accepts, and stays under builtinDefinitions.',
     },
   ],
   [
@@ -127,24 +323,44 @@ export const CHECKS = [
   ],
   [
     "builtinEdition",
-    "Under the October 2021 profile, a built-in definition that differs from October 2021's is as the draft defines it",
+    "Under an older release's profile, a built-in definition that differs from that release's is as a later release defines it",
     "INFO",
     ["4.2", "3.13"],
     {
       basis:
-        "The kit grades against the draft; the October 2021 profile is a fallback for a service whose introspection types the draft's query can't ask. A built-in definition (or an addition) that is exactly the draft's breaks nothing the draft requires, so it is reported here, not under builtinDefinitions or builtinAdditions.",
+        "The kit grades September 2026, the latest release; the September 2025 and October 2021 profiles are for a service whose introspection types September 2026's query can't ask. A built-in definition (or an addition) that is exactly as a later release defines it breaks nothing that release requires, so it is reported here, labelled with that release, and not under builtinDefinitions or builtinAdditions.",
     },
   ],
-  ["typename", "__typename names the root type, and no fields list includes it", "MUST", ["4.1"]],
+  [
+    "typename",
+    "__typename names the root type, and no fields list includes it",
+    "MUST",
+    ["4.1"],
+    {
+      basis:
+        '§4.1: "Type name introspection is accomplished via the meta-field __typename: String! on any Object, Interface, or Union. It returns the name of the concrete Object type at that point during operation execution." "As a meta-field, __typename is implicit and does not appear in the fields list in any defined type."',
+    },
+  ],
   [
     "order",
     "Fields, arguments, enum values, directives, members and interfaces come in source order",
     "SHOULD",
     ["4.2"],
-    { edition: "draft", draft: "Stable Ordering" },
+    {
+      since: "September2025",
+      feature: "Stable Ordering",
+      basis:
+        '§4 "Stable Ordering": "When a schema is produced from a TypeSystemDocument, introspection should return items in the same source order for each element list: object fields, input object fields, arguments, enum values, directives, union member types, and implemented interfaces." September 2025 introduced this paragraph.',
+    },
   ],
-  ["other", "Anything else Introspection!Matches requires", "MUST", ["4.2"]],
-].map(([id, title, level, spec, edition = {}]) => ({ id, title, level, spec, ...edition }));
+  [
+    "other",
+    "Anything else Introspection!Matches requires",
+    "MUST",
+    ["4.2"],
+    { basis: "A difference Introspection!Matches finds that IntrospectChecks can't name. Matches compares with the result §4.2 defines, so a difference there is one from what §4.2's sentences require." },
+  ],
+].map(([id, title, level, spec, notes = {}]) => ({ id, title, level, spec, ...notes }));
 
 // Checks a lookup vector doesn't exercise: it asks __type(name:) only.
 const SCHEMA_ONLY = new Set(["roots", "types", "builtinScalars", "directives", "builtinDirectives"]);
@@ -153,10 +369,14 @@ const LOOKUP_ONLY = new Set(["typeByName"]);
 // Checks the October 2021 profile doesn't grade: its query doesn't select
 // isOneOf, and October 2021 has no Stable Ordering.
 const NOT_OCT2021 = new Set(["isOneOf", "order"]);
-// Checks only the October 2021 profile grades.
-const ONLY_OCT2021 = new Set(["builtinEdition"]);
+// Checks only the October 2021 profile grades: under the later releases'
+// profiles, a null deprecationReason is a deprecation problem.
+const ONLY_OCT2021 = new Set(["deprecationReasonOmitted"]);
 const exercises = (vector, id, profile) => {
-  if (profile === "oct2021" ? NOT_OCT2021.has(id) : ONLY_OCT2021.has(id)) return false;
+  if (profile === "October2021" ? NOT_OCT2021.has(id) : ONLY_OCT2021.has(id)) return false;
+  // Only an older release's profile can find a built-in as a later
+  // release defines it.
+  if (id === "builtinEdition" && profile === PRIMARY) return false;
   if (vector.wrappers) return id === "typeKinds";
   return vector.lookups ? !SCHEMA_ONLY.has(id) : !LOOKUP_ONLY.has(id);
 };
@@ -217,8 +437,8 @@ const hides = (m, [aspect, where], kindOf) => {
     return isTypePlace(where) && kind;
   }
   if (field === "description") return aspect === "description" && of;
-  if (field === "isDeprecated" || field === "deprecationReason") return aspect === "deprecation" && of;
-  if (field === "specifiedByURL") return aspect === field;
+  if (field === "isDeprecated" || field === "deprecationReason") return (aspect === "deprecation" || aspect === "deprecationReasonOmitted") && of;
+  if (field === "specifiedByURL") return aspect === field || aspect === "specifiedByURLOmitted";
   if (field === "isOneOf") return aspect === "isOneOf" || aspect === "isOneOfNull" || aspect === "wrapperIsOneOf";
   if (field === "defaultValue") return aspect === "defaultValue" || aspect === "defaultValueOmitted";
   if (field === "isRepeatable") return aspect === "isRepeatable";
@@ -236,13 +456,17 @@ const ASPECT = {
   interfaces: "interfaces",
   deprecation: "deprecation",
   includeDeprecated: "deprecation",
+  deprecationReasonOmitted: "deprecationReasonOmitted",
   specifiedByURL: "specifiedByURL",
+  specifiedByURLOmitted: "specifiedByURLOmitted",
   isOneOf: "isOneOf",
   description: "descriptions",
   directives: "directives",
+  locations: "directives",
   isRepeatable: "directives",
   roots: "roots",
   types: "types",
+  unreferencedTypes: "unreferencedTypes",
   other: "other",
 };
 
@@ -265,10 +489,11 @@ const ownerOf = (where) => {
 // provided directives, including any built-in directive, must be included
 // in the set of returned directives"). A schema rejected because it
 // applies a directive the service needn't provide (unsupportedDirective)
-// is a SHOULD. A problem with a built-in where the answer follows the
-// draft, under the October 2021 profile ("draft:"), is informational.
+// is a SHOULD. A problem with a built-in where the answer follows a later
+// release, under an older release's profile ("edition:<release>:"), is
+// informational.
 export const checkOf = ([aspect, where]) => {
-  if (aspect.startsWith("draft:")) return "builtinEdition";
+  if (aspect.startsWith("edition:")) return "builtinEdition";
   // An item added to an introspection type's list, or an introspection type
   // of the service's own. Added arguments of a built-in directive are
   // §3.13's, and stay with builtinDefinitions.
@@ -277,6 +502,9 @@ export const checkOf = ([aspect, where]) => {
     return owner.builtin && !owner.directive ? "builtinAdditions" : checkOf([aspect.slice("added:".length), where]);
   }
   if (aspect === "nullability") return ownerOf(where).builtin ? "builtinNullability" : "fields";
+  // An argument or input field that is nullable where the spec's is
+  // Non-Null: a SHOULD for a built-in, a wrong type for the document's.
+  if (aspect === "inputNullability") return ownerOf(where).builtin ? "builtinNullability" : isArgumentPlace(where) ? "arguments" : "inputFields";
   if (aspect === "wrapperFields" || aspect === "wrapperIsOneOf" || aspect === "isOneOfNull") return "typeKinds";
   if (aspect === "builtinScalars" || aspect === "builtinDirectives" || aspect === "typeByName") return aspect;
   if (aspect === "requiredDirective") return where === "@deprecated" ? "deprecation" : "directives";
@@ -320,12 +548,12 @@ const SHARD = 12;
 const parentOf = (where) => (where.endsWith(":)") ? where.slice(0, where.lastIndexOf("(")) : where.includes(".") ? where.slice(0, where.lastIndexOf(".")) : "");
 const key = ([aspect, where]) => `${aspect}\u0000${where}`;
 
-// Whether a problem with a built-in definition (or, under the October 2021
-// profile, an addition to one) is where the answer follows the other
-// edition: comparing with that edition's built-ins (other) finds no
-// problem there, and none with the built-in list it belongs to, left out
-// or added. A built-in directive's list is `directives`, which holds the
-// document's directives too, so it isn't consulted.
+// Whether a problem with a built-in definition (or an addition to one) is
+// where the answer follows another edition: comparing with that edition's
+// built-ins (other, its problems' keys) finds no problem there, and none
+// with the built-in list it belongs to, left out or added. A built-in
+// directive's list is `directives`, which holds the document's directives
+// too, so it isn't consulted.
 const followsOther = ([aspect, where], other) => {
   const parent = parentOf(where);
   const base = aspect.replace(/^added:/, "");
@@ -350,19 +578,22 @@ const shownIn = (actual) => {
 // - { envelope, malformed }: not the result of the query;
 // - { envelope, problems, rejected }: a schema rejected for a directive it
 //   needn't support (needs);
-// - { envelope, unbuilt }: a schema rejected that uses syntax only the
-//   draft has (syntax), which isn't graded;
-// - { envelope, problems, matches, oct2021 }: oct2021 holds the problems of
-//   a draft answer where it follows October 2021 instead (followsOther, and
-//   anything October 2021 doesn't define). Under the October 2021 profile,
-//   a problem where the answer follows the draft has its aspect prefixed
-//   with "draft:".
+// - { envelope, unbuilt }: a schema rejected that uses syntax only a later
+//   release's grammar has (syntax), which isn't graded;
+// - { envelope, problems, matches, labels }: labels maps each problem with
+//   a built-in that rests on a rule a release introduced to { since, edition,
+//   follows }: the answer follows the older `edition` there (follows), or
+//   that edition doesn't define it, so the rule it breaks is new in `since`,
+//   the release after `edition` (builtinLabel). A problem with a built-in
+//   where the answer follows a later release than the profile's instead
+//   has its aspect prefixed with "edition:<that release>:", and counts
+//   under builtinEdition.
 const evaluate = async (schemas, cases) => {
   const results = new Array(cases.length);
   const prepared = [];
   cases.forEach((c, i) => {
     if (c.response instanceof Crash) {
-      results[i] = { envelope: [], crash: c.response.message, oct2021: new Set() };
+      results[i] = { envelope: [], crash: c.response.message, labels: new Map() };
       return;
     }
     const envelope = envelopeProblems(c.response);
@@ -370,14 +601,14 @@ const evaluate = async (schemas, cases) => {
     // from an implementation that answers the query for other schemas:
     // it doesn't provide the directive, which §3.13 allows.
     if (c.needs?.length && c.queryAccepted && isRequestError(c.response)) {
-      results[i] = { envelope, problems: c.needs.map((n) => ["unsupportedDirective", `@${n}`]), rejected: true, oct2021: new Set() };
+      results[i] = { envelope, problems: c.needs.map((n) => ["unsupportedDirective", `@${n}`]), rejected: true, labels: new Map() };
       return;
     }
-    // A request error for a schema written with syntax only the draft's
-    // grammar has: the schema didn't build, which says nothing about
-    // introspection.
+    // A request error for a schema written with syntax only a later
+    // release's grammar has: the schema didn't build, which says nothing
+    // about introspection.
     if (c.syntax && c.queryAccepted && isRequestError(c.response)) {
-      results[i] = { envelope, unbuilt: c.syntax, oct2021: new Set() };
+      results[i] = { envelope, unbuilt: c.syntax, labels: new Map() };
       return;
     }
     try {
@@ -413,15 +644,16 @@ ${moduleFooter}`;
     if (verdicts.length !== shard.length || new Set(verdicts.map((v) => v[1])).size !== shard.length) {
       throw new Error(`read ${verdicts.length} verdicts from shard ${k}, which has ${shard.length} cases`);
     }
-    for (const [, n, [problems, matches, otherProblems]] of verdicts) {
+    for (const [, n, [problems, matches, others]] of verdicts) {
       const { i } = shard[n - 1];
-      Object.assign(results[i], { problems: problems.map(([aspect, where]) => [aspect, where]), matches, other: new Set(otherProblems.map(key)) });
+      const other = Object.fromEntries(others.map(([edition, found]) => [edition, new Set(found.map(key))]));
+      Object.assign(results[i], { problems: problems.map(([aspect, where]) => [aspect, where]), matches, other });
     }
   });
   // Problems must explain the reference's verdict: none when Matches
   // holds, apart from the checks Matches doesn't make, and some when it
   // doesn't. Then the problems a missing field or argument hides are left
-  // out, and problems with built-ins are labelled by edition.
+  // out, and problems with built-ins are labelled by release.
   results.forEach((r, i) => {
     if (r.malformed || r.rejected || r.crash || r.unbuilt) return;
     const c = cases[i];
@@ -429,19 +661,47 @@ ${moduleFooter}`;
     if (r.matches && graded.length > 0) throw new Error(`kit bug: Introspection!Matches holds, but IntrospectChecks found ${JSON.stringify(graded)}`);
     const visible = r.problems.filter((p) => !c.missing.some((m) => hides(m, p, c.kindOf)));
     if (!r.matches && r.problems.length === 0) visible.push(["other", ""]);
-    r.problems = c.profile === "oct2021" ? visible.filter(([aspect]) => aspect !== "order") : visible;
+    // Since September 2025, deprecationReason "returns the reason": a null
+    // one is a deprecation problem. Only October 2021's "optionally
+    // provides a reason" makes it deprecationReasonOmitted.
+    r.problems =
+      c.profile === "October2021"
+        ? visible.filter(([aspect]) => aspect !== "order")
+        : visible.map(([aspect, where]) => [aspect === "deprecationReasonOmitted" ? "deprecation" : aspect, where]);
     // Every check about built-in definitions is labelled the same way:
-    // definitions, additions and Non-Null wrapping.
+    // definitions, additions and Non-Null wrapping. A problem where the
+    // answer follows a later release than the profile's is that release's
+    // (builtinEdition); otherwise, one where it follows an older release,
+    // or that release doesn't define the item, rests on a rule the next
+    // release introduced.
     const builtinProblem = (p) => ["builtinDefinitions", "builtinAdditions", "builtinNullability"].includes(checkOf(p));
-    if (c.profile === "draft") {
-      const oct = c.builtins.oct2021;
-      r.oct2021 = new Set(r.problems.filter((p) => builtinProblem(p) && (followsOther(p, r.other) || !defines(oct, p[1]))).map(key));
-    } else {
-      r.oct2021 = new Set();
-      r.problems = r.problems.map((p) => (builtinProblem(p) && followsOther(p, r.other) ? [`draft:${p[0]}`, p[1]] : p));
-    }
+    const newer = EDITIONS.slice(editionIndex(c.profile) + 1);
+    const older = EDITIONS.slice(0, editionIndex(c.profile)).reverse();
+    r.labels = new Map();
+    r.problems = r.problems.map((p) => {
+      if (!builtinProblem(p)) return p;
+      const follows = newer.find((e) => followsOther(p, r.other[e]));
+      if (follows) return [`edition:${follows}:${p[0]}`, p[1]];
+      const label = builtinLabel(p, older, r.other, c.builtins);
+      if (label) r.labels.set(key(p), label);
+      return p;
+    });
   });
   return results;
+};
+
+// The label of a problem with a built-in under a profile, from the older
+// editions (newest first): the first that doesn't define the item (an
+// addition is never defined), or that the answer follows there, and the
+// release after it, which introduced the rule the answer breaks.
+const builtinLabel = (problem, older, other, builtins) => {
+  const added = problem[0].startsWith("added:");
+  for (const edition of older) {
+    const since = nextEdition(edition);
+    if (!added && !defines(builtins[edition], problem[1])) return { since, edition, follows: false };
+    if (followsOther(problem, other[edition])) return { since, edition, follows: true };
+  }
+  return undefined;
 };
 
 // ---------------------------------------------------------------------------
@@ -451,82 +711,109 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const listed = (items) => (items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`);
 
 // The check ids a result fails. A crash fails executes; a schema that
-// didn't build for draft-only syntax fails nothing but its envelope.
+// didn't build for syntax only a later release has fails nothing but its
+// envelope.
 const failedChecks = (r) =>
   [...new Set([...(r.envelope.length ? ["envelope"] : []), ...(r.crash || r.malformed ? ["executes"] : r.unbuilt ? [] : r.problems.map(checkOf))])].sort();
 
-// Whether a problem rests on what only the draft has: OneOf input objects,
-// Stable Ordering, or a built-in definition where the answer follows
-// October 2021 instead, or that October 2021 doesn't define.
-const draftOnly = (problem, r) => {
+// The release a problem rests on, or undefined if October 2021 has the
+// rule it breaks too: OneOf input objects and Stable Ordering are new in
+// September 2025, a built-in definition labelled by evaluate (labels) is
+// new in its `since`, and one under builtinEdition is as that release
+// defines it.
+const problemSince = (problem, r) => {
   const [aspect, where] = problem;
-  if (where === "@oneOf" || ["isOneOf", "isOneOfNull", "wrapperIsOneOf", "order"].includes(aspect)) return true;
-  return r.oct2021.has(key(problem));
+  if (aspect.startsWith("edition:")) return aspect.split(":")[1];
+  if (where === "@oneOf" || ["isOneOf", "isOneOfNull", "wrapperIsOneOf", "order"].includes(aspect)) return "September2025";
+  return r.labels.get(key(problem))?.since;
 };
 
-// Whether a result's failure of check id rests on the draft: the vector is
-// draft only, or every problem behind the failure is (draftOnly). A crash
-// on a draft-only vector is draft only because the vector's schema isn't
-// valid October 2021 input (its SDL needs the draft's grammar or rules).
-const draftFor = (v, r, id) => {
-  if (v.edition === "draft") return true;
-  if (r.malformed || r.crash || id === "envelope") return false;
-  const behind = r.problems.filter((p) => checkOf(p) === id);
-  return behind.length > 0 && behind.every((p) => draftOnly(p, r));
+// The release a set of problems on a vector rests on: the first release
+// in which all of them are failures (the earliest of theirs, none if any
+// has none), and no earlier than the first release whose grammar and rules
+// can express the vector's schema (v.since).
+const sinceOfProblems = (v, problems, r) => later(v.since, earliest(problems.map((p) => problemSince(p, r))));
+
+// The release a result's failure of check id rests on. A crash rests on
+// none (it fails in every release, whatever the vector's verdict); an
+// answer that isn't the query's result, and a bad envelope, rest on the
+// vector's.
+const sinceFor = (v, r, id) => {
+  if (r.crash) return undefined;
+  if (r.malformed || id === "envelope") return v.since;
+  return sinceOfProblems(v, r.problems.filter((p) => checkOf(p) === id), r);
 };
+
+// The release a whole result's failure rests on, for its finding.
+const resultSince = (v, r) => {
+  if (r.crash) return undefined;
+  if (r.malformed || r.unbuilt || r.envelope.length > 0) return v.since;
+  return sinceOfProblems(v, r.problems, r);
+};
+
+const count = (counts, release) => void (counts[release] = (counts[release] ?? 0) + 1);
+const sinceWords = (release) => `${release === PRIMARY ? "new in" : "since"} ${editionName(release)}`;
 
 // One problem in words, without the schema-specific part unless it is a
 // built-in, so that the same fault groups across schemas.
 const describe = (problem, vector, r, profile) => {
   const [aspect, where] = problem;
   const check = checkOf(problem);
-  const draft = where === "@oneOf" ? " (draft only)" : "";
+  const graded = editionName(profile);
+  const oneOf = where === "@oneOf" ? " (since September 2025)" : "";
   if (check === "builtinEdition") {
-    const base = aspect.slice("draft:".length);
-    if (base.startsWith("added:")) return `the built-in ${where} has ${{ "added:fields": "a field", "added:enumValues": "an enum value", "added:arguments": "an argument", "added:types": "an introspection type" }[base] ?? "an item"} October 2021 doesn't define, as the draft does`;
-    return `the built-in ${where} isn't as October 2021 defines it, but is as the draft does (${base})`;
+    const [, release, ...rest] = aspect.split(":");
+    const base = rest.join(":");
+    if (base.startsWith("added:")) {
+      const noun = { "added:fields": "a field", "added:enumValues": "an enum value", "added:arguments": "an argument", "added:types": "an introspection type", "added:locations": "a location" }[base] ?? "an item";
+      return `the built-in ${where} has ${noun} ${graded} doesn't define, as ${editionName(release)} does`;
+    }
+    return `the built-in ${where} isn't as ${graded} defines it, but is as ${editionName(release)} does (${base})`;
   }
   if (check === "builtinScalars") {
     const expected = vector.expected.response.data.__schema.types.some((t) => t.name === where);
     return expected ? `leaves out ${where}, a built-in scalar the schema references` : `includes ${where}, a built-in scalar nothing references`;
   }
-  if (aspect === "builtinDirectives") return `doesn't provide ${where}${draft}`;
-  if (aspect === "unsupportedDirective") return `rejects a schema that applies ${where}, so doesn't provide it${draft}`;
+  if (aspect === "builtinDirectives") return `doesn't provide ${where}${oneOf}`;
+  if (aspect === "unsupportedDirective") return `rejects a schema that applies ${where}, so doesn't provide it${oneOf}`;
   if (aspect === "requiredDirective") {
     if (where === "@deprecated") return "doesn't return @deprecated, though the schema deprecates something";
     if (where === "@specifiedBy") return "doesn't return @specifiedBy in directives, though a scalar's specifiedByURL shows it is provided";
-    return "doesn't return @oneOf in directives, though an input object's isOneOf shows it is provided (draft only)";
+    return "doesn't return @oneOf in directives, though an input object's isOneOf shows it is provided (since September 2025)";
   }
   if (aspect === "serviceTypes") return "a directive of the service's own takes an argument of a type that isn't an input type";
   if (aspect === "wrapper") return "a List or Non-Null type has a non-null field other than kind and ofType";
-  if (aspect === "wrapperIsOneOf") return "a List or Non-Null type has a non-null isOneOf (draft only)";
-  if (aspect === "isOneOfNull") return `${ownerOf(where).builtin ? `the built-in ${where}'s` : "a type's"} isOneOf is null for an input object, or not null for another kind (draft only)`;
+  if (aspect === "wrapperIsOneOf") return "a List or Non-Null type has a non-null isOneOf (since September 2025)";
+  if (aspect === "isOneOfNull") return `${ownerOf(where).builtin ? `the built-in ${where}'s` : "a type's"} isOneOf is null for an input object, or not null for another kind (since September 2025)`;
   if (aspect === "wrapperFields") return '__type(name: "__Schema") doesn\'t return each of __Schema\'s fields once, with its type, so their wrapper types can\'t all be checked';
   if (check === "builtinAdditions") {
-    const edition = profile === "oct2021" ? "October 2021" : "the spec";
     const base = aspect.slice("added:".length);
-    if (base === "types") return `has the introspection type ${where}, which ${edition} doesn't define`;
+    if (base === "types") return `has the introspection type ${where}, which ${graded} doesn't define`;
     const noun = { fields: "a field", enumValues: "an enum value", arguments: "an argument" }[base] ?? `an item (${base})`;
-    return `the built-in ${where} has ${noun} ${edition} doesn't define`;
+    return `the built-in ${where} has ${noun} ${graded} doesn't define`;
   }
   if (aspect === "typeByName") {
     const expected = Object.values(vector.expected.response.data).some((t) => t?.name === where);
     return expected ? "__type(name:) doesn't return a type the schema has" : "__type(name:) returns a type for a name the schema doesn't have";
   }
+  const label = r.labels.get(key(problem));
   if (check === "builtinNullability") {
-    const base = `the built-in ${where} has the spec's type, but not its Non-Null wrapping`;
-    if (profile === "oct2021" || !r.oct2021.has(key(problem))) return base;
-    return defines(r.builtinsOct2021, where) ? `${base}; it is as October 2021 defines it` : `${base}; October 2021 doesn't define it`;
+    const base = `the built-in ${where} has ${graded}'s type, but not its Non-Null wrapping`;
+    if (!label) return base;
+    return label.follows ? `${base}; it is as ${editionName(label.edition)} defines it` : `${base}; ${editionName(label.edition)} doesn't define it`;
   }
   if (check === "builtinDefinitions") {
-    if (profile === "oct2021") return `the built-in ${where} isn't as October 2021 defines it (${aspect})`;
-    if (!r.oct2021.has(key(problem))) return `the built-in ${where} isn't as the spec defines it (${aspect})`;
-    return defines(r.builtinsOct2021, where)
-      ? `the built-in ${where} isn't as the draft defines it, but is as October 2021 does (${aspect})`
-      : `the built-in ${where} isn't as the draft defines it; October 2021 doesn't define it (${aspect})`;
+    if (!label) return `the built-in ${where} isn't as ${graded} defines it (${aspect})`;
+    if (aspect === "locations") return `the built-in ${where} lacks only locations ${editionName(label.edition)} doesn't define (${aspect})`;
+    return label.follows
+      ? `the built-in ${where} isn't as ${graded} defines it, but is as ${editionName(label.edition)} does (${aspect})`
+      : `the built-in ${where} isn't as ${graded} defines it; ${editionName(label.edition)} doesn't define it (${aspect})`;
   }
   if (check === "typename") return where === "" ? "the root's __typename isn't the query root type's name" : "lists __typename among a type's fields";
   if (aspect === "defaultValueOmitted") return "defaultValue is null for an input value that has a default";
+  if (aspect === "specifiedByURLOmitted") return "specifiedByURL is null for a custom scalar that has a URL, though @specifiedBy is provided";
+  if (aspect === "deprecationReasonOmitted") return "deprecationReason is null for a deprecated field or enum value that has a reason";
+  if (aspect === "unreferencedTypes") return vector.lookups ? "__type(name:) returns null for a type the document defines that nothing references" : "leaves out a type the document defines that nothing references";
   if (aspect === "includeDeprecated") return "a list's deprecated items don't follow includeDeprecated";
   return `${CHECKS.find((c) => c.id === check).title.replace(/^./, (x) => x.toLowerCase())}: differs from Introspection.tla`;
 };
@@ -557,20 +844,23 @@ const partOf = (response, [aspect, where], vector) => {
 
 // A check's notes for the profile the run used.
 const notesOf = (c, profile) => {
-  if (profile === "oct2021" && NOT_OCT2021.has(c.id)) {
-    return { note: `Not graded: the implementation answered the October 2021 query, and October 2021 has no ${c.draft}.` };
+  if (profile === "October2021" && NOT_OCT2021.has(c.id)) {
+    return { note: `Not graded: the implementation answered the October 2021 query, and October 2021 has no ${c.feature}.` };
   }
-  if (profile !== "oct2021" && ONLY_OCT2021.has(c.id)) return { note: "Graded only under the October 2021 profile." };
-  if (profile === "oct2021" && c.oct2021) return { note: `Graded for ${c.oct2021}: the implementation answered the October 2021 query.` };
-  if (c.edition === "draft") return { note: `Draft only: October 2021 has no ${c.draft}.` };
+  if (profile !== "October2021" && ONLY_OCT2021.has(c.id)) return { note: "Graded only under the October 2021 profile." };
+  if (profile === PRIMARY && c.id === "builtinEdition") return { note: "Graded only under an older release's profile." };
+  if (c.profileNotes?.[profile]) return { note: `The implementation answered the ${editionName(profile)} query, so this check is graded as ${editionName(profile)} has it: ${c.profileNotes[profile]}` };
+  if (c.since) return { note: `${sinceWords(c.since).replace(/^./, (x) => x.toUpperCase())}: October 2021 has no ${c.feature}.` };
   return {};
 };
 
 // The run-level finding for the fields and arguments the introspection
-// types lack: one case, under builtinDefinitions. It is draft only when
-// October 2021 defines none of them.
-const missingFinding = (missingFields, builtins, discovery) => {
-  const draftOnlyMissing = missingFields.every((m) => !defines(builtins.oct2021, m));
+// types lack: one case, under builtinDefinitions. It rests on the release
+// after the newest older edition that defines none of them.
+const missingFinding = (missingFields, builtins, discovery, profile) => {
+  const older = EDITIONS.slice(0, editionIndex(profile)).reverse();
+  const edition = older.find((e) => missingFields.every((m) => !defines(builtins[e], m)));
+  const since = edition && nextEdition(edition);
   return {
     finding: {
       checks: ["builtinDefinitions"],
@@ -579,14 +869,14 @@ const missingFinding = (missingFields, builtins, discovery) => {
       fixtures: { discovery: 1 },
       fixture: "discovery",
       problem: missingFields.join(", "),
-      ...(draftOnlyMissing ? { draftOnly: 1, edition: "draft" } : {}),
+      ...(since ? { since: { [since]: 1 } } : {}),
       example: {
         input: "the fields of each introspection type, with their arguments (the kit's IntrospectionFields query)",
         response: discovery ?? "not asked",
-        expected: `the fields and arguments the spec defines, including ${listed(missingFields)}`,
+        expected: `the fields and arguments ${editionName(profile)} defines, including ${listed(missingFields)}`,
       },
     },
-    draftOnly: draftOnlyMissing,
+    since,
   };
 };
 
@@ -607,12 +897,11 @@ export const buildReport = ({
   missingFields = [],
   discovery,
 }) => {
-  const stats = new Map(CHECKS.map((c) => [c.id, { cases: 0, failing: 0, failingDraftOnly: 0 }]));
+  const stats = new Map(CHECKS.map((c) => [c.id, { cases: 0, failing: 0, failingSince: {} }]));
   const findings = new Map();
   const notGraded = {};
   vectors.forEach((v, i) => {
     const r = results[i];
-    r.builtinsOct2021 = builtins.oct2021;
     for (const c of CHECKS) {
       const exercised =
         c.id === "envelope" ||
@@ -622,8 +911,10 @@ export const buildReport = ({
     if (r.unbuilt) notGraded[r.unbuilt] = (notGraded[r.unbuilt] ?? 0) + 1;
     const failed = failedChecks(r);
     for (const id of failed) {
-      stats.get(id).failing++;
-      if (draftFor(v, r, id)) stats.get(id).failingDraftOnly++;
+      const s = stats.get(id);
+      s.failing++;
+      const since = sinceFor(v, r, id);
+      if (since) count(s.failingSince, since);
     }
     if (failed.length === 0) return;
     const descriptions = [
@@ -645,7 +936,7 @@ export const buildReport = ({
     const expected = fullResponse(v, builtins, profile);
     const what = v.wrappers ? '__type(name: "__Schema")\'s fields and their types' : v.lookups ? `__type(name:) for ${v.lookups.map((l) => l.name).join(", ")}` : "the introspection query";
     const example = {
-      input: `${v.edition === "draft" ? "[draft] " : ""}${v.sdl.replace(/\s+/g, " ")}  (${what}${profile === "oct2021" ? ", October 2021 profile" : ""}; includeDeprecated: ${v.includeDeprecated ? "true" : "the default"})`,
+      input: `${v.since ? `[since ${editionName(v.since)}] ` : ""}${v.sdl.replace(/\s+/g, " ")}  (${what}${profile === PRIMARY ? "" : `, ${editionName(profile)} profile`}; includeDeprecated: ${v.includeDeprecated ? "true" : "the default"})`,
       response: r.crash ? crashResponse(answers[i]) : whole || !first ? answers[i] : partOf(answers[i].response, first, v),
       expected: whole || !first ? "a well-formed execution result with exactly the fields the query selects, and no errors" : partOf(expected, first, v),
     };
@@ -657,25 +948,23 @@ export const buildReport = ({
       fixtures: {},
       fixture: v.id,
       problem: [...r.envelope, ...(r.crash ? [r.crash] : r.malformed ? [r.malformed] : r.unbuilt ? [] : r.problems.map(([aspect, where]) => `${aspect} at ${where || "the root"}`).sort())].join(", "),
-      draftOnly: 0,
+      since: {},
       example,
     };
-    if (v.edition === "draft" || (!whole && r.envelope.length === 0 && r.problems.every((p) => draftOnly(p, r)))) f.draftOnly++;
+    const since = resultSince(v, r);
+    if (since) count(f.since, since);
     f.cases++;
     f.fixtures[v.family] = (f.fixtures[v.family] ?? 0) + 1;
     findings.set(findingKey, f);
   });
-  for (const f of findings.values()) {
-    if (f.draftOnly === f.cases) f.edition = "draft";
-    if (f.draftOnly === 0) delete f.draftOnly;
-  }
+  for (const f of findings.values()) if (Object.keys(f.since).length === 0) delete f.since;
   const extra = [];
   if (missingFields.length) {
-    const m = missingFinding(missingFields, builtins, discovery);
+    const m = missingFinding(missingFields, builtins, discovery, profile);
     const s = stats.get("builtinDefinitions");
     s.cases++;
     s.failing++;
-    if (m.draftOnly) s.failingDraftOnly++;
+    if (m.since) count(s.failingSince, m.since);
     extra.push(m.finding);
   }
   const crashes = results.filter((r) => r.crash).length;
@@ -697,6 +986,14 @@ export const buildReport = ({
       ...(Object.keys(notGraded).length ? { notGraded } : {}),
     },
     adapterProblems,
+    // The graded vectors whose schemas need a release after October 2021,
+    // and how many of them fail (a crash never counts here).
+    since: Object.fromEntries(
+      RELEASES.map((release) => {
+        const tagged = vectors.map((v, i) => [v, results[i]]).filter(([v]) => v.since === release);
+        return [release, { vectors: tagged.length, failing: tagged.filter(([, r]) => !r.crash && failedChecks(r).length > 0).length }];
+      }).filter(([, s]) => s.vectors > 0),
+    ),
     checks: CHECKS.map((c) => {
       const s = stats.get(c.id);
       return {
@@ -707,10 +1004,10 @@ export const buildReport = ({
         status: s.failing > 0 ? "fail" : s.cases > 0 ? "pass" : "untested",
         cases: s.cases,
         failing: s.failing,
-        failingDraftOnly: s.failingDraftOnly,
-        ...(c.edition ? { edition: c.edition } : {}),
+        ...(Object.keys(s.failingSince).length ? { failingSince: s.failingSince } : {}),
+        ...(c.since ? { since: c.since } : {}),
+        ...(c.levels ? { levels: c.levels } : {}),
         ...(c.basis ? { basis: c.basis } : {}),
-        ...(c.oct2021 ? { oct2021: c.oct2021 } : {}),
         ...notesOf(c, profile),
       };
     }),
@@ -730,6 +1027,37 @@ const isMapValue = (v) => v !== null && typeof v === "object" && !Array.isArray(
 const isRejection = (response) => isRequestError(response) || (isMapValue(response) && response.data === null && Array.isArray(response.errors) && response.errors.length > 0);
 const rejected = (answer) => hasResponse(answer) && isRejection(answer.response);
 const answered = (answer) => hasResponse(answer) && !isRejection(answer.response);
+
+// §3.13.3's default reason, and the default a service's own
+// @deprecated(reason:) has, from a __schema response, where that is another
+// string. The reason of an item deprecated without one is that default:
+// the service's answer then agrees with the directive it describes, and
+// the different default counts once, under builtinDefinitions, not again
+// at every such item under deprecation.
+const SPEC_REASON = "No longer supported";
+const reasonDefaultOf = (response) => {
+  const directives = response?.data?.__schema?.directives;
+  if (!Array.isArray(directives)) return undefined;
+  const args = directives.find((d) => d?.name === "deprecated")?.args;
+  const reason = Array.isArray(args) ? args.find((a) => a?.name === "reason") : undefined;
+  if (typeof reason?.defaultValue !== "string") return undefined;
+  const value = parseDefault(reason.defaultValue);
+  return value.kind === "string" && value.text !== SPEC_REASON ? value.text : undefined;
+};
+// The SDL with the reason written out on every @deprecated that has none,
+// or null if it has no such @deprecated.
+const withReason = (sdl, reason) => {
+  let changed = false;
+  const doc = graphql.visit(graphql.parse(sdl), {
+    Directive(node) {
+      if (node.name.value !== "deprecated" || (node.arguments ?? []).some((a) => a.name.value === "reason")) return undefined;
+      changed = true;
+      const arg = { kind: graphql.Kind.ARGUMENT, name: { kind: graphql.Kind.NAME, value: "reason" }, value: { kind: graphql.Kind.STRING, value: reason } };
+      return { ...node, arguments: [...(node.arguments ?? []), arg] };
+    },
+  });
+  return changed ? graphql.print(doc) : null;
+};
 
 // The fields of each introspection type, each with its arguments' names,
 // from DISCOVERY_QUERY's response, or null if it doesn't say.
@@ -762,28 +1090,40 @@ const lacking = (present, profile) => {
 // schema. Returns { profile, missing, first, note, discovery }: first is
 // the answer the probe is graded on, discovery DISCOVERY_QUERY's answer.
 //
-// 1. The draft's query. Anything but a rejection (a request error, or
-//    errors with "data": null) keeps the draft profile.
-// 2. DISCOVERY_QUERY asks for the fields of each introspection type, and
-//    their arguments. If all the fields and arguments the draft's query
-//    needs but the service lacks are FILLABLE, the kit asks the draft's
-//    query without them. Answered, that is the draft profile without them.
-// 3. October 2021's query: answered, the October 2021 profile.
-// 4. October 2021's query without what the service lacks, if FILLABLE.
-// 5. Otherwise the draft profile stays, and every vector fails executes.
+// 1. September 2026's query. Anything but a rejection (a request error, or
+//    errors with "data": null) keeps the September 2026 profile.
+// 2. September 2025's query: answered, the September 2025 profile.
+// 3. DISCOVERY_QUERY asks for the fields of each introspection type, and
+//    their arguments. For September 2026 and September 2025, if all the
+//    fields and arguments the release's query needs but the service lacks
+//    are FILLABLE, the kit asks that query without them, the release whose
+//    query lacks fewer first (September 2026 on a tie). Answered, that is
+//    the release's profile without them.
+// 4. October 2021's query: answered, the October 2021 profile.
+// 5. October 2021's query without what the service lacks, if FILLABLE.
+// 6. Otherwise the September 2026 profile stays, and every vector fails
+//    executes.
 export const chooseProfile = async (probe, askQuery) => {
-  const first = await askQuery(probe.query);
-  const draft = { profile: "draft", missing: [], first };
-  if (!rejected(first)) return draft;
-  const tried = [`The draft's introspection query was rejected ("${firstError(first.response)}")`];
+  const queryOf = (profile) => probe.queries[profile];
+  const first = await askQuery(queryOf(PRIMARY));
+  const primary = { profile: PRIMARY, missing: [], first };
+  if (!rejected(first)) return primary;
+  const tried = [`${editionName(PRIMARY)}'s introspection query was rejected ("${firstError(first.response)}")`];
+  const exact = async (profile) => {
+    const answer = await askQuery(queryOf(profile));
+    if (answered(answer)) {
+      return { profile, missing: [], first: answer, note: `${tried.join("; ")}. ${editionName(profile)}'s was answered, so this run grades against ${editionName(profile)}.` };
+    }
+    tried.push(`so was ${editionName(profile)}'s${hasResponse(answer) ? ` ("${firstError(answer.response)}")` : ""}`);
+    return null;
+  };
+  const sep2025 = await exact("September2025");
+  if (sep2025) return sep2025;
   const fields = await askQuery(DISCOVERY_QUERY);
   const discovery = hasResponse(fields) ? fields.response : undefined;
   const present = discovery === undefined ? null : presentFields(discovery);
-  const without = async (profile) => {
-    const missing = lacking(present, profile);
-    const edition = profile === "draft" ? "the draft" : "October 2021";
-    // With nothing missing, this is the query that was rejected.
-    if (missing.length === 0) return null;
+  const without = async (profile, missing) => {
+    const edition = editionName(profile);
     if (!missing.every((m) => FILLABLE.has(m))) {
       tried.push(`the introspection types lack ${listed(missing.filter((m) => !FILLABLE.has(m)))}, without which ${edition}'s query can't be graded`);
       return null;
@@ -797,22 +1137,28 @@ export const chooseProfile = async (probe, askQuery) => {
     return null;
   };
   if (present) {
-    const got = await without("draft");
-    if (got) return got;
-  } else tried.push("the fields of the introspection types couldn't be read");
-  if (probe.query2021) {
-    const old = await askQuery(probe.query2021);
-    if (answered(old)) {
-      const note = `${tried.join("; ")}. October 2021's was answered, so this run grades against October 2021.`;
-      return { profile: "oct2021", missing: [], first: old, note, discovery };
-    }
-    tried.push(`so was October 2021's${hasResponse(old) ? ` ("${firstError(old.response)}")` : ""}`);
-    if (present) {
-      const got = await without("oct2021");
+    // With nothing missing, a release's query is one that was rejected.
+    const candidates = ["September2026", "September2025"]
+      .map((profile) => ({ profile, missing: lacking(present, profile) }))
+      .filter((c) => c.missing.length > 0)
+      .sort((x, y) => x.missing.length - y.missing.length);
+    for (const c of candidates) {
+      const got = await without(c.profile, c.missing);
       if (got) return got;
     }
+  } else tried.push("the fields of the introspection types couldn't be read");
+  if (queryOf("October2021")) {
+    const old = await exact("October2021");
+    if (old) return { ...old, discovery };
+    if (present) {
+      const missing = lacking(present, "October2021");
+      if (missing.length > 0) {
+        const got = await without("October2021", missing);
+        if (got) return got;
+      }
+    }
   }
-  return { ...draft, note: `${tried.join("; ")}. So this run grades against the draft.`, discovery };
+  return { ...primary, note: `${tried.join("; ")}. So this run grades against ${editionName(PRIMARY)}.`, discovery };
 };
 
 export const run = async ({ adapter, strict, log = console.log }) => {
@@ -831,7 +1177,7 @@ export const run = async ({ adapter, strict, log = console.log }) => {
   const editionDirectives = (profile) => new Set(builtins[profile].directives.map((d) => d.name));
   // A type's kind, in the document or among the built-ins.
   const kindsOf = (v) => {
-    const kinds = new Map([...builtins.draft.types, ...builtins.oct2021.types].map((t) => [t.name, t.kind]));
+    const kinds = new Map(PROFILES.flatMap((p) => builtins[p].types).map((t) => [t.name, t.kind]));
     for (const t of docOf(v).types) kinds.set(t.name, t.kind);
     return (name) => kinds.get(name);
   };
@@ -848,10 +1194,25 @@ export const run = async ({ adapter, strict, log = console.log }) => {
       return editionDirectives(profile);
     }
   };
-  const caseFor = (v, response, { profile, queryAccepted, provided, missing = [] }) => {
+  // A case whose service gives @deprecated(reason:) another default
+  // (reasonDefault) is judged against its schema with that reason written
+  // out wherever the document leaves it to the default (withReason).
+  const schemas = [...data];
+  const reasoned = new Map();
+  const schemaFor = (v, reasonDefault) => {
+    const i = sdls.indexOf(v.sdl);
+    if (reasonDefault === undefined) return i;
+    const k = `${i}\u0000${reasonDefault}`;
+    if (!reasoned.has(k)) {
+      const sdl = withReason(v.sdl, reasonDefault);
+      reasoned.set(k, sdl === null ? i : schemas.push(schemaData(sdl)) - 1);
+    }
+    return reasoned.get(k);
+  };
+  const caseFor = (v, response, { profile, queryAccepted, provided, missing = [], reasonDefault }) => {
     const S = docOf(v);
     return {
-      schema: sdls.indexOf(v.sdl),
+      schema: schemaFor(v, reasonDefault),
       profile,
       inc: v.includeDeprecated,
       response,
@@ -882,8 +1243,13 @@ export const run = async ({ adapter, strict, log = console.log }) => {
   const { profile, missing, first, discovery } = chosen;
   const profileNote = chosen.note;
   const queryAccepted = answered(first);
-  const graded = profile === "oct2021" ? vectors.filter((v) => v.query2021) : vectors;
-  if (profile === "oct2021" && graded.length < vectors.length) skipped["draft only (October 2021 profile)"] = vectors.length - graded.length;
+  // Under an older release's profile, a vector whose schema that release
+  // can't express isn't asked.
+  const graded = vectors.filter((v) => v.queries[profile]);
+  for (const v of vectors.filter((x) => !x.queries[profile])) {
+    const why = `${sinceWords(v.since)} (${editionName(profile)} profile)`;
+    skipped[why] = (skipped[why] ?? 0) + 1;
+  }
 
   // The vector's query for the profile, without what the service lacks.
   const queryOf = (v) => {
@@ -891,7 +1257,7 @@ export const run = async ({ adapter, strict, log = console.log }) => {
       if (v.wrappers) return wrappersQuery(profile, missing);
       return v.lookups ? lookupQuery(profile, v.lookups, v.includeDeprecated, missing) : schemaQuery(profile, v.includeDeprecated, missing);
     }
-    return profile === "oct2021" ? v.query2021 : v.query;
+    return v.queries[profile];
   };
   const answers = [first];
   for (const v of graded.slice(1)) answers.push(await ask(v.sdl, queryOf(v)));
@@ -901,7 +1267,7 @@ export const run = async ({ adapter, strict, log = console.log }) => {
   };
   const responseOf = (a) => (a instanceof Crash ? a : a?.response);
 
-  // The self-test's cases (kit/introspect/controls.mjs), for both profiles:
+  // The self-test's cases (kit/introspect/controls.mjs), for every profile:
   // each vector's expected response, which must pass; another vector's,
   // which must fail; and responses broken on purpose, each of which must
   // fail its check.
@@ -910,17 +1276,25 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     ...answers.map((a, i) => {
       const v = graded[i];
       const provided = v.lookups ? providedIn(v, responseOfFamily(v.family), profile, missing) : undefined;
-      return caseFor(v, responseOf(a), { profile, queryAccepted, provided, missing });
+      const reasonDefault = reasonDefaultOf(v.lookups ? responseOfFamily(v.family) : responseOf(a));
+      return caseFor(v, responseOf(a), { profile, queryAccepted, provided, missing, reasonDefault });
     }),
-    ...controls.map((c) => caseFor(c.vector, c.response, { profile: c.profile, queryAccepted: true, provided: c.provided, missing: c.missing })),
+    ...controls.map((c) =>
+      caseFor(c.vector, c.response, {
+        profile: c.profile,
+        queryAccepted: true,
+        provided: c.provided,
+        missing: c.missing,
+        reasonDefault: c.vector.lookups ? undefined : reasonDefaultOf(c.response),
+      }),
+    ),
   ];
-  const results = await evaluate(data, cases);
+  const results = await evaluate(schemas, cases);
   const own = results.slice(0, graded.length);
 
   const problems = [];
   controls.forEach((c, k) => {
     const r = results[graded.length + k];
-    r.builtinsOct2021 = builtins.oct2021;
     const failed = failedChecks(r);
     const wrong = Array.isArray(c.check)
       ? failed.join() !== [...c.check].sort().join()
@@ -934,10 +1308,11 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     if (wrong) {
       problems.push(`${c.name} (${c.vector.id}, ${c.profile}): expected ${c.check === "pass" ? "no failure" : [c.check].flat().join(", ")}, got ${failed.join(", ") || "no failure"}`);
     }
-    // draftOnly: whether each failing check rests on the draft alone.
-    if (c.draftOnly !== undefined && !wrong) {
+    // since: the release each failing check rests on (null: none).
+    if (c.since !== undefined && !wrong) {
       for (const id of failed) {
-        if (draftFor(c.vector, r, id) !== c.draftOnly) problems.push(`${c.name} (${c.vector.id}, ${c.profile}): ${id} should${c.draftOnly ? "" : "n't"} be draft only`);
+        const got = sinceFor(c.vector, r, id) ?? null;
+        if (got !== c.since) problems.push(`${c.name} (${c.vector.id}, ${c.profile}): ${id} should rest on ${c.since ?? "no release after October 2021"}, not ${got ?? "none"}`);
       }
     }
     if (c.unbuilt && !r.unbuilt) problems.push(`${c.name} (${c.vector.id}, ${c.profile}): should not be graded`);
@@ -951,12 +1326,24 @@ export const run = async ({ adapter, strict, log = console.log }) => {
       problems.push(`${c.name}: expected the ${c.profile} profile${c.missing.length ? ` without ${c.missing.join(", ")}` : ""}, got ${got.profile}${got.missing.length ? ` without ${got.missing.join(", ")}` : ""}`);
     }
   }
-  // A field the service lacks counts once per run, under builtinDefinitions.
-  const counted = buildReport({ vectors: [], builtins, answers: [], results: [], strict, implementation: "", capabilities: [], selfTestText: "", adapterProblems: 0, profile: "draft", missingFields: ["__Type.specifiedByURL"] });
-  const once = counted.checks.find((x) => x.id === "builtinDefinitions");
-  if (once.failing !== 1 || once.failingDraftOnly !== 0 || counted.findings.length !== 1) problems.push("a missing __Type.specifiedByURL isn't counted once, under builtinDefinitions, in both editions");
+  // A field the service lacks counts once per run, under builtinDefinitions,
+  // labelled by the release after the newest older one that lacks it too.
+  const missingCases = [
+    [PRIMARY, ["__Type.specifiedByURL"], undefined],
+    [PRIMARY, ["__Directive.isDeprecated", "__Schema.directives(includeDeprecated:)"], "September2026"],
+    [PRIMARY, ["__Type.isOneOf", "__Directive.isDeprecated"], "September2025"],
+    ["September2025", ["__Type.isOneOf"], "September2025"],
+  ];
+  for (const [p, missingFields, since] of missingCases) {
+    const counted = buildReport({ vectors: [], builtins, answers: [], results: [], strict, implementation: "", capabilities: [], selfTestText: "", adapterProblems: 0, profile: p, missingFields });
+    const once = counted.checks.find((x) => x.id === "builtinDefinitions");
+    const label = Object.keys(once.failingSince ?? {});
+    if (once.failing !== 1 || counted.findings.length !== 1 || label.join() !== (since ?? "")) {
+      problems.push(`missing ${missingFields.join(", ")} under ${p} isn't counted once, under builtinDefinitions, ${since ? `as ${sinceWords(since)}` : "in every release"}`);
+    }
+  }
   for (const p of problems) log(`✗ self-test: ${p}`);
-  const negative = controls.filter((c) => c.check !== "pass").length + profileControls.length + 1;
+  const negative = controls.filter((c) => c.check !== "pass").length + profileControls.length + missingCases.length;
   const selfTestText = problems.length === 0 ? `passed (${negative} negative controls)` : "failed";
 
   const report = buildReport({
@@ -989,10 +1376,15 @@ export const run = async ({ adapter, strict, log = console.log }) => {
   const crashed = own.filter((r) => r.crash).length;
   const unbuilt = own.length - gradedCount;
   log(
-    `${passing === gradedCount ? "✓" : "✗"} ${passing} of ${gradedCount} introspection results satisfy Introspection.tla${should}${crashed ? `; ${crashed} crashed` : ""}${unbuilt ? `; ${unbuilt} not graded (the schema didn't build: draft-only syntax)` : ""}`,
+    `${passing === gradedCount ? "✓" : "✗"} ${passing} of ${gradedCount} introspection results satisfy Introspection.tla (${editionName(profile)} profile)${should}${crashed ? `; ${crashed} crashed` : ""}${unbuilt ? `; ${unbuilt} not graded (the schema didn't build: syntax only a later release has)` : ""}`,
   );
-  const draft = (f) => (f.draftOnly ? `, ${f.draftOnly === f.cases ? "all" : f.draftOnly} draft only` : "");
-  for (const f of report.findings) log(`  ✗ ${f.summary} (${plural(f.cases, f.fixture === "discovery" ? "run" : "result")}${draft(f)}, e.g. ${f.fixture})`);
+  const since = (f) =>
+    f.since
+      ? `, ${Object.entries(f.since)
+          .map(([release, n]) => `${n === f.cases ? "all" : n} ${sinceWords(release)}`)
+          .join(", ")}`
+      : "";
+  for (const f of report.findings) log(`  ✗ ${f.summary} (${plural(f.cases, f.fixture === "discovery" ? "run" : "result")}${since(f)}, e.g. ${f.fixture})`);
   if (problems.length === 0) log(`✓ the checker catches all ${negative} negative controls`);
   const failing = report.checks.filter((c) => c.status === "fail" && (c.level === "MUST" || (strict && c.level === "SHOULD")));
   const ok = problems.length === 0 && adapterProblems === 0 && failing.length === 0 && gradedCount > 0;

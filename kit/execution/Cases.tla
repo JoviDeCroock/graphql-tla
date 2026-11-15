@@ -60,12 +60,16 @@ DataNulledEarly(fx, O, data) ==
 \* The clauses of Reference!Clauses a case breaks, plus "calledSerially" if
 \* a mutation's root field was called before an earlier one completed, and
 \* "dataMatches" if data is null though no root field can null it
-\* (DataNulledEarly).
+\* (DataNulledEarly). serialErrorsKept rests on serial execution, which
+\* §6.2.2 only says "should" happen: a mutation that didn't run its root
+\* fields serially may have completed a later one first, so it is graded
+\* only when CalledSerially holds.
 Failures(c) ==
-  LET fx == Fixtures[c.fixture] IN
-  FailedClauses(fx, c.outcomes, c.data, c.errors)
-    \cup (IF CalledSerially(fx, c.trace) THEN {} ELSE {"calledSerially"})
-    \cup (IF DataNulledEarly(fx, c.outcomes, c.data) THEN {"dataMatches"} ELSE {})
+  LET fx == Fixtures[c.fixture]
+      failed == FailedClauses(fx, c.outcomes, c.data, c.errors)
+  IN (IF CalledSerially(fx, c.trace) THEN failed
+      ELSE (failed \ {"serialErrorsKept"}) \cup {"calledSerially"})
+       \cup (IF DataNulledEarly(fx, c.outcomes, c.data) THEN {"dataMatches"} ELSE {})
 
 \* A readable rendering of json, for reports. Leaf values are abstracted
 \* away, so a leaf other than __typename's prints as <leaf>.

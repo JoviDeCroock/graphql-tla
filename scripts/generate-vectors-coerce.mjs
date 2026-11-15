@@ -12,9 +12,9 @@
 //                      policies, the answers the spec also permits
 //                      (`alternatives`). Under October 2021's rule for
 //                      default values (used as they are): where that
-//                      answer differs, the vector relies on the draft
-//                      (`edition`), and the answer is an `oct2021`
-//                      alternative. Under October 2021's §3.11 table of
+//                      answer differs, the vector relies on a rule new in
+//                      September 2025 (`since`), and the answer is an
+//                      `oct2021` alternative. Under October 2021's §3.11 table of
 //                      examples (no list of one made for an item whose
 //                      type is a list), which its own prose contradicts:
 //                      an `oct2021Example` alternative, not an edition's
@@ -31,9 +31,9 @@
 //                      is only invalid because an Int or Float literal
 //                      doesn't coerce (§5.6.1 asks for "coercible", which
 //                      Validation.tla checks by literal kind only) is also
-//                      `valid: false`, and needs `unvalidated`: whether a
-//                      validator must catch it rests on Int's SHOULD and on
-//                      the reference's reading of Float's precision.
+//                      `valid: false`, and `literalOnly`: a service may
+//                      refuse it at validation or at coercion, so the kit
+//                      takes a request error or a field error for it.
 //
 // graphql-js only parses the SDL and the documents here, and finds string
 // literals in them. It never decides an answer. The generator also names,
@@ -62,7 +62,10 @@ const SHARD_SIZE = 250;
 
 // ---------------------------------------------------------------------------
 // The schema: differential-coercion.mjs's, plus the spec's
-// ExampleInputObject (§3.10) and a field that takes it.
+// ExampleInputObject (§3.10) and a field that takes it, and Settings, whose
+// fields are all nullable with no default: §3.10 says that when such a
+// field is left out "no entry is added to the coerced unordered map", so an
+// implementation that fills in 0 or false fails.
 
 const SDL = `enum Color { RED GREEN BLUE }
 
@@ -82,6 +85,12 @@ input Shape {
 input ExampleInputObject {
   a: String
   b: Int!
+}
+
+input Settings {
+  count: Int
+  ratio: Float
+  enabled: Boolean
 }
 
 type Mutation {
@@ -110,13 +119,14 @@ type Query {
   shape(v: Shape): String
   pair(a: Int, b: Int! = 2): String
   example(arg: ExampleInputObject): String
+  settings(v: Settings): String
 }
 `;
 
 // The schema of the OneOf vectors: the same, plus §3.10.1's
 // ExampleOneOfInputObject and a field that takes it. It is a schema of its
-// own, since @oneOf is only in the draft: an implementation that can't build
-// it fails only these vectors.
+// own, since @oneOf is new in September 2025: an implementation that can't
+// build it fails only these vectors.
 const SDL_ONEOF = SDL.replace(
   "type Mutation {",
   "input ExampleOneOfInputObject @oneOf {\n  a: String\n  b: Int\n}\n\ntype Mutation {",
@@ -213,7 +223,7 @@ const SPEC_EXAMPLES = [
   ['{ example(arg: { b: 123, c: "xyz" }) }', "{}"],
 ];
 
-// §3.10.1's table of examples (the draft only), as `oneOfExample(arg:
+// §3.10.1's table of examples (since September 2025), as `oneOfExample(arg:
 // <literal>)`, plus a few more. Where the literal uses $var, the operation
 // declares `$var: ExampleOneOfInputObject`; $a and $b are String and Int.
 const ONEOF_EXAMPLES = [
@@ -239,7 +249,7 @@ const ONEOF_EXAMPLES = [
   ['{ oneOfExample(arg: { c: "abc" }) }', "{}"],
 ];
 
-// String literals whose Unicode text (§2.10.4) is the same in both editions:
+// String literals whose Unicode text (§2.10.4) is the same in every edition:
 // escapes, and block strings with indentation, blank lines and an escaped
 // triple quote. Each is `{ string(v: <literal>) }`. Lexer.tla gives every
 // string literal's text, here and in every other vector.
@@ -269,6 +279,23 @@ const OPERATIONS = [
   ["mutation { mutate(v: 1) }", [null], ["{}"]],
   ["query Q { int(v: 1) } mutation M { mutate(v: 2) }", [null, "Q", "M"], ["{}"]],
   ["query A($x: Int) { int(v: $x) } query B($y: Int!) { intNN(v: $y) }", ["A", "B"], ['{"x": 1}', '{"x": 1, "y": 2}', '{"x": 1, "y": "bad"}']],
+];
+
+// Settings' nullable fields with no default, left out (§3.10: "Otherwise,
+// if the field is not required, then no entry is added to the coerced
+// unordered map"), by a literal, a variable's map, and a variable with no
+// runtime value ("If the variable definition does not provide a default
+// value, the input object field definition's default value should be
+// used", and there is none). Added last, so the other vectors keep their
+// ids.
+const OMITTED_FIELDS = [
+  ["{ settings(v: {}) }", ["{}"]],
+  ["{ settings(v: { count: 1 }) }", ["{}"]],
+  ["{ settings(v: { ratio: 1.5 }) }", ["{}"]],
+  ["{ settings(v: { enabled: true }) }", ["{}"]],
+  ["query($x: Settings) { settings(v: $x) }", ['{"x": {}}', '{"x": {"count": 2}}', '{"x": {"ratio": 0.5, "enabled": false}}']],
+  ["query($c: Int) { settings(v: { count: $c }) }", ["{}", '{"c": 3}']],
+  ["query($e: Boolean) { settings(v: { enabled: $e, ratio: 2.5 }) }", ["{}"]],
 ];
 
 // ---------------------------------------------------------------------------
@@ -409,6 +436,128 @@ const argumentOf = (o) => {
   return definition && { kind: "json", type: typeRef(definition.type), value: variables[name] };
 };
 
+// Where §3.12 is one of the rules an error rests on: the selected
+// operation's root field gets a null, or a variable with no runtime value,
+// at a Non-Null argument, input object field or list item, or an input
+// object leaves out a Non-Null field that has no default, or a Non-Null
+// argument with no default is left out. A variable at a Non-Null position
+// counts when the request gives it null or no value and it has no default
+// ("provided with a variable that was either not provided a value at
+// runtime, or was provided the value null"). This only names a section. It
+// never decides an answer.
+// The root field the request's operation selects, as GetOperation picks
+// it, and a lookup of a variable's runtime value: the request's (JSON),
+// else its default (a literal), else undefined.
+const selection = (o) => {
+  const ops = graphql.parse(o.document).definitions.filter((d) => d.kind === "OperationDefinition");
+  const operation = o.operationName === null ? (ops.length === 1 ? ops[0] : undefined) : ops.find((d) => d.name?.value === o.operationName);
+  const field = operation?.selectionSet.selections[0];
+  if (!field) return undefined;
+  const variables = parseExact(o.variables);
+  const definitions = new Map((operation.variableDefinitions ?? []).map((v) => [v.variable.name.value, v]));
+  const runtime = (name) => {
+    if (Object.hasOwn(variables, name)) return { kind: "json", value: variables[name] };
+    const def = definitions.get(name)?.defaultValue;
+    return def ? { kind: "literal", value: def } : undefined;
+  };
+  return { field, runtime };
+};
+const isNull = (kind, v) => (kind === "literal" ? v.kind === "NullValue" : v === null);
+
+const nonNullGap = (o) => {
+  const selected = selection(o);
+  if (!selected) return false;
+  const { field, runtime } = selected;
+  const gap = (kind, type, v) => {
+    if (kind === "literal" && v.kind === "Variable") {
+      const r = runtime(v.name.value);
+      if (type.wrappers[0] === "nonNull" && (!r || isNull(r.kind, r.value))) return true;
+      return false;
+    }
+    if (type.wrappers[0] === "nonNull") return isNull(kind, v) || gap(kind, { ...type, wrappers: type.wrappers.slice(1) }, v);
+    if (isNull(kind, v)) return false;
+    const inner = { ...type, wrappers: type.wrappers.slice(1) };
+    if (type.wrappers[0] === "list") {
+      const items = kind === "literal" ? (v.kind === "ListValue" ? v.values : [v]) : Array.isArray(v) ? v : [v];
+      return items.some((item) => gap(kind, inner, item));
+    }
+    const def = model.types.get(type.name);
+    if (def.kind !== "inputObject") return false;
+    const entries =
+      kind === "literal"
+        ? v.kind === "ObjectValue" ? new Map(v.fields.map((f) => [f.name.value, f.value])) : undefined
+        : v !== null && typeof v === "object" && !Array.isArray(v) && !(NUMBER in v) ? new Map(Object.entries(v)) : undefined;
+    if (!entries) return false;
+    return def.fields.some((f) =>
+      entries.has(f.name)
+        ? gap(kind, f.type, entries.get(f.name))
+        : f.type.wrappers[0] === "nonNull" && f.default === undefined,
+    );
+  };
+  const args = new Map((field.arguments ?? []).map((a) => [a.name.value, a.value]));
+  // A variable given as a whole argument: its JSON value, walked as the
+  // argument's type.
+  const walk = (type, v) => {
+    if (v.kind !== "Variable") return gap("literal", type, v);
+    const r = runtime(v.name.value);
+    if (!r || isNull(r.kind, r.value)) return type.wrappers[0] === "nonNull";
+    return gap(r.kind, type, r.value);
+  };
+  return (model.fields.get(field.name.value) ?? []).some((a) =>
+    args.has(a.name) ? walk(a.type, args.get(a.name)) : a.type.wrappers[0] === "nonNull" && a.default === undefined,
+  );
+};
+
+// Where §3.10 or §3.10.1 itself says "an execution error must be raised",
+// so that a request error instead breaks that MUST rather than only
+// CoerceArgumentValues' "should be treated instead as an execution error":
+// a variable in an input object literal whose runtime value is null, at a
+// Non-Null field (§3.10: "If the runtime value is {null} and the field type
+// is non-null, an _execution error_ must be raised"), or a OneOf literal
+// whose one entry is a variable with a null or no runtime value, so that
+// the coerced map has no entry or a null one (§3.10.1). This only names a
+// level. It never decides an answer.
+const executionErrorRequired = (o) => {
+  const selected = selection(o);
+  if (!selected) return false;
+  const { field, runtime } = selected;
+  const walk = (type, v) => {
+    if (v.kind === "Variable" || v.kind === "NullValue") return false;
+    const inner = { ...type, wrappers: type.wrappers.slice(1) };
+    if (type.wrappers[0] === "nonNull") return walk(inner, v);
+    if (type.wrappers[0] === "list") return (v.kind === "ListValue" ? v.values : [v]).some((item) => walk(inner, item));
+    const def = model.types.get(type.name);
+    if (def.kind !== "inputObject" || v.kind !== "ObjectValue") return false;
+    if (def.oneOf && v.fields.length === 1 && v.fields[0].value.kind === "Variable") {
+      const r = runtime(v.fields[0].value.name.value);
+      if (!r || isNull(r.kind, r.value)) return true;
+    }
+    return v.fields.some((f) => {
+      const declared = def.fields.find((d) => d.name === f.name.value);
+      if (!declared) return false;
+      if (f.value.kind !== "Variable") return walk(declared.type, f.value);
+      const r = runtime(f.value.name.value);
+      return declared.type.wrappers[0] === "nonNull" && r !== undefined && isNull(r.kind, r.value);
+    });
+  };
+  const declared = model.fields.get(field.name.value) ?? [];
+  return (field.arguments ?? []).some((a) => {
+    const d = declared.find((x) => x.name === a.name.value);
+    return d !== undefined && walk(d.type, a.value);
+  });
+};
+
+// Whether a document holds a code point outside October 2021's
+// SourceCharacter (U+0009, U+000A, U+000D, U+0020–U+FFFF), read literally,
+// as the parse area reads it: then only September 2025 and later, whose
+// SourceCharacter is any Unicode scalar value, can read the document.
+const outsideOctoberSource = (text) =>
+  Array.from(text).some((c) => {
+    const n = c.codePointAt(0);
+    return !(n === 0x9 || n === 0xa || n === 0xd || (n >= 0x20 && n <= 0xffff));
+  });
+const SOURCE_REASON = "since September 2025, SourceCharacter is any Unicode scalar value; October 2021's is U+0009, U+000A, U+000D and U+0020–U+FFFF, which, read literally as the parse area reads it, leaves out the document's code point above U+FFFF";
+
 // A JSON number in the variables that a double can't hold, so the answer
 // depends on how the implementation's JSON parser reads numbers.
 const needsExactNumbers = (text) => {
@@ -430,7 +579,7 @@ const operations = [];
 const add = (family, check, document, variables, operationName = null, schema = undefined) =>
   operations.push({ family, check, document, variables, operationName, schema });
 for (const [field, args] of model.fields) {
-  if (field === "pair" || field === "example" || field === "mutate" || field === "oneOfExample") continue;
+  if (field === "pair" || field === "example" || field === "mutate" || field === "oneOfExample" || field === "settings") continue;
   const [arg] = args;
   const type = arg.typeText;
   add("omitted", "arguments", `{ ${field} }`, "{}");
@@ -467,6 +616,9 @@ for (const [document, variables] of ONEOF_EXAMPLES) add("oneOf", "oneOf", docume
 for (const literal of STRING_LITERALS) add("string-value", "stringValue", `{ string(v: ${literal}) }`, "{}");
 for (const [document, names, variableSets] of OPERATIONS) {
   for (const name of names) for (const variables of variableSets) add("operation", "getOperation", document, variables, name);
+}
+for (const [document, variableSets] of OMITTED_FIELDS) {
+  for (const variables of variableSets) add("omitted-field", "inputObject", document, variables);
 }
 
 // ---------------------------------------------------------------------------
@@ -718,7 +870,7 @@ InRange(type, v) ==
          THEN LET fields == Schema.types[t.name].fields IN
               \\A i \\in DOMAIN fields : HasKey(v.entries, fields[i].name) => InRange(fields[i].type, Get(v.entries, fields[i].name))
          ELSE TRUE
-    [] v.kind \\in {"int", "float"} /\\ t.name \\in {"Int", "Float"} -> CoerceScalar(t.name, v).ok
+    [] v.kind \\in {"int", "float"} /\\ t.name \\in {"Int", "Float"} -> CoerceScalar(Schema, t.name, v).ok
     [] OTHER -> TRUE
 LiteralsInRange(op) ==
   LET args == Schema.fields[op.field] IN
@@ -740,6 +892,8 @@ ASSUME \\A i \\in DOMAIN Cases :
               Answer(WithPolicy(Schema, Policy(FALSE, FALSE)), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.missingListItem = "error"]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.missingListItem = "drop"]), c, c.request),
+              Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.floatRounded = TRUE]), c, c.request),
+              Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.variableItemWrapped = TRUE]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.coerceDefaults = FALSE]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.nestedListItems = FALSE]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.coerceDefaults = FALSE, !.nestedListItems = FALSE]), c, c.request),
@@ -834,14 +988,20 @@ const canonical = (v) =>
 // the switches each one turns off or sets (specs/Coercion.tla, "What the
 // spec leaves to the implementation"), as kit/coerce/checks.mjs's POLICIES
 // name them. A MAY-only policy comes first, so an answer it explains is
-// recorded as needing only the MAY. The last two are the other readings of
-// a list item that is a variable with no runtime value.
+// recorded as needing only the MAY. missingListItemError and
+// missingListItemDropped are the other readings of a list item that is a
+// variable with no runtime value, floatRounded the other reading of
+// Float's "outside the available precision", and variableItemWrapped the
+// other reading of a variable item whose value isn't a list at a list item
+// type (only in an invalid document).
 const POLICY_RUNS = [
   ["enumFromString"],
   ["inputFieldDefaults"],
   ["enumFromString", "inputFieldDefaults"],
   ["missingListItemError"],
   ["missingListItemDropped"],
+  ["floatRounded"],
+  ["variableItemWrapped"],
 ];
 const ANSWER = String.raw`<<\s*"(\w*)",\s*"((?:[^"\\]|\\.)*)"\s*>>`;
 // The field, then the answers: the default policy's, POLICY_RUNS', with
@@ -853,8 +1013,12 @@ const VECTOR = new RegExp(
   String.raw`<<\s*"vector",\s*(\d+),\s*"(\w*)",\s*${Array(ANSWERS).fill(ANSWER).join(String.raw`,\s*`)},\s*(TRUE|FALSE)\s*>>`,
   "g",
 );
-const EDITION_REASON = "only the draft coerces a default value; October 2021 uses it as it is";
-const ONEOF_REASON = "OneOf Input Objects (§3.10.1, @oneOf) are only in the draft: under October 2021 the schema is invalid";
+// Every rule a coerce vector relies on that October 2021 doesn't have is in
+// September 2025: default value coercion (#793), OneOf Input Objects
+// (#825) and SourceCharacter as any Unicode scalar value (#849).
+const SINCE = "September2025";
+const EDITION_REASON = "since September 2025, a default value is coerced (CoerceVariableValues, CoerceArgumentValues, §3.10); October 2021 uses it as it is";
+const ONEOF_REASON = "OneOf Input Objects (§3.10.1, @oneOf) are new in September 2025: under October 2021 the schema is invalid";
 const OUTCOMES = { requestError: "request-error", fieldError: "field-error", resolved: "value" };
 const answerOf = (kind, text, field) => {
   const outcome = OUTCOMES[kind];
@@ -997,17 +1161,19 @@ const generate = async () => {
     // October 2021's answer. Its CoerceVariableValues and
     // CoerceArgumentValues add a default value as it is, and its §3.10 uses
     // an input field's default without coercing it: where that changes the
-    // answer, the vector relies on the draft.
+    // answer, the vector relies on September 2025's rule.
     const oct2021 = r.oct2021.coerceDefaults;
-    const draftOnly = answerKey(oct2021) !== answerKey(expected);
-    if (draftOnly && !alternatives.some((x) => answerKey(x) === answerKey(oct2021))) alternatives.push({ ...oct2021, policy: ["oct2021"] });
+    const newRule = answerKey(oct2021) !== answerKey(expected);
+    if (newRule && !alternatives.some((x) => answerKey(x) === answerKey(oct2021))) alternatives.push({ ...oct2021, policy: ["oct2021"] });
     const editionNote = o.schema === "oneOf"
       ? ONEOF_REASON
-      : draftOnly
+      : outsideOctoberSource(o.document)
+        ? SOURCE_REASON
+        : newRule
         ? `${EDITION_REASON}. Under October 2021 the answer is ${oct2021.outcome === "value" ? `the arguments ${JSON.stringify(oct2021.arguments)}` : `a ${oct2021.outcome.replace("-", " ")}`}`
         : undefined;
     // October 2021's §3.11 table of examples says [1, 2, 3] for [[Int]] is
-    // "Error: Incorrect item value". Its prose, the same as the draft's,
+    // "Error: Incorrect item value". Its prose, the same as September 2026's,
     // says otherwise, and examples are non-normative, so that answer isn't
     // an edition's: it is recorded, under either edition's default rule, so
     // that a result that follows the table is named as such. A literal the
@@ -1036,6 +1202,9 @@ const generate = async () => {
     const spec = [CHECKS.find((c) => c.id === typeCheck).spec[0]];
     if (expected.outcome === "request-error" && r.field !== "" && check !== "variables") spec.push("6.1.2");
     if (expected.outcome === "field-error" && check !== "arguments") spec.push("6.4.1");
+    // §3.12, where a null or a missing value at a Non-Null position is one
+    // of the rules the error rests on.
+    if (expected.outcome !== "value" && !spec.includes("3.12") && nonNullGap(o)) spec.push("3.12");
     return {
       id: `coerce-${String(i + 1).padStart(4, "0")}`,
       spec,
@@ -1048,6 +1217,7 @@ const generate = async () => {
       // Invalid by Validation.tla, or only because a literal doesn't coerce.
       valid: r.valid && r.inRange,
       literalOnly: r.valid && !r.inRange,
+      executionErrorRequired: expected.outcome === "field-error" && executionErrorRequired(o),
       idFromInteger: expected.outcome === "value" && isIntegerInput(idInput(o)),
       expected,
       alternatives,
@@ -1099,7 +1269,6 @@ const generate = async () => {
   const onlyNullVersusAbsent = (v) => v.expected.outcome === "value" && answers.get(keyOf(v)).size > 1;
   for (const v of vectors) {
     const requires = [];
-    if (v.literalOnly) requires.push("unvalidated");
     if (onlyNullVersusAbsent(v)) requires.push("absent-vs-null");
     if (requires.length) v.requires = requires;
   }
@@ -1114,6 +1283,8 @@ const generate = async () => {
     variables: v.variables,
     ...(v.operationName !== null ? { operationName: v.operationName } : {}),
     valid: v.valid,
+    ...(v.literalOnly ? { literalOnly: true } : {}),
+    ...(v.executionErrorRequired ? { executionErrorRequired: true } : {}),
     ...(v.requires ? { requires: v.requires } : {}),
     ...(v.idFromInteger ? { idFromInteger: true } : {}),
     expected: v.expected,
@@ -1121,7 +1292,7 @@ const generate = async () => {
     ...(v.restsOn ? { restsOn: v.restsOn } : {}),
     ...(v.binary64 ? { binary64: v.binary64 } : {}),
     ...(v.loneSurrogate ? { loneSurrogate: v.loneSurrogate } : {}),
-    ...(v.editionNote ? { edition: "draft", editionNote: v.editionNote } : {}),
+    ...(v.editionNote ? { since: SINCE, editionNote: v.editionNote } : {}),
   }));
 
   // The argument and input field declarations, as type text, so the kit

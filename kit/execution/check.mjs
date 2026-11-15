@@ -40,7 +40,7 @@ const isFatal = (id, strict) => LEVEL.get(id) === "MUST" || LEVEL.get(id) === "A
 // problems and the checks on resolver calls don't depend on propagation,
 // and keep their own checks and levels.
 export const OUTSIDE_SPEC = "disabledPropagation";
-const KEEP_OUTSIDE_SPEC = new Set(["protocol", "callsOnce", "callsSelected", "callsReachable", "calledSerially"]);
+const KEEP_OUTSIDE_SPEC = new Set(["protocol", "callsOnce", "callsSelected", "callsReachable", "mutationFieldsOnce", "calledSerially"]);
 const outsideSpec = (fixture) => fixture?.errorPropagation === false;
 const gradedAs = (fixture, id) => (outsideSpec(fixture) && !KEEP_OUTSIDE_SPEC.has(id) ? OUTSIDE_SPEC : id);
 
@@ -64,7 +64,10 @@ const nullable = (type) => (graphql.isNonNullType(type) ? type.ofType : type);
 // the resolver raised, returned null for a Non-Null type, a value of the
 // wrong shape or runtime type, or a value the leaf type can't represent.
 // The reference decides this for itself; the kit uses it only to recognize
-// an error reported under a field name instead of its alias.
+// an error reported at the wrong form of its path: under a field name
+// instead of its alias, without its list indices, or cut short where it
+// propagated to. (The kit doesn't send runtime types that aren't possible
+// types; see drive.mjs.)
 const raises = (schema, type, outcome) => {
   if (outcome.kind === "error" || outcome.kind === "uncoercible") return true;
   if (outcome.kind === "null") return graphql.isNonNullType(type);
@@ -81,38 +84,57 @@ const raises = (schema, type, outcome) => {
 // resultCoercion.
 const coercionCheck = (at, path) => (graphql.getNamedType(at(path)?.type ?? graphql.GraphQLString).name === "Int" ? "intFraction" : "resultCoercion");
 
+// Whether a call or settle at `path` is a mutation's root field: the one
+// place an extra call is perceived (mutationFieldsOnce). Elsewhere it is
+// callsOnce or callsSelected, which are INFO.
+const mutationRoot = (fixture, path) => fixture.operationType === "mutation" && path.length === 1;
+
 // The trace's own consistency: each position's resolver is called once and
 // settles at most once, after its call. A field called twice is settled
-// twice by the kit, so both count against callsOnce.
-const traceProblems = (trace, add) => {
+// twice by the kit, so both count against callsOnce (mutationFieldsOnce at
+// a mutation's root). Returns whether the trace still says what each
+// position produced: false if a position settled twice with different
+// outcomes, since the response can't say which one the implementation used.
+const traceProblems = (fixture, trace, add) => {
   const called = new Set();
-  const settled = new Set();
+  const settled = new Map();
+  let consistent = true;
   for (const event of trace) {
     const path = event.call ?? event.settle;
     if (!Array.isArray(path)) {
       add("protocol", `a trace event without a path: ${JSON.stringify(event)}`);
+      consistent = false;
       continue;
     }
     const k = pathKey(path.map(String));
+    const once = mutationRoot(fixture, path) ? "mutationFieldsOnce" : "callsOnce";
     if (event.call) {
-      if (called.has(k)) add("callsOnce", `the resolver at ${path.join(".")} was called twice (§6.3.3 executes each field once)`);
+      if (called.has(k)) add(once, `the resolver at ${path.join(".")} was called twice (§6.3.2 executes each field once)`);
       called.add(k);
     } else {
       if (!called.has(k)) add("protocol", `${path.join(".")} settled without being called`);
-      if (settled.has(k)) add("callsOnce", `${path.join(".")} settled twice`);
-      settled.add(k);
+      if (settled.has(k)) {
+        add(once, `${path.join(".")} settled twice`);
+        if (JSON.stringify(settled.get(k)) !== JSON.stringify(event.outcome)) consistent = false;
+      }
+      settled.set(k, event.outcome);
     }
   }
+  return consistent;
 };
 
 // Calls: each at a position the operation selects, with the type the
 // fixture gives it.
-const callProblems = (trace, at, add) => {
+const callProblems = (fixture, trace, at, add) => {
   for (const event of trace) {
     if (!Array.isArray(event.call)) continue;
     const position = at(event.call);
-    if (!position) add("callsSelected", `a resolver was called at ${event.call.join(".")}, which the operation doesn't select`);
-    else if (event.type !== undefined && String(position.type) !== event.type) {
+    if (!position) {
+      add(
+        mutationRoot(fixture, event.call) ? "mutationFieldsOnce" : "callsSelected",
+        `a resolver was called at ${event.call.join(".")}, which the operation doesn't select`,
+      );
+    } else if (event.type !== undefined && String(position.type) !== event.type) {
       add("protocol", `the call at ${event.call.join(".")} reports type ${event.type}; the fixture says ${position.type}`);
     }
   }
@@ -155,14 +177,16 @@ const causalProblems = (trace, add) => {
   }
 };
 
-// The checks on the trace itself. A case that breaks one of them says
-// nothing reliable about what the resolvers produced, so the reference
-// doesn't see it.
-const TRACE_CHECKS = new Set(["protocol", "callsOnce", "callsSelected", "callsReachable"]);
+// The checks on the trace itself. When the adapter broke the protocol, only
+// these count (countedProblems). A case that breaks only the checks on
+// calls still goes to the reference: an extra call doesn't change what the
+// resolvers produced, unless a position settled twice with different
+// outcomes, or the adapter broke the protocol.
+const TRACE_CHECKS = new Set(["protocol", "callsOnce", "callsSelected", "callsReachable", "mutationFieldsOnce"]);
 // The checks that make a response's error paths unusable, as does an error
 // that isn't a map or has no list for a path. The reference still sees such
 // a case, but only its clauses on data and calls count.
-const ERROR_PATH_CHECKS = new Set(["errorPath", "responsePosition"]);
+const ERROR_PATH_CHECKS = new Set(["errorPath", "responsePosition", "errorPathFull"]);
 // The clauses that don't read error paths.
 export const DATA_CLAUSES = new Set(["complete", "dataMatches", "keyOrder", "calledSerially"]);
 
@@ -218,9 +242,9 @@ export const normalize = (fixture, c) => {
   // The trace comes first, whatever the response: a call the fixture
   // doesn't select, or with the wrong type, is the root cause of whatever
   // follows from it, so it must not be blamed on the response.
-  traceProblems(c.trace, add);
+  const consistent = traceProblems(fixture, c.trace, add);
   causalProblems(c.trace, add);
-  callProblems(c.trace, at, add);
+  callProblems(fixture, c.trace, at, add);
   // A subscription whose response stream failed instead of yielding the
   // event's execution result (§6.2.3.2 ExecuteSubscriptionEvent always
   // produces one). The envelope checks don't apply: there is no response.
@@ -232,9 +256,8 @@ export const normalize = (fixture, c) => {
   }
   // The implementation produced no response at all. Where a resolver
   // returned a value its type can't represent, that's the root cause: it
-  // should have raised a field error (graphql-go passes Infinity through,
-  // and then can't serialize it). intFraction is only a SHOULD, so after a
-  // fraction for an Int, the missing response also counts as itself.
+  // must have raised an execution error (graphql-go passes Infinity
+  // through, and then can't serialize it).
   if ("noResponse" in c) {
     const message = JSON.stringify(c.noResponse);
     const checks = new Set(uncoercible.map((e) => coercionCheck(at, e.settle)));
@@ -243,15 +266,14 @@ export const normalize = (fixture, c) => {
         checks.has("resultCoercion") ? "resultCoercion" : "intFraction",
         `the implementation produced no response, after a resolver returned a value its type can't represent: ${message}`,
       );
-    }
-    if (!checks.has("resultCoercion")) {
+    } else {
       add(fixture.operationType === "subscription" ? "eventYieldsResult" : "responds", `the implementation produced no response: ${message}`);
     }
     return { problems, ids };
   }
   const response = c.response;
   if (!isMap(response)) {
-    add("errorFormat", "the response isn't a map");
+    add("resultMap", "the response isn't a map (§7.1.1)");
     return { problems, ids };
   }
 
@@ -271,15 +293,24 @@ export const normalize = (fixture, c) => {
   if ("errors" in response && errors.length === 0) add("errorsList", "errors is present but empty (§7.1.1)");
 
   // Where the kit's outcomes raised an execution error, with each path's
-  // field names.
+  // field names and segment kinds.
   const raised = new Map();
   for (const event of c.trace) {
     if (!Array.isArray(event.settle) || !event.outcome) continue;
     const position = at(event.settle);
     if (position && raises(fixture.schema, position.type, event.outcome)) {
-      raised.set(pathKey(event.settle.map(String)), { path: event.settle, names: position.names });
+      raised.set(pathKey(event.settle.map(String)), { path: event.settle.map(String), names: position.names, kinds: position.kinds });
     }
   }
+  // Whether an error raised at `r` propagated up to its ancestor at depth
+  // n: every position below that ancestor, down to r, is Non-Null (§6.4.4).
+  const propagatedTo = (r, n) => {
+    for (let k = n + 1; k <= r.path.length; k++) {
+      if (!graphql.isNonNullType(at(r.path.slice(0, k))?.type)) return false;
+    }
+    return true;
+  };
+  const withoutIndices = (r, segments) => segments.filter((_, i) => r.kinds[i] !== "index");
   for (const error of errors) {
     if (!isMap(error)) {
       add("errorFormat", `an error that isn't a map: ${JSON.stringify(error)}`);
@@ -305,18 +336,43 @@ export const normalize = (fixture, c) => {
       continue;
     }
     // §7.1.4: a list of response names and integer list indices. These are
-    // musts in the draft, shoulds in October 2021, so they belong to
+    // musts since September 2025, shoulds in October 2021, so they belong to
     // responsePosition rather than errorPath.
     if (!Array.isArray(error.path)) {
       add("responsePosition", `error path ${JSON.stringify(error.path)} isn't a list of path segments (§7.1.4)`);
       continue;
     }
     const reported = pathKey(error.path.map(String));
-    const aliased = !raised.has(reported) && [...raised.values()].find((r) => pathKey(r.names) === reported && pathKey(r.path.map(String)) !== reported);
+    const others = raised.has(reported) ? [] : [...raised.values()];
+    const aliased = others.find((r) => pathKey(r.names) === reported && pathKey(r.path) !== reported);
     if (aliased) {
       add(
         "responsePosition",
         `error path ${JSON.stringify(error.path)} uses field names where §7.1.4 wants the response names of ${JSON.stringify(aliased.path)}, where the error was raised`,
+      );
+      continue;
+    }
+    // A path cut short at a position the error propagated to (§7.1.6: the
+    // path "should include the full path to the result field where the
+    // error was raised"), or a raised path with its list indices left out
+    // (§7.1.4). Either is the right error in the wrong form, so it counts
+    // there, not against the clauses that read error paths.
+    const n = error.path.length;
+    const truncated = others.find((r) => r.path.length > n && pathKey(r.path.slice(0, n)) === reported && propagatedTo(r, n));
+    if (truncated) {
+      add(
+        "errorPathFull",
+        `error path ${JSON.stringify(error.path)} stops where the error raised at ${JSON.stringify(truncated.path)} propagated to (§7.1.6: should include the full path)`,
+      );
+      continue;
+    }
+    const unindexed = others.find(
+      (r) => r.kinds.includes("index") && (pathKey(withoutIndices(r, r.path)) === reported || pathKey(withoutIndices(r, r.names)) === reported),
+    );
+    if (unindexed) {
+      add(
+        "responsePosition",
+        `error path ${JSON.stringify(error.path)} leaves out the list indices of ${JSON.stringify(unindexed.path)}, where the error was raised (§7.1.4)`,
       );
       continue;
     }
@@ -339,32 +395,31 @@ export const normalize = (fixture, c) => {
   }
 
   // §3.5.1, §3.5.2, §3.9: a leaf value the type can't represent must raise
-  // an execution error (a fraction for an Int only should: intFraction), so
-  // the position can't hold a value, and if it is null, an error must say
-  // why. A silent null there is this rule's failure, not nullsExplained's:
-  // the reference sees the position as null, the implementation's own
-  // coercion.
+  // an execution error, so the position can't hold a value (intFraction for
+  // an Int, resultCoercion otherwise), and if it is null, an error must say
+  // why. A silent null there is coercionErrorReported's failure, not
+  // nullsExplained's: the reference sees the position as null, the
+  // implementation's own coercion.
   const valueAt = (path) => path.reduce((v, k) => (v === null || typeof v !== "object" ? undefined : v[k]), response.data ?? null);
   const errorAt = new Set(errors.filter((e) => isMap(e) && Array.isArray(e.path)).map((e) => pathKey(e.path.map(String))));
   const coerced = new Map();
   for (const event of uncoercible) {
     const value = valueAt(event.settle.map((k) => (/^\d+$/.test(k) ? Number(k) : k)));
     const check = coercionCheck(at, event.settle);
-    const level = check === "intFraction" ? "should" : "must";
     const k = pathKey(event.settle.map(String));
     if (value !== undefined && value !== null) {
       coerced.set(k, { kind: "leaf" });
-      add(check, `${event.settle.join(".")} is ${JSON.stringify(value)}, though its resolver returned a value its type can't represent, which ${level} raise an execution error`);
+      add(check, `${event.settle.join(".")} is ${JSON.stringify(value)}, though its resolver returned a value its type can't represent, which must raise an execution error`);
     } else if (value === null && !errorAt.has(k)) {
       coerced.set(k, { kind: "null" });
-      add(check, `${event.settle.join(".")} is null without an error, though its resolver returned a value its type can't represent, which ${level} raise an execution error`);
+      add("coercionErrorReported", `${event.settle.join(".")} is null without an error, though its resolver returned a value its type can't represent, which must raise an execution error`);
     }
   }
 
   // Leaf values: the reference abstracts them away, so check them here
   // against the canonical value for the position's type in the fixture.
   // A position whose resolver returned an uncoercible value is graded above
-  // only, by intFraction or resultCoercion.
+  // only, by intFraction, resultCoercion or coercionErrorReported.
   const skipLeaf = new Set(uncoercible.map((e) => pathKey(e.settle.map(String))));
   const walk = (value, path) => {
     if (value === null) return;
@@ -388,10 +443,13 @@ export const normalize = (fixture, c) => {
 
   if (problems.length === 0) return { warnings, warningIds, case: referenceCase(c, response.data, errors.map((e) => e.path)) };
   // What the reference can still check of a malformed case: nothing if the
-  // trace is broken, there is no data, or data holds a position the
-  // operation doesn't select; only the clauses on data and calls if error
-  // paths are unusable; everything otherwise.
-  if (ids.some((id) => TRACE_CHECKS.has(id) || id === "dataPresent" || id === "dataShape")) return { problems, ids };
+  // adapter broke the protocol, a position settled twice with different
+  // outcomes, there is no data, or data holds a position the operation
+  // doesn't select; only the clauses on data and calls if error paths are
+  // unusable; everything otherwise. Extra calls (callsOnce, callsSelected,
+  // callsReachable, mutationFieldsOnce) leave the trace usable: the outcome
+  // at each position is still the one the response was built from.
+  if (!consistent || ids.some((id) => id === "protocol" || id === "dataPresent" || id === "dataShape")) return { problems, ids };
   const usable = errors.every((e) => isMap(e) && Array.isArray(e.path)) && !ids.some((id) => ERROR_PATH_CHECKS.has(id));
   const clauses = usable ? "all" : "data";
   const paths = clauses === "all" ? errors.map((e) => e.path) : [];
@@ -722,7 +780,13 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
 
   // Why a failure doesn't fail the run, if it doesn't.
   const leniency = (id) =>
-    isFatal(id, strict) ? "" : id === OUTSIDE_SPEC ? `: outside the spec, informational (${OUTSIDE_SPEC})` : ": a SHOULD, fails with --strict";
+    isFatal(id, strict)
+      ? ""
+      : id === OUTSIDE_SPEC
+        ? `: outside the spec, informational (${OUTSIDE_SPEC})`
+        : LEVEL.get(id) === "INFO"
+          ? `: informational, no spec sentence requires it (${id})`
+          : ": a SHOULD, fails with --strict";
 
   // Malformed cases, grouped by problem.
   const problems = new Map();
@@ -885,22 +949,24 @@ const hasErrors = (r) => Array.isArray(r?.errors) && r.errors.length > 0;
 const APPLIES = {
   dataShape: (raw) => raw.response?.data != null,
   leafValues: (raw) => raw.response?.data != null,
-  extensions: (raw) => raw.response != null && "extensions" in raw.response,
   leafEncoding: (raw) => raw.response?.data != null,
-  // A response that isn't a map counts against errorFormat.
-  errorFormat: (raw) => answered(raw) && (!isMap(raw.response) || hasErrors(raw.response)),
+  errorFormat: (raw) => hasErrors(raw.response),
   errorLocations: (raw) => hasErrors(raw.response) && raw.response.errors.some((e) => isMap(e) && "locations" in e),
   errorPath: (raw) => hasErrors(raw.response),
   errorEntries: (raw) => hasErrors(raw.response),
   responsePosition: (raw) => hasErrors(raw.response),
-  dataPresent: answered,
-  errorsList: answered,
+  errorPathFull: (raw) => hasErrors(raw.response),
+  resultMap: answered,
+  dataPresent: (raw) => answered(raw) && isMap(raw.response),
   // Only cases where a resolver returned a value its type can't represent:
   // a fraction at an Int position for intFraction, anything else for
-  // resultCoercion.
+  // resultCoercion, either for coercionErrorReported.
   resultCoercion: (raw, fixture) => uncoercibleChecks(raw, fixture).has("resultCoercion"),
   intFraction: (raw, fixture) => uncoercibleChecks(raw, fixture).has("intFraction"),
-  additionalEntries: answered,
+  coercionErrorReported: (raw, fixture) => answered(raw) && uncoercibleChecks(raw, fixture).size > 0,
+  additionalEntries: (raw) => answered(raw) && isMap(raw.response),
+  errorsList: (raw) => answered(raw) && isMap(raw.response),
+  extensions: (raw) => isMap(raw.response) && "extensions" in raw.response,
 };
 const uncoercibleChecks = (raw, fixture) => {
   const settles = (raw.trace ?? []).filter((e) => Array.isArray(e.settle) && e.outcome?.kind === "uncoercible");
@@ -972,6 +1038,7 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, partials = []
       if (check.reference || check.id === OUTSIDE_SPEC) continue;
       if (gradedAs(fixture, check.id) !== check.id) continue;
       if (check.subscriptionOnly && fixture?.operationType !== "subscription") continue;
+      if (check.mutationOnly && fixture?.operationType !== "mutation") continue;
       if (APPLIES[check.id] && !APPLIES[check.id](raw, fixture)) continue;
       stats.get(check.id).cases++;
     }
@@ -1016,6 +1083,8 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, partials = []
     for (const check of CHECKS) {
       if (!check.reference || (check.mutationOnly && !mutation) || !inScope(check.id)) continue;
       if (gradedAs(fixture, check.id) !== check.id) continue;
+      // Graded only on serial runs (Cases!Failures).
+      if (check.id === "serialErrorsKept" && failures.includes("calledSerially")) continue;
       stats.get(check.id).cases++;
       if (failures.includes(check.id)) stats.get(check.id).failing.add(c);
     }
@@ -1061,7 +1130,7 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, partials = []
         id: check.id,
         title: check.title,
         level: check.level,
-        ...(check.oct2021 ? { oct2021: check.oct2021 } : {}),
+        ...(check.levels ? { levels: check.levels } : {}),
         spec: check.spec.map(section),
         ...(check.basis ? { basis: check.basis } : {}),
         status: s.failing.size > 0 ? "fail" : s.cases > 0 ? (note ? "inconclusive" : "pass") : "untested",

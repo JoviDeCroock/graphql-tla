@@ -55,6 +55,15 @@ Schema(types) ==
 WithDirectives(S, directives) == [S EXCEPT !.directives = directives]
 WithRoots(S, operations) == [S EXCEPT !.schemaDef = TRUE, !.operations = operations]
 Op(operation, type) == [operation |-> operation, type |-> type]
+\* Schema data with the two optional fields: n schema definitions, and the
+\* directives the document applies, each Use(name, location).
+Full(S, n, uses) ==
+  [description |-> S.description, types |-> S.types, directives |-> S.directives,
+   schemaDef |-> S.schemaDef, operations |-> S.operations,
+   schemaDefinitions |-> n, uses |-> uses]
+Uses(S, uses) == Full(S, IF S.schemaDef THEN 1 ELSE 0, uses)
+Use(name, location) == [name |-> name, location |-> location]
+At(D, locations) == [D EXCEPT !.locations = locations]
 
 QueryA == Obj("Query", <<>>, <<F("a", R("Int"))>>)
 \* Query { a: Int }, plus types.
@@ -63,6 +72,7 @@ With(types) == Schema(<<QueryA>> \o types)
 WithArgs(args) == Schema(<<Obj("Query", <<>>, <<FA("f", args, R("Int"))>>)>>)
 
 Is(S, verdict) == Verdict(S) = verdict
+IsSeptember2025(S, verdict) == VerdictSeptember2025(S) = verdict
 
 VARIABLE done
 Init == done = FALSE
@@ -163,7 +173,7 @@ DefaultValuesCoerce == ~done =>
   /\ Is(WithDefault(R("Pick"), OV(<<>>)), {"ARG_DEFAULT_COMPATIBLE"})
   \* A missing field with a default takes the default.
   /\ Coerce(R("Filled"), OV(<<E("b", I("2"))>>)).value = OV(<<E("a", V("int", "1")), E("b", V("int", "2"))>>)
-  \* The draft states the rule for object field arguments only.
+  \* September 2026 states the rule for object field arguments only.
   /\ LET S == With(<<Iface("I", <<>>, <<FA("f", <<ArgD("x", R("Int"), V("string", "s"))>>, R("Int"))>>)>>)
      IN Is(S, {}) /\ ~OtherDefaultsAreCompatible(S)
 
@@ -299,6 +309,31 @@ UnbreakableCyclesAreFound == ~done =>
   \* A type that only reaches a cycle is itself uninhabitable.
   /\ ~HasNoUnbreakableCycle(With(<<Input("A", <<Arg("c", NN(R("C")))>>), Input("C", <<Arg("c", NN(R("C")))>>)>>),
                              Input("A", <<Arg("c", NN(R("C")))>>))
+  \* September 2025's rule, "at least one of the fields in the chain of
+  \* references must be either a nullable or a List type", agrees on plain
+  \* input objects, and finds no cycle through a OneOf input object's
+  \* nullable fields (graphql-spec #1211 changed that in September 2026).
+  /\ IsSeptember2025(With(<<Input("Example", <<Arg("self", R("Example")), Arg("value", R("String"))>>)>>), {})
+  /\ IsSeptember2025(With(<<Input("Example", <<Arg("self", NN(L(NN(R("Example"))))), Arg("value", R("String"))>>)>>), {})
+  /\ IsSeptember2025(With(<<Input("Example", <<Arg("self", NN(R("Example"))), Arg("value", R("String"))>>)>>),
+                     {"INPUT_OBJECT_UNBREAKABLE_CYCLE"})
+  /\ IsSeptember2025(With(<<Input("First", <<Arg("second", NN(R("Second"))), Arg("value", R("String"))>>),
+                            Input("Second", <<Arg("first", NN(R("First"))), Arg("value", R("String"))>>)>>),
+                     {"INPUT_OBJECT_UNBREAKABLE_CYCLE"})
+  /\ IsSeptember2025(With(<<Input("First", <<Arg("second", NN(R("Second"))), Arg("value", R("String"))>>),
+                            Input("Second", <<Arg("first", R("First")), Arg("value", R("String"))>>)>>), {})
+  /\ IsSeptember2025(With(<<OneOf("First", <<Arg("second", R("Second"))>>),
+                            Input("Second", <<Arg("first", NN(R("First")))>>)>>), {})
+  /\ IsSeptember2025(With(<<OneOf("A", <<Arg("b", R("B"))>>), OneOf("B", <<Arg("a", R("A"))>>)>>), {})
+  \* A chain through a third type, and one that only reaches a cycle.
+  /\ IsSeptember2025(With(<<Input("A", <<Arg("b", NN(R("B")))>>), Input("B", <<Arg("c", NN(R("C")))>>),
+                            Input("C", <<Arg("a", NN(R("A")))>>)>>), {"INPUT_OBJECT_UNBREAKABLE_CYCLE"})
+  /\ ~HasNoUnbrokenNonNullChain(With(<<Input("A", <<Arg("c", NN(R("C")))>>), Input("C", <<Arg("c", NN(R("C")))>>)>>),
+                                 Input("C", <<Arg("c", NN(R("C")))>>))
+  /\ HasNoUnbrokenNonNullChain(With(<<Input("A", <<Arg("c", NN(R("C")))>>), Input("C", <<Arg("c", NN(R("C")))>>)>>),
+                                Input("A", <<Arg("c", NN(R("C")))>>))
+  \* Every other rule is September 2026's.
+  /\ IsSeptember2025(With(<<OneOf("In", <<Arg("a", NN(R("Int")))>>)>>), {"ONEOF_FIELD_NULLABLE"})
 
 DefaultValueCyclesAreFound == ~done =>
   \* input I { i: I = {} }
@@ -343,6 +378,27 @@ DirectiveRulesHold == ~done =>
   /\ Is(WithDirectives(With(<<Using(Input("In", <<Arg("f", R("Int"))>>), {"e"})>>),
                        <<Dir("d", <<Arg("a", R("In"))>>, {}), Dir("e", <<>>, {})>>), {})
 
+\* "Directives must only be used in the locations they are declared to belong
+\* in."
+DirectiveUsesAreChecked == ~done =>
+  \* §3.13's example: directive @example on FIELD_DEFINITION | ARGUMENT_DEFINITION,
+  \* type SomeType { field(arg: Int @example): String @example }
+  /\ Is(Uses(WithDirectives(With(<<>>), <<At(Dir("example", <<>>, {}), <<"FIELD_DEFINITION", "ARGUMENT_DEFINITION">>)>>),
+             <<Use("example", "ARGUMENT_DEFINITION"), Use("example", "FIELD_DEFINITION")>>), {})
+  \* directive @d on FIELD, applied to a field definition
+  /\ Is(Uses(WithDirectives(With(<<>>), <<Dir("d", <<>>, {})>>), <<Use("d", "FIELD_DEFINITION")>>),
+        {"DIRECTIVE_LOCATIONS_VALID"})
+  \* Built-in directives need no definition, and have their own locations.
+  /\ Is(Uses(With(<<>>), <<Use("deprecated", "FIELD_DEFINITION"), Use("deprecated", "ARGUMENT_DEFINITION"),
+                          Use("specifiedBy", "SCALAR"), Use("oneOf", "INPUT_OBJECT")>>), {})
+  /\ Is(Uses(With(<<>>), <<Use("deprecated", "OBJECT")>>), {"DIRECTIVE_LOCATIONS_VALID"})
+  /\ Is(Uses(With(<<>>), <<Use("skip", "FIELD_DEFINITION")>>), {"DIRECTIVE_LOCATIONS_VALID"})
+  \* A directive that is neither defined nor built in.
+  /\ Is(Uses(With(<<>>), <<Use("notDefined", "OBJECT")>>), {"DIRECTIVES_DEFINED"})
+  /\ Is(Uses(WithDirectives(With(<<>>), <<At(Dir("notDefined", <<>>, {}), <<"OBJECT">>)>>), <<Use("notDefined", "OBJECT")>>), {})
+  \* Without the optional field, no use is checked.
+  /\ Is(With(<<>>), {})
+
 -----------------------------------------------------------------------------
 (* §3.3 Schema and §3.3.1 Root Operation Types *)
 
@@ -357,6 +413,21 @@ RootTypesAreChecked == ~done =>
   /\ Is(With(<<Iface("Mutation", <<>>, <<F("a", R("Int"))>>)>>), {"ROOT_TYPES_ARE_OBJECTS"})
   /\ Is(WithRoots(With(<<>>), <<Op("query", "Query"), Op("mutation", "Query")>>), {"ROOT_TYPES_DIFFERENT"})
   /\ RootTypeName(With(<<Obj("Subscription", <<>>, <<F("a", R("Int"))>>)>>), "subscription") = <<"Subscription">>
+  \* "a document must include at most one schema definition"
+  /\ Is(Full(WithRoots(With(<<>>), <<Op("query", "Query")>>), 2, <<>>), {"SCHEMA_DEFINITION_UNIQUE"})
+  /\ Is(Full(WithRoots(With(<<>>), <<Op("query", "Query")>>), 1, <<>>), {})
+  /\ SchemaDefinitionCount(WithRoots(With(<<>>), <<Op("query", "Query")>>)) = 1
+  /\ SchemaDefinitionCount(With(<<>>)) = 0
+
+\* A name the document doesn't define is no type: no output or input type,
+\* no Object or Interface type.
+UndefinedTypesAreChecked == ~done =>
+  /\ Is(Schema(<<Obj("Query", <<>>, <<F("a", R("Missing"))>>)>>), {"FIELD_OUTPUT_TYPE"})
+  /\ Is(WithArgs(<<Arg("x", L(R("Missing")))>>), {"ARG_INPUT_TYPE"})
+  /\ Is(With(<<Input("In", <<Arg("x", R("Missing"))>>)>>), {"INPUT_FIELD_INPUT_TYPE"})
+  /\ Is(With(<<Union("U", <<"Missing">>)>>), {"UNION_MEMBERS_OBJECTS"})
+  /\ Is(Schema(<<Obj("Query", <<"Missing">>, <<F("a", R("Int"))>>)>>), {"IMPLEMENTS_INTERFACES"})
+  /\ Is(WithRoots(With(<<>>), <<Op("query", "Missing")>>), {"ROOT_TYPES_ARE_OBJECTS"})
 
 NamesAreChecked == ~done =>
   /\ Is(With(<<Obj("__T", <<>>, <<F("a", R("Int"))>>)>>), {"TYPE_NAME_RESERVED"})

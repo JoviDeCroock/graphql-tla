@@ -8,14 +8,20 @@
 // doesn't), and asked twice: with includeDeprecated: true on every list,
 // and with every list's default. graphql-js only parses the SDL.
 //
-// A schema October 2021 can't express (Introspection!IsOct2021Schema is
-// false: a OneOf input object, or a deprecated argument, input field or
-// directive) carries "edition": "draft". Every other vector also has
-// query2021, the October 2021 profile's query (kit/introspect/query.mjs),
-// and the script checks that its expected response is the draft's without
-// the draft-only fields, with Introspection!Oct2021Builtins as the
-// built-ins. A schema that applies @specifiedBy or @oneOf, which a service
-// needn't provide, lists them in `needs` (Introspection!OptionalDirectivesUsed).
+// Each vector has `queries`, one per profile (kit/introspect/query.mjs)
+// whose release can express its schema. A schema September 2025 can't
+// express (Introspection!IsSep2025Schema is false: a directive applied to
+// a directive definition, such as a deprecated directive) carries
+// "since": "September2026", and has only September 2026's query. One
+// October 2021 can't express (Introspection!IsOct2021Schema is false: a
+// OneOf input object, or a deprecated argument or input field) carries
+// "since": "September2025", and has September 2026's and September 2025's.
+// For each older release's query, the script checks that the expected
+// response is September 2026's without the fields that query doesn't
+// select, with that release's built-ins (Introspection!Sep2025Builtins,
+// Oct2021Builtins). A schema that applies @specifiedBy or @oneOf, which a
+// service needn't provide, lists them in `needs`
+// (Introspection!OptionalDirectivesUsed).
 //
 // Each schema also has a lookup vector, which asks __type(name:) for a few
 // of its types (LOOKUPS) and for UNKNOWN, a name no schema has. Its
@@ -25,7 +31,7 @@
 //
 // A schema that declares a directive of its own needs the adapter's
 // custom-directives capability (`requires`). One that applies a directive
-// to a directive definition uses syntax only the draft's grammar has
+// to a directive definition uses syntax only September 2026's grammar has
 // (`syntax`, the reason the kit gives for not grading a schema that
 // doesn't build).
 //
@@ -43,7 +49,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { lookupQuery, schemaQuery, wrappersQuery } from "../kit/introspect/query.mjs";
+import { PRIMARY, PROFILES, lookupQuery, schemaQuery, wrappersQuery } from "../kit/introspect/query.mjs";
 import { directiveFor, fullResponse, responseOf, typeFor, typeJson } from "../kit/introspect/data.mjs";
 import { chunked, evaluateModule, moduleFooter, pool, schemaData, tla } from "../kit/schema/tla.mjs";
 
@@ -103,11 +109,17 @@ input In { p: Int @deprecated, q: Int }`,
 directive @new(x: Int) on FIELD
 type Query { a: Int }`,
   ],
+  // Q references Mutation, so that the vector tests only that a type named
+  // Mutation isn't a root when a schema definition names the roots.
   [
     "roots",
     ["4.2.1", "3.3.1", "4.1"],
-    `schema { query: Q subscription: S } type Q { a: Int } type S { s: Int } type Mutation { m: Int }`,
+    `schema { query: Q subscription: S } type Q { a: Int, m: Mutation } type S { s: Int } type Mutation { m: Int }`,
   ],
+  // A type nothing references: whether it is "contained within this schema"
+  // (§4.2.1) the text doesn't settle, so the kit grades its absence as a
+  // SHOULD (unreferencedTypes), apart from the rest of types.
+  ["unreferenced", ["4.2.1"], `type Query { a: Int } type Orphan { b: Int }`],
   [
     "builtinScalars",
     ["3.5", "4.2.1"],
@@ -146,6 +158,7 @@ const LOOKUPS = {
   inputDeprecation: ["Query", "In"],
   directiveDeprecation: ["Query", "__Directive"],
   roots: ["Q", "S", "Mutation", "Float"],
+  unreferenced: ["Query", "Orphan"],
   builtinScalars: ["In", "ID", "Float", "Int"],
   scalars: ["Date", "Plain", "String"],
   oneOf: ["Pick", "Plain"],
@@ -162,9 +175,13 @@ const lookupsOf = (family) => [...LOOKUPS[family], UNKNOWN].map((name, i) => ({ 
 // The adapter capability a schema with directives of its own needs.
 const CUSTOM_DIRECTIVES = "custom-directives";
 // Why a schema that applies a directive to a directive definition may not
-// build: October 2021's DirectiveDefinition has no Directives.
+// build: September 2025's and October 2021's DirectiveDefinition have no
+// Directives.
 const DIRECTIVE_DEFINITION_DIRECTIVES =
-  "the schema applies a directive to a directive definition, which only the draft's grammar has (§3.13 DirectiveDefinition)";
+  "the schema applies a directive to a directive definition, which only September 2026's grammar has (§3.13 DirectiveDefinition)";
+
+// Each profile's built-ins in Introspection.tla.
+const EDITION_BUILTINS = { September2026: "SpecBuiltins", September2025: "Sep2025Builtins", October2021: "Oct2021Builtins" };
 
 const generate = async () => {
   const data = SCHEMAS.map(([, , sdl]) => schemaData(sdl));
@@ -177,10 +194,10 @@ EXTENDS Introspection
 S == ${tla(d)}
 
 ASSUME PrintT(<<"valid", Verdict(S), OtherDefaultsAreCompatible(S)>>)
-ASSUME PrintT(<<"edition", IsOct2021Schema(S), OptionalDirectivesUsed(S)>>)
+ASSUME PrintT(<<"edition", IsSep2025Schema(S), IsOct2021Schema(S), OptionalDirectivesUsed(S)>>)
 ASSUME PrintT(<<"typename", RootTypeName(S, "query")>>)
 Names == ${tla(lookupsOf(SCHEMAS[i][0]).map((l) => l.name))}
-${["SpecBuiltins", "Oct2021Builtins"]
+${PROFILES.map((p) => EDITION_BUILTINS[p])
   .map(
     (B) => `ASSUME PrintT(<<"result", SchemaResult(S, ${B}, TRUE)>>)
 ASSUME PrintT(<<"result", SchemaResult(S, ${B}, FALSE)>>)
@@ -195,23 +212,28 @@ ${moduleFooter}`;
         throw new Error(`${SCHEMAS[i][0]}: the reference says the schema is invalid (${JSON.stringify(valid[1])}, defaults coerce: ${valid[2]})`);
       }
       const results = (k) => ({ inc: rest[k][1], defaults: rest[k + 1][1], lookupInc: rest[k + 2][1], lookupDefaults: rest[k + 3][1] });
-      return { oct2021: edition[1], needs: [...edition[2]].sort(), typename: typename[1][0], draft: results(0), edition2021: results(4) };
+      // The profiles whose release can express the schema, and the first
+      // release that can.
+      const profiles = PROFILES.filter((p) => p === PRIMARY || (p === "September2025" ? edition[1] : edition[2]));
+      const since = profiles.includes("October2021") ? undefined : profiles.at(-1);
+      return { profiles, since, needs: [...edition[3]].sort(), typename: typename[1][0], ...Object.fromEntries(PROFILES.map((p, k) => [p, results(4 * k)])) };
     },
   );
 
   // The built-ins are the same for every schema; they're written once per
-  // profile, in that profile's shape.
+  // profile, in that profile's shape. A profile's built-ins come from a
+  // schema its release can express.
   const builtins = {};
   const keep = (profile, b, family) => {
     const shaped = { types: b.types.map((t) => typeFor(profile, t)), directives: b.directives.map((d) => directiveFor(profile, d)) };
     if (builtins[profile] === undefined) builtins[profile] = shaped;
     else if (JSON.stringify(builtins[profile]) !== JSON.stringify(shaped)) throw new Error(`${family}: the ${profile} built-ins differ from the first schema's`);
   };
-  const same = (family, what, a, b) => {
-    if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${family}: ${what} under October 2021 isn't the draft's without the draft-only fields`);
+  const same = (family, profile, what, a, b) => {
+    if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${family}: ${what} under ${profile} isn't September 2026's without the fields its query doesn't select`);
   };
   const meta = (r, i) => ({
-    ...(r.oct2021 ? {} : { edition: "draft" }),
+    ...(r.since ? { since: r.since } : {}),
     ...(r.needs.length ? { needs: r.needs } : {}),
     ...(data[i].directives.length ? { requires: [CUSTOM_DIRECTIVES] } : {}),
     ...(data[i].directives.some((d) => d.directives.size > 0) ? { syntax: DIRECTIVE_DEFINITION_DIRECTIVES } : {}),
@@ -223,18 +245,16 @@ ${moduleFooter}`;
       ["inc", true],
       ["defaults", false],
     ]) {
-      const { response, builtins: b } = responseOf(r.draft[variant], r.typename);
-      keep("draft", b, family);
-      let query2021;
-      if (r.oct2021) {
-        const old = responseOf(r.edition2021[variant], r.typename);
-        keep("oct2021", old.builtins, family);
+      const { response, builtins: b } = responseOf(r[PRIMARY][variant], r.typename);
+      keep(PRIMARY, b, family);
+      for (const profile of r.profiles.filter((p) => p !== PRIMARY)) {
+        const old = responseOf(r[profile][variant], r.typename);
+        keep(profile, old.builtins, family);
         const s = response.data.__schema;
         const t = old.response.data.__schema;
-        same(family, "the document's types", s.types.map((x) => typeFor("oct2021", x)), t.types.map((x) => typeFor("oct2021", x)));
-        same(family, "the document's directives", s.directives.map((x) => directiveFor("oct2021", x)), t.directives.map((x) => directiveFor("oct2021", x)));
-        same(family, "the rest of __schema", { ...s, types: 0, directives: 0 }, { ...t, types: 0, directives: 0 });
-        query2021 = schemaQuery("oct2021", includeDeprecated);
+        same(family, profile, "the document's types", s.types.map((x) => typeFor(profile, x)), t.types.map((x) => typeFor(profile, x)));
+        same(family, profile, "the document's directives", s.directives.map((x) => directiveFor(profile, x)), t.directives.map((x) => directiveFor(profile, x)));
+        same(family, profile, "the rest of __schema", { ...s, types: 0, directives: 0 }, { ...t, types: 0, directives: 0 });
       }
       vectors.push({
         id: `${family}.${variant}`,
@@ -243,8 +263,7 @@ ${moduleFooter}`;
         ...meta(r, i),
         includeDeprecated,
         sdl,
-        query: schemaQuery("draft", includeDeprecated),
-        ...(query2021 ? { query2021 } : {}),
+        queries: Object.fromEntries(r.profiles.map((p) => [p, schemaQuery(p, includeDeprecated)])),
         expected: { response },
       });
     }
@@ -256,13 +275,11 @@ ${moduleFooter}`;
     if (LOOKUP_DEFAULTS.has(family)) variants.push(["lookup.defaults", false, "lookupDefaults"]);
     for (const [variant, includeDeprecated, key] of variants) {
       const typesOf = (found) => Object.fromEntries(lookups.map((l, k) => [l.alias, found[k].length ? typeJson(found[k][0]) : null]));
-      const data = typesOf(r.draft[key]);
+      const data = typesOf(r[PRIMARY][key]);
       if (data[lookups.at(-1).alias] !== null) throw new Error(`${family}: the reference finds a type named ${UNKNOWN}`);
-      let query2021;
-      if (r.oct2021) {
-        const old = typesOf(r.edition2021[key]);
-        same(family, "a lookup", Object.values(data).map((t) => typeFor("oct2021", t)), Object.values(old).map((t) => typeFor("oct2021", t)));
-        query2021 = lookupQuery("oct2021", lookups, includeDeprecated);
+      for (const profile of r.profiles.filter((p) => p !== PRIMARY)) {
+        const old = typesOf(r[profile][key]);
+        same(family, profile, "a lookup", Object.values(data).map((t) => typeFor(profile, t)), Object.values(old).map((t) => typeFor(profile, t)));
       }
       vectors.push({
         id: `${family}.${variant}`,
@@ -271,8 +288,7 @@ ${moduleFooter}`;
         ...meta(r, i),
         includeDeprecated,
         sdl,
-        query: lookupQuery("draft", lookups, includeDeprecated),
-        ...(query2021 ? { query2021 } : {}),
+        queries: Object.fromEntries(r.profiles.map((p) => [p, lookupQuery(p, lookups, includeDeprecated)])),
         lookups,
         expected: { response: { data } },
       });
@@ -284,14 +300,13 @@ ${moduleFooter}`;
     family: "wrappers",
     includeDeprecated: false,
     sdl: SCHEMAS[0][2],
-    query: wrappersQuery("draft"),
-    query2021: wrappersQuery("oct2021"),
+    queries: Object.fromEntries(PROFILES.map((p) => [p, wrappersQuery(p)])),
     wrappers: true,
-    expected: { response: fullResponse({ wrappers: true }, builtins, "draft") },
+    expected: { response: fullResponse({ wrappers: true }, builtins, PRIMARY) },
   });
   return {
     source:
-      "Generated by scripts/generate-vectors-introspect.mjs from specs/Introspection.tla: each expected response is Introspection!SchemaResult with the spec's built-ins, or for a lookup vector Introspection!TypeByName for each name, evaluated by tla-ts. `builtins` holds the introspection types and built-in directives every __schema response also has, for the draft and for October 2021 (Introspection!Oct2021Builtins), each in its profile's shape; built-in descriptions the spec leaves open are null. Under the October 2021 profile, a vector's expected response is its `expected` without the draft-only fields. Don't edit.",
+      "Generated by scripts/generate-vectors-introspect.mjs from specs/Introspection.tla: each expected response is Introspection!SchemaResult with September 2026's built-ins, or for a lookup vector Introspection!TypeByName for each name, evaluated by tla-ts. `builtins` holds the introspection types and built-in directives every __schema response also has, for September 2026, September 2025 (Introspection!Sep2025Builtins) and October 2021 (Introspection!Oct2021Builtins), each in its profile's shape; built-in descriptions the spec leaves open are null. `queries` has each profile's query, for the releases that can express the vector's schema; `since` names the first release that can, when it is newer than October 2021. Under an older release's profile, a vector's expected response is its `expected` without the fields that profile's query doesn't select. Don't edit.",
     builtins,
     vectors,
   };
@@ -312,9 +327,9 @@ if (process.argv.includes("--check")) {
   writeFileSync(out, text);
   const all = JSON.parse(text).vectors;
   const lookups = all.filter((v) => v.lookups).length;
-  const draft = all.filter((v) => v.edition === "draft").length;
+  const since = (release) => all.filter((v) => v.since === release).length;
   const custom = all.filter((v) => v.requires).length;
   console.log(
-    `wrote ${all.length} vectors (${SCHEMAS.length} schemas: ${all.length - lookups - 1} __schema, ${lookups} __type lookups, 1 wrappers; ${draft} draft only, ${custom} need ${CUSTOM_DIRECTIVES}) to kit/introspect/vectors.json`,
+    `wrote ${all.length} vectors (${SCHEMAS.length} schemas: ${all.length - lookups - 1} __schema, ${lookups} __type lookups, 1 wrappers; ${since("September2025")} since September 2025, ${since("September2026")} new in September 2026, ${custom} need ${CUSTOM_DIRECTIVES}) to kit/introspect/vectors.json`,
   );
 }

@@ -1,7 +1,8 @@
 ---- MODULE TypeSystem ----
 (***************************************************************************)
-(* The type system's validity rules, written by hand from the spec's Type  *)
-(* Validation sub-sections (https://spec.graphql.org/draft/, §3), plus the *)
+(* The type system's validity rules, written by hand from the Type         *)
+(* Validation sub-sections of the September 2026 edition                   *)
+(* (https://spec.graphql.org/September2026/, §3), plus the                 *)
 (* literal input coercion that "If the argument has a default value it     *)
 (* must be compatible with argumentType" depends on.                       *)
 (*                                                                         *)
@@ -31,6 +32,16 @@
 (*              {"null", "int", "float", "string", "boolean", "enum",      *)
 (*              "list", "object"}; fields is a sequence of [name, value]   *)
 (*   deprecated <<>>, or <<reason>> when @deprecated is applied            *)
+(*                                                                         *)
+(* Two optional fields of schema, read through DOMAIN so that schema data  *)
+(* without them is still valid (the differential's, and                    *)
+(* IntrospectionVectors.tla's):                                            *)
+(*   schemaDefinitions  how many schema definitions the document has;      *)
+(*                      absent: one if schemaDef, else none                *)
+(*   uses       a sequence of [name, location]: every directive the        *)
+(*              document applies, with the DirectiveLocation of the place  *)
+(*              it is applied (OBJECT, FIELD_DEFINITION, ...); absent: no   *)
+(*              use is checked                                             *)
 (***************************************************************************)
 EXTENDS Integers, Sequences, FiniteSets, TLC
 
@@ -80,8 +91,12 @@ BuiltinScalar(name) ==
   TypeDef("SCALAR", name, NoDescription, <<>>, <<>>, <<>>, <<>>, <<>>,
           FALSE, <<>>, {})
 
-\* A name that names nothing. The generator only writes names it defines, so
-\* this only shows up in hand-written vectors.
+\* A name that names nothing. Its kind is none of §3.4.2's, so IsInputType
+\* and IsOutputType are false for it, and it is no Object or Interface type:
+\* a field, argument, input field, root operation type, union member or
+\* implemented interface that names it breaks that place's rule. The
+\* differential's generator only writes names it defines; the kit's schema
+\* vectors refer to undefined names on purpose.
 UnknownType(name) ==
   TypeDef("UNKNOWN", name, NoDescription, <<>>, <<>>, <<>>, <<>>, <<>>,
           FALSE, <<>>, {})
@@ -239,8 +254,12 @@ CoerceFields(S, def, v, i, acc, fill, fuel, seen) ==
             ELSE IF fuel = 0 THEN Fail
             ELSE LET c == CoerceLiteral(S, field.type, field.default[1], fill, fuel - 1) IN
                  IF c.ok THEN next(Append(acc, [name |-> field.name, value |-> c.value])) ELSE Fail
-       \* "If no default value is provided and the input object field's type
-       \* is non-null, an error should be raised."
+       \* §3.12 Input Coercion: "If an argument or input-object field of a
+       \* Non-Null type is not provided, is provided with the literal value
+       \* null, ... then a request error must be raised." (§3.10's own
+       \* sentence for this case, "If no default value is provided and the
+       \* input object field's type is non-null, an error should be raised",
+       \* says only "should"; the MUST is §3.12's.)
        ELSE IF IsNonNull(field.type) THEN Fail
        ELSE next(acc)
 
@@ -272,6 +291,13 @@ NoTypeIsNamedLikeABuiltin(S) ==
 
 \* "All directives within a GraphQL schema must have unique names."
 DirectivesHaveUniqueNames(S) == IsUnique(NamesOf(S.directives))
+
+\* "When using the type system definition language, a document must include
+\* at most one schema definition."
+SchemaDefinitionCount(S) ==
+  IF "schemaDefinitions" \in DOMAIN S THEN S.schemaDefinitions
+  ELSE IF S.schemaDef THEN 1 ELSE 0
+HasAtMostOneSchemaDefinition(S) == SchemaDefinitionCount(S) <= 1
 
 \* "All types and directives defined within a schema must not have a name
 \* which begins with "__" (two underscores)"
@@ -605,6 +631,31 @@ InputFieldTypeHasUnbreakableCycle(S, type, visited) ==
 \* "InputObjectHasUnbreakableCycle(inputObject) must be false."
 HasNoUnbreakableCycle(S, T) == ~InputObjectHasUnbreakableCycle(S, T.name, {})
 
+\* September 2025's rule 3, which September 2026 replaced with the one above
+\* (graphql-spec #1211), and which October 2021 has word for word: "If an
+\* Input Object references itself either directly or through referenced
+\* Input Objects, at least one of the fields in the chain of references must
+\* be either a nullable or a List type." A chain is broken by any field that
+\* isn't Non-Null of an input object, whatever the input object: the rule
+\* has no case for OneOf input objects, whose fields are nullable anyway. So
+\* `input A @oneOf { b: B } input B @oneOf { a: A }` is valid under it,
+\* though no finite value inhabits A. Verdict doesn't use this; the kit
+\* uses VerdictSeptember2025 to tell which release gives a schema its
+\* verdict.
+NonNullInputObjectRefs(S, T) ==
+  {OfType(T.inputFields[k].type).name :
+     k \in {k \in DOMAIN T.inputFields :
+              /\ IsNonNull(T.inputFields[k].type)
+              /\ ~IsList(OfType(T.inputFields[k].type))
+              /\ KindOf(S, OfType(T.inputFields[k].type)) = "INPUT_OBJECT"}}
+RECURSIVE NonNullChainReach(_, _, _)
+NonNullChainReach(S, frontier, seen) ==
+  IF frontier = {} THEN seen
+  ELSE LET next == UNION {NonNullInputObjectRefs(S, TypeNamed(S, n)) : n \in frontier} \ seen IN
+       NonNullChainReach(S, next, seen \cup next)
+HasNoUnbrokenNonNullChain(S, T) ==
+  T.name \notin NonNullChainReach(S, NonNullInputObjectRefs(S, T), NonNullInputObjectRefs(S, T))
+
 \* InputObjectDefaultValueHasCycle(inputObject, defaultValue, visitedFields)
 \* and InputFieldDefaultValueHasCycle(field, defaultValue, visitedFields). A
 \* field is identified by <<input object name, field name>>.
@@ -669,6 +720,40 @@ References(S, node) ==
        {<<"directive", d>> : d \in T.directives}
        \cup {<<"type", t>> : t \in TypeReferences(T) \ T.directives}
 
+\* The built-in directives (§3.13.1 to §3.13.5) and their locations, which a
+\* document may use without defining: "any built-in directive may be
+\* omitted for brevity". These are September 2026's. @deprecated goes on
+\* arguments and input fields since September 2025, and on directive
+\* definitions since September 2026; the kit tags a schema that puts it
+\* there with that release.
+BuiltinDirectiveLocations ==
+  ("skip" :> {"FIELD", "FRAGMENT_SPREAD", "INLINE_FRAGMENT"})
+  @@ ("include" :> {"FIELD", "FRAGMENT_SPREAD", "INLINE_FRAGMENT"})
+  @@ ("deprecated" :> {"FIELD_DEFINITION", "ARGUMENT_DEFINITION",
+                       "INPUT_FIELD_DEFINITION", "ENUM_VALUE", "DIRECTIVE_DEFINITION"})
+  @@ ("specifiedBy" :> {"SCALAR"})
+  @@ ("oneOf" :> {"INPUT_OBJECT"})
+
+DirectiveUses(S) == IF "uses" \in DOMAIN S THEN S.uses ELSE <<>>
+DefinesDirective(S, name) == \E i \in DOMAIN S.directives : S.directives[i].name = name
+IsKnownDirective(S, name) ==
+  DefinesDirective(S, name) \/ name \in DOMAIN BuiltinDirectiveLocations
+\* A directive the document defines, else the built-in of that name.
+DeclaredLocations(S, name) ==
+  IF DefinesDirective(S, name) THEN Range(DirectiveNamed(S, name).locations)
+  ELSE BuiltinDirectiveLocations[name]
+
+\* "Directives must only be used in the locations they are declared to
+\* belong in." A directive that is neither defined nor built in isn't
+\* declared to belong anywhere (DIRECTIVES_DEFINED); one that is must be
+\* used at one of its locations (DIRECTIVE_LOCATIONS_VALID).
+DirectivesAreDefined(S) ==
+  \A k \in DOMAIN DirectiveUses(S) : IsKnownDirective(S, DirectiveUses(S)[k].name)
+DirectivesAreInDeclaredLocations(S) ==
+  \A k \in DOMAIN DirectiveUses(S) :
+    LET use == DirectiveUses(S)[k] IN
+    IsKnownDirective(S, use.name) => use.location \in DeclaredLocations(S, use.name)
+
 RECURSIVE Reachable(_, _, _)
 Reachable(S, frontier, seen) ==
   IF frontier = {} THEN seen
@@ -699,7 +784,7 @@ DoesNotReferenceItselfIndirectly(S, D) ==
 
 Rules ==
   { "TYPE_NAMES_UNIQUE", "TYPE_NAME_NOT_BUILTIN", "TYPE_NAME_RESERVED",
-    "DIRECTIVE_NAMES_UNIQUE", "DIRECTIVE_NAME_RESERVED",
+    "DIRECTIVE_NAMES_UNIQUE", "DIRECTIVE_NAME_RESERVED", "SCHEMA_DEFINITION_UNIQUE",
     "QUERY_ROOT_PROVIDED", "ROOT_TYPES_ARE_OBJECTS", "ROOT_TYPES_DIFFERENT",
     "FIELDS_DEFINED", "FIELD_NAMES_UNIQUE", "FIELD_NAME_RESERVED",
     "FIELD_OUTPUT_TYPE",
@@ -716,7 +801,8 @@ Rules ==
     "ONEOF_FIELD_NULLABLE", "ONEOF_FIELD_NO_DEFAULT",
     "INPUT_OBJECT_UNBREAKABLE_CYCLE", "INPUT_OBJECT_DEFAULT_VALUE_CYCLE",
     "DIRECTIVE_LOCATIONS_DEFINED", "DIRECTIVE_USES_ITSELF",
-    "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY" }
+    "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+    "DIRECTIVES_DEFINED", "DIRECTIVE_LOCATIONS_VALID" }
 
 TypesOfKind(S, kinds) == {S.types[i] : i \in {k \in DOMAIN S.types : S.types[k].kind \in kinds}}
 Objects(S) == TypesOfKind(S, {"OBJECT"})
@@ -736,6 +822,7 @@ Violated(S, rule) ==
     [] rule = "TYPE_NAME_RESERVED" -> ~NoTypeNameIsReserved(S)
     [] rule = "DIRECTIVE_NAMES_UNIQUE" -> ~DirectivesHaveUniqueNames(S)
     [] rule = "DIRECTIVE_NAME_RESERVED" -> ~NoDirectiveNameIsReserved(S)
+    [] rule = "SCHEMA_DEFINITION_UNIQUE" -> ~HasAtMostOneSchemaDefinition(S)
     [] rule = "QUERY_ROOT_PROVIDED" -> ~QueryRootIsProvided(S)
     [] rule = "ROOT_TYPES_ARE_OBJECTS" -> ~RootTypesAreObjects(S)
     [] rule = "ROOT_TYPES_DIFFERENT" -> ~RootTypesAreDifferent(S)
@@ -777,18 +864,31 @@ Violated(S, rule) ==
     [] rule = "DIRECTIVE_USES_ITSELF" -> \E i \in DOMAIN S.directives : ~DoesNotUseItself(S.directives[i])
     [] rule = "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY" ->
          \E i \in DOMAIN S.directives : ~DoesNotReferenceItselfIndirectly(S, S.directives[i])
+    [] rule = "DIRECTIVES_DEFINED" -> ~DirectivesAreDefined(S)
+    [] rule = "DIRECTIVE_LOCATIONS_VALID" -> ~DirectivesAreInDeclaredLocations(S)
     [] OTHER -> FALSE
 
 \* The rules S breaks. S is a valid schema when this is empty.
 Verdict(S) == {rule \in Rules : Violated(S, rule)}
 IsValidSchema(S) == Verdict(S) = {}
 
+\* The rules S breaks under September 2025, for a document in its grammar
+\* (no directives on directive definitions, so no @deprecated there). Every
+\* rule is September 2026's but the input object cycle, which is
+\* HasNoUnbrokenNonNullChain's. The kit tags a schema whose verdict this
+\* changes `since: "September2026"`.
+CycleRuleSeptember2025(S) ==
+  IF \E T \in InputObjects(S) : ~HasNoUnbrokenNonNullChain(S, T)
+  THEN {"INPUT_OBJECT_UNBREAKABLE_CYCLE"} ELSE {}
+VerdictSeptember2025(S) ==
+  (Verdict(S) \ {"INPUT_OBJECT_UNBREAKABLE_CYCLE"}) \cup CycleRuleSeptember2025(S)
+
 -----------------------------------------------------------------------------
-(* Not in the draft. graphql-js 17 also checks the default values of       *)
-(* interface field arguments, input fields and directive arguments. The    *)
-(* draft states the rule only for object field arguments (§3.6 rule        *)
-(* 2.4.5); §3.7, §3.10 and §3.13 don't list it. It is here, under its own  *)
-(* name, so the differential can say exactly where graphql-js goes         *)
+(* Not in the spec. graphql-js 17 also checks the default values of        *)
+(* interface field arguments, input fields and directive arguments.        *)
+(* September 2026 states the rule only for object field arguments (§3.6    *)
+(* rule 2.4.5); §3.7, §3.10 and §3.13 don't list it. It is here, under    *)
+(* its own name, so the differential can say exactly where graphql-js goes *)
 (* further than the spec.                                                  *)
 
 OtherDefaultsAreCompatible(S) ==

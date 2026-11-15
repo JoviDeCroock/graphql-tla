@@ -1,12 +1,13 @@
 ---- MODULE Coercion ----
 (***************************************************************************)
 (* GraphQL input coercion and request errors, written by hand from the     *)
-(* spec's algorithms (https://spec.graphql.org/draft/):                    *)
+(* algorithms of the September 2026 edition                                *)
+(* (https://spec.graphql.org/September2026/):                              *)
 (*                                                                         *)
 (*   §3.5   scalar input coercion (Int, Float, String, Boolean, ID)        *)
 (*   §3.9   enum input coercion                                            *)
 (*   §3.10  input object input coercion                                    *)
-(*   §3.10.1 OneOf input object input coercion (the draft only)            *)
+(*   §3.10.1 OneOf input object input coercion (since September 2025)      *)
 (*   §3.11  list input coercion                                            *)
 (*   §3.12  non-null input coercion                                        *)
 (*   §6.1   GetOperation                                                   *)
@@ -188,25 +189,43 @@ AsNumber(n) == [n EXCEPT !.kind = "number"]
 (*   missingListItem     what a list item that is a variable with no       *)
 (*                       runtime value coerces to, which the spec doesn't  *)
 (*                       say (see CoerceItems): "null", "error" or "drop"  *)
+(*   floatRounded        §3.5.2: what "a value outside the available       *)
+(*                       precision" covers, which the spec doesn't define  *)
+(*                       (see CoerceScalar). FALSE: an integer input value *)
+(*                       a double can't hold exactly is one, so it is an   *)
+(*                       error. TRUE: it is rounded to the nearest double, *)
+(*                       as a fraction such as 0.1 is. The value is kept   *)
+(*                       as its decimal; whoever compares it as a double   *)
+(*                       gets the rounded value                            *)
+(*   variableItemWrapped what a list item that is a variable whose runtime *)
+(*                       value isn't a list becomes, where the item type   *)
+(*                       is a list. Only an invalid document has one       *)
+(*                       (§5.8.5), and the spec doesn't say (see           *)
+(*                       CoerceItems). FALSE: the value is used as it is   *)
+(*                       (§6.4.1's Note: variable values are already       *)
+(*                       coerced). TRUE: §3.11's "list of size one" is     *)
+(*                       applied to it, as to any other item               *)
 (*                                                                         *)
 (* Two more switches aren't choices the spec leaves open but editions:     *)
 (*                                                                         *)
-(*   coerceDefaults      the draft coerces a default value (CoerceVariable-*)
-(*                       Values, CoerceArgumentValues, §3.10). October     *)
-(*                       2021 adds "the value defaultValue" as it is, and  *)
-(*                       says an input field's "default value should be    *)
-(*                       used". FALSE gives October 2021's answer.         *)
-(*   nestedListItems     the draft's §3.11 table coerces [1, 2, 3] for     *)
-(*                       [[Int]] to [[1], [2], [3]]. October 2021's table  *)
-(*                       says "Error: Incorrect item value": an item that  *)
-(*                       isn't a list, where the item type is a list, is   *)
-(*                       an error. FALSE gives October 2021's answer.      *)
+(*   coerceDefaults      since September 2025, a default value is coerced  *)
+(*                       (CoerceVariableValues, CoerceArgumentValues,      *)
+(*                       §3.10). October 2021 adds "the value              *)
+(*                       defaultValue" as it is, and says an input field's *)
+(*                       "default value should be used". FALSE gives       *)
+(*                       October 2021's answer.                            *)
+(*   nestedListItems     the §3.11 table of September 2025 and later       *)
+(*                       coerces [1, 2, 3] for [[Int]] to [[1], [2], [3]]. *)
+(*                       October 2021's table says "Error: Incorrect item  *)
+(*                       value": an item that isn't a list, where the item *)
+(*                       type is a list, is an error. FALSE gives October  *)
+(*                       2021's answer.                                    *)
 (*                                                                         *)
-(* DefaultPolicy follows every SHOULD, takes the MAY, and follows the      *)
-(* draft. A schema without a policy field uses it, and a policy without a  *)
-(* switch takes that switch's default.                                     *)
+(* DefaultPolicy follows every SHOULD, takes the MAY, and follows          *)
+(* September 2026. A schema without a policy field uses it, and a policy   *)
+(* without a switch takes that switch's default.                           *)
 
-DefaultPolicy == [enumFromString |-> TRUE, inputFieldDefaults |-> TRUE, missingListItem |-> "null", coerceDefaults |-> TRUE, nestedListItems |-> TRUE]
+DefaultPolicy == [enumFromString |-> TRUE, inputFieldDefaults |-> TRUE, missingListItem |-> "null", floatRounded |-> FALSE, variableItemWrapped |-> FALSE, coerceDefaults |-> TRUE, nestedListItems |-> TRUE]
 PolicyOf(S) == IF "policy" \in DOMAIN S THEN S.policy ELSE DefaultPolicy
 WithPolicy(S, policy) == [types |-> S.types, fields |-> S.fields, policy |-> policy]
 Switch(S, name) == IF name \in DOMAIN PolicyOf(S) THEN PolicyOf(S)[name] ELSE DefaultPolicy[name]
@@ -240,7 +259,7 @@ IsFloatInput(v) == v.kind = "float" \/ (v.kind = "number" /\ ~IsIntegral(v))
 \* §3.5.3: "only valid Unicode string input values are accepted"
 IsStringInput(v) == v.kind = "string" /\ v.wellFormed
 
-CoerceScalar(name, v) ==
+CoerceScalar(S, name, v) ==
   CASE name = "Int" ->
          \* §3.5.1: "only integer input values are accepted. All other
          \* input values, including strings with numeric content, must
@@ -255,16 +274,19 @@ CoerceScalar(name, v) ==
          \* outside the available precision), a request error must be
          \* raised."
          \*
-         \* "Outside the available precision" can't mean every decimal that
-         \* has no exact double (0.1 has none), so this reads it as: an
-         \* integral value must be exactly representable. A fractional value
-         \* is rounded to the nearest double, which this module doesn't
-         \* compute: it keeps the decimal. That is exact for decimals of at
-         \* most 15 significant digits, whose nearest double prints back as
-         \* the same decimal, and the differential only uses those.
+         \* "Outside the available precision" isn't defined, and can't mean
+         \* every decimal that has no exact double (0.1 has none). By
+         \* default this reads it as: an integer input value must be exactly
+         \* representable. A float input value, even an integral one such as
+         \* the literal 1e23, is rounded to the nearest double like 0.1.
+         \* policy.floatRounded rounds integer input values too. A rounded
+         \* value isn't computed here: the decimal is kept. That is exact for
+         \* decimals of at most 15 significant digits, whose nearest double
+         \* prints back as the same decimal, and the differential only uses
+         \* those.
          IF /\ IsIntegerInput(v) \/ IsFloatInput(v)
             /\ IsFiniteDouble(v)
-            /\ IsIntegral(v) => IsExactDouble(v)
+            /\ (IsIntegerInput(v) /\ ~Switch(S, "floatRounded")) => IsExactDouble(v)
          THEN Ok(AsNumber(v)) ELSE Fail
     [] name = "String" -> IF IsStringInput(v) THEN Ok(v) ELSE Fail
     [] name = "Boolean" ->
@@ -299,7 +321,7 @@ CoerceEnum(policy, def, v, source) ==
 (* in vars (the coerced variable values, as entries), or "variables" for a *)
 (* JSON value from the request's variables.                                *)
 
-\* §3.10.1 OneOf Input Objects (the draft only). Only an input object's
+\* §3.10.1 OneOf Input Objects (since September 2025). Only an input object's
 \* record may have the oneOf field.
 IsOneOf(def) == "oneOf" \in DOMAIN def /\ def.oneOf
 OneNonNullEntry(entries) == Cardinality(entries) = 1 /\ \A e \in entries : e.value.kind # "null"
@@ -308,6 +330,15 @@ OneNonNullEntry(entries) == Cardinality(entries) = 1 /\ \A e \in entries : e.val
 IsMissingVariable(v, vars) == v.kind = "variable" /\ ~HasKey(vars, v.str)
 
 RECURSIVE CoerceInput(_, _, _, _, _), CoerceItems(_, _, _, _, _, _, _), CoerceFields(_, _, _, _, _, _, _)
+
+\* The variableItemWrapped reading: §3.11's "If the value passed as an input
+\* to a list type is not a list and not the null value, then the result of
+\* input coercion is a list of size one ... (note this may apply recursively
+\* for nested lists)", applied to a variable item's runtime value.
+RECURSIVE WrappedAs(_, _)
+WrappedAs(type, v) ==
+  LET t == IF IsNonNull(type) THEN OfType(type) ELSE type IN
+  IF IsList(t) /\ v.kind \notin {"list", "null"} THEN ListV(<<WrappedAs(OfType(t), v)>>) ELSE v
 
 CoerceInput(S, type, v, source, vars) ==
   IF v.kind = "variable" THEN
@@ -346,7 +377,7 @@ CoerceInput(S, type, v, source, vars) ==
       IF item.ok THEN Ok(ListV(<<item.value>>)) ELSE Fail
   ELSE
     LET def == S.types[type.name] IN
-    CASE def.kind = "scalar" -> CoerceScalar(type.name, v)
+    CASE def.kind = "scalar" -> CoerceScalar(S, type.name, v)
       [] def.kind = "enum" -> CoerceEnum(PolicyOf(S), def, v, source)
       [] OTHER ->
            \* §3.10: "The value for an input object should be an input
@@ -396,6 +427,16 @@ CoerceItems(S, itemType, items, i, source, vars, acc) ==
                   /\ IsList(IF IsNonNull(itemType) THEN OfType(itemType) ELSE itemType)
                   /\ items[i].kind \notin {"list", "null", "variable"}
           THEN Fail
+          \* A variable item's runtime value, coerced to the variable's own
+          \* type, is used as it is (§6.4.1's Note), as §3.10 says for an
+          \* input object field. In a valid document a variable at a list
+          \* item type has a list type (§5.8.5), so its value is a list or
+          \* null. In an invalid one, [$x] for [[Int]] with $x: Int = 2, the
+          \* spec doesn't say whether the item is 2 or, by §3.11, [2]:
+          \* policy.variableItemWrapped decides.
+          ELSE IF items[i].kind = "variable" /\ Switch(S, "variableItemWrapped")
+          THEN LET r == CoerceInput(S, itemType, items[i], source, vars) IN
+               IF r.ok THEN Ok(WrappedAs(itemType, r.value)) ELSE r
           ELSE CoerceInput(S, itemType, items[i], source, vars)
     IN IF item.ok
        THEN CoerceItems(S, itemType, items, i + 1, source, vars, Append(acc, item.value))
@@ -620,11 +661,11 @@ Valid(S, operation, request, response) ==
   LET outcome == Respond(S, operation, request) IN
   CASE outcome.kind = "requestError" ->
          \* §7.1.3: "The request error result map must not contain an entry
-         \* with key "data"." The "errors" entry "must be a non-empty list";
-         \* a request error has no response position, so no path.
+         \* with key "data"." The "errors" entry "must be a non-empty list".
+         \* No sentence says whether a request error may carry a path, so
+         \* any path is accepted.
          /\ ~response.hasData
          /\ Len(response.errors) > 0
-         /\ \A i \in DOMAIN response.errors : response.errors[i] = <<>>
          /\ ~response.called
     [] outcome.kind = "fieldError" ->
          \* §6.4.4: the execution error nulls the nullable root field, and
@@ -702,7 +743,13 @@ ScalarCases == <<
   Case(Lit(Named("Float"), Num("int", FALSE, TwoTo53.digits, 0)), Ok(TwoTo53)),
   Case(Lit(Named("Float"), Num("int", FALSE, <<9, 0, 0, 7, 1, 9, 9, 2, 5, 4, 7, 4, 0, 9, 9, 3>>, 0)), Fail),  \* 2^53 + 1
   Case(Lit(Named("Float"), Num("float", FALSE, <<1>>, 22)), Ok(Num("number", FALSE, <<1>>, 22))),  \* 1e22 is exact
-  Case(Lit(Named("Float"), Num("float", FALSE, <<1>>, 23)), Fail),   \* 1e23 is not
+  Case(Lit(Named("Float"), Num("float", FALSE, <<1>>, 23)), Ok(Num("number", FALSE, <<1>>, 23))),  \* the float 1e23 is rounded
+  Case(Json(Named("Float"), Num("number", FALSE, <<1>>, 23)), Fail),  \* the integer 10^23 isn't exact
+  Case(CoerceInput(WithPolicy(ExampleSchema, [DefaultPolicy EXCEPT !.floatRounded = TRUE]), Named("Float"),
+                   Num("int", FALSE, <<9, 0, 0, 7, 1, 9, 9, 2, 5, 4, 7, 4, 0, 9, 9, 3>>, 0), "literal", {}),
+       Ok(Num("number", FALSE, <<9, 0, 0, 7, 1, 9, 9, 2, 5, 4, 7, 4, 0, 9, 9, 3>>, 0))),  \* 2^53 + 1, rounded
+  Case(CoerceInput(WithPolicy(ExampleSchema, [DefaultPolicy EXCEPT !.floatRounded = TRUE]), Named("Float"),
+                   Num("float", FALSE, <<1>>, 400), "literal", {}), Fail),  \* 1e400 still isn't finite
   Case(Json(Named("Float"), Str("1.5")), Fail),
   Case(Json(Named("String"), Str("abc")), Ok(Str("abc"))),
   Case(Json(Named("String"), StrW("\\ud800", FALSE)), Fail),
@@ -754,7 +801,21 @@ ListCases == <<
                    ListOf(ListOf(IntT)), ListV(<<ListV(<<I(1)>>), NullV>>), "literal", {}),
        Ok(ListV(<<ListV(<<N(1)>>), NullV>>))),
   Case(CoerceInput(WithPolicy(ExampleSchema, [DefaultPolicy EXCEPT !.nestedListItems = FALSE]),
-                   ListOf(ListOf(IntT)), I(1), "variables", {}), Ok(ListV(<<ListV(<<N(1)>>)>>)))
+                   ListOf(ListOf(IntT)), I(1), "variables", {}), Ok(ListV(<<ListV(<<N(1)>>)>>))),
+  \* A variable item is used as it is: [$x, [$x]] for [[Int]], with $x 2
+  \* (an invalid document), gives [2, [2]]. Under variableItemWrapped, the
+  \* reading of §3.11 that wraps it, [[2], [2]]; a list or null value is
+  \* kept either way.
+  Case(CoerceInput(ExampleSchema, ListOf(ListOf(IntT)), ListV(<<VarV("x"), ListV(<<VarV("x")>>)>>), "literal",
+                   {Entry("x", N(2))}),
+       Ok(ListV(<<N(2), ListV(<<N(2)>>)>>))),
+  Case(CoerceInput(WithPolicy(ExampleSchema, [DefaultPolicy EXCEPT !.variableItemWrapped = TRUE]),
+                   ListOf(ListOf(IntT)), ListV(<<VarV("x"), ListV(<<VarV("x")>>)>>), "literal", {Entry("x", N(2))}),
+       Ok(ListV(<<ListV(<<N(2)>>), ListV(<<N(2)>>)>>))),
+  Case(CoerceInput(WithPolicy(ExampleSchema, [DefaultPolicy EXCEPT !.variableItemWrapped = TRUE]),
+                   ListOf(ListOf(IntT)), ListV(<<VarV("x"), VarV("y")>>), "literal",
+                   {Entry("x", ListV(<<N(2)>>)), Entry("y", NullV)}),
+       Ok(ListV(<<ListV(<<N(2)>>), NullV>>)))
 >>
 
 \* §3.10's table of examples, run as `example(arg: <literal>)` with the
@@ -789,7 +850,7 @@ InputObjectCases == <<
   Case(Example(<<>>, ObjV({Entry("b", I(123)), Entry("c", Str("xyz"))}), {}), FieldError)
 >>
 
-\* §3.10.1's table of examples (the draft only), as `oneOfExample(arg:
+\* §3.10.1's table of examples (since September 2025), as `oneOfExample(arg:
 \* <literal>)`. Where the literal is $var, the operation declares
 \* `$var: ExampleOneOfInputObject`; $a and $b are declared String and Int.
 OneOfType == Named("ExampleOneOfInputObject")
@@ -914,6 +975,8 @@ BadLiteral == Op(<<>>, "int", {Entry("v", Str("1"))})
 Fine == Op(<<>>, "int", {Entry("v", I(1))})
 ResponseCases == <<
   Case(Valid(ExampleSchema, BadVariable, {Entry("x", Str("1"))}, Response(FALSE, FALSE, <<<<>>>>, FALSE, NullV)), TRUE),
+  \* No sentence forbids a path on a request error.
+  Case(Valid(ExampleSchema, BadVariable, {Entry("x", Str("1"))}, Response(FALSE, FALSE, <<<<"int">>>>, FALSE, NullV)), TRUE),
   \* A request error reported as an execution error.
   Case(Valid(ExampleSchema, BadVariable, {Entry("x", Str("1"))}, Response(TRUE, TRUE, <<<<"int">>>>, FALSE, NullV)), FALSE),
   \* A request error with "data": null.

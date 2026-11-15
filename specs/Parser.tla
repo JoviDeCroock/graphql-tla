@@ -1,8 +1,10 @@
 ---- MODULE Parser ----
 (***************************************************************************)
 (* The syntactic grammar of executable documents, written by hand from the *)
-(* spec (https://spec.graphql.org/draft/, §2.3 to §2.13): a recursive-     *)
-(* descent reading of ExecutableDocument over the tokens of Lexer.tla.      *)
+(* September 2026 edition of the spec                                      *)
+(* (https://spec.graphql.org/September2026/, §2.3 to §2.13): a             *)
+(* recursive-descent reading of ExecutableDocument over the tokens of      *)
+(* Lexer.tla.                                                              *)
 (*                                                                         *)
 (* "The lexical token sequence, omitting Ignored, must be described by a   *)
 (* single Document syntactic grammar." Documents with type system          *)
@@ -241,7 +243,8 @@ RECURSIVE SelectionSet(_, _), Selections(_, _, _), Selection(_, _), Field(_, _),
           FragmentSpread(_, _), InlineFragment(_, _)
 
 \* SelectionSet : { Selection* }
-\* The draft allows an empty selection set (graphql-spec#1227).
+\* An empty selection set is new in September 2026 (graphql-spec#1227);
+\* October 2021 and September 2025 have { Selection+ }.
 SelectionSet(toks, k) ==
   IF IsPunctuator(toks, k, LBrace) THEN Selections(toks, k + 1, <<>>) ELSE Fail(k)
 

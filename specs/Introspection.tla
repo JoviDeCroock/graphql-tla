@@ -1,9 +1,9 @@
 ---- MODULE Introspection ----
 (***************************************************************************)
 (* Schema introspection, written by hand from the spec                     *)
-(* (https://spec.graphql.org/draft/, §4.2 Schema Introspection): the       *)
-(* `__schema` a service must return for schema data S (see TypeSystem.tla) *)
-(* and the built-in definitions B it provides.                             *)
+(* (https://spec.graphql.org/September2026/, §4.2 Schema Introspection):   *)
+(* the `__schema` a service must return for schema data S (see            *)
+(* TypeSystem.tla) and the built-in definitions B it provides.             *)
 (*                                                                         *)
 (* Results use these shapes. As in TypeSystem.tla, an optional value is a  *)
 (* sequence of length 0 (null) or 1:                                       *)
@@ -44,8 +44,9 @@
 (*     built-ins it did return. A service that neither returns nor shows   *)
 (*     @specifiedBy or @oneOf has no scalar URL and no OneOf input object  *)
 (*     (AsProvided, ProvidedNames).                                        *)
-(*   - B may be SpecBuiltins (the draft) or Oct2021Builtins (the October   *)
-(*     2021 edition).                                                      *)
+(*   - B may be SpecBuiltins (September 2026, the edition the kit grades), *)
+(*     Sep2025Builtins (the September 2025 edition) or Oct2021Builtins     *)
+(*     (the October 2021 edition).                                         *)
 (*   - A wrapper type's fields other than kind and ofType are null         *)
 (*     (WrapperMatches), and the answer they are read from has each of     *)
 (*     __Schema's fields with its type (SchemaFieldsMatch).                *)
@@ -192,7 +193,7 @@ Oct2021IncludeDeprecatedArg ==
   BuiltinInputValue("includeDeprecated", Named("Boolean"),
                     Some(Value("boolean", "false", <<>>, <<>>)))
 
-\* October 2021's schema introspection schema. Against the draft's:
+\* October 2021's schema introspection schema. Against September 2026's:
 \* __Type has no isOneOf and inputFields takes no argument, __InputValue
 \* has no isDeprecated or deprecationReason, __Directive has no
 \* isDeprecated or deprecationReason, __Field.args, __Directive.args and
@@ -249,8 +250,8 @@ Oct2021IntrospectionTypes == <<
     "UNION", "ENUM", "ENUM_VALUE", "INPUT_OBJECT", "INPUT_FIELD_DEFINITION">>)
 >>
 
-\* October 2021, §3.13: @skip, @include and @specifiedBy as in the draft,
-\* "directive @deprecated(reason: String = "No longer supported") on
+\* October 2021, §3.13: @skip, @include and @specifiedBy as in September
+\* 2026, "directive @deprecated(reason: String = "No longer supported") on
 \* FIELD_DEFINITION | ENUM_VALUE", and no @oneOf.
 Oct2021Directives == <<
   BuiltinDirectives[1],
@@ -268,8 +269,9 @@ Oct2021Builtins == [types |-> Oct2021IntrospectionTypes, directives |-> Oct2021D
 \* Whether October 2021 can express S: no OneOf input object, and nothing
 \* deprecates an argument, an input field or a directive, which its
 \* @deprecated locations don't allow. For such a schema, the fields only
-\* the draft's introspection types have are fixed: isOneOf is false for
-\* every input object, and no input value or directive is deprecated.
+\* the later editions' introspection types have are fixed: isOneOf is
+\* false for every input object, and no input value or directive is
+\* deprecated.
 IsOct2021Schema(S) ==
   /\ \A T \in Range(S.types) :
        /\ ~(T.kind = "INPUT_OBJECT" /\ T.oneOf)
@@ -277,6 +279,65 @@ IsOct2021Schema(S) ==
        /\ \A k \in DOMAIN T.fields : \A j \in DOMAIN T.fields[k].args : ~IsDeprecated(T.fields[k].args[j])
   /\ \A D \in Range(S.directives) :
        ~IsDeprecated(D) /\ \A j \in DOMAIN D.args : ~IsDeprecated(D.args[j])
+
+-----------------------------------------------------------------------------
+(* The September 2025 edition's built-in definitions *)
+
+\* September 2025's schema introspection schema. Against September 2026's:
+\* __Schema.directives takes no argument, __Directive has no isDeprecated
+\* or deprecationReason, and __DirectiveLocation has no
+\* DIRECTIVE_DEFINITION. Its §4.2 has "includeDeprecated: Boolean! =
+\* false" on every other list, as September 2026 does; its Appendix D
+\* still printed "Boolean = false" (corrected in September 2026), and the
+\* reference follows §4.2.
+Sep2025IntrospectionTypes == <<
+  BuiltinObject("__Schema", <<
+    BuiltinField("description", <<>>, Named("String")),
+    BuiltinField("types", <<>>, NNListOfNN("__Type")),
+    BuiltinField("queryType", <<>>, NN("__Type")),
+    BuiltinField("mutationType", <<>>, Named("__Type")),
+    BuiltinField("subscriptionType", <<>>, Named("__Type")),
+    BuiltinField("directives", <<>>, NNListOfNN("__Directive"))>>),
+  IntrospectionTypes[2],
+  IntrospectionTypes[3],
+  IntrospectionTypes[4],
+  IntrospectionTypes[5],
+  IntrospectionTypes[6],
+  BuiltinObject("__Directive", <<
+    BuiltinField("name", <<>>, NN("String")),
+    BuiltinField("description", <<>>, Named("String")),
+    BuiltinField("isRepeatable", <<>>, NN("Boolean")),
+    BuiltinField("locations", <<>>, NNListOfNN("__DirectiveLocation")),
+    BuiltinField("args", <<IncludeDeprecatedArg>>, NNListOfNN("__InputValue"))>>),
+  Oct2021IntrospectionTypes[8]
+>>
+
+\* September 2025, §3.13: @skip, @include, @specifiedBy and @oneOf as in
+\* September 2026, and "directive @deprecated(reason: String! = "No longer
+\* supported") on FIELD_DEFINITION | ARGUMENT_DEFINITION |
+\* INPUT_FIELD_DEFINITION | ENUM_VALUE": no DIRECTIVE_DEFINITION.
+Sep2025Directives == <<
+  BuiltinDirectives[1],
+  BuiltinDirectives[2],
+  BuiltinDirective("deprecated",
+                   <<BuiltinInputValue("reason", NN("String"),
+                       Some(Value("string", "No longer supported", <<>>, <<>>)))>>,
+                   <<"FIELD_DEFINITION", "ARGUMENT_DEFINITION", "INPUT_FIELD_DEFINITION", "ENUM_VALUE">>),
+  BuiltinDirectives[4],
+  BuiltinDirectives[5]
+>>
+
+\* B for a service that implements the September 2025 edition.
+Sep2025Builtins == [types |-> Sep2025IntrospectionTypes, directives |-> Sep2025Directives]
+
+\* Whether September 2025 can express S: no directive definition has a
+\* directive applied (its DirectiveDefinition has no Directives), so none
+\* is deprecated. For such a schema, the fields only September 2026's
+\* introspection types have are fixed: no directive is deprecated.
+IsSep2025Schema(S) ==
+  \A D \in Range(S.directives) : ~IsDeprecated(D) /\ D.directives = {}
+
+-----------------------------------------------------------------------------
 
 \* The built-in directives S applies that a service needn't provide:
 \* @specifiedBy on a custom scalar and @oneOf on an input object (§3.13

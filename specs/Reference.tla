@@ -1,7 +1,7 @@
 ---- MODULE Reference ----
 (***************************************************************************)
 (* GraphQL query execution, written by hand from the spec's algorithms     *)
-(* (https://spec.graphql.org/draft/, §6.3 and §6.4).                        *)
+(* (https://spec.graphql.org/September2026/, §6.3 and §6.4).                *)
 (*                                                                         *)
 (* Everything here is a pure operator over plain data:                     *)
 (*                                                                         *)
@@ -49,7 +49,7 @@ RootType(fx) ==
 \* Whether execution errors propagate (§6.4.4). graphql-js 17's
 \* @experimental_disableErrorPropagation turns this off: an error nulls the
 \* position where it happened, Non-Null or not. That mode is outside the
-\* spec: neither edition has execution without propagation. The kit grades
+\* spec: no release has execution without propagation. The kit grades
 \* it under an informational check, never against §6.4.4.
 Propagates(fx, type) == fx.errorPropagation /\ IsNonNull(type)
 
@@ -161,8 +161,10 @@ Pending == Result("pending", NullJson, {}, {}, {})
 
 \* The outcome a resolver must produce for a nullable type: a list for a
 \* list type, a leaf for a scalar, an object otherwise. Anything else, such
-\* as an object for a list type, is a field error, as is a runtime type
-\* that isn't one of the possible types (§6.4.3 ResolveAbstractType).
+\* as an object for a list type, is a field error. So is a runtime type
+\* that isn't one of the possible types, as in graphql-js: no sentence in
+\* any release says what happens when ResolveAbstractType (§6.4.3)
+\* returns one, so the kit never sends that outcome (kit/execution/drive.mjs).
 Expected(fx, type) ==
   IF IsList(type) THEN "list"
   ELSE IF TypeDef(fx, type.name).kind = "scalar" THEN "leaf"

@@ -155,7 +155,8 @@
     {
       "id": "directiveNameReserved.1.invalid",
       "spec": [
-        "3.3"
+        "3.3",
+        "3.13"
       ],
       "family": "names",
       "rule": "DIRECTIVE_NAME_RESERVED",
@@ -171,12 +172,43 @@
     {
       "id": "directiveNameReserved.1.valid",
       "spec": [
-        "3.3"
+        "3.3",
+        "3.13"
       ],
       "family": "names",
       "rule": "DIRECTIVE_NAME_RESERVED",
       "pair": "directiveNameReserved.1.invalid",
       "sdl": "directive @_d on FIELD type Query { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "schemaDefinitionUnique.1.invalid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "root",
+      "rule": "SCHEMA_DEFINITION_UNIQUE",
+      "pair": "schemaDefinitionUnique.1.valid",
+      "sdl": "schema { query: Query } schema { query: Query } type Query { a: Int }",
+      "verdict": [
+        "SCHEMA_DEFINITION_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "schemaDefinitionUnique.1.valid",
+      "spec": [
+        "3.3"
+      ],
+      "family": "root",
+      "rule": "SCHEMA_DEFINITION_UNIQUE",
+      "pair": "schemaDefinitionUnique.1.invalid",
+      "sdl": "schema { query: Query } type Query { a: Int }",
       "verdict": [],
       "expected": {
         "valid": true
@@ -330,6 +362,36 @@
       "rule": "ROOT_TYPES_ARE_OBJECTS",
       "pair": "rootTypesAreObjects.3.invalid",
       "sdl": "schema { query: Q } type Q { a: Int } input In { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "rootTypesAreObjects.4.invalid",
+      "spec": [
+        "3.3.1"
+      ],
+      "family": "root",
+      "rule": "ROOT_TYPES_ARE_OBJECTS",
+      "pair": "rootTypesAreObjects.4.valid",
+      "sdl": "schema { query: Missing } type Q { a: Int }",
+      "verdict": [
+        "ROOT_TYPES_ARE_OBJECTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "rootTypesAreObjects.4.valid",
+      "spec": [
+        "3.3.1"
+      ],
+      "family": "root",
+      "rule": "ROOT_TYPES_ARE_OBJECTS",
+      "pair": "rootTypesAreObjects.4.invalid",
+      "sdl": "schema { query: Q } type Q { a: Int }",
       "verdict": [],
       "expected": {
         "valid": true
@@ -524,6 +586,38 @@
       }
     },
     {
+      "id": "fieldNamesUnique.3.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "names",
+      "rule": "FIELD_NAMES_UNIQUE",
+      "pair": "fieldNamesUnique.3.valid",
+      "sdl": "type Query implements I { a: I x: Int y: Int } interface I { x: Int x: Int }",
+      "verdict": [
+        "FIELD_NAMES_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "fieldNamesUnique.3.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "names",
+      "rule": "FIELD_NAMES_UNIQUE",
+      "pair": "fieldNamesUnique.3.invalid",
+      "sdl": "type Query implements I { a: I x: Int y: Int } interface I { x: Int y: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
       "id": "fieldNameReserved.1.invalid",
       "spec": [
         "3.6",
@@ -559,6 +653,7 @@
       "id": "fieldOutputType.1.invalid",
       "spec": [
         "3.6",
+        "3.7",
         "3.4.2"
       ],
       "family": "typeUse",
@@ -576,6 +671,7 @@
       "id": "fieldOutputType.1.valid",
       "spec": [
         "3.6",
+        "3.7",
         "3.4.2"
       ],
       "family": "typeUse",
@@ -591,6 +687,7 @@
       "id": "fieldOutputType.2.invalid",
       "spec": [
         "3.6",
+        "3.7",
         "3.4.2"
       ],
       "family": "typeUse",
@@ -609,6 +706,7 @@
       "id": "fieldOutputType.2.valid",
       "spec": [
         "3.6",
+        "3.7",
         "3.4.2"
       ],
       "family": "typeUse",
@@ -622,9 +720,44 @@
       }
     },
     {
+      "id": "fieldOutputType.3.invalid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.4.2"
+      ],
+      "family": "typeUse",
+      "rule": "FIELD_OUTPUT_TYPE",
+      "pair": "fieldOutputType.3.valid",
+      "sdl": "type O { x: Int } type Query { a: Missing }",
+      "verdict": [
+        "FIELD_OUTPUT_TYPE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "fieldOutputType.3.valid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.4.2"
+      ],
+      "family": "typeUse",
+      "rule": "FIELD_OUTPUT_TYPE",
+      "pair": "fieldOutputType.3.invalid",
+      "sdl": "type O { x: Int } type Query { a: O }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
       "id": "argNameReserved.1.invalid",
       "spec": [
         "3.6",
+        "3.7",
         "3.13"
       ],
       "family": "names",
@@ -642,6 +775,7 @@
       "id": "argNameReserved.1.valid",
       "spec": [
         "3.6",
+        "3.7",
         "3.13"
       ],
       "family": "names",
@@ -657,6 +791,7 @@
       "id": "argNameReserved.2.invalid",
       "spec": [
         "3.6",
+        "3.7",
         "3.13"
       ],
       "family": "names",
@@ -674,6 +809,7 @@
       "id": "argNameReserved.2.valid",
       "spec": [
         "3.6",
+        "3.7",
         "3.13"
       ],
       "family": "names",
@@ -689,12 +825,13 @@
       "id": "argNamesUnique.1.invalid",
       "spec": [
         "3.6",
+        "3.7",
         "3.13"
       ],
       "family": "names",
       "rule": "ARG_NAMES_UNIQUE",
-      "edition": "draft",
-      "editionNote": "new in the draft: argument name uniqueness",
+      "since": "September2025",
+      "editionNote": "new in September 2025: argument name uniqueness",
       "pair": "argNamesUnique.1.valid",
       "sdl": "type Query { f(x: Int, x: Int): Int }",
       "verdict": [
@@ -708,6 +845,7 @@
       "id": "argNamesUnique.1.valid",
       "spec": [
         "3.6",
+        "3.7",
         "3.13"
       ],
       "family": "names",
@@ -723,12 +861,13 @@
       "id": "argNamesUnique.2.invalid",
       "spec": [
         "3.6",
+        "3.7",
         "3.13"
       ],
       "family": "names",
       "rule": "ARG_NAMES_UNIQUE",
-      "edition": "draft",
-      "editionNote": "new in the draft: argument name uniqueness",
+      "since": "September2025",
+      "editionNote": "new in September 2025: argument name uniqueness",
       "pair": "argNamesUnique.2.valid",
       "sdl": "directive @d(x: Int, x: Int) on FIELD type Query { a: Int }",
       "verdict": [
@@ -742,6 +881,7 @@
       "id": "argNamesUnique.2.valid",
       "spec": [
         "3.6",
+        "3.7",
         "3.13"
       ],
       "family": "names",
@@ -757,6 +897,8 @@
       "id": "argInputType.1.invalid",
       "spec": [
         "3.6",
+        "3.7",
+        "3.13",
         "3.4.2"
       ],
       "family": "typeUse",
@@ -774,6 +916,8 @@
       "id": "argInputType.1.valid",
       "spec": [
         "3.6",
+        "3.7",
+        "3.13",
         "3.4.2"
       ],
       "family": "typeUse",
@@ -789,6 +933,8 @@
       "id": "argInputType.2.invalid",
       "spec": [
         "3.6",
+        "3.7",
+        "3.13",
         "3.4.2"
       ],
       "family": "typeUse",
@@ -806,6 +952,8 @@
       "id": "argInputType.2.valid",
       "spec": [
         "3.6",
+        "3.7",
+        "3.13",
         "3.4.2"
       ],
       "family": "typeUse",
@@ -821,6 +969,8 @@
       "id": "argInputType.3.invalid",
       "spec": [
         "3.6",
+        "3.7",
+        "3.13",
         "3.4.2"
       ],
       "family": "typeUse",
@@ -838,12 +988,50 @@
       "id": "argInputType.3.valid",
       "spec": [
         "3.6",
+        "3.7",
+        "3.13",
         "3.4.2"
       ],
       "family": "typeUse",
       "rule": "ARG_INPUT_TYPE",
       "pair": "argInputType.3.invalid",
       "sdl": "directive @d(x: Int) on FIELD type Query { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "argInputType.4.invalid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.13",
+        "3.4.2"
+      ],
+      "family": "typeUse",
+      "rule": "ARG_INPUT_TYPE",
+      "pair": "argInputType.4.valid",
+      "sdl": "input In { x: Int } type Query { f(x: [Missing]): Int }",
+      "verdict": [
+        "ARG_INPUT_TYPE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "argInputType.4.valid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.13",
+        "3.4.2"
+      ],
+      "family": "typeUse",
+      "rule": "ARG_INPUT_TYPE",
+      "pair": "argInputType.4.invalid",
+      "sdl": "input In { x: Int } type Query { f(x: [In]): Int }",
       "verdict": [],
       "expected": {
         "valid": true
@@ -858,8 +1046,8 @@
       "family": "typeUse",
       "rule": "REQUIRED_ARG_NOT_DEPRECATED",
       "origin": "§3.13.3: a required argument must first be made optional, by making its type nullable",
-      "edition": "draft",
-      "editionNote": "new in the draft: deprecated arguments",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecated arguments",
       "pair": "requiredArgNotDeprecated.1.valid",
       "sdl": "type Query { f(oldArg: String! @deprecated): Int }",
       "verdict": [
@@ -882,8 +1070,8 @@
       "family": "typeUse",
       "rule": "REQUIRED_ARG_NOT_DEPRECATED",
       "origin": "§3.13.3: a required argument must first be made optional, by making its type nullable",
-      "edition": "draft",
-      "editionNote": "new in the draft: deprecated arguments",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecated arguments",
       "pair": "requiredArgNotDeprecated.1.invalid",
       "sdl": "type Query { f(oldArg: String @deprecated): Int }",
       "verdict": [],
@@ -900,8 +1088,8 @@
       "family": "typeUse",
       "rule": "REQUIRED_ARG_NOT_DEPRECATED",
       "origin": "§3.13.3: a required argument must first be made optional, by adding a default value",
-      "edition": "draft",
-      "editionNote": "new in the draft: deprecated arguments",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecated arguments",
       "pair": "requiredArgNotDeprecated.1.invalid",
       "sdl": "type Query { f(oldArg: String! = \"s\" @deprecated): Int }",
       "verdict": [],
@@ -917,8 +1105,8 @@
       ],
       "family": "typeUse",
       "rule": "REQUIRED_ARG_NOT_DEPRECATED",
-      "edition": "draft",
-      "editionNote": "new in the draft: deprecated arguments",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecated arguments",
       "pair": "requiredArgNotDeprecated.3.valid",
       "sdl": "type Query { a: I } interface I { f(x: Int! @deprecated): Int }",
       "verdict": [
@@ -936,8 +1124,8 @@
       ],
       "family": "typeUse",
       "rule": "REQUIRED_ARG_NOT_DEPRECATED",
-      "edition": "draft",
-      "editionNote": "new in the draft: deprecated arguments",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecated arguments",
       "pair": "requiredArgNotDeprecated.3.invalid",
       "sdl": "type Query { a: I } interface I { f(x: Int @deprecated): Int }",
       "verdict": [],
@@ -953,8 +1141,8 @@
       ],
       "family": "typeUse",
       "rule": "REQUIRED_ARG_NOT_DEPRECATED",
-      "edition": "draft",
-      "editionNote": "new in the draft: deprecated arguments",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecated arguments",
       "pair": "requiredArgNotDeprecated.4.valid",
       "sdl": "directive @d(x: Int! @deprecated) on FIELD type Query { a: Int }",
       "verdict": [
@@ -972,8 +1160,8 @@
       ],
       "family": "typeUse",
       "rule": "REQUIRED_ARG_NOT_DEPRECATED",
-      "edition": "draft",
-      "editionNote": "new in the draft: deprecated arguments",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecated arguments",
       "pair": "requiredArgNotDeprecated.4.invalid",
       "sdl": "directive @d(x: Int @deprecated) on FIELD type Query { a: Int }",
       "verdict": [],
@@ -982,14 +1170,56 @@
       }
     },
     {
+      "id": "requiredArgNotDeprecated.5.invalid",
+      "spec": [
+        "3.6",
+        "3.13.3"
+      ],
+      "family": "typeUse",
+      "rule": "REQUIRED_ARG_NOT_DEPRECATED",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecated arguments",
+      "pair": "requiredArgNotDeprecated.5.valid",
+      "sdl": "type Query implements I { a: I f(x: Int!): Int } interface I { f(x: Int! @deprecated): Int }",
+      "verdict": [
+        "REQUIRED_ARG_NOT_DEPRECATED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "requiredArgNotDeprecated.5.valid",
+      "spec": [
+        "3.6",
+        "3.13.3"
+      ],
+      "family": "typeUse",
+      "rule": "REQUIRED_ARG_NOT_DEPRECATED",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecated arguments",
+      "pair": "requiredArgNotDeprecated.5.invalid",
+      "sdl": "type Query implements I { a: I f(x: Int!): Int } interface I { f(x: Int! = 1 @deprecated): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
       "id": "argDefaultCompatible.1.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
-      "edition": "draft",
-      "editionNote": "new in the draft: default value validation",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
       "pair": "argDefaultCompatible.1.valid",
       "sdl": "type Query { f(x: Int = \"1\"): Int }",
       "verdict": [
@@ -1002,7 +1232,13 @@
     {
       "id": "argDefaultCompatible.1.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
@@ -1016,12 +1252,18 @@
     {
       "id": "argDefaultCompatible.2.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
-      "edition": "draft",
-      "editionNote": "new in the draft: default value validation",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
       "pair": "argDefaultCompatible.2.valid",
       "sdl": "type Query { f(x: Int = 1.5): Int }",
       "verdict": [
@@ -1034,7 +1276,13 @@
     {
       "id": "argDefaultCompatible.2.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
@@ -1048,12 +1296,18 @@
     {
       "id": "argDefaultCompatible.3.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
-      "edition": "draft",
-      "editionNote": "new in the draft: default value validation",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
       "pair": "argDefaultCompatible.3.valid",
       "sdl": "type Query { f(x: Int! = null): Int }",
       "verdict": [
@@ -1066,7 +1320,13 @@
     {
       "id": "argDefaultCompatible.3.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
@@ -1080,12 +1340,18 @@
     {
       "id": "argDefaultCompatible.4.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
-      "edition": "draft",
-      "editionNote": "new in the draft: default value validation",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
       "pair": "argDefaultCompatible.4.valid",
       "sdl": "type Query { f(x: [Int!] = [1, null]): Int }",
       "verdict": [
@@ -1098,7 +1364,13 @@
     {
       "id": "argDefaultCompatible.4.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
@@ -1112,13 +1384,19 @@
     {
       "id": "argDefaultCompatible.5.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
       "origin": "§3.9: string literals must not be accepted as an enum input",
-      "edition": "draft",
-      "editionNote": "new in the draft: default value validation",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
       "pair": "argDefaultCompatible.5.valid",
       "sdl": "enum Color { RED BLUE } type Query { f(c: Color = \"RED\"): Int }",
       "verdict": [
@@ -1131,7 +1409,13 @@
     {
       "id": "argDefaultCompatible.5.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
@@ -1146,13 +1430,19 @@
     {
       "id": "argDefaultCompatible.6.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
-      "origin": "§3.10's coercion table: a missing required field",
-      "edition": "draft",
-      "editionNote": "new in the draft: default value validation",
+      "origin": "§3.12: a required input field the default leaves out (\"If an argument or input-object field of a Non-Null type is not provided ... a request error must be raised\"); §3.10's coercion table shows the same case",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
       "pair": "argDefaultCompatible.6.valid",
       "sdl": "input Point { x: Int! y: Int } type Query { f(p: Point = {y: 1}): Int }",
       "verdict": [
@@ -1165,11 +1455,17 @@
     {
       "id": "argDefaultCompatible.6.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
-      "origin": "§3.10's coercion table: a missing required field",
+      "origin": "§3.12: a required input field the default leaves out (\"If an argument or input-object field of a Non-Null type is not provided ... a request error must be raised\"); §3.10's coercion table shows the same case",
       "pair": "argDefaultCompatible.6.invalid",
       "sdl": "input Point { x: Int! y: Int } type Query { f(p: Point = {x: 1}): Int }",
       "verdict": [],
@@ -1180,13 +1476,19 @@
     {
       "id": "argDefaultCompatible.7.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
       "origin": "§3.10's coercion table: an unexpected field",
-      "edition": "draft",
-      "editionNote": "new in the draft: default value validation",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
       "pair": "argDefaultCompatible.7.valid",
       "sdl": "input Point { x: Int! y: Int } type Query { f(p: Point = {x: 1, z: 1}): Int }",
       "verdict": [
@@ -1199,7 +1501,13 @@
     {
       "id": "argDefaultCompatible.7.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
@@ -1214,13 +1522,19 @@
     {
       "id": "argDefaultCompatible.8.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
       "origin": "§3.10.1's coercion table: exactly one key must be specified",
-      "edition": "draft",
-      "editionNote": "new in the draft: OneOf input objects, default value validation",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects, default value validation",
       "pair": "argDefaultCompatible.8.valid",
       "sdl": "input Pick @oneOf { a: Int b: String } type Query { f(p: Pick = {a: 1, b: \"s\"}): Int }",
       "verdict": [
@@ -1233,13 +1547,19 @@
     {
       "id": "argDefaultCompatible.8.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
       "origin": "§3.10.1's coercion table: exactly one key must be specified",
-      "edition": "draft",
-      "editionNote": "new in the draft: OneOf input objects",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
       "pair": "argDefaultCompatible.8.invalid",
       "sdl": "input Pick @oneOf { a: Int b: String } type Query { f(p: Pick = {a: 1}): Int }",
       "verdict": [],
@@ -1250,13 +1570,19 @@
     {
       "id": "argDefaultCompatible.9.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
       "origin": "§3.10.1's coercion table: the member field must be non-null",
-      "edition": "draft",
-      "editionNote": "new in the draft: OneOf input objects, default value validation",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects, default value validation",
       "pair": "argDefaultCompatible.9.valid",
       "sdl": "input Pick @oneOf { a: Int b: String } type Query { f(p: Pick = {a: null}): Int }",
       "verdict": [
@@ -1269,13 +1595,19 @@
     {
       "id": "argDefaultCompatible.9.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
       "origin": "§3.10.1's coercion table: the member field must be non-null",
-      "edition": "draft",
-      "editionNote": "new in the draft: OneOf input objects",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
       "pair": "argDefaultCompatible.9.invalid",
       "sdl": "input Pick @oneOf { a: Int b: String } type Query { f(p: Pick = {a: 2}): Int }",
       "verdict": [],
@@ -1286,13 +1618,19 @@
     {
       "id": "argDefaultCompatible.10.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
       "origin": "§3.5.2: a value not representable by finite IEEE 754 must raise a request error",
-      "edition": "draft",
-      "editionNote": "new in the draft: default value validation",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
       "pair": "argDefaultCompatible.10.valid",
       "sdl": "type Query { f(x: Float = 1e400): Int }",
       "verdict": [
@@ -1305,7 +1643,13 @@
     {
       "id": "argDefaultCompatible.10.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.5",
+        "3.9",
+        "3.10",
+        "3.10.1",
+        "3.11",
+        "3.12"
       ],
       "family": "defaults",
       "rule": "ARG_DEFAULT_COMPATIBLE",
@@ -1382,6 +1726,38 @@
       }
     },
     {
+      "id": "implementsInterfaces.2.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPLEMENTS_INTERFACES",
+      "pair": "implementsInterfaces.2.valid",
+      "sdl": "interface O { a: Int } type Query implements Missing { a: Int }",
+      "verdict": [
+        "IMPLEMENTS_INTERFACES"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implementsInterfaces.2.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPLEMENTS_INTERFACES",
+      "pair": "implementsInterfaces.2.invalid",
+      "sdl": "interface O { a: Int } type Query implements O { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
       "id": "implementsItself.1.invalid",
       "spec": [
         "3.7"
@@ -1444,7 +1820,8 @@
     {
       "id": "implTransitive.1.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_TRANSITIVE",
@@ -1461,7 +1838,8 @@
     {
       "id": "implTransitive.1.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_TRANSITIVE",
@@ -1476,7 +1854,8 @@
     {
       "id": "implTransitive.2.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_TRANSITIVE",
@@ -1492,7 +1871,8 @@
     {
       "id": "implTransitive.2.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_TRANSITIVE",
@@ -1504,9 +1884,42 @@
       }
     },
     {
+      "id": "implTransitive.3.invalid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_TRANSITIVE",
+      "pair": "implTransitive.3.valid",
+      "sdl": "interface A implements B { x: Int } interface B implements A { x: Int } type Query implements A & B { x: Int a: A }",
+      "verdict": [
+        "IMPL_TRANSITIVE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implTransitive.3.valid",
+      "spec": [
+        "3.6",
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPL_TRANSITIVE",
+      "pair": "implTransitive.3.invalid",
+      "sdl": "interface A implements B { x: Int } interface B { x: Int } type Query implements A & B { x: Int a: A }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
       "id": "implFieldProvided.1.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_FIELD_PROVIDED",
@@ -1522,7 +1935,8 @@
     {
       "id": "implFieldProvided.1.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_FIELD_PROVIDED",
@@ -1536,7 +1950,8 @@
     {
       "id": "implArgProvided.1.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_ARG_PROVIDED",
@@ -1552,7 +1967,8 @@
     {
       "id": "implArgProvided.1.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_ARG_PROVIDED",
@@ -1566,7 +1982,8 @@
     {
       "id": "implArgInvariant.1.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_ARG_INVARIANT",
@@ -1582,7 +1999,8 @@
     {
       "id": "implArgInvariant.1.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_ARG_INVARIANT",
@@ -1596,7 +2014,8 @@
     {
       "id": "implArgInvariant.2.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_ARG_INVARIANT",
@@ -1612,7 +2031,8 @@
     {
       "id": "implArgInvariant.2.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_ARG_INVARIANT",
@@ -1626,7 +2046,8 @@
     {
       "id": "implExtraArgOptional.1.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_EXTRA_ARG_OPTIONAL",
@@ -1642,7 +2063,8 @@
     {
       "id": "implExtraArgOptional.1.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_EXTRA_ARG_OPTIONAL",
@@ -1656,7 +2078,8 @@
     {
       "id": "implFieldCovariant.1.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_FIELD_COVARIANT",
@@ -1672,7 +2095,8 @@
     {
       "id": "implFieldCovariant.1.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_FIELD_COVARIANT",
@@ -1686,7 +2110,8 @@
     {
       "id": "implFieldCovariant.2.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_FIELD_COVARIANT",
@@ -1702,7 +2127,8 @@
     {
       "id": "implFieldCovariant.2.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_FIELD_COVARIANT",
@@ -1716,7 +2142,8 @@
     {
       "id": "implFieldCovariant.3.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_FIELD_COVARIANT",
@@ -1732,7 +2159,8 @@
     {
       "id": "implFieldCovariant.3.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_FIELD_COVARIANT",
@@ -1746,7 +2174,8 @@
     {
       "id": "implFieldCovariant.4.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_FIELD_COVARIANT",
@@ -1762,7 +2191,8 @@
     {
       "id": "implFieldCovariant.4.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_FIELD_COVARIANT",
@@ -1776,12 +2206,13 @@
     {
       "id": "implDeprecation.1.invalid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_DEPRECATION",
-      "edition": "draft",
-      "editionNote": "new in the draft: deprecation of implementing fields",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecation of implementing fields",
       "pair": "implDeprecation.1.valid",
       "sdl": "interface I { f: Int } type Query implements I { f: Int @deprecated }",
       "verdict": [
@@ -1794,7 +2225,8 @@
     {
       "id": "implDeprecation.1.valid",
       "spec": [
-        "3.6"
+        "3.6",
+        "3.7"
       ],
       "family": "implementation",
       "rule": "IMPL_DEPRECATION",
@@ -1950,6 +2382,36 @@
       "rule": "UNION_MEMBERS_OBJECTS",
       "pair": "unionMembersObjects.3.invalid",
       "sdl": "union U = Query union V = Query type Query { u: U }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "unionMembersObjects.4.invalid",
+      "spec": [
+        "3.8"
+      ],
+      "family": "union",
+      "rule": "UNION_MEMBERS_OBJECTS",
+      "pair": "unionMembersObjects.4.valid",
+      "sdl": "union U = Query | Missing type Query { u: U }",
+      "verdict": [
+        "UNION_MEMBERS_OBJECTS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "unionMembersObjects.4.valid",
+      "spec": [
+        "3.8"
+      ],
+      "family": "union",
+      "rule": "UNION_MEMBERS_OBJECTS",
+      "pair": "unionMembersObjects.4.invalid",
+      "sdl": "union U = Query type Query { u: U }",
       "verdict": [],
       "expected": {
         "valid": true
@@ -2168,6 +2630,38 @@
       }
     },
     {
+      "id": "inputFieldInputType.2.invalid",
+      "spec": [
+        "3.10",
+        "3.4.2"
+      ],
+      "family": "input",
+      "rule": "INPUT_FIELD_INPUT_TYPE",
+      "pair": "inputFieldInputType.2.valid",
+      "sdl": "input In { x: Missing } type Query { f(i: In): Int }",
+      "verdict": [
+        "INPUT_FIELD_INPUT_TYPE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "inputFieldInputType.2.valid",
+      "spec": [
+        "3.10",
+        "3.4.2"
+      ],
+      "family": "input",
+      "rule": "INPUT_FIELD_INPUT_TYPE",
+      "pair": "inputFieldInputType.2.invalid",
+      "sdl": "input In { x: Int } type Query { f(i: In): Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
       "id": "requiredInputFieldNotDeprecated.1.invalid",
       "spec": [
         "3.10",
@@ -2175,8 +2669,8 @@
       ],
       "family": "input",
       "rule": "REQUIRED_INPUT_FIELD_NOT_DEPRECATED",
-      "edition": "draft",
-      "editionNote": "new in the draft: deprecated input fields",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecated input fields",
       "pair": "requiredInputFieldNotDeprecated.1.valid",
       "sdl": "input In { x: Int! @deprecated } type Query { f(i: In): Int }",
       "verdict": [
@@ -2194,8 +2688,8 @@
       ],
       "family": "input",
       "rule": "REQUIRED_INPUT_FIELD_NOT_DEPRECATED",
-      "edition": "draft",
-      "editionNote": "new in the draft: deprecated input fields",
+      "since": "September2025",
+      "editionNote": "new in September 2025: deprecated input fields",
       "pair": "requiredInputFieldNotDeprecated.1.invalid",
       "sdl": "input In { x: Int! = 1 @deprecated } type Query { f(i: In): Int }",
       "verdict": [],
@@ -2211,8 +2705,8 @@
       ],
       "family": "input",
       "rule": "ONEOF_FIELD_NULLABLE",
-      "edition": "draft",
-      "editionNote": "new in the draft: OneOf input objects",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
       "pair": "oneOfFieldNullable.1.valid",
       "sdl": "input In @oneOf { a: Int! } type Query { f(i: In): Int }",
       "verdict": [
@@ -2230,8 +2724,8 @@
       ],
       "family": "input",
       "rule": "ONEOF_FIELD_NULLABLE",
-      "edition": "draft",
-      "editionNote": "new in the draft: OneOf input objects",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
       "pair": "oneOfFieldNullable.1.invalid",
       "sdl": "input In @oneOf { a: Int } type Query { f(i: In): Int }",
       "verdict": [],
@@ -2247,8 +2741,8 @@
       ],
       "family": "input",
       "rule": "ONEOF_FIELD_NO_DEFAULT",
-      "edition": "draft",
-      "editionNote": "new in the draft: OneOf input objects",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
       "pair": "oneOfFieldNoDefault.1.valid",
       "sdl": "input In @oneOf { a: Int = 1 b: String } type Query { f(i: In): Int }",
       "verdict": [
@@ -2266,8 +2760,8 @@
       ],
       "family": "input",
       "rule": "ONEOF_FIELD_NO_DEFAULT",
-      "edition": "draft",
-      "editionNote": "new in the draft: OneOf input objects",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
       "pair": "oneOfFieldNoDefault.1.invalid",
       "sdl": "input In @oneOf { a: Int b: String } type Query { f(i: In): Int }",
       "verdict": [],
@@ -2366,8 +2860,8 @@
       "family": "input",
       "rule": "INPUT_OBJECT_UNBREAKABLE_CYCLE",
       "origin": "§3.10: a OneOf input object breaks the cycle only with a field that does",
-      "edition": "draft",
-      "editionNote": "new in the draft: OneOf input objects",
+      "since": "September2026",
+      "editionNote": "new in September 2025: OneOf input objects; new in September 2026: OneOf inhabitability, InputObjectHasUnbreakableCycle (September 2025's rule, \"at least one of the fields in the chain of references must be either a nullable or a List type\", accepts this schema)",
       "pair": "inputObjectUnbreakableCycle.4.valid",
       "sdl": "input First @oneOf { second: Second } input Second { first: First! } type Query { f(e: First): Int }",
       "verdict": [
@@ -2385,8 +2879,8 @@
       "family": "input",
       "rule": "INPUT_OBJECT_UNBREAKABLE_CYCLE",
       "origin": "§3.10: a OneOf input object breaks the cycle only with a field that does",
-      "edition": "draft",
-      "editionNote": "new in the draft: OneOf input objects",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
       "pair": "inputObjectUnbreakableCycle.4.invalid",
       "sdl": "input First @oneOf { second: Second value: String } input Second { first: First! } type Query { f(e: First): Int }",
       "verdict": [],
@@ -2401,8 +2895,8 @@
       ],
       "family": "input",
       "rule": "INPUT_OBJECT_UNBREAKABLE_CYCLE",
-      "edition": "draft",
-      "editionNote": "new in the draft: OneOf input objects",
+      "since": "September2026",
+      "editionNote": "new in September 2025: OneOf input objects; new in September 2026: OneOf inhabitability, InputObjectHasUnbreakableCycle (September 2025's rule, \"at least one of the fields in the chain of references must be either a nullable or a List type\", accepts this schema)",
       "pair": "inputObjectUnbreakableCycle.5.valid",
       "sdl": "input A @oneOf { b: B } input B @oneOf { a: A } type Query { f(a: A): Int }",
       "verdict": [
@@ -2419,8 +2913,8 @@
       ],
       "family": "input",
       "rule": "INPUT_OBJECT_UNBREAKABLE_CYCLE",
-      "edition": "draft",
-      "editionNote": "new in the draft: OneOf input objects",
+      "since": "September2025",
+      "editionNote": "new in September 2025: OneOf input objects",
       "pair": "inputObjectUnbreakableCycle.5.invalid",
       "sdl": "input A @oneOf { b: B } input B @oneOf { a: [A] } type Query { f(a: A): Int }",
       "verdict": [],
@@ -2435,8 +2929,8 @@
       ],
       "family": "input",
       "rule": "INPUT_OBJECT_DEFAULT_VALUE_CYCLE",
-      "edition": "draft",
-      "editionNote": "new in the draft: default value validation",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
       "pair": "inputObjectDefaultValueCycle.1.valid",
       "sdl": "input I { i: I = {} } type Query { f(i: I): Int }",
       "verdict": [
@@ -2467,8 +2961,8 @@
       ],
       "family": "input",
       "rule": "INPUT_OBJECT_DEFAULT_VALUE_CYCLE",
-      "edition": "draft",
-      "editionNote": "new in the draft: default value validation",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
       "pair": "inputObjectDefaultValueCycle.2.valid",
       "sdl": "input I { i: I = {i: {}} } type Query { f(i: I): Int }",
       "verdict": [
@@ -2499,8 +2993,8 @@
       ],
       "family": "input",
       "rule": "INPUT_OBJECT_DEFAULT_VALUE_CYCLE",
-      "edition": "draft",
-      "editionNote": "new in the draft: default value validation",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
       "pair": "inputObjectDefaultValueCycle.3.valid",
       "sdl": "input I { i: [I] = [{}] } type Query { f(i: I): Int }",
       "verdict": [
@@ -2531,8 +3025,8 @@
       ],
       "family": "input",
       "rule": "INPUT_OBJECT_DEFAULT_VALUE_CYCLE",
-      "edition": "draft",
-      "editionNote": "new in the draft: default value validation",
+      "since": "September2025",
+      "editionNote": "new in September 2025: default value validation",
       "pair": "inputObjectDefaultValueCycle.4.valid",
       "sdl": "input A { b: B = {} } input B { a: A = {} } type Query { f(a: A): Int }",
       "verdict": [
@@ -2735,6 +3229,156 @@
       "rule": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
       "pair": "directiveReferencesItselfIndirectly.4.invalid",
       "sdl": "directive @d(a: Int @e) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @e(b: Int) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION type Query { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directivesDefined.1.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVES_DEFINED",
+      "pair": "directivesDefined.1.valid",
+      "sdl": "type Query @undefinedInThisSchema { a: Int }",
+      "verdict": [
+        "DIRECTIVES_DEFINED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directivesDefined.1.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVES_DEFINED",
+      "pair": "directivesDefined.1.invalid",
+      "sdl": "directive @undefinedInThisSchema on OBJECT type Query @undefinedInThisSchema { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directivesDefined.2.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVES_DEFINED",
+      "pair": "directivesDefined.2.valid",
+      "sdl": "type Query { a: Int @undefinedInThisSchema }",
+      "verdict": [
+        "DIRECTIVES_DEFINED"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directivesDefined.2.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVES_DEFINED",
+      "pair": "directivesDefined.2.invalid",
+      "sdl": "type Query { a: Int @deprecated }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.1.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.1.valid",
+      "sdl": "directive @d on FIELD type Query { a: Int @d }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.1.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.1.invalid",
+      "sdl": "directive @d on FIELD_DEFINITION type Query { a: Int @d }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.2.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.2.valid",
+      "sdl": "directive @d on FIELD_DEFINITION type Query @d { a: Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.2.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.2.invalid",
+      "sdl": "directive @d on OBJECT type Query @d { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveLocationsValid.3.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.3.valid",
+      "sdl": "type Query @deprecated { a: Int }",
+      "verdict": [
+        "DIRECTIVE_LOCATIONS_VALID"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveLocationsValid.3.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_LOCATIONS_VALID",
+      "pair": "directiveLocationsValid.3.invalid",
+      "sdl": "type Query { a: Int @deprecated }",
       "verdict": [],
       "expected": {
         "valid": true

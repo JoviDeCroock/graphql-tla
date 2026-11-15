@@ -4,6 +4,7 @@
   "differential": "schema { query: Query subscription: Subscription }\n\ndirective @label(name: String) repeatable on QUERY | SUBSCRIPTION | FIELD | FRAGMENT_DEFINITION | FRAGMENT_SPREAD | INLINE_FRAGMENT\ndirective @once on QUERY | FIELD | VARIABLE_DEFINITION\n\ntype Query {\n  node(id: ID!): Node\n  user(id: ID): User\n  post: Post\n  resource: Resource\n  search(term: String = \"\", filter: Filter): [Result!]\n  matrix(rows: [[Int]]): [[Int!]]\n  echo(int: Int, float: Float, opt: Int! = 1, list: [Int!], nums: [Int!] = [1], filter: Filter, role: Role): String\n}\n\ntype Subscription {\n  postAdded: Post\n  userJoined(room: ID!): User\n}\n\ninterface Node { id: ID! }\ninterface Resource implements Node { id: ID! url: String }\n\ntype User implements Node {\n  id: ID!\n  name: String\n  score: Int\n  role: Role\n  avatar(size: Int!): String\n  friends(first: Int = 10): [User]\n  posts: [Post!]!\n}\n\ntype Post implements Node {\n  id: ID!\n  name: String!\n  score: Float\n  author: User\n  tags: [[String!]]\n}\n\nunion Result = User | Post\nenum Role { ADMIN GUEST }\ninput Filter { role: Role limit: Int! offset: Int! = 0 tags: [String!] }\n",
   "differentialOneOf": "schema { query: Query subscription: Subscription }\n\ndirective @label(name: String) repeatable on QUERY | SUBSCRIPTION | FIELD | FRAGMENT_DEFINITION | FRAGMENT_SPREAD | INLINE_FRAGMENT\ndirective @once on QUERY | FIELD | VARIABLE_DEFINITION\n\ntype Query {\n  node(id: ID!): Node\n  user(id: ID): User\n  post: Post\n  resource: Resource\n  search(term: String = \"\", filter: Filter): [Result!]\n  matrix(rows: [[Int]]): [[Int!]]\n  echo(int: Int, float: Float, opt: Int! = 1, list: [Int!], nums: [Int!] = [1], filter: Filter, pick: Pick, role: Role): String\n}\n\ntype Subscription {\n  postAdded: Post\n  userJoined(room: ID!): User\n}\n\ninterface Node { id: ID! }\ninterface Resource implements Node { id: ID! url: String }\n\ntype User implements Node {\n  id: ID!\n  name: String\n  score: Int\n  role: Role\n  avatar(size: Int!): String\n  friends(first: Int = 10): [User]\n  posts: [Post!]!\n}\n\ntype Post implements Node {\n  id: ID!\n  name: String!\n  score: Float\n  author: User\n  tags: [[String!]]\n}\n\nunion Result = User | Post\nenum Role { ADMIN GUEST }\ninput Filter { role: Role limit: Int! offset: Int! = 0 tags: [String!] }\ninput Pick @oneOf { id: ID name: String }\n",
   "scalars": "type Query {\n  json(value: Json): String\n  dog: Dog\n}\n\nscalar Json\n\ntype Dog {\n  id: ID\n  name: String\n  age: Int\n  weight: Float\n  good: Boolean\n}\n\ninput DogInput {\n  name: String\n}\n",
+  "mutation": "directive @audit on MUTATION\n\ntype Query {\n  count: Int\n}\n\ntype Mutation {\n  increment(by: Int): Int\n}\n",
   "examples": "schema { query: Query subscription: Subscription }\n\ntype Alien implements Sentient {\n  homePlanet: String\n  name: String!\n}\n\ntype Arguments {\n  booleanArgField(booleanArg: Boolean): Boolean\n  booleanListArgField(booleanListArg: [Boolean]!): [Boolean]\n  floatArgField(floatArg: Float): Float\n  intArgField(intArg: Int): Int\n  multipleRequirements(x: Int!, y: Int!): Int!\n  nonNullBooleanArgField(nonNullBooleanArg: Boolean!): Boolean!\n  optionalNonNullBooleanArgField(optionalBooleanArg: Boolean! = false): Boolean!\n}\n\ntype Cat implements Pet {\n  doesKnowCommand(catCommand: CatCommand!): Boolean!\n  meowVolume: Int\n  name: String!\n  nickname: String\n}\n\nenum CatCommand { JUMP }\n\ninput CatInput {\n  meowVolume: Int\n  name: String!\n  nickname: String\n}\n\nunion CatOrDog = Cat | Dog\n\ntype Dog implements Pet {\n  barkVolume: Int\n  doesKnowCommand(dogCommand: DogCommand!): Boolean!\n  isHouseTrained(atOtherHomes: Boolean): Boolean!\n  name: String!\n  nickname: String\n  owner: Human\n}\n\nenum DogCommand { DOWN HEEL SIT }\n\ninput DogInput {\n  barkVolume: Int\n  name: String!\n  nickname: String\n}\n\nunion DogOrHuman = Dog | Human\n\ninput FindDogInput {\n  name: String\n  owner: String\n}\n\ntype Human implements Sentient {\n  name: String!\n  pets: [Pet!]\n}\n\nunion HumanOrAlien = Alien | Human\n\ntype Message {\n  body: String\n  sender: String\n}\n\ninterface Node {\n  id: ID!\n}\n\ninterface Pet {\n  name: String!\n}\n\ntype Query {\n  arguments: Arguments\n  booleanList(booleanListArg: [Boolean!]): Boolean\n  catOrDog: CatOrDog\n  dog: Dog\n  findDog(searchBy: FindDogInput): Dog\n  human: Human\n  pet: Pet\n}\n\ninterface Resource {\n  id: ID!\n  url: String\n}\n\ninterface Sentient {\n  name: String!\n}\n\ntype Subscription {\n  disallowedSecondRootField: Boolean\n  newMessage: Message\n}\n",
   "examplesOneOf": "schema { query: Query mutation: Mutation subscription: Subscription }\n\ntype Alien implements Sentient {\n  homePlanet: String\n  name: String!\n}\n\ntype Arguments {\n  booleanArgField(booleanArg: Boolean): Boolean\n  booleanListArgField(booleanListArg: [Boolean]!): [Boolean]\n  floatArgField(floatArg: Float): Float\n  intArgField(intArg: Int): Int\n  multipleRequirements(x: Int!, y: Int!): Int!\n  nonNullBooleanArgField(nonNullBooleanArg: Boolean!): Boolean!\n  optionalNonNullBooleanArgField(optionalBooleanArg: Boolean! = false): Boolean!\n}\n\ntype Cat implements Pet {\n  doesKnowCommand(catCommand: CatCommand!): Boolean!\n  meowVolume: Int\n  name: String!\n  nickname: String\n}\n\nenum CatCommand { JUMP }\n\ninput CatInput {\n  meowVolume: Int\n  name: String!\n  nickname: String\n}\n\nunion CatOrDog = Cat | Dog\n\ntype Dog implements Pet {\n  barkVolume: Int\n  doesKnowCommand(dogCommand: DogCommand!): Boolean!\n  isHouseTrained(atOtherHomes: Boolean): Boolean!\n  name: String!\n  nickname: String\n  owner: Human\n}\n\nenum DogCommand { DOWN HEEL SIT }\n\ninput DogInput {\n  barkVolume: Int\n  name: String!\n  nickname: String\n}\n\nunion DogOrHuman = Dog | Human\n\ninput FindDogInput {\n  name: String\n  owner: String\n}\n\ntype Human implements Sentient {\n  name: String!\n  pets: [Pet!]\n}\n\nunion HumanOrAlien = Alien | Human\n\ntype Message {\n  body: String\n  sender: String\n}\n\ntype Mutation {\n  addPet(pet: PetInput!): Pet\n  addPets(pets: [PetInput!]!): [Pet]\n}\n\ninterface Node {\n  id: ID!\n}\n\ninterface Pet {\n  name: String!\n}\n\ninput PetInput @oneOf {\n  cat: CatInput\n  dog: DogInput\n}\n\ntype Query {\n  arguments: Arguments\n  booleanList(booleanListArg: [Boolean!]): Boolean\n  catOrDog: CatOrDog\n  dog: Dog\n  findDog(searchBy: FindDogInput): Dog\n  human: Human\n  pet: Pet\n}\n\ninterface Resource {\n  id: ID!\n  url: String\n}\n\ninterface Sentient {\n  name: String!\n}\n\ntype Subscription {\n  disallowedSecondRootField: Boolean\n  newMessage: Message\n}\n",
   "hello": "schema { query: Query }\n\ntype Query {\n  hello: String\n}\n"
@@ -63,20 +64,6 @@
    "document": "{\n  dog {\n    ...differingArgs\n  }\n}\n\nfragment differingArgs on Dog {\n  doesKnowCommand(dogCommand: SIT)\n  doesKnowCommand\n}"
   },
   {
-   "rule": "LeafFieldSelections",
-   "example": "scalarEmptySelectionsNotAllowedOnInt",
-   "valid": false,
-   "reason": "doesn't parse",
-   "document": "{ dog { ...scalarEmptySelectionsNotAllowedOnInt } }\nfragment scalarEmptySelectionsNotAllowedOnInt on Dog { barkVolume {  } }"
-  },
-  {
-   "rule": "LeafFieldSelections",
-   "example": "directQueryOnObjectWithEmptySelection",
-   "valid": true,
-   "reason": "doesn't parse",
-   "document": "query directQueryOnObjectWithEmptySelection { human {  } }"
-  },
-  {
    "rule": "ArgumentNames",
    "example": "invalidArgName",
    "valid": false,
@@ -117,13 +104,6 @@
    "valid": false,
    "reason": "also breaks FragmentsMustBeUsed",
    "document": "fragment fragOnScalar on Int {\n  something\n}"
-  },
-  {
-   "rule": "FragmentsMustBeUsed",
-   "example": "a",
-   "valid": true,
-   "reason": "also breaks FragmentSpreadsMustNotFormCycles",
-   "document": "{\n  dog {\n    name\n  }\n}\n\nfragment a on Dog {\n  ...b\n}\n\nfragment b on Dog {\n  ...a\n}"
   },
   {
    "rule": "FragmentSpreadIsPossible",
@@ -171,29 +151,29 @@
    "rule": "VariablesAreInputTypes",
    "example": "takesCat",
    "valid": false,
-   "reason": "doesn't parse",
-   "document": "query takesCat($cat: Cat) {  }"
+   "reason": "also breaks AllVariablesUsed",
+   "document": "query takesCat($cat: Cat) {}"
   },
   {
    "rule": "VariablesAreInputTypes",
    "example": "takesDogBang",
    "valid": false,
-   "reason": "doesn't parse",
-   "document": "query takesDogBang($dog: Dog!) {  }"
+   "reason": "also breaks AllVariablesUsed",
+   "document": "query takesDogBang($dog: Dog!) {}"
   },
   {
    "rule": "VariablesAreInputTypes",
    "example": "takesListOfPet",
    "valid": false,
-   "reason": "doesn't parse",
-   "document": "query takesListOfPet($pets: [Pet]) {  }"
+   "reason": "also breaks AllVariablesUsed",
+   "document": "query takesListOfPet($pets: [Pet]) {}"
   },
   {
    "rule": "VariablesAreInputTypes",
    "example": "takesCatOrDog",
    "valid": false,
-   "reason": "doesn't parse",
-   "document": "query takesCatOrDog($catOrDog: CatOrDog) {  }"
+   "reason": "also breaks AllVariablesUsed",
+   "document": "query takesCatOrDog($catOrDog: CatOrDog) {}"
   }
  ],
  "vectors": [
@@ -332,8 +312,8 @@
     "OperationTypeExistence-valid-10",
     "OperationTypeExistence-valid-11"
    ],
-   "edition": "draft",
-   "editionNote": "Operation Type Existence is new in the draft"
+   "since": "September2025",
+   "editionNote": "Operation Type Existence is new in September 2025"
   },
   {
    "id": "OperationTypeExistence-valid-1",
@@ -368,8 +348,8 @@
    "siblings": [
     "OperationTypeExistence-valid-2"
    ],
-   "edition": "draft",
-   "editionNote": "Operation Type Existence is new in the draft"
+   "since": "September2025",
+   "editionNote": "Operation Type Existence is new in September 2025"
   },
   {
    "id": "OperationTypeExistence-valid-2",
@@ -404,8 +384,8 @@
    "siblings": [
     "OperationTypeExistence-valid-3"
    ],
-   "edition": "draft",
-   "editionNote": "Operation Type Existence is new in the draft"
+   "since": "September2025",
+   "editionNote": "Operation Type Existence is new in September 2025"
   },
   {
    "id": "OperationTypeExistence-valid-3",
@@ -440,8 +420,8 @@
    "siblings": [
     "OperationTypeExistence-valid-4"
    ],
-   "edition": "draft",
-   "editionNote": "Operation Type Existence is new in the draft"
+   "since": "September2025",
+   "editionNote": "Operation Type Existence is new in September 2025"
   },
   {
    "id": "OperationTypeExistence-valid-4",
@@ -476,8 +456,8 @@
    "siblings": [
     "OperationTypeExistence-valid-5"
    ],
-   "edition": "draft",
-   "editionNote": "Operation Type Existence is new in the draft"
+   "since": "September2025",
+   "editionNote": "Operation Type Existence is new in September 2025"
   },
   {
    "id": "OperationTypeExistence-valid-5",
@@ -512,8 +492,8 @@
    "siblings": [
     "OperationTypeExistence-valid-6"
    ],
-   "edition": "draft",
-   "editionNote": "Operation Type Existence is new in the draft"
+   "since": "September2025",
+   "editionNote": "Operation Type Existence is new in September 2025"
   },
   {
    "id": "OperationTypeExistence-valid-6",
@@ -548,8 +528,8 @@
    "siblings": [
     "OperationTypeExistence-valid-7"
    ],
-   "edition": "draft",
-   "editionNote": "Operation Type Existence is new in the draft"
+   "since": "September2025",
+   "editionNote": "Operation Type Existence is new in September 2025"
   },
   {
    "id": "OperationTypeExistence-valid-7",
@@ -636,8 +616,8 @@
    "siblings": [
     "OperationTypeExistence-valid-12"
    ],
-   "edition": "draft",
-   "editionNote": "Operation Type Existence is new in the draft"
+   "since": "September2025",
+   "editionNote": "Operation Type Existence is new in September 2025"
   },
   {
    "id": "OperationTypeExistence-valid-12",
@@ -672,8 +652,8 @@
    "siblings": [
     "OperationTypeExistence-valid-13"
    ],
-   "edition": "draft",
-   "editionNote": "Operation Type Existence is new in the draft"
+   "since": "September2025",
+   "editionNote": "Operation Type Existence is new in September 2025"
   },
   {
    "id": "OperationTypeExistence-valid-13",
@@ -708,8 +688,8 @@
    "siblings": [
     "OperationTypeExistence-valid-14"
    ],
-   "edition": "draft",
-   "editionNote": "Operation Type Existence is new in the draft"
+   "since": "September2025",
+   "editionNote": "Operation Type Existence is new in September 2025"
   },
   {
    "id": "OperationTypeExistence-valid-14",
@@ -744,8 +724,8 @@
    "siblings": [
     "OperationTypeExistence-valid-14"
    ],
-   "edition": "draft",
-   "editionNote": "Operation Type Existence is new in the draft"
+   "since": "September2025",
+   "editionNote": "Operation Type Existence is new in September 2025"
   },
   {
    "id": "OperationTypeExistence-spec-1",
@@ -779,8 +759,8 @@
     ]
    },
    "example": "goodbyeMutation",
-   "edition": "draft",
-   "editionNote": "Operation Type Existence is new in the draft"
+   "since": "September2025",
+   "editionNote": "Operation Type Existence is new in September 2025"
   },
   {
    "id": "OperationNameUniqueness-1",
@@ -3182,8 +3162,8 @@
    "siblings": [
     "SingleRootField-valid-38"
    ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root: October 2021 applies them with no variable values, and collects exactly one root field here"
+   "since": "September2025",
+   "editionNote": "since September 2025 @skip and @include are forbidden at a subscription's root: October 2021 applies them with no variable values, and collects exactly one root field here"
   },
   {
    "id": "SingleRootField-valid-38",
@@ -3390,8 +3370,8 @@
     ]
    },
    "example": "requiredRuntimeValidation",
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root: October 2021 applies them with no variable values, and collects exactly one root field here"
+   "since": "September2025",
+   "editionNote": "since September 2025 @skip and @include are forbidden at a subscription's root: October 2021 applies them with no variable values, and collects exactly one root field here"
   },
   {
    "id": "SingleRootField-spec-6",
@@ -3413,11 +3393,11 @@
    "example": "sub"
   },
   {
-   "id": "SingleRootField-spec-7",
+   "id": "SingleRootField-added-1",
    "spec": [
     "5.2.4.1"
    ],
-   "family": "spec",
+   "family": "extra",
    "rule": "SingleRootField",
    "schema": "examples",
    "document": "subscription sub($bool: Boolean!) {\n  newMessage @include(if: $bool) {\n    body\n    sender\n  }\n}",
@@ -3429,7 +3409,7 @@
      "sub"
     ]
    },
-   "example": "sub"
+   "origin": "Validation.tla's own invalid document sub, written beside the spec's examples; not one of them"
   },
   {
    "id": "FieldSelections-1",
@@ -25679,11 +25659,11 @@
    ]
   },
   {
-   "id": "FieldSelectionMerging-spec-12",
+   "id": "FieldSelectionMerging-added-1",
    "spec": [
     "5.3.2"
    ],
-   "family": "spec",
+   "family": "extra",
    "rule": "FieldSelectionMerging",
    "schema": "examples",
    "document": "{\n  pet {\n    ...conflictingNullability\n  }\n}\n\nfragment conflictingNullability on Pet {\n  ... on Dog {\n    x: name\n  }\n  ... on Cat {\n    x: nickname\n  }\n}",
@@ -25695,17 +25675,17 @@
      "conflict"
     ]
    },
-   "example": "conflictingNullability",
+   "origin": "Validation.tla's own invalid document conflictingNullability, written beside the spec's examples; not one of them",
    "completed": [
     "fragments used"
    ]
   },
   {
-   "id": "FieldSelectionMerging-spec-13",
+   "id": "FieldSelectionMerging-added-2",
    "spec": [
     "5.3.2"
    ],
-   "family": "spec",
+   "family": "extra",
    "rule": "FieldSelectionMerging",
    "schema": "examples",
    "document": "query conflictingSubfields {\n  dog {\n    x: name\n  }\n  dog {\n    x: __typename\n  }\n}",
@@ -25717,7 +25697,7 @@
      "conflict"
     ]
    },
-   "example": "conflictingSubfields"
+   "origin": "Validation.tla's own invalid document conflictingSubfields, written beside the spec's examples; not one of them"
   },
   {
    "id": "LeafFieldSelections-1",
@@ -26887,6 +26867,31 @@
    "family": "spec",
    "rule": "LeafFieldSelections",
    "schema": "examples",
+   "document": "{\n  dog {\n    ...scalarEmptySelectionsNotAllowedOnInt\n  }\n}\n\nfragment scalarEmptySelectionsNotAllowedOnInt on Dog {\n  barkVolume {}\n}",
+   "expected": {
+    "valid": false
+   },
+   "violations": {
+    "LeafFieldSelections": [
+     "barkVolume"
+    ]
+   },
+   "example": "scalarEmptySelectionsNotAllowedOnInt",
+   "completed": [
+    "fragments used"
+   ],
+   "syntax": "an empty selection set, new in September 2026 (§2.5 SelectionSet : { Selection* }, where October 2021 and September 2025 have { Selection+ }); §5.3.3 was reworded with it, from \"must be empty\" to \"must not be present\"",
+   "since": "September2026",
+   "editionNote": "it has an empty selection set, new in September 2026 (§2.5 SelectionSet : { Selection* }, where October 2021 and September 2025 have { Selection+ }); §5.3.3 was reworded with it, from \"must be empty\" to \"must not be present\""
+  },
+  {
+   "id": "LeafFieldSelections-spec-4",
+   "spec": [
+    "5.3.3"
+   ],
+   "family": "spec",
+   "rule": "LeafFieldSelections",
+   "schema": "examples",
    "document": "query directQueryOnObjectWithoutSubFields {\n  human\n}",
    "expected": {
     "valid": false
@@ -26899,7 +26904,7 @@
    "example": "directQueryOnObjectWithoutSubFields"
   },
   {
-   "id": "LeafFieldSelections-spec-4",
+   "id": "LeafFieldSelections-spec-5",
    "spec": [
     "5.3.3"
    ],
@@ -26918,7 +26923,7 @@
    "example": "directQueryOnInterfaceWithoutSubFields"
   },
   {
-   "id": "LeafFieldSelections-spec-5",
+   "id": "LeafFieldSelections-spec-6",
    "spec": [
     "5.3.3"
    ],
@@ -26937,7 +26942,7 @@
    "example": "directQueryOnUnionWithoutSubFields"
   },
   {
-   "id": "LeafFieldSelections-spec-6",
+   "id": "LeafFieldSelections-spec-7",
    "spec": [
     "5.3.3"
    ],
@@ -26949,6 +26954,23 @@
     "valid": true
    },
    "example": "directQueryOnObjectWithSubFields"
+  },
+  {
+   "id": "LeafFieldSelections-spec-8",
+   "spec": [
+    "5.3.3"
+   ],
+   "family": "spec",
+   "rule": "LeafFieldSelections",
+   "schema": "examples",
+   "document": "query directQueryOnObjectWithEmptySelection {\n  human {}\n}",
+   "expected": {
+    "valid": true
+   },
+   "example": "directQueryOnObjectWithEmptySelection",
+   "syntax": "an empty selection set, new in September 2026 (§2.5 SelectionSet : { Selection* }, where October 2021 and September 2025 have { Selection+ }); §5.3.3 was reworded with it, from \"must be empty\" to \"must not be present\"",
+   "since": "September2026",
+   "editionNote": "it has an empty selection set, new in September 2026 (§2.5 SelectionSet : { Selection* }, where October 2021 and September 2025 have { Selection+ }); §5.3.3 was reworded with it, from \"must be empty\" to \"must not be present\""
   },
   {
    "id": "ArgumentNames-1",
@@ -27829,18 +27851,18 @@
    ]
   },
   {
-   "id": "RequiredArguments-spec-5",
+   "id": "RequiredArguments-added-1",
    "spec": [
     "5.4.3"
    ],
-   "family": "spec",
+   "family": "extra",
    "rule": "RequiredArguments",
    "schema": "examples",
    "document": "{\n  arguments {\n    ...optionalNonNullArg\n  }\n}\n\nfragment optionalNonNullArg on Arguments {\n  optionalNonNullBooleanArgField\n}",
    "expected": {
     "valid": true
    },
-   "example": "optionalNonNullArg",
+   "origin": "Validation.tla's own valid document optionalNonNullArg, written beside the spec's examples; not one of them",
    "completed": [
     "fragments used"
    ]
@@ -33881,8 +33903,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-6"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-valid-6",
@@ -33896,8 +33918,8 @@
    "expected": {
     "valid": true
    },
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-7",
@@ -34243,8 +34265,8 @@
     "ValuesOfCorrectType-valid-19",
     "ValuesOfCorrectType-valid-20"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-valid-17",
@@ -34297,8 +34319,8 @@
    "expected": {
     "valid": true
    },
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-17",
@@ -34704,8 +34726,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-20"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-31",
@@ -34727,8 +34749,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-24"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-32",
@@ -34750,8 +34772,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-25"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-33",
@@ -34983,8 +35005,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-20"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-44",
@@ -35174,8 +35196,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-20"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-53",
@@ -35197,8 +35219,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-20"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-54",
@@ -35386,8 +35408,8 @@
    "expected": {
     "valid": true
    },
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-61",
@@ -35646,8 +35668,8 @@
    "expected": {
     "valid": true
    },
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-72",
@@ -35842,8 +35864,8 @@
    "expected": {
     "valid": true
    },
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-80",
@@ -35907,8 +35929,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-31"
    ],
-   "edition": "draft",
-   "editionNote": "OneOf Input Objects are new in the draft"
+   "since": "September2025",
+   "editionNote": "OneOf Input Objects are new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-83",
@@ -36856,8 +36878,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-20"
    ],
-   "edition": "draft",
-   "editionNote": "OneOf Input Objects are new in the draft"
+   "since": "September2025",
+   "editionNote": "OneOf Input Objects are new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-123",
@@ -37060,8 +37082,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-25"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-132",
@@ -37083,8 +37105,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-44"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-133",
@@ -37329,8 +37351,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-25"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-144",
@@ -38213,8 +38235,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-33"
    ],
-   "edition": "draft",
-   "editionNote": "OneOf Input Objects are new in the draft"
+   "since": "September2025",
+   "editionNote": "OneOf Input Objects are new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-186",
@@ -39606,8 +39628,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-48"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-valid-48",
@@ -39621,8 +39643,8 @@
    "expected": {
     "valid": true
    },
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-251",
@@ -39780,8 +39802,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-53"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-valid-53",
@@ -40009,8 +40031,8 @@
     "valid": true
    },
    "example": "addPet",
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "ValuesOfCorrectType-spec-4",
@@ -40071,8 +40093,8 @@
     ]
    },
    "example": "oneOfWithNoFields",
-   "edition": "draft",
-   "editionNote": "OneOf Input Objects are new in the draft"
+   "since": "September2025",
+   "editionNote": "OneOf Input Objects are new in September 2025"
   },
   {
    "id": "InputObjectFieldNames-1",
@@ -40097,8 +40119,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-31"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "InputObjectFieldNames-2",
@@ -40123,8 +40145,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-31"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "InputObjectFieldNames-3",
@@ -40150,8 +40172,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-40"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "InputObjectFieldNames-4",
@@ -40177,8 +40199,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-41"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "InputObjectFieldNames-5",
@@ -40203,8 +40225,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-31"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "InputObjectFieldNames-6",
@@ -40254,8 +40276,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-41"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "InputObjectFieldNames-8",
@@ -40305,8 +40327,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-40"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "InputObjectFieldNames-10",
@@ -40332,8 +40354,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-40"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "InputObjectFieldNames-spec-1",
@@ -40516,11 +40538,11 @@
    }
   },
   {
-   "id": "InputObjectFieldUniqueness-spec-1",
+   "id": "InputObjectFieldUniqueness-added-1",
    "spec": [
     "5.6.3"
    ],
-   "family": "spec",
+   "family": "extra",
    "rule": "InputObjectFieldUniqueness",
    "schema": "examples",
    "document": "{\n  findDog(searchBy: {name: \"a\", name: \"b\"}) {\n    name\n  }\n}",
@@ -40532,21 +40554,21 @@
      "name"
     ]
    },
-   "example": "(anonymous)"
+   "origin": "Validation.tla's own invalid document (anonymous), written beside the spec's examples; not one of them"
   },
   {
-   "id": "InputObjectFieldUniqueness-spec-2",
+   "id": "InputObjectFieldUniqueness-added-2",
    "spec": [
     "5.6.3"
    ],
-   "family": "spec",
+   "family": "extra",
    "rule": "InputObjectFieldUniqueness",
    "schema": "examples",
    "document": "{\n  findDog(searchBy: {name: \"a\", owner: \"b\"}) {\n    name\n  }\n}",
    "expected": {
     "valid": true
    },
-   "example": "(anonymous)"
+   "origin": "Validation.tla's own valid document (anonymous), written beside the spec's examples; not one of them"
   },
   {
    "id": "InputObjectRequiredFields-1",
@@ -40693,27 +40715,27 @@
    ]
   },
   {
-   "id": "InputObjectRequiredFields-spec-1",
+   "id": "InputObjectRequiredFields-added-1",
    "spec": [
     "5.6.4"
    ],
-   "family": "spec",
+   "family": "extra",
    "rule": "InputObjectRequiredFields",
    "schema": "examplesOneOf",
    "document": "mutation addCat {\n  addPet(pet: {cat: {name: \"Brontie\"}}) {\n    name\n  }\n}",
    "expected": {
     "valid": true
    },
-   "example": "addCat",
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "origin": "Validation.tla's own valid document addCat, written beside the spec's examples; not one of them",
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
-   "id": "InputObjectRequiredFields-spec-2",
+   "id": "InputObjectRequiredFields-added-2",
    "spec": [
     "5.6.4"
    ],
-   "family": "spec",
+   "family": "extra",
    "rule": "InputObjectRequiredFields",
    "schema": "examplesOneOf",
    "document": "mutation addCat {\n  addPet(pet: {cat: {nickname: \"B\"}}) {\n    name\n  }\n}",
@@ -40728,16 +40750,16 @@
      "CatInput.name"
     ]
    },
-   "example": "addCat",
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "origin": "Validation.tla's own invalid document addCat, written beside the spec's examples; not one of them",
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
-   "id": "InputObjectRequiredFields-spec-3",
+   "id": "InputObjectRequiredFields-added-3",
    "spec": [
     "5.6.4"
    ],
-   "family": "spec",
+   "family": "extra",
    "rule": "InputObjectRequiredFields",
    "schema": "examplesOneOf",
    "document": "mutation addCat {\n  addPet(pet: {cat: {name: null}}) {\n    name\n  }\n}",
@@ -40752,9 +40774,9 @@
      "CatInput.name"
     ]
    },
-   "example": "addCat",
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "origin": "Validation.tla's own invalid document addCat, written beside the spec's examples; not one of them",
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "DirectivesAreDefined-1",
@@ -41483,11 +41505,11 @@
    }
   },
   {
-   "id": "DirectivesAreDefined-spec-1",
+   "id": "DirectivesAreDefined-added-1",
    "spec": [
     "5.7.1"
    ],
-   "family": "spec",
+   "family": "extra",
    "rule": "DirectivesAreDefined",
    "schema": "examples",
    "document": "{\n  dog {\n    name @unknown\n  }\n}",
@@ -41499,21 +41521,21 @@
      "unknown"
     ]
    },
-   "example": "(anonymous)"
+   "origin": "Validation.tla's own invalid document (anonymous), written beside the spec's examples; not one of them"
   },
   {
-   "id": "DirectivesAreDefined-spec-2",
+   "id": "DirectivesAreDefined-added-2",
    "spec": [
     "5.7.1"
    ],
-   "family": "spec",
+   "family": "extra",
    "rule": "DirectivesAreDefined",
    "schema": "examples",
    "document": "{\n  dog {\n    name @include(if: true)\n  }\n}",
    "expected": {
     "valid": true
    },
-   "example": "(anonymous)"
+   "origin": "Validation.tla's own valid document (anonymous), written beside the spec's examples; not one of them"
   },
   {
    "id": "DirectivesAreInValidLocations-1",
@@ -42130,6 +42152,136 @@
    ]
   },
   {
+   "id": "DirectivesAreInValidLocations-28",
+   "spec": [
+    "5.7.2"
+   ],
+   "family": "extra",
+   "rule": "DirectivesAreInValidLocations",
+   "schema": "mutation",
+   "document": "mutation {\n  increment(by: 1) @audit\n}",
+   "expected": {
+    "valid": false
+   },
+   "violations": {
+    "DirectivesAreInValidLocations": [
+     "audit@FIELD"
+    ]
+   },
+   "siblings": [
+    "DirectivesAreInValidLocations-valid-3",
+    "DirectivesAreInValidLocations-valid-4"
+   ],
+   "requires": [
+    "custom-directives"
+   ]
+  },
+  {
+   "id": "DirectivesAreInValidLocations-valid-3",
+   "spec": [
+    "5.7.2"
+   ],
+   "family": "extra",
+   "rule": "DirectivesAreInValidLocations",
+   "schema": "mutation",
+   "document": "mutation {\n  increment(by: 1)\n  __typename\n}",
+   "expected": {
+    "valid": true
+   }
+  },
+  {
+   "id": "DirectivesAreInValidLocations-valid-4",
+   "spec": [
+    "5.7.2"
+   ],
+   "family": "extra",
+   "rule": "DirectivesAreInValidLocations",
+   "schema": "mutation",
+   "document": "mutation {\n  increment(by: 1)\n}",
+   "expected": {
+    "valid": true
+   }
+  },
+  {
+   "id": "DirectivesAreInValidLocations-29",
+   "spec": [
+    "5.7.2"
+   ],
+   "family": "extra",
+   "rule": "DirectivesAreInValidLocations",
+   "schema": "mutation",
+   "document": "query @audit {\n  count\n}",
+   "expected": {
+    "valid": false
+   },
+   "violations": {
+    "DirectivesAreInValidLocations": [
+     "audit@QUERY"
+    ]
+   },
+   "siblings": [
+    "DirectivesAreInValidLocations-valid-5"
+   ],
+   "requires": [
+    "custom-directives"
+   ]
+  },
+  {
+   "id": "DirectivesAreInValidLocations-valid-5",
+   "spec": [
+    "5.7.2"
+   ],
+   "family": "extra",
+   "rule": "DirectivesAreInValidLocations",
+   "schema": "mutation",
+   "document": "mutation {\n  __typename\n}",
+   "expected": {
+    "valid": true
+   }
+  },
+  {
+   "id": "DirectivesAreInValidLocations-30",
+   "spec": [
+    "5.7.2"
+   ],
+   "family": "extra",
+   "rule": "DirectivesAreInValidLocations",
+   "schema": "mutation",
+   "document": "mutation @skip(if: true) {\n  increment(by: 1)\n}",
+   "expected": {
+    "valid": false
+   },
+   "violations": {
+    "DirectivesAreInValidLocations": [
+     "skip@MUTATION"
+    ]
+   },
+   "siblings": [
+    "DirectivesAreInValidLocations-valid-4"
+   ]
+  },
+  {
+   "id": "DirectivesAreInValidLocations-31",
+   "spec": [
+    "5.7.2"
+   ],
+   "family": "extra",
+   "rule": "DirectivesAreInValidLocations",
+   "schema": "mutation",
+   "document": "mutation @include(if: false) {\n  increment(by: 1)\n}",
+   "expected": {
+    "valid": false
+   },
+   "violations": {
+    "DirectivesAreInValidLocations": [
+     "include@MUTATION"
+    ]
+   },
+   "siblings": [
+    "DirectivesAreInValidLocations-valid-4"
+   ]
+  },
+  {
    "id": "DirectivesAreUniquePerLocation-1",
    "spec": [
     "5.7.3"
@@ -42386,6 +42538,63 @@
    "expected": {
     "valid": true
    }
+  },
+  {
+   "id": "DirectivesAreUniquePerLocation-11",
+   "spec": [
+    "5.7.3"
+   ],
+   "family": "extra",
+   "rule": "DirectivesAreUniquePerLocation",
+   "schema": "mutation",
+   "document": "mutation @audit @audit {\n  increment(by: 1)\n}",
+   "expected": {
+    "valid": false
+   },
+   "violations": {
+    "DirectivesAreUniquePerLocation": [
+     "audit"
+    ]
+   },
+   "siblings": [
+    "DirectivesAreUniquePerLocation-valid-4",
+    "DirectivesAreUniquePerLocation-valid-5"
+   ],
+   "requires": [
+    "custom-directives"
+   ]
+  },
+  {
+   "id": "DirectivesAreUniquePerLocation-valid-4",
+   "spec": [
+    "5.7.3"
+   ],
+   "family": "extra",
+   "rule": "DirectivesAreUniquePerLocation",
+   "schema": "mutation",
+   "document": "mutation @audit {\n  increment(by: 1)\n}",
+   "expected": {
+    "valid": true
+   },
+   "requires": [
+    "custom-directives"
+   ]
+  },
+  {
+   "id": "DirectivesAreUniquePerLocation-valid-5",
+   "spec": [
+    "5.7.3"
+   ],
+   "family": "extra",
+   "rule": "DirectivesAreUniquePerLocation",
+   "schema": "mutation",
+   "document": "mutation M @audit {\n  increment(by: 1)\n}",
+   "expected": {
+    "valid": true
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "VariableUniqueness-1",
@@ -42966,8 +43175,8 @@
    "siblings": [
     "AllVariableUsesDefined-valid-5"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsesDefined-valid-5",
@@ -43671,8 +43880,8 @@
    "siblings": [
     "AllVariablesUsed-valid-8"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariablesUsed-valid-8",
@@ -43686,8 +43895,8 @@
    "expected": {
     "valid": true
    },
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariablesUsed-spec-1",
@@ -43903,8 +44112,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-valid-4",
@@ -43918,8 +44127,8 @@
    "expected": {
     "valid": true
    },
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-6",
@@ -43983,8 +44192,8 @@
    "siblings": [
     "VariableUniqueness-valid-1"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-9",
@@ -44006,8 +44215,8 @@
    "siblings": [
     "VariableUniqueness-valid-1"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-10",
@@ -44029,8 +44238,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-1"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-11",
@@ -44128,8 +44337,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-2"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-15",
@@ -44186,8 +44395,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-17",
@@ -44209,8 +44418,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-18",
@@ -44642,8 +44851,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-36",
@@ -44686,8 +44895,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-38",
@@ -44709,8 +44918,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-39",
@@ -44732,8 +44941,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-9"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-40",
@@ -44797,8 +45006,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-43",
@@ -44889,8 +45098,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-11"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-46",
@@ -45014,8 +45223,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
    ],
-   "edition": "draft",
-   "editionNote": "OneOf Input Objects are new in the draft"
+   "since": "September2025",
+   "editionNote": "OneOf Input Objects are new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-valid-16",
@@ -45029,8 +45238,8 @@
    "expected": {
     "valid": true
    },
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-50",
@@ -45129,8 +45338,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-1"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-54",
@@ -45236,8 +45445,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-valid-18",
@@ -45251,8 +45460,8 @@
    "expected": {
     "valid": true
    },
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-59",
@@ -45413,8 +45622,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-13"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-66",
@@ -45457,8 +45666,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-68",
@@ -45480,8 +45689,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-13"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-69",
@@ -45503,8 +45712,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-14"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-70",
@@ -45526,8 +45735,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-17"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-71",
@@ -45583,8 +45792,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-73",
@@ -45606,8 +45815,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-74",
@@ -45955,8 +46164,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-21"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-88",
@@ -46215,8 +46424,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-99",
@@ -46286,8 +46495,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-101",
@@ -46309,8 +46518,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-102",
@@ -46332,8 +46541,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-25"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-103",
@@ -46355,8 +46564,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-104",
@@ -46378,8 +46587,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-105",
@@ -46519,8 +46728,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
    ],
-   "edition": "draft",
-   "editionNote": "OneOf Input Objects are new in the draft"
+   "since": "September2025",
+   "editionNote": "OneOf Input Objects are new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-valid-30",
@@ -46535,8 +46744,8 @@
     "valid": true
    },
    "unspecified": "§5.8.5's formal text lets a nullable variable with a non-null default value into a OneOf Input Object field; its prose says such variables must be non-nullable",
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-111",
@@ -46681,8 +46890,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-valid-34",
@@ -46696,8 +46905,8 @@
    "expected": {
     "valid": true
    },
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-116",
@@ -46719,8 +46928,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-117",
@@ -46742,8 +46951,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-28"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-118",
@@ -46828,8 +47037,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-122",
@@ -46851,8 +47060,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-123",
@@ -46895,8 +47104,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-31"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-125",
@@ -47015,8 +47224,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-130",
@@ -47164,8 +47373,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-35"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-137",
@@ -47429,8 +47638,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-11"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-147",
@@ -47625,8 +47834,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-40"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-155",
@@ -47834,8 +48043,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-44"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-163",
@@ -48059,8 +48268,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-2"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-173",
@@ -48250,8 +48459,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-9"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-182",
@@ -48294,8 +48503,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-7"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-184",
@@ -48317,8 +48526,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-8"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-185",
@@ -48340,8 +48549,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-4"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-186",
@@ -48768,8 +48977,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-46"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-205",
@@ -48833,8 +49042,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-2"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-208",
@@ -48919,8 +49128,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-212",
@@ -49306,8 +49515,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-229",
@@ -49329,8 +49538,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-15"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-230",
@@ -49478,8 +49687,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-237",
@@ -49788,8 +49997,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-21"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-251",
@@ -49937,8 +50146,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-258",
@@ -50002,8 +50211,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-261",
@@ -50025,8 +50234,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-262",
@@ -50069,8 +50278,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-25"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-264",
@@ -50197,8 +50406,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-270",
@@ -50262,8 +50471,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-273",
@@ -50285,8 +50494,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-23"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-274",
@@ -50308,8 +50517,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-24"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-275",
@@ -50331,8 +50540,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-276",
@@ -50590,8 +50799,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-18"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-287",
@@ -50739,8 +50948,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-6"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-294",
@@ -51180,8 +51389,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-52"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-313",
@@ -51287,8 +51496,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-29"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-318",
@@ -51310,8 +51519,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-28"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-319",
@@ -51494,8 +51703,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-55"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-327",
@@ -51622,8 +51831,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-333",
@@ -51645,8 +51854,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-32"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-334",
@@ -51794,8 +52003,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-341",
@@ -52082,8 +52291,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-354",
@@ -52105,8 +52314,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-355",
@@ -52296,8 +52505,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-364",
@@ -52424,8 +52633,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-370",
@@ -52489,8 +52698,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-373",
@@ -52512,8 +52721,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-374",
@@ -52640,8 +52849,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-6"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-380",
@@ -52726,8 +52935,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-37"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-384",
@@ -52749,8 +52958,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-38"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-385",
@@ -52772,8 +52981,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-39"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-386",
@@ -52795,8 +53004,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-36"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-387",
@@ -53511,8 +53720,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-43"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-421",
@@ -53534,8 +53743,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-42"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-422",
@@ -53948,8 +54157,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-45"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-441",
@@ -54181,8 +54390,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-2"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-452",
@@ -54267,8 +54476,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-17"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-456",
@@ -54395,8 +54604,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-1"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-462",
@@ -54586,8 +54795,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-471",
@@ -54693,8 +54902,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-476",
@@ -54716,8 +54925,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-21"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-477",
@@ -54739,8 +54948,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-478",
@@ -54888,8 +55097,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-1"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-485",
@@ -54911,8 +55120,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-47"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-486",
@@ -55312,8 +55521,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-505",
@@ -55335,8 +55544,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-506",
@@ -55631,8 +55840,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-45"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-520",
@@ -56158,8 +56367,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-545",
@@ -56223,8 +56432,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-6"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-548",
@@ -56246,8 +56455,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-549",
@@ -56290,8 +56499,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-551",
@@ -56334,8 +56543,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-553",
@@ -56840,8 +57049,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-577",
@@ -56863,8 +57072,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-21"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-578",
@@ -57033,8 +57242,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-35"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-586",
@@ -57182,8 +57391,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-593",
@@ -57205,8 +57414,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-594",
@@ -57228,8 +57437,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-595",
@@ -57356,8 +57565,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-601",
@@ -57442,8 +57651,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-21"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-605",
@@ -57465,8 +57674,8 @@
    "siblings": [
     "ValuesOfCorrectType-valid-6"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-606",
@@ -57488,8 +57697,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-607",
@@ -57511,8 +57720,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-55"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-608",
@@ -57534,8 +57743,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-50"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-609",
@@ -57767,8 +57976,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-34"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-620",
@@ -57853,8 +58062,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-58"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-624",
@@ -57876,8 +58085,8 @@
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-45"
    ],
-   "edition": "draft",
-   "editionNote": "its schema needs a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "its schema needs a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-625",
@@ -58167,8 +58376,8 @@
     "valid": true
    },
    "example": "addCat",
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-spec-7",
@@ -58183,8 +58392,8 @@
     "valid": true
    },
    "example": "addCatWithDefault",
-   "edition": "draft",
-   "editionNote": "it uses a OneOf Input Object, new in the draft"
+   "since": "September2025",
+   "editionNote": "it uses a OneOf Input Object, new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-spec-8",
@@ -58204,8 +58413,8 @@
     ]
    },
    "example": "addNullableCat",
-   "edition": "draft",
-   "editionNote": "OneOf Input Objects are new in the draft"
+   "since": "September2025",
+   "editionNote": "OneOf Input Objects are new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-spec-9",
@@ -58225,8 +58434,8 @@
     ]
    },
    "example": "listOfOneOfWithNullableVariable",
-   "edition": "draft",
-   "editionNote": "OneOf Input Objects are new in the draft"
+   "since": "September2025",
+   "editionNote": "OneOf Input Objects are new in September 2025"
   },
   {
    "id": "AllVariableUsagesAreAllowed-spec-10",

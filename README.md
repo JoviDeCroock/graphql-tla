@@ -1,6 +1,6 @@
 # graphql-tla
 
-[GraphQL's specification](https://spec.graphql.org/draft/) as executable TLA+, and a kit that checks any GraphQL implementation against it.
+[GraphQL's specification](https://spec.graphql.org/September2026/) as executable TLA+, and a kit that checks any GraphQL implementation against it.
 
 - **References** for each part of the spec, written by hand from its algorithms and model checked with [tla-ts](https://github.com/aidenybai/tla-ts):
   - the language (§2);
@@ -11,6 +11,8 @@
   - the response format (§7).
 - **A conformance kit**, [`kit/`](kit), that drives a GraphQL implementation through a small adapter and checks every answer against the references: execution responses, and in the other areas parsing, validation, coercion, schema validity and introspection. Nine implementations have adapters, and the [conformance sheet](conformance/README.md) records what each one passes and breaks.
 - **Models of behaviour over time:** mutations, subscriptions, `@defer` and `@stream`.
+
+**Editions.** The kit grades the [September 2026 edition](https://spec.graphql.org/September2026/), the latest release. Some of its rules are newer than the October 2021 edition: every one of them first appeared in September 2025 or September 2026, and the kit labels the vectors, checks and findings that rely on one with that release ("since September 2025", "new in September 2026"). Where September 2025 or October 2021 gives a rule another level (a SHOULD where September 2026 has a MUST, for example), the check says so, and `introspect` can also grade an implementation's October 2021 or September 2025 introspection types. That way an implementation of an older edition can tell which of its failures that edition shares. Section numbers and links ([`kit/spec-sections.json`](kit/spec-sections.json)) are September 2026's. The references were written from the working draft at graphql/graphql-spec@bfcc722b32f4, which differs from September 2026 only editorially and numbers its sections the same.
 
 Execution is where an executable reference earns its keep. One query, given what each resolver did, has many correct responses: resolvers settle in any order, siblings may be cancelled, errors under an already-nulled position may be dropped. `Reference.tla` accepts exactly that set, so no golden file has to pick one.
 
@@ -78,7 +80,7 @@ The kit has six areas. Each checks one part of the spec against its TLA+ referen
 | [`validate`](docs/kit/validate.md) | §5 | `Validation.tla` | about 3,000 documents, each breaking one rule (two in 21 documented cases) or none, so each rule gets its own verdict |
 | [`coerce`](docs/kit/coerce.md) | §3.5, §3.9–3.12, §6.1, §6.4.1 | `Coercion.tla` | about 2,000 operations with variables, and operation selection: a request error, a field error, or the coerced arguments |
 | [`schema`](docs/kit/schema.md) | §3 | `TypeSystem.tla` | 87 minimal pairs of SDL schemas, one or more per type-system rule |
-| [`introspect`](docs/kit/introspect.md) | §4 | `Introspection.tla` | 38 introspection queries over 12 schemas, with the variation the spec allows, answered under the draft or the October 2021 profile |
+| [`introspect`](docs/kit/introspect.md) | §4 | `Introspection.tla` | 38 introspection queries over 12 schemas, with the variation the spec allows, answered under the September 2026, September 2025 or October 2021 profile |
 
 Outside execution, every expected answer comes from evaluating the reference with tla-ts, never from graphql-js. [`docs/kit-areas.md`](docs/kit-areas.md) describes how those areas work.
 
@@ -96,7 +98,7 @@ An adapter is a small program that speaks newline-delimited JSON. It builds the 
 | [`juniper`](adapters/juniper) | Juniper 0.18.0 (Rust) | Doesn't collect fields: a field selected twice resolves twice (§6.3.2). Error paths have no list indices (§7.1.4). A nested list's items are checked against the outer item type. A null item at a Non-Null position nulls the list without an error. Leaves aren't coerced, so a non-finite Float becomes null with no error. Validation lacks the Single Root Field and Unique Directives rules. |
 | [`async-graphql`](adapters/async-graphql) | async-graphql 7.0.17, dynamic schemas | Its dynamic schema API breaks four rules: resolver errors have no `path`; errors don't stop at the nearest nullable field; an explicit null isn't treated as null; merged fields run their resolver twice. |
 
-The kit checks the checker too. Every run evaluates a shipped corpus of 41 negative controls, and each must be caught by the clause or check it names.
+The kit checks the checker too. Every run evaluates a shipped corpus of 46 negative controls, and each must be caught by the clause or check it names.
 
 **[The conformance sheet](conformance/README.md)** shows what each implementation was checked against and what it breaks, by spec section and by check, with the shortest failing case for each failure. Every cell is a count from a kit report (`--report`); `npm run conformance` regenerates it.
 
@@ -130,19 +132,19 @@ For each fixture, the kit tries every combination of resolver outcomes in two se
 
 ### Language
 
-`Lexer.tla` and `Parser.tla` are hand-written references for §2. They cover the lexical grammar with its static semantics: escapes, surrogate pairs and `BlockStringValue()`. They also cover the grammar of executable documents, following the draft's `SelectionSet : { Selection* }`. Each has hand-written vectors and mutants.
+`Lexer.tla` and `Parser.tla` are hand-written references for §2. They cover the lexical grammar with its static semantics: escapes, surrogate pairs and `BlockStringValue()`. They also cover the grammar of executable documents, following September 2026's `SelectionSet : { Selection* }`. Each has hand-written vectors and mutants.
 
 `scripts/differential-lexer.mjs` lexes about 51,000 strings and parses about 43,000 documents with graphql-js 16 and 17. tla-ts checks that every token sequence and parse tree matches the reference. Error positions aren't compared, only success versus failure. There are two known discrepancies:
 
 - **Long escapes:** graphql-js rejects a variable-width escape with more than 8 hex digits (`"\u{000000041}"`), which `EscapedUnicode :: { HexDigit+ }` allows.
-- **Empty selection sets:** graphql-js 16 rejects `{}`, which the draft has allowed since graphql-spec#1227. graphql-js 17 accepts it.
+- **Empty selection sets:** graphql-js 16 rejects `{}`, which September 2026 allows (graphql-spec#1227). graphql-js 17 accepts it.
 
 ### Type system and introspection
 
 `TypeSystem.tla` states the §3 type validation rules, and `Introspection.tla` the `__schema` result §4 requires. `scripts/differential-type-system.mjs` builds about 250 schemas. It checks that graphql-js's verdicts agree with `TypeSystem!Verdict` rule by rule, and that its introspection results satisfy `Introspection!Matches`. The differences it reports are documented ones:
 
-- graphql-js 17 validates default values in more places than the draft requires;
-- graphql-js 16's introspection arguments are `Boolean = false` where the draft has `Boolean!`;
+- graphql-js 17 validates default values in more places than September 2026 requires;
+- graphql-js 16's introspection arguments are `Boolean = false` where September 2025 and later have `Boolean!`;
 - graphql-js 17 has `FRAGMENT_VARIABLE_DEFINITION`.
 
 ### Validation

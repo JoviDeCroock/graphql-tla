@@ -34,15 +34,19 @@
 //                the formal text and the prose disagree, and Field Selection
 //                Merging where readings of "identical sets of arguments"
 //                disagree; not graded
-//   edition      "draft": the vector relies on a rule only the draft has
-//                (Single Root Field only where October 2021's own rule,
-//                SingleRootFieldOctober2021, accepts the document), or its
-//                schema needs a OneOf Input Object
+//   since        the first release whose text gives the verdict, where
+//                October 2021's differs: "September2025" for a rule or
+//                input new in September 2025 (Operation Type Existence,
+//                OneOf Input Objects, @skip and @include at a
+//                subscription's root, the last only where October 2021's
+//                own rule, SingleRootFieldOctober2021, accepts the
+//                document); "September2026" for a document with an empty
+//                selection set. `editionNote` says why
 //
-// The differential and examples schemas declare a OneOf Input Object, which
-// an implementation of October 2021 can't build. The vectors file has each
-// both without it (the name) and with it (<name>OneOf); only vectors tagged
-// draft use the second.
+// The verdicts are September 2026's. The differential and examples schemas
+// declare a OneOf Input Object, which an implementation of October 2021
+// can't build. The vectors file has each both without it (the name) and
+// with it (<name>OneOf); only vectors with `since` use the second.
 //
 // graphql-js is used only to parse and print documents, to turn an SDL
 // schema into TLA+ data, to check that the generated SDL builds a valid
@@ -58,6 +62,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as graphql16 from "graphql16";
+import * as graphql17 from "graphql17";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
 const cli = join(root, "node_modules/tla-ts/dist/cli.js");
@@ -877,7 +882,7 @@ const extractSpec = async () => {
 ASSUME PrintT(<<"schemas", [examples |-> Examples, hello |-> Hello]>>)
 ASSUME PrintT(<<"examples", [g \\in DOMAIN Vectors |-> [n \\in DOMAIN Vectors[g] |->
   [rule |-> Vectors[g][n].rule, hello |-> Vectors[g][n].schema = Hello,
-   doc |-> Vectors[g][n].doc, valid |-> Vectors[g][n].valid]]]>>)
+   doc |-> Vectors[g][n].doc, valid |-> Vectors[g][n].valid, added |-> Vectors[g][n].added]]]>>)
 ASSUME PrintT(<<"done">>)`,
   ]);
   const [[sections]] = printed(flat, "sections");
@@ -1187,7 +1192,7 @@ const started = Date.now();
 const log = (s) => console.log(s);
 
 // The rules and their sections. Sections are numbered as in
-// kit/spec-sections.json, matched by title, since the draft renumbers.
+// kit/spec-sections.json, matched by title, since releases renumber.
 const spec = await extractSpec();
 const kitSections = JSON.parse(readFileSync(join(root, "kit/spec-sections.json"), "utf8")).sections.filter((s) => s.number.startsWith("5."));
 const letters = (s) => s.replace(/[^A-Za-z]/g, "").toLowerCase();
@@ -1202,7 +1207,7 @@ for (const rule of RULES) {
   const s = kitSections.find((x) => letters(x.title) === letters(rule));
   if (!s) throw new Error(`no section in kit/spec-sections.json titled like ${rule}`);
   SECTION[rule] = s.number;
-  if (s.number !== spec.sections[rule]) log(`  note: Validation.tla numbers ${rule} §${spec.sections[rule]}; the draft numbers it §${s.number}`);
+  if (s.number !== spec.sections[rule]) log(`  note: Validation.tla numbers ${rule} §${spec.sections[rule]}; September 2026 numbers it §${s.number}`);
 }
 const ORDER = [...RULES].sort((a, b) => {
   const [x, y] = [SECTION[a], SECTION[b]].map((s) => s.split(".").map(Number));
@@ -1229,6 +1234,20 @@ type Dog {
 
 input DogInput {
   name: String
+}
+`;
+
+// A schema with a mutation root, which the differential schema doesn't
+// have: a directive at MUTATION (§5.7.2) and __typename at a mutation's
+// root. @audit is a custom directive allowed only there.
+const MUTATION_SDL = `directive @audit on MUTATION
+
+type Query {
+  count: Int
+}
+
+type Mutation {
+  increment(by: Int): Int
 }
 `;
 
@@ -1279,22 +1298,37 @@ const EXTRA = {
     `query Q($v: Dog) { ...F } fragment F on Query { json(value: {a: $v}) }`,
     `query Q($v: String) { ...F } fragment F on Query { json(value: {a: $v}) }`,
   ],
+  // Directives at MUTATION, and __typename at a mutation's root, which is
+  // allowed: only a subscription's root forbids it (§5.2.4.1).
+  mutation: [
+    `mutation { increment(by: 1) }`,
+    `mutation { __typename }`,
+    `mutation { increment(by: 1) __typename }`,
+    `mutation @audit { increment(by: 1) }`,
+    `mutation M @audit { increment(by: 1) }`,
+    `mutation @skip(if: true) { increment(by: 1) }`,
+    `mutation @include(if: false) { increment(by: 1) }`,
+    `mutation { increment(by: 1) @audit }`,
+    `query @audit { count }`,
+    `mutation @audit @audit { increment(by: 1) }`,
+  ],
 };
 
 // The schemas the reference evaluates every document against.
 const SCHEMAS = {
   differential: `${SDL.trim()}\n`,
   scalars: SCALARS_SDL,
+  mutation: MUTATION_SDL,
   examples: schemaSdl(spec.schemas.examples),
   hello: schemaSdl(spec.schemas.hello),
 };
 
-// OneOf Input Objects are new in the draft, so an implementation of the
-// October 2021 edition can't build a schema that declares one. The
+// OneOf Input Objects are new in September 2025, so an implementation of
+// the October 2021 edition can't build a schema that declares one. The
 // differential and examples schemas are also written without theirs, and a
 // vector is asked against that version unless the reference's verdict
 // changes there. The version with the OneOf Input Object (`<name>OneOf`) is
-// left to vectors tagged draft.
+// left to vectors with `since`.
 const replaceOnce = (text, from, to) => {
   if (text.split(from).length !== 2) throw new Error(`expected "${from}" once in the schema`);
   return text.replace(from, to);
@@ -1333,6 +1367,7 @@ const OUTPUT_SCHEMAS = {
   differential: WITHOUT_ONE_OF.differential,
   differentialOneOf: SCHEMAS.differential,
   scalars: SCHEMAS.scalars,
+  mutation: SCHEMAS.mutation,
   examples: WITHOUT_ONE_OF.examples,
   examplesOneOf: SCHEMAS.examples,
   hello: SCHEMAS.hello,
@@ -1351,21 +1386,49 @@ const schemaTla = Object.fromEntries(Object.entries(built).map(([name, s]) => [n
 const builtWithoutOneOf = buildAll(WITHOUT_ONE_OF);
 const schemaTlaWithoutOneOf = Object.fromEntries(Object.entries(builtWithoutOneOf).map(([name, s]) => [name, schemaToTla(graphql16, s)]));
 
-// Every candidate document, once per schema.
+// Every candidate document, once per schema. A spec example that only
+// September 2026's grammar parses (an empty selection set, `SelectionSet :
+// { Selection* }`, where October 2021 and September 2025 have `Selection+`)
+// is parsed and printed with graphql-js 17, which follows September 2026
+// there, and marked `newSyntax`.
 const docs = [];
 const byKey = new Map();
+const NEW_SYNTAX =
+  "an empty selection set, new in September 2026 (§2.5 SelectionSet : { Selection* }, where October 2021 and September 2025 have { Selection+ }); §5.3.3 was reworded with it, from \"must be empty\" to \"must not be present\"";
+const parseNewer = (text) => {
+  const ast = graphql17.parse(text, { noLocation: true });
+  let empty = false;
+  graphql17.visit(ast, { SelectionSet: (node) => void (node.selections.length === 0 && (empty = true)) });
+  if (!empty) throw new Error(`graphql-js 17 parses a document graphql-js 16 doesn't, for another reason than an empty selection set:\n${text}`);
+  return ast;
+};
+// A vector's document as a syntax tree.
+const parseDocument = (text) => {
+  try {
+    return parse(text, { noLocation: true });
+  } catch {
+    return parseNewer(text);
+  }
+};
 const addDoc = (family, schema, text) => {
   let ast;
+  let newSyntax = false;
   try {
     ast = parse(text, { noLocation: true });
   } catch {
-    return undefined;
+    if (family !== "spec") return undefined;
+    try {
+      ast = parseNewer(text);
+      newSyntax = true;
+    } catch {
+      return undefined;
+    }
   }
-  const printedText = print(ast);
+  const printedText = newSyntax ? graphql17.print(ast) : print(ast);
   const key = `${schema}\u0000${printedText}`;
   if (byKey.has(key)) return byKey.get(key);
   const index = docs.length;
-  docs.push({ family, schema, text: printedText, ast, tla: documentToTla(ast), tokens: tokensOf(printedText) });
+  docs.push({ family, schema, text: printedText, ast, tla: documentToTla(ast), tokens: tokensOf(printedText), ...(newSyntax ? { newSyntax } : {}) });
   byKey.set(key, index);
   return index;
 };
@@ -1605,10 +1668,15 @@ for (const rule of ORDER) {
     if (!x.siblings.includes(v.id)) x.siblings.push(v.id);
   }
   // The spec's examples of this rule, each in the least changed way that
-  // breaks only this rule, or no rule for a valid one.
+  // breaks only this rule, or no rule for a valid one. The documents
+  // Validation.tla adds beside them (`added`) aren't the spec's: they go
+  // in family `extra`, with ids of their own, and are dropped if they don't
+  // fit.
   let k = 0;
+  let a = 0;
   for (const e of examples.filter((x) => x.rule === rule)) {
     const fit = e.candidates.find((c) => (c.index === undefined ? false : e.valid ? broken(c.index).length === 0 : ruleOf(c.index) === rule));
+    if (!fit && e.added) continue;
     if (!fit) {
       const last = e.candidates.filter((c) => c.index !== undefined).at(-1);
       const others = last ? broken(last.index).filter((r) => r !== rule || e.valid) : [];
@@ -1622,21 +1690,25 @@ for (const rule of ORDER) {
       continue;
     }
     const d = docs[fit.index];
-    k++;
+    if (e.added) a++;
+    else k++;
     vectors.push({
-      id: nextId(`${rule}-spec-`),
+      id: nextId(e.added ? `${rule}-added-` : `${rule}-spec-`),
       spec: [SECTION[rule]],
-      family: "spec",
+      family: e.added ? "extra" : "spec",
       rule,
       schema: d.schema,
       document: d.text,
       expected: { valid: e.valid },
       ...(e.valid ? {} : { violations: d.violations }),
-      example: e.name,
+      ...(e.added
+        ? { origin: `Validation.tla's own ${e.valid ? "valid" : "invalid"} document ${e.name}, written beside the spec's examples; not one of them` }
+        : { example: e.name }),
       ...(fit.completed.length ? { completed: fit.completed } : {}),
+      ...(d.newSyntax ? { syntax: NEW_SYNTAX } : {}),
     });
   }
-  coverage[rule] = { pairs: chosen.length, invalid: new Set(chosen.map((p) => p.i)).size, spec: k };
+  coverage[rule] = { pairs: chosen.length, invalid: new Set(chosen.map((p) => p.i)).size, spec: k, added: a };
 }
 
 // ---------------------------------------------------------------------------
@@ -1658,7 +1730,7 @@ const inspect = (vector) => {
   const typeInfo = new TypeInfo(schema);
   const found = { oneOf: false, scalarLiteral: false, listForScalar: false, customDirective: false };
   visit(
-    parse(vector.document, { noLocation: true }),
+    parseDocument(vector.document),
     visitWithTypeInfo(typeInfo, {
       enter(node) {
         if (node.kind === "Directive" && schema.getDirective(node.name.value)?.astNode) found.customDirective = true;
@@ -1723,7 +1795,7 @@ for (const v of vectors) {
 const unspecify = (v, why) => {
   v.unspecified = v.unspecified ? `${v.unspecified}; ${why}` : why;
 };
-const astOf = (v) => parse(v.document, { noLocation: true });
+const astOf = (v) => parseDocument(v.document);
 // Evaluates `expression` on each vector's document (or docOf's rewrite of
 // it), against its schema as tlaOf gives it. A Map from vector to result.
 const evaluateVectors = async (list, { docOf = astOf, expression, read, tlaOf = (s) => schemaTla[s] }) => {
@@ -1837,33 +1909,38 @@ for (const v of identityCandidates) {
   );
 }
 
-// Single Root Field. The draft forbids @skip and @include at a
-// subscription's root (§5.2.4.1); October 2021 applies them, collecting the
-// root fields with no variable values, and also asks for exactly one entry
-// (its §5.2.3.1). So `postAdded @skip(if: true)` or `postAdded @include(if:
-// $v)` alone collects nothing and breaks both editions' rule, while
-// `postAdded @include(if: true)` breaks only the draft's. The reference's
+// Single Root Field. Since September 2025 the spec forbids @skip and
+// @include at a subscription's root (§5.2.4.1, CollectSubscriptionFields:
+// "{selection} must not provide the `@skip` directive"); October 2021
+// applies them, collecting the root fields with no variable values, and
+// also asks for exactly one entry (its §5.2.3.1). So `postAdded @skip(if:
+// true)` or `postAdded @include(if: $v)` alone collects nothing and breaks
+// both editions' rule, while `postAdded @include(if: true)` breaks only
+// September 2025's and September 2026's. The reference's
 // SingleRootFieldOctober2021 is October 2021's rule; a vector that breaks
-// Single Root Field relies on the draft only when that rule accepts it.
+// Single Root Field has `since` only when that rule accepts it.
 const singleRootCandidates = vectors.filter((v) => v.violations?.SingleRootField);
 const singleRootOctober2021 = await evaluateVectors(singleRootCandidates, {
   expression: "SingleRootFieldOctober2021(WithIntrospection(Schema), Docs[i])",
   read: asList,
 });
-const singleRootDraftOnly = new Set(singleRootCandidates.filter((v) => singleRootOctober2021.get(v).length === 0));
+const singleRootSince2025 = new Set(singleRootCandidates.filter((v) => singleRootOctober2021.get(v).length === 0));
 
-// Vectors that rely on the draft: an invalid vector that breaks Operation
-// Type Existence (new in the draft), that breaks Single Root Field only as
-// the draft states it, or that breaks a rule only because an input object
-// is OneOf, and a valid vector that gives a value to a OneOf Input Object. Whether a OneOf input object decides a verdict is the
-// reference's answer again, with every input object's oneOf turned off.
+// Vectors whose verdict rests on a release after October 2021: an invalid
+// vector that breaks Operation Type Existence (new in September 2025,
+// §5.2.1.1 "{rootOperationType} must exist"), that breaks Single Root Field
+// only as September 2025 states it, or that breaks a rule only because an
+// input object is OneOf (§3.10.1, new in September 2025), and a valid
+// vector that gives a value to a OneOf Input Object. Whether a OneOf input
+// object decides a verdict is the reference's answer again, with every
+// input object's oneOf turned off.
 const oneOfCandidates = vectors.filter((v) => !v.expected.valid && inspected.get(v).oneOf);
 const withoutOneOf = Object.fromEntries(Object.entries(schemaTla).map(([name, tla]) => [name, tla.replaceAll("oneOf |-> TRUE", "oneOf |-> FALSE")]));
 const oneOfGroups = Object.keys(SCHEMAS)
   .map((schema) => ({ schema, list: oneOfCandidates.filter((v) => v.schema === schema) }))
   .filter((g) => g.list.length);
 const oneOfVerdicts = await evaluate(
-  oneOfGroups.map((g) => ({ schemaTla: withoutOneOf[g.schema], docs: g.list.map((v) => documentToTla(parse(v.document, { noLocation: true }))) })),
+  oneOfGroups.map((g) => ({ schemaTla: withoutOneOf[g.schema], docs: g.list.map((v) => documentToTla(parseDocument(v.document))) })),
 );
 const restsOnOneOf = new Set();
 oneOfGroups.forEach((g, k) =>
@@ -1873,39 +1950,47 @@ oneOfGroups.forEach((g, k) =>
 );
 
 // Nested lists aren't an edition difference. §3.11's prose is the same in
-// the draft and October 2021: a value that isn't a list, given to a list
+// every release: a value that isn't a list, given to a list
 // type, is coerced to "a list of size one … (note this may apply
 // recursively for nested lists)", and "list values are accepted only when
 // each item in the list can be accepted by the list's item type". So `[1]`
 // for `[[Int]]` is `[[1]]` in both. Only October 2021's example table
-// disagrees ("Error: Incorrect item value" for `[1, 2, 3]`); examples aren't
-// normative, so those vectors are graded in both editions
-// (docs/kit/validate.md).
+// disagrees ("Error: Incorrect item value" for `[1, 2, 3]`; September 2025's
+// table already says `[[1], [2], [3]]`); examples aren't normative, so
+// those vectors are graded in every release (docs/kit/validate.md).
 
 // The vectors whose verdict changes against the schema without its OneOf
-// Input Object. They keep the schema that has it, and rely on the draft.
+// Input Object. They keep the schema that has it, and have `since`
+// September 2025.
 const splitCandidates = vectors.filter((v) => ONE_OF[v.schema]);
 const withoutOneOfVerdicts = await evaluateVectors(splitCandidates, { tlaOf: (s) => schemaTlaWithoutOneOf[s] });
 const sameViolations = (a, b) => stable(a) === stable(b);
 const needsOneOfSchema = new Set(splitCandidates.filter((v) => !sameViolations(withoutOneOfVerdicts.get(v), v.violations ?? {})));
 
+// A vector's `since` is the latest release among its reasons: it needs
+// every one of them.
+const RELEASES = ["September2025", "September2026"];
 for (const v of vectors) {
   const why = [];
-  if (v.violations?.OperationTypeExistence) why.push("Operation Type Existence is new in the draft");
-  if (singleRootDraftOnly.has(v)) {
-    why.push("only the draft forbids @skip and @include at a subscription's root: October 2021 applies them with no variable values, and collects exactly one root field here");
+  if (v.violations?.OperationTypeExistence) why.push(["September2025", "Operation Type Existence is new in September 2025"]);
+  if (singleRootSince2025.has(v)) {
+    why.push([
+      "September2025",
+      "since September 2025 @skip and @include are forbidden at a subscription's root: October 2021 applies them with no variable values, and collects exactly one root field here",
+    ]);
   }
-  if (restsOnOneOf.has(v)) why.push("OneOf Input Objects are new in the draft");
-  if (v.expected.valid && inspected.get(v).oneOf) why.push("it uses a OneOf Input Object, new in the draft");
-  if (needsOneOfSchema.has(v) && why.every((w) => !w.includes("OneOf"))) why.push("its schema needs a OneOf Input Object, new in the draft");
+  if (restsOnOneOf.has(v)) why.push(["September2025", "OneOf Input Objects are new in September 2025"]);
+  if (v.expected.valid && inspected.get(v).oneOf) why.push(["September2025", "it uses a OneOf Input Object, new in September 2025"]);
+  if (needsOneOfSchema.has(v) && why.every(([, w]) => !w.includes("OneOf"))) why.push(["September2025", "its schema needs a OneOf Input Object, new in September 2025"]);
+  if (v.syntax) why.push(["September2026", `it has ${v.syntax}`]);
   if (why.length) {
-    v.edition = "draft";
-    v.editionNote = why.join("; ");
+    v.since = RELEASES[Math.max(...why.map(([r]) => RELEASES.indexOf(r)))];
+    v.editionNote = why.map(([, w]) => w).join("; ");
   }
 }
 for (const v of vectors) {
   if (needsOneOfSchema.has(v)) v.schema = ONE_OF[v.schema];
-  if (v.schema.endsWith("OneOf") && v.edition !== "draft") throw new Error(`${v.id} uses a schema with a OneOf Input Object but isn't tagged draft`);
+  if (v.schema.endsWith("OneOf") && !v.since) throw new Error(`${v.id} uses a schema with a OneOf Input Object but has no \`since\``);
 }
 
 const output = {
@@ -1918,11 +2003,11 @@ const output = {
 
 for (const rule of ORDER) {
   const c = coverage[rule];
-  log(`  ${rule} §${SECTION[rule]}: ${c.invalid} invalid documents in ${c.pairs} pairs, ${c.spec} spec examples`);
+  log(`  ${rule} §${SECTION[rule]}: ${c.invalid} invalid documents in ${c.pairs} pairs, ${c.spec} spec examples${c.added ? `, ${c.added} added by Validation.tla` : ""}`);
 }
 log(`  ${vectors.length} vectors (${vectors.filter((v) => !v.expected.valid).length} invalid, ${vectors.filter((v) => v.expected.valid).length} valid); ${left.length} spec examples left out`);
 log(
-  `  ${vectors.filter((v) => v.unspecified).length} unspecified, ${vectors.filter((v) => v.requires?.includes(SCALAR_LITERALS)).length} need ${SCALAR_LITERALS}, ${vectors.filter((v) => v.requires?.includes(CUSTOM_DIRECTIVES)).length} need ${CUSTOM_DIRECTIVES}, ${vectors.filter((v) => v.edition === "draft").length} rely on the draft, ${vectors.filter((v) => Object.keys(v.violations ?? {}).length > 1).length} break two rules, ${vectors.filter((v) => v.schema.endsWith("OneOf")).length} use a schema with a OneOf Input Object`,
+  `  ${vectors.filter((v) => v.unspecified).length} unspecified, ${vectors.filter((v) => v.requires?.includes(SCALAR_LITERALS)).length} need ${SCALAR_LITERALS}, ${vectors.filter((v) => v.requires?.includes(CUSTOM_DIRECTIVES)).length} need ${CUSTOM_DIRECTIVES}, ${RELEASES.map((r) => `${vectors.filter((v) => v.since === r).length} since ${r}`).join(", ")}, ${vectors.filter((v) => Object.keys(v.violations ?? {}).length > 1).length} break two rules, ${vectors.filter((v) => v.schema.endsWith("OneOf")).length} use a schema with a OneOf Input Object`,
 );
 
 const text = `${JSON.stringify(output, null, 1)}\n`;

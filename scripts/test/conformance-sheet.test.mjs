@@ -1,48 +1,95 @@
-// The conformance sheet's verdicts on synthetic reports: a failing check
-// keeps its level's symbol whatever edition its failing cases rely on.
+// The conformance sheet's verdicts on synthetic format 2 reports: the kit
+// grades September 2026, a failing check keeps its level's symbol whatever
+// release its failing cases' rules come from, and those cases are counted
+// by the release that introduced them.
 //
 // Run with: node --test scripts/test/*.test.mjs
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cell, fixtureCell, findingLabels, sectionVerdict } from "../conformance-sheet.mjs";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  FORMAT, GRADED, cell, editionName, failsFrom, findingLabels, findingSinceText, fixtureCell, levelText, profileText, reportSinceText, sectionVerdict, sinceText,
+} from "../conformance-sheet.mjs";
 
 const check = (id, level, status, extra = {}) => ({ id, level, status, cases: 10, failing: status === "fail" ? 4 : 0, spec: [], ...extra });
-const draftOnly = (id, level) => check(id, level, "fail", { failingDraftOnly: 4 });
-const partlyDraft = (id, level) => check(id, level, "fail", { failingDraftOnly: 1 });
+// Every failing case relies on September 2025's rules, or September 2026's.
+const since2025 = (id, level) => check(id, level, "fail", { failingSince: { September2025: 4 } });
+const new2026 = (id, level) => check(id, level, "fail", { failingSince: { September2026: 4 } });
+// Some failing cases rely on newer rules, and some fail under October 2021's too.
+const partly = (id, level) => check(id, level, "fail", { failingSince: { September2025: 1 } });
+// Every failing case relies on newer rules, from both releases.
+const both = (id, level) => check(id, level, "fail", { failingSince: { September2025: 3, September2026: 1 } });
 
-test("a check's cell keeps its level and says how many failing cases are draft only", () => {
+test("editions are named as releases, and the graded one is September 2026", () => {
+  assert.equal(FORMAT, 2);
+  assert.equal(GRADED, "September2026");
+  assert.equal(editionName("September2026"), "September 2026");
+  assert.equal(editionName("October2021"), "October 2021");
+  assert.equal(sinceText({ September2025: 3, September2026: 1 }, 4), "3 since September 2025, 1 new in September 2026");
+  assert.equal(sinceText({ September2026: 4 }, 4), "all new in September 2026");
+  assert.equal(sinceText({ September2025: 2, September2026: 0 }, 4), "2 since September 2025");
+});
+
+test("a check's cell keeps its level and counts its failing cases by release", () => {
   assert.equal(cell(check("m", "MUST", "fail")), "✗ 4/10");
-  assert.equal(cell(draftOnly("m", "MUST")), "✗ 4/10 (all draft only)");
-  assert.equal(cell(partlyDraft("m", "MUST")), "✗ 4/10 (1 draft only)");
-  assert.equal(cell(draftOnly("s", "SHOULD")), "! 4/10 (all draft only)");
-  assert.equal(cell(draftOnly("i", "INFO")), "i 4/10 (all draft only)");
+  assert.equal(cell(since2025("m", "MUST")), "✗ 4/10 (all since September 2025)");
+  assert.equal(cell(new2026("m", "MUST")), "✗ 4/10 (all new in September 2026)");
+  assert.equal(cell(partly("m", "MUST")), "✗ 4/10 (1 since September 2025)");
+  assert.equal(cell(both("m", "MUST")), "✗ 4/10 (3 since September 2025, 1 new in September 2026)");
+  assert.equal(cell(since2025("s", "SHOULD")), "! 4/10 (all since September 2025)");
+  assert.equal(cell(new2026("i", "INFO")), "i 4/10 (all new in September 2026)");
+  assert.equal(cell(check("m", "MUST", "fail", { failingSince: {} })), "✗ 4/10");
   assert.equal(cell(check("a", "ADAPTER", "fail")), "✗ 4/10");
   assert.equal(cell(check("p", "MUST", "pass")), "✓ 10");
   assert.equal(cell(check("u", "MUST", "untested", { cases: 0 })), "–");
   assert.equal(cell(undefined), "n/a");
 });
 
-test("a section whose only failure is a draft-only SHOULD is a should, not a MUST failure", () => {
-  assert.equal(sectionVerdict([check("p", "MUST", "pass"), draftOnly("s", "SHOULD")]), "! (draft only) `s`");
+test("a check fails from the earliest release all its failing cases need", () => {
+  assert.equal(failsFrom({ September2025: 4 }, 4), "September2025");
+  assert.equal(failsFrom({ September2026: 4 }, 4), "September2026");
+  assert.equal(failsFrom({ September2025: 3, September2026: 1 }, 4), "September2025");
+  assert.equal(failsFrom({ September2025: 1 }, 4), null);
+  assert.equal(failsFrom(undefined, 4), null);
+  assert.equal(failsFrom({}, 0), null);
 });
 
-test("a draft-only MUST and an outright SHOULD keep their own levels", () => {
-  assert.equal(sectionVerdict([draftOnly("m", "MUST"), check("s", "SHOULD", "fail")]), "✗ (draft only) `m`; ! `s`");
+test("a check's level is September 2026's, with the releases that differ", () => {
+  assert.equal(levelText({ level: "MUST" }), "MUST");
+  assert.equal(levelText({ level: "MUST", levels: { October2021: "SHOULD" } }), "MUST (SHOULD in October 2021)");
+  assert.equal(levelText({ level: "MUST", levels: { September2025: "SHOULD", October2021: "SHOULD" } }), "MUST (SHOULD in September 2025 and October 2021)");
+  assert.equal(levelText({ level: "MUST", since: "September2025" }), "MUST (since September 2025)");
+  assert.equal(levelText({ level: "MUST", since: "September2026", levels: { September2025: "SHOULD" } }), "MUST (new in September 2026; SHOULD in September 2025)");
+  assert.equal(levelText({ level: "SHOULD", levels: { September2025: "MAY", October2021: "MUST" } }), "SHOULD (MAY in September 2025; MUST in October 2021)");
 });
 
-test("(draft only) applies only when every failure at that level is draft only", () => {
-  assert.equal(sectionVerdict([draftOnly("m1", "MUST"), draftOnly("m2", "MUST")]), "✗ (draft only) `m1` `m2`");
-  assert.equal(sectionVerdict([check("m1", "MUST", "fail"), draftOnly("m2", "MUST")]), "✗ `m1`; ✗ (draft only) `m2`");
-  // A check with only some draft-only failing cases fails outright.
-  assert.equal(sectionVerdict([partlyDraft("m", "MUST")]), "✗ `m`");
-  assert.equal(sectionVerdict([check("m", "MUST", "fail"), check("s", "SHOULD", "fail"), draftOnly("s2", "SHOULD")]), "✗ `m`; ! `s`; ! (draft only) `s2`");
+test("a section whose only failure is a SHOULD since September 2025 is a should, not a MUST failure", () => {
+  assert.equal(sectionVerdict([check("p", "MUST", "pass"), since2025("s", "SHOULD")]), "! (since September 2025) `s`");
+});
+
+test("a MUST new in September 2026 and an outright SHOULD keep their own levels", () => {
+  assert.equal(sectionVerdict([new2026("m", "MUST"), check("s", "SHOULD", "fail")]), "✗ (new in September 2026) `m`; ! `s`");
+});
+
+test("a release label applies only when every failure of the check needs that release or a later one", () => {
+  assert.equal(sectionVerdict([since2025("m1", "MUST"), since2025("m2", "MUST")]), "✗ (since September 2025) `m1` `m2`");
+  assert.equal(sectionVerdict([check("m1", "MUST", "fail"), since2025("m2", "MUST"), new2026("m3", "MUST")]), "✗ `m1`; ✗ (since September 2025) `m2`; ✗ (new in September 2026) `m3`");
+  // Failing cases from both releases fail from September 2025 on.
+  assert.equal(sectionVerdict([both("m", "MUST")]), "✗ (since September 2025) `m`");
+  // A check with only some failing cases on newer rules fails outright.
+  assert.equal(sectionVerdict([partly("m", "MUST")]), "✗ `m`");
+  assert.equal(sectionVerdict([check("m", "MUST", "fail"), check("s", "SHOULD", "fail"), new2026("s2", "SHOULD")]), "✗ `m`; ! `s`; ! (new in September 2026) `s2`");
 });
 
 test("informational checks never make a section fail", () => {
   assert.equal(sectionVerdict([check("p", "MUST", "pass"), check("i", "INFO", "fail")]), "✓; i `i`");
   assert.equal(sectionVerdict([check("i", "INFO", "fail")]), "i `i`");
-  assert.equal(sectionVerdict([check("s", "SHOULD", "fail"), draftOnly("i", "INFO")]), "! `s`; i (draft only) `i`");
+  assert.equal(sectionVerdict([check("s", "SHOULD", "fail"), since2025("i", "INFO")]), "! `s`; i (since September 2025) `i`");
 });
 
 test("a section with nothing failing is passed, inconclusive or unexercised", () => {
@@ -66,10 +113,127 @@ test("a fixture's verdict takes the worst level of the findings that hold its ca
   assert.equal(fixtureCell({ id: "f", status: "skipped", cases: 0 }, report([])), "–");
 });
 
-test("a finding is labelled with its level and whether all its cases are draft only", () => {
+test("a finding is labelled with its level and the first release all its cases need", () => {
   const checks = [check("m", "MUST", "fail"), check("s", "SHOULD", "fail"), check("i", "INFO", "fail")];
   assert.deepEqual(findingLabels({ checks: ["m", "s"], cases: 2 }, checks), []);
-  assert.deepEqual(findingLabels({ checks: ["s"], cases: 2, draftOnly: 2 }, checks), ["(SHOULD)", "(draft only)"]);
-  assert.deepEqual(findingLabels({ checks: ["i"], cases: 2, draftOnly: 1 }, checks), ["(informational)"]);
+  assert.deepEqual(findingLabels({ checks: ["s"], cases: 2, since: { September2025: 2 } }, checks), ["(SHOULD)", "(since September 2025)"]);
+  assert.deepEqual(findingLabels({ checks: ["m"], cases: 2, since: { September2026: 2 } }, checks), ["(new in September 2026)"]);
+  assert.deepEqual(findingLabels({ checks: ["m"], cases: 3, since: { September2025: 1, September2026: 2 } }, checks), ["(since September 2025)"]);
+  assert.deepEqual(findingLabels({ checks: ["i"], cases: 2, since: { September2025: 1 } }, checks), ["(informational)"]);
   assert.deepEqual(findingLabels({ checks: [], cases: 1 }, checks), []);
+  assert.equal(findingSinceText({ cases: 2 }), "");
+  assert.equal(findingSinceText({ cases: 2, since: { September2026: 2 } }), "All rely on grammar or rules introduced in September 2026, not in October 2021.");
+  assert.equal(
+    findingSinceText({ cases: 5, since: { September2025: 3, September2026: 1 } }),
+    "3 of them rely on grammar or rules introduced in September 2025 and 1 on ones introduced in September 2026, not in October 2021.",
+  );
+});
+
+test("a report's profile and its vectors on newer rules are worded by release", () => {
+  assert.equal(profileText({}), null);
+  assert.equal(profileText({ profile: "September2026" }), "the September 2026 edition's introspection types (latest release)");
+  assert.equal(profileText({ profile: "September2025", profileNote: "It has no isDeprecated on __Directive" }), "the September 2025 edition's introspection types. It has no isDeprecated on __Directive");
+  assert.equal(profileText({ profile: "October2021" }), "the October 2021 edition's introspection types");
+  assert.equal(reportSinceText({}), null);
+  assert.equal(
+    reportSinceText({ since: { September2025: { vectors: 120, failing: 3 }, September2026: { vectors: 10, failing: 0 } } }),
+    "since September 2025, 3 of 120 vectors failing; new in September 2026, 0 of 10 vectors failing",
+  );
+  assert.equal(reportSinceText({ since: { September2026: { vectors: 1, failing: 1 } } }), "new in September 2026, 1 of 1 vector failing");
+});
+
+// The whole sheet, built from synthetic reports in a directory of its own.
+const script = resolve(fileURLToPath(import.meta.url), "../../conformance-sheet.mjs");
+const section = (number, title) => ({ number, title, url: `https://spec.graphql.org/September2026/#sec-${title.replace(/ /g, "-")}` });
+const report = (key, area, extra = {}) => ({
+  format: 2,
+  area,
+  implementation: `Impl ${key}`,
+  capabilities: [area],
+  provenance: { kit: "0123456789ab", date: "2026-11-15", strict: true, vectors: 20, graded: 20 },
+  checkerSelfTest: "passed (2 negative controls)",
+  cases: { submitted: 20, distinct: 20, malformed: 0 },
+  adapterProblems: 0,
+  checks: [],
+  findings: [],
+  fixtures: [],
+  ok: false,
+  ...extra,
+});
+const sheetDir = (reports) => {
+  const dir = mkdtempSync(join(tmpdir(), "graphql-tla-sheet-"));
+  mkdirSync(join(dir, "reports"));
+  const keys = [...new Set(reports.map(([name]) => name.split(".")[0]))];
+  writeFileSync(join(dir, "implementations.json"), JSON.stringify({ implementations: keys.map((key) => ({ key })) }));
+  for (const [name, r] of reports) writeFileSync(join(dir, "reports", name), JSON.stringify(r));
+  return dir;
+};
+const build = (dir) => spawnSync("node", [script, "--dir", dir], { encoding: "utf8" });
+
+test("the sheet and a page say which edition is graded and count newer rules by release", () => {
+  const dir = sheetDir([
+    [
+      "a.parse.json",
+      report("a", "parse", {
+        since: { September2025: { vectors: 12, failing: 3 }, September2026: { vectors: 2, failing: 1 } },
+        checks: [
+          { ...both("stringValue", "MUST"), spec: [section("2.10.4", "String Value")] },
+          { ...check("selectionSets", "MUST", "pass"), spec: [section("2.5", "Selection Sets")] },
+        ],
+        findings: [
+          { checks: ["stringValue"], summary: "rejects escapes", cases: 4, since: { September2025: 3, September2026: 1 }, fixtures: { escapes: 4 }, fixture: "escapes", example: { input: '[since September 2025] "\\u{41}"', response: { ok: false }, expected: "ok" } },
+        ],
+      }),
+    ],
+    [
+      "a.json",
+      report("a", "execution", {
+        checks: [{ ...check("errorPathsUnique", "MUST", "fail", { levels: { September2025: "SHOULD", October2021: "SHOULD" } }), spec: [section("6.4.4", "Handling Execution Errors")] }],
+        findings: [{ checks: ["errorPathsUnique"], cases: 4, fixtures: { lists: 4 }, fixture: "lists", example: { trace: "t", response: {} } }],
+      }),
+    ],
+    [
+      "a.introspect.json",
+      report("a", "introspect", {
+        profile: "September2025",
+        checks: [{ ...new2026("deprecation", "MUST"), since: "September2025", spec: [section("4.2", "Schema Introspection")] }],
+        findings: [{ checks: ["deprecation"], cases: 4, since: { September2026: 4 }, fixtures: { directiveDeprecation: 4 }, fixture: "directiveDeprecation", example: { input: "x", response: {} } }],
+      }),
+    ],
+  ]);
+  try {
+    const run = build(dir);
+    assert.equal(run.status, 0, run.stderr);
+    const sheet = readFileSync(join(dir, "README.md"), "utf8");
+    const page = readFileSync(join(dir, "a.md"), "utf8");
+    assert.match(sheet, /\[GraphQL spec\]\(https:\/\/spec\.graphql\.org\/September2026\/\), September 2026 \(latest release\)/);
+    assert.match(sheet, /\| ✗ 4\/10 \(3 since September 2025, 1 new in September 2026\) \|/);
+    assert.match(sheet, /\| MUST \(SHOULD in September 2025 and October 2021\) \|/);
+    assert.match(sheet, /\| MUST \(since September 2025\) \|/);
+    assert.match(sheet, /✗ \(since September 2025\) `stringValue`/);
+    assert.match(sheet, /✗ \(new in September 2026\) `deprecation`/);
+    assert.match(sheet, /- \(new in September 2026\) \[`deprecation`\]/);
+    // Only the section numbering's source names the working draft.
+    assert.doesNotMatch(sheet, /draft[ -]only|the draft|\(draft/i);
+    assert.match(page, /- \*\*Profile:\*\* the September 2025 edition's introspection types/);
+    assert.match(page, /- \*\*Vectors relying on rules after October 2021:\*\* since September 2025, 3 of 12 vectors failing; new in September 2026, 1 of 2 vectors failing/);
+    assert.match(page, /4 cases, in `escapes` \(4\)\. 3 of them rely on grammar or rules introduced in September 2025 and 1 on ones introduced in September 2026, not in October 2021\./);
+    assert.match(page, /4 cases, in `directiveDeprecation` \(4\)\. All rely on grammar or rules introduced in September 2026, not in October 2021\./);
+    assert.match(page, /input: {4}\[since September 2025\]/);
+    assert.doesNotMatch(page, /draft/i);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("the sheet refuses to build from a format 1 report", () => {
+  const dir = sheetDir([["a.parse.json", report("a", "parse", { format: 1, draftOnly: { vectors: 1, failing: 0 } })]]);
+  try {
+    const run = build(dir);
+    assert.equal(run.status, 1);
+    assert.match(run.stderr, /a\.parse\.json: format 1/);
+    assert.match(run.stderr, /npm run conformance/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

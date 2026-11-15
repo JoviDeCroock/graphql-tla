@@ -8,13 +8,13 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
 
-export const REPORT_FORMAT = 1;
+export const REPORT_FORMAT = 2;
 
 const sections = new Map(
   JSON.parse(readFileSync(join(root, "kit/spec-sections.json"), "utf8")).sections.map((s) => [s.number, s]),
 );
 
-// A spec section ({ number, title, url }) by its number in the draft.
+// A spec section ({ number, title, url }) by its number in September 2026.
 export const section = (number) => {
   const s = sections.get(number);
   if (!s) throw new Error(`no spec section ${number} in kit/spec-sections.json`);

@@ -209,13 +209,46 @@ const mutants = [
     why: "the differential doesn't select a wrapper type's other fields",
   },
   {
-    name: "October 2021's @deprecated has the draft's locations",
+    name: "September 2025's @deprecated has DIRECTIVE_DEFINITION",
+    find: '<<"FIELD_DEFINITION", "ARGUMENT_DEFINITION", "INPUT_FIELD_DEFINITION", "ENUM_VALUE">>),',
+    replace: '<<"FIELD_DEFINITION", "ARGUMENT_DEFINITION", "INPUT_FIELD_DEFINITION", "ENUM_VALUE", "DIRECTIVE_DEFINITION">>),',
+    property: "Sep2025BuiltinsFollowTheEdition",
+    differential: false,
+    why: "the differential grades graphql-js against September 2026's definitions",
+  },
+  {
+    name: "September 2025's __Schema.directives takes includeDeprecated",
+    find: '    BuiltinField("directives", <<>>, NNListOfNN("__Directive"))>>),\n  IntrospectionTypes[2],',
+    replace: '    BuiltinField("directives", <<IncludeDeprecatedArg>>, NNListOfNN("__Directive"))>>),\n  IntrospectionTypes[2],',
+    property: "Sep2025BuiltinsFollowTheEdition",
+    differential: false,
+    why: "the differential grades graphql-js against September 2026's definitions",
+  },
+  {
+    name: "September 2025's __Directive is September 2026's",
+    find: '    BuiltinField("args", <<IncludeDeprecatedArg>>, NNListOfNN("__InputValue"))>>),\n  Oct2021IntrospectionTypes[8]',
+    replace:
+      '    BuiltinField("args", <<IncludeDeprecatedArg>>, NNListOfNN("__InputValue")),\n    BuiltinField("isDeprecated", <<>>, NN("Boolean")),\n    BuiltinField("deprecationReason", <<>>, Named("String"))>>),\n  Oct2021IntrospectionTypes[8]',
+    property: "Sep2025BuiltinsFollowTheEdition",
+    differential: false,
+    why: "the differential grades graphql-js against September 2026's definitions",
+  },
+  {
+    name: "a deprecated directive counts as something September 2025 can express",
+    find: "\\A D \\in Range(S.directives) : ~IsDeprecated(D) /\\ D.directives = {}",
+    replace: "\\A D \\in Range(S.directives) : D.directives = {}",
+    property: "Sep2025ProfileIsSound",
+    differential: false,
+    why: "the differential doesn't use the September 2025 profile",
+  },
+  {
+    name: "October 2021's @deprecated has September 2026's locations",
     find: '                   <<"FIELD_DEFINITION", "ENUM_VALUE">>),',
     replace:
       '                   <<"FIELD_DEFINITION", "ARGUMENT_DEFINITION", "INPUT_FIELD_DEFINITION",\n                     "ENUM_VALUE", "DIRECTIVE_DEFINITION">>),',
     property: "Oct2021BuiltinsFollowTheEdition",
     differential: false,
-    why: "the differential grades graphql-js against the draft's definitions",
+    why: "the differential grades graphql-js against September 2026's definitions",
   },
   {
     name: "October 2021's includeDeprecated is Boolean!",
@@ -223,7 +256,7 @@ const mutants = [
     replace: 'BuiltinInputValue("includeDeprecated", NN("Boolean"),',
     property: "Oct2021BuiltinsFollowTheEdition",
     differential: false,
-    why: "the differential grades graphql-js against the draft's definitions",
+    why: "the differential grades graphql-js against September 2026's definitions",
   },
   {
     name: "October 2021's __Type.inputFields takes includeDeprecated",
@@ -231,7 +264,7 @@ const mutants = [
     replace: 'BuiltinField("inputFields", <<Oct2021IncludeDeprecatedArg>>, ListOfNN("__InputValue"))',
     property: "Oct2021BuiltinsFollowTheEdition",
     differential: false,
-    why: "the differential grades graphql-js against the draft's definitions",
+    why: "the differential grades graphql-js against September 2026's definitions",
   },
   {
     name: "October 2021's __DirectiveLocation has DIRECTIVE_DEFINITION",
@@ -239,7 +272,7 @@ const mutants = [
     replace: '"UNION", "ENUM", "ENUM_VALUE", "INPUT_OBJECT", "INPUT_FIELD_DEFINITION",\n    "DIRECTIVE_DEFINITION">>)',
     property: "Oct2021BuiltinsFollowTheEdition",
     differential: false,
-    why: "the differential grades graphql-js against the draft's definitions",
+    why: "the differential grades graphql-js against September 2026's definitions",
   },
   {
     name: "a schema with a OneOf input object counts as one October 2021 can express",

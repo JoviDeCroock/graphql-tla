@@ -146,6 +146,32 @@ export const CONTROLS = [
     },
   },
   {
+    name: "leaves the list indices out of an error path",
+    clause: "malformed",
+    check: "responsePosition",
+    make: (c) =>
+      (c.response.errors ?? [])
+        .filter((e) => e.path.some((s) => typeof s === "number"))
+        .map((error) => ({ response: withError(c.response, error, { ...error, path: error.path.filter((s) => typeof s !== "number") }) })),
+  },
+  {
+    name: "reports an error at the nullable position it propagated to",
+    clause: "malformed",
+    check: "errorPathFull",
+    make: (c) =>
+      (c.response.errors ?? []).flatMap((error) => {
+        // The deepest proper prefix of the path that is null in data, if
+        // the error's own position isn't in data: it propagated there. A
+        // field, not data itself.
+        const valueAt = (path) => path.reduce((v, k) => (v === null || typeof v !== "object" ? undefined : v[k]), c.response.data ?? null);
+        if (valueAt(error.path) !== undefined) return [];
+        for (let n = error.path.length - 1; n >= 1; n--) {
+          if (valueAt(error.path.slice(0, n)) === null) return [{ response: withError(c.response, error, { ...error, path: error.path.slice(0, n) }) }];
+        }
+        return [];
+      }),
+  },
+  {
     name: "writes an error path as a string instead of a list",
     clause: "malformed",
     check: "responsePosition",
@@ -209,6 +235,16 @@ export const CONTROLS = [
     },
   },
   {
+    name: "calls a mutation root field twice",
+    clause: "malformed",
+    check: "mutationFieldsOnce",
+    make: (c, fixture) => {
+      if (fixture.operationType !== "mutation") return [];
+      const [[call] = []] = rootCalls(c);
+      return call ? [{ trace: [...c.trace, call] }] : [];
+    },
+  },
+  {
     name: "truncates a fraction returned for an Int instead of raising an error",
     clause: "malformed",
     check: "intFraction",
@@ -235,7 +271,7 @@ export const CONTROLS = [
   {
     name: "returns null without an error for a non-finite Float",
     clause: "malformed",
-    check: "resultCoercion",
+    check: "coercionErrorReported",
     make: (c) => {
       const settle = c.trace.find((e) => e.settle?.length === 1 && e.settle[0] === "ratio" && e.outcome.kind === "uncoercible");
       if (!settle || c.response.data?.ratio !== null) return [];
@@ -450,6 +486,51 @@ export const REPORT_CONTROLS = [
       check(report, "errorsList").failing === 1 && check(report, "additionalEntries").failing === 1
         ? ""
         : `errorsList fails on ${check(report, "errorsList").failing} cases and additionalEntries on ${check(report, "additionalEntries").failing}, not 1 and 1`,
+  },
+  {
+    name: "a field called twice, with the same outcome both times, still has its response graded",
+    strict: false,
+    bases: [
+      (c, fixture) =>
+        !outsideSpec(fixture) &&
+        fixture.operationType === "query" &&
+        c.response?.errors?.length === 1 &&
+        c.trace.some((e) => e.call?.length > 1 && samePath(e.call, c.response.errors[0].path)),
+    ],
+    // The failing field's resolver called and settled a second time, and
+    // its error dropped.
+    make: ([c]) => {
+      const path = c.response.errors[0].path;
+      const call = c.trace.find((e) => e.call && samePath(e.call, path));
+      const settle = c.trace.find((e) => e.settle && samePath(e.settle, path));
+      return [{ ...c, trace: [...c.trace, call, settle], response: withoutErrors(c.response, () => false) }];
+    },
+    expect: (report, [c]) => {
+      const problems = [];
+      if (check(report, "callsOnce").failing !== 1) problems.push(`callsOnce fails on ${check(report, "callsOnce").failing} cases, not 1`);
+      if (check(report, "nullsExplained").failing !== 1) problems.push(`nullsExplained fails on ${check(report, "nullsExplained").failing} cases, not 1`);
+      if (fixtureOf(report, c.fixture).status !== "fail") problems.push(`${c.fixture} passes`);
+      return problems.join("; ");
+    },
+  },
+  {
+    name: "a mutation that didn't run serially isn't graded on serialErrorsKept",
+    strict: false,
+    bases: [(c, fixture) => !outsideSpec(fixture) && fixture.operationType === "mutation" && c.response?.data === null && c.response.errors?.length > 1 && rootCalls(c).length > 1],
+    // The second root field called right after the first, and the first
+    // root field's errors dropped.
+    make: ([c]) => {
+      const [[firstCall, first], [second, at]] = rootCalls(c);
+      const trace = c.trace.filter((_, i) => i !== at);
+      trace.splice(first + 1, 0, "after" in second ? { ...second, after: firstCall.after } : second);
+      return [{ ...c, trace, response: withoutErrors(c.response, (e) => e.path[0] !== firstCall.call[0]) }];
+    },
+    expect: (report) => {
+      const problems = [];
+      if (check(report, "calledSerially").failing !== 1) problems.push(`calledSerially fails on ${check(report, "calledSerially").failing} cases, not 1`);
+      if (check(report, "serialErrorsKept").cases !== 0) problems.push(`serialErrorsKept was graded on ${check(report, "serialErrorsKept").cases} cases, not 0`);
+      return problems.join("; ");
+    },
   },
   {
     name: "a root field called twice with different types, outside the spec",

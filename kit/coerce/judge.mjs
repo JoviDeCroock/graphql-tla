@@ -50,14 +50,25 @@ export const sameJson = (a, b) => {
 // such as [null] or a field error with only a path, is flagged badErrors,
 // which errorFormat grades. A value with an "errors" entry that is an
 // empty list is flagged emptyErrors, which errorsList grades (§7.1.1: the
-// entry, when present, is a non-empty list).
+// entry, when present, is a non-empty list). A result with a top-level
+// entry other than data, errors and extensions is flagged extraEntries
+// (additionalEntries, §7.1.8), and one whose extensions isn't a map
+// badExtensions (extensions, §7.1.7).
 export const NO_RESPONSE = { outcome: "no-response" };
 
 const wellFormedError = (e) => isMap(e) && typeof e.message === "string";
 
+const RESULT_ENTRIES = new Set(["data", "errors", "extensions"]);
+
 export const classify = ({ response, calls }) => {
   const errors = response.errors ?? [];
-  const flag = (outcome) => (errors.every(wellFormedError) ? outcome : { ...outcome, badErrors: true });
+  const extra = Object.keys(response).filter((k) => !RESULT_ENTRIES.has(k));
+  const shape = (outcome) => ({
+    ...outcome,
+    ...(extra.length ? { extraEntries: extra } : {}),
+    ...(Object.hasOwn(response, "extensions") && !isMap(response.extensions) ? { badExtensions: true } : {}),
+  });
+  const flag = (outcome) => shape(errors.every(wellFormedError) ? outcome : { ...outcome, badErrors: true });
   if (!Object.hasOwn(response, "data") || response.data === null) {
     if (errors.length === 0 || calls.length > 0) return { outcome: "other" };
     return flag(Object.hasOwn(response, "data") ? { outcome: "request-error", dataNull: true } : { outcome: "request-error" });
@@ -71,7 +82,7 @@ export const classify = ({ response, calls }) => {
   }
   if (calls.length === 1 && errors.length === 0 && data[field] !== null && sameJson(calls[0].path, [field])) {
     const value = { outcome: "value", field, arguments: calls[0].arguments };
-    return Object.hasOwn(response, "errors") ? { ...value, emptyErrors: true } : value;
+    return shape(Object.hasOwn(response, "errors") ? { ...value, emptyErrors: true } : value);
   }
   return { outcome: "other" };
 };
@@ -109,7 +120,9 @@ const writesInteger = (text, digits) => {
 // A variable used as a list item is passed through without being coerced
 // to the item type (§6.4.1's Note: its value is already coerced), so a
 // value needn't have its position's shape: [$x, [$x]] for [[Int]] can be
-// [2, [2]]. A list position holding a non-list is compared as its item.
+// [2, [2]] (in an invalid document; the variableItemWrapped reading,
+// [[2], [2]], is an alternative). A list position holding a non-list is
+// compared as its item.
 const sameValue = (ctx, type, e, a) => {
   if (e === null || a === null) return e === a;
   if (type.list) {
@@ -198,15 +211,18 @@ export const sameAnswer = (ctx, expected, got) => {
 // deviations: answers that leave a SHOULD undone, and the check they fail;
 // withoutDefaults: the answer with every input field default left out, to
 // tell a result that leaves out only some of them; editions: October
-// 2021's answer to a draft-only vector, which fails the vector's check but
-// is reported apart; examples: the answer October 2021's non-normative
-// §3.11 table gives, which fails the vector's check in both editions, and
+// 2021's answer to a vector whose rule is new since then (`since`), which
+// fails the vector's check but is reported apart; examples: the answer
+// October 2021's non-normative §3.11 table gives, which fails the vector's
+// check in every edition, and
 // is reported apart; exercises: the checks the vector counts toward. A
 // vector that accepts a request error also exercises requestErrorNoData.
 //
-// A vector that accepts a field error also exercises fieldErrorPath, and
-// one where producing no response counts against responds exercises that.
-// Every vector exercises errorFormat and errorsList.
+// A vector that accepts a field error also exercises fieldErrorPath, and,
+// where it doesn't accept a request error, argumentErrorKind unless
+// §3.10 or §3.10.1 itself requires the execution error. Every vector
+// exercises responds, errorFormat, errorsList, additionalEntries and
+// extensions.
 //
 // known: for an invalid vector, whether the implementation's own validator
 // rejects the document (true), accepts it (false), or the kit can't tell
@@ -219,30 +235,59 @@ export const planFor = (vector, capabilities, { known, validator = false } = {})
   const plan = basePlan(vector, capabilities, known);
   if (!plan) return plan;
   if (plan.accept.some((a) => a.outcome === "request-error")) plan.exercises.push("requestErrorNoData");
-  if (plan.accept.some((a) => a.outcome === "field-error")) plan.exercises.push("fieldErrorPath");
-  if (noResponseCheck(plan) === "responds") plan.exercises.push("responds");
+  if (plan.accept.some((a) => a.outcome === "field-error")) {
+    plan.exercises.push("fieldErrorPath");
+    if (!plan.accept.some((a) => a.outcome === "request-error")) plan.exercises.push(fieldErrorKindCheck(vector, plan));
+  }
   if (validator && vector.valid !== false && !capabilities.has("unvalidated")) plan.exercises.push("acceptsValid");
-  plan.exercises.push("errorFormat", "errorsList");
+  plan.exercises.push("responds", "errorFormat", "errorsList", "additionalEntries", "extensions");
+  plan.exercises = [...new Set(plan.exercises)];
   return plan;
 };
 
-// The check a result with no response counts against: the vector's own,
-// where the reference's answer is a request error and that check is a MUST
-// (a request error is a response, so no response still doesn't match it),
-// else responds. A SHOULD or informational check never takes it, since
-// producing no response is never permitted.
-export const noResponseCheck = (plan) =>
-  plan.accept[0].outcome === "request-error" && checkById(plan.check).level === "MUST" ? plan.check : "responds";
+// A result with no response counts against responds (§7), whatever the
+// vector: it says nothing about the rule the vector is about, which the
+// finding keeps as a hint.
+export const noResponseCheck = () => "responds";
+
+// The check a request error counts against where the reference gives a
+// field error: argumentErrorKind's SHOULD ("Any request error raised as a
+// result of input coercion during CoerceArgumentValues() should be treated
+// instead as an execution error"), unless §3.10 or §3.10.1 itself says "an
+// execution error must be raised" for the vector (executionErrorRequired),
+// where it is the vector's own check.
+export const fieldErrorKindCheck = (vector, plan) => (vector.executionErrorRequired ? plan.check : "argumentErrorKind");
 
 // The check a float or other input value accepted by a type that must
 // reject it counts against: ID's MUST, not idCoerced's SHOULD.
 export const rejectingCheck = (vector) => (vector.check === "idCoerced" ? "id" : vector.check);
 
 const basePlan = (vector, capabilities, known) => {
+  const plan = gradedPlan(vector, capabilities, known);
+  // A document invalid only because a literal doesn't coerce (literalOnly):
+  // §5.6.1 asks for literals to be "coercible", so a service that validates
+  // may refuse it at validation (a request error) as well as at coercion
+  // (the reference's answer). A resolved value is graded under the vector's
+  // own check, as for an adapter that doesn't validate. Which kind of error
+  // isn't graded, so arguments and argumentErrorKind aren't exercised.
+  if (plan && vector.literalOnly && !capabilities.has("unvalidated")) {
+    if (!plan.accept.some((a) => a.outcome === "request-error")) plan.accept.push({ outcome: "request-error" });
+    if (plan.labels) plan.labels.push("refused at validation");
+    plan.exercises = plan.exercises.filter((c) => c !== "arguments");
+  }
+  return plan;
+};
+
+// How the reference's floatPrecision answers are labelled: the default
+// reading refuses, floatRounded rounds to the nearest double.
+const floatPrecisionLabel = (answer) =>
+  answer.policy?.includes("floatRounded") ? "rounded to the nearest double" : answer.outcome === "value" ? "as the reference" : "refused";
+
+const gradedPlan = (vector, capabilities, known) => {
   const only = (check, accept, labels) => ({ check, accept, labels, deviations: [], editions: [], examples: [], exercises: [check] });
   if (!capabilities.has("unvalidated")) {
     if (vector.requires?.includes("unvalidated")) return undefined;
-    if (vector.valid === false) return only(known ? "invalidNotExecuted" : "onlyValidExecuted", [{ outcome: "request-error" }]);
+    if (vector.valid === false && !vector.literalOnly) return only(known ? "invalidNotExecuted" : "onlyValidExecuted", [{ outcome: "request-error" }]);
   }
   if (vector.requires?.some((c) => c !== "unvalidated" && !capabilities.has(c))) return undefined;
   if (vector.binary64 && !capabilities.has("exact-numbers")) {
@@ -280,9 +325,12 @@ const basePlan = (vector, capabilities, known) => {
       vector.expected.outcome === "value" &&
       a.field === vector.expected.field,
   );
+  const accept = [vector.expected, ...alternatives.filter(permitted)];
   return {
     check: vector.check,
-    accept: [vector.expected, ...alternatives.filter(permitted)],
+    accept,
+    // floatPrecision is informational: which reading the result follows.
+    labels: vector.check === "floatPrecision" ? accept.map(floatPrecisionLabel) : undefined,
     deviations,
     withoutDefaults,
     editions: alternatives.filter(edition),
@@ -313,10 +361,8 @@ export const contextFor = (vector, inputs, capabilities, rejectedByValidator) =>
 // How a classified result fails a vector: undefined if it doesn't, or the
 // kind of failure and the check it counts against.
 export const judge = (vector, plan, got, ctx) => {
-  if (got.outcome === "no-response") {
-    const check = noResponseCheck(plan);
-    return { kind: check === "responds" ? "no-response" : "no-response-for-request-error", check };
-  }
+  // No response: responds, with the vector's own check as the hint.
+  if (got.outcome === "no-response") return { kind: "no-response", check: noResponseCheck(plan), hint: plan.check };
   // The answer October 2021's §3.11 table gives: named as such, before the
   // validator is blamed for refusing what the table refuses.
   if (plan.examples.some((a) => sameAnswer(ctx, a, got))) return { kind: "example-table", check: plan.check };
@@ -329,6 +375,8 @@ export const judge = (vector, plan, got, ctx) => {
     if (got.badErrors) return { kind: "error-format", check: "errorFormat" };
     if (got.emptyErrors) return { kind: "empty-errors", check: "errorsList" };
     if (got.dataNull) return { kind: "data-with-request-error", check: "requestErrorNoData" };
+    if (got.extraEntries) return { kind: "additional-entries", check: "additionalEntries" };
+    if (got.badExtensions) return { kind: "extensions-not-map", check: "extensions" };
     if (got.wrongPath) return { kind: "field-error-path", check: "fieldErrorPath" };
     return undefined;
   }
@@ -338,7 +386,7 @@ export const judge = (vector, plan, got, ctx) => {
     return { kind: "deviates", check: "inputFieldDefaults" };
   }
   const { check } = plan;
-  if (plan.editions.some((a) => sameAnswer(ctx, a, got))) return { kind: "edition", check };
+  if (plan.editions.some((a) => sameAnswer(ctx, a, got))) return { kind: "edition", check, since: vector.since };
   if (check === "invalidNotExecuted" || check === "onlyValidExecuted") return { kind: "executes-invalid", check };
   if (check === "jsonNumbers") {
     if (got.outcome === "value" && vector.binary64.outcome === "request-error") return { kind: "accepts", check: rejectingCheck(vector) };
@@ -351,31 +399,39 @@ export const judge = (vector, plan, got, ctx) => {
   if (want === "value") return { kind: "rejects", check };
   if (got.outcome === "value") return { kind: "accepts", check };
   if (want === "request-error") return { kind: "field-error-for-request-error", check: vector.spec.includes("6.1.2") ? "variables" : check };
-  return { kind: "request-error-for-field-error", check: "arguments" };
+  return { kind: "request-error-for-field-error", check: fieldErrorKindCheck(vector, plan) };
 };
 
-export const summary = ({ kind, check }) => {
+// "September2025" as the kit writes a release in prose: "September 2025".
+export const releaseName = (since) => since.replace(/^([A-Za-z]+)(\d+)$/, "$1 $2");
+
+export const summary = ({ kind, check, hint, since }) => {
   const s = sectionOf(check);
   const at = s ? `§${s} (${section(s).title})` : "";
+  const h = hint && sectionOf(hint);
   switch (kind) {
     case "accepts": return `accepts what ${at} rejects`;
     case "rejects": return `rejects what ${at} accepts`;
     case "wrong-value": return `coerces to the wrong value under ${at}`;
     case "wrong-field": return `runs a different operation than ${at} selects`;
     case "field-error-for-request-error": return `raises a field error where ${at} requires a request error`;
-    case "request-error-for-field-error": return `raises a request error where ${at} requires a field error`;
+    case "request-error-for-field-error":
+      return check === "argumentErrorKind"
+        ? `raises a request error where ${at} says a coercion failure should be treated as a field error`
+        : `raises a request error where ${at} requires a field error`;
     case "deviates": return `${checkById(check).title.replace(/^./, (c) => c.toLowerCase())}: not done, though ${at} says it should be`;
     case "executes-invalid":
       return check === "invalidNotExecuted"
         ? `executes a document its own validator rejects, which ${at} says must fail without execution`
         : `executes an invalid document its validator doesn't reject, though ${at} says only valid documents should be executed (the rule it misses is the validate area's)`;
-    case "edition": return `gives October 2021's answer where the draft changed it, under ${at}`;
-    case "example-table": return `follows October 2021's §3.11 table of examples, which is non-normative and which §3.11's prose, the same in both editions, contradicts`;
+    case "edition": return `gives October 2021's answer where ${since ? releaseName(since) : "a later edition"} changed it, under ${at}`;
+    case "example-table": return `follows October 2021's §3.11 table of examples, which is non-normative and which §3.11's prose, the same in every edition, contradicts`;
     case "rejected-at-validation": return `rejects a valid document at validation, so it never reaches coercion (${at})`;
     case "empty-errors": return `answers a value with an empty "errors" list, which ${at} says must not be present when no error was raised`;
     case "error-format": return `answers with an error that isn't a map with a string message, which ${at} requires of every error`;
-    case "no-response": return `produces no response, though ${at} says every request gets one`;
-    case "no-response-for-request-error": return `produces no response where ${at} requires a request error`;
+    case "no-response": return `produces no response, though ${at} says every request gets one${h ? ` (on vectors of §${h} (${section(h).title}))` : ""}`;
+    case "additional-entries": return `answers with a top-level entry other than data, errors and extensions, which ${at} says must not be there`;
+    case "extensions-not-map": return `answers with a top-level extensions entry that isn't a map, which ${at} requires`;
     case "field-error-path": return `raises the field error with a path other than the field's response path, which ${at} requires`;
     case "data-with-request-error": return `answers a request error with a "data" entry, which ${at} says it must not have`;
     case "lone-surrogate": return "treats a JSON string with a lone surrogate in a way that neither keeping it, replacing it with U+FFFD, nor a refusal explains";

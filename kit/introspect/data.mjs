@@ -2,16 +2,20 @@
 // `actual` data Introspection!Matches reads, and the reference's
 // SchemaResult (as tla-ts prints it) as the response a service should
 // give, which the self-test and findings use. Both follow a profile
-// (query.mjs): "draft" or "oct2021".
+// (query.mjs): "September2026", "September2025" or "October2021".
 
 import { parseDefault } from "../schema/tla.mjs";
-import { SELECTED, TYPE_REF_DEPTH, WRAPPER_DEPTH, isArgument, selection } from "./query.mjs";
+import { PRIMARY, SELECTED, TYPE_REF_DEPTH, WRAPPER_DEPTH, isArgument, selection } from "./query.mjs";
 
 export const BUILTIN_DIRECTIVES = ["skip", "include", "deprecated", "specifiedBy", "oneOf"];
 // The built-in directives of each edition: October 2021 has no @oneOf, so
 // a service that answers its query and returns @oneOf has a directive of
 // its own.
-const EDITION_DIRECTIVES = { draft: BUILTIN_DIRECTIVES, oct2021: BUILTIN_DIRECTIVES.filter((d) => d !== "oneOf") };
+const EDITION_DIRECTIVES = {
+  September2026: BUILTIN_DIRECTIVES,
+  September2025: BUILTIN_DIRECTIVES,
+  October2021: BUILTIN_DIRECTIVES.filter((d) => d !== "oneOf"),
+};
 export const BUILTIN_SCALARS = ["Int", "Float", "String", "Boolean", "ID"];
 export const isBuiltinType = (name) => name.startsWith("__") || BUILTIN_SCALARS.includes(name);
 
@@ -51,12 +55,13 @@ export const isRequestError = (response) => isMap(response) && Array.isArray(res
 // with an explicit null where the value is null, and no others. Anything
 // else is Malformed, and fails the executes check.
 //
-// Under the October 2021 profile, the fields only the draft has aren't
-// selected. They are filled in with the only values a schema October 2021
-// can express allows (Introspection!IsOct2021Schema, checked by
-// IntrospectionVectors' Oct2021ProfileIsSound): isOneOf false for an input
-// object and null otherwise, and no input value or directive deprecated.
-// So they compare equal, and only what the profile selects is graded.
+// Under an older release's profile, the fields only later releases have
+// aren't selected. They are filled in with the only values a schema that
+// release can express allows (Introspection!IsSep2025Schema and
+// IsOct2021Schema, checked by IntrospectionVectors' Sep2025ProfileIsSound
+// and Oct2021ProfileIsSound): isOneOf false for an input object and null
+// otherwise, and no input value or directive deprecated. So they compare
+// equal, and only what the profile selects is graded.
 //
 // A field the service lacks (`missing`, query.mjs) isn't selected either.
 // It is filled in with null, or false for isDeprecated and isRepeatable, so
@@ -278,7 +283,7 @@ const reachedTypes = (extras, types, documentTypes) => {
 // of __Schema's fields), the service's own directives (extras) and the
 // types they reach (extraTypes). Throws Malformed if the response isn't
 // the result of the profile's query, without the `missing` fields.
-export const caseOf = (response, documentDirectives, documentTypes, profile = "draft", missing = []) => {
+export const caseOf = (response, documentDirectives, documentTypes, profile = PRIMARY, missing = []) => {
   const S = selection(profile, missing);
   const data = dataOf(response);
   object(data, "data", S.data);
@@ -309,7 +314,7 @@ export const caseOf = (response, documentDirectives, documentTypes, profile = "d
 };
 
 // The case for the answer to wrappersQuery.
-export const wrappersCaseOf = (response, profile = "draft", missing = []) => {
+export const wrappersCaseOf = (response, profile = PRIMARY, missing = []) => {
   const S = selection(profile, missing);
   const data = object(dataOf(response), "data", ["wrappers"]);
   const { levels, fields } = wrappersOf(data.wrappers, S);
@@ -318,7 +323,7 @@ export const wrappersCaseOf = (response, profile = "draft", missing = []) => {
 
 // The case for one response to __type(name:) lookups: [name, result] per
 // lookup, the result an optional __Type.
-export const lookupCaseOf = (response, lookups, profile = "draft", missing = []) => {
+export const lookupCaseOf = (response, lookups, profile = PRIMARY, missing = []) => {
   const S = selection(profile, missing);
   const data = object(dataOf(response), "data", lookups.map((l) => l.alias));
   return { actual: lookups.map(({ alias, name }) => ({ name, result: data[alias] === null ? [] : [typeOf(data[alias], alias, S)] })) };
@@ -442,23 +447,25 @@ export const responseOf = (result, typename) => {
 };
 
 // ---------------------------------------------------------------------------
-// Responses under the October 2021 profile
+// Responses under an older release's profile
 
 const without = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));
-const DRAFT_ONLY = { type: ["isOneOf"], inputValue: ["isDeprecated", "deprecationReason"], directive: ["isDeprecated", "deprecationReason"] };
+// The fields of a list of SELECTED the profile's query doesn't select.
+const unselected = (profile, list) => SELECTED[PRIMARY][list].filter((f) => !SELECTED[profile][list].includes(f));
 
-// A draft response's __Type (or null) as the October 2021 query selects it.
+// A September 2026 response's __Type (or null) as the profile's query
+// selects it.
 export const typeFor = (profile, t) => {
-  if (profile === "draft" || t === null) return t;
-  const iv = (v) => without(v, DRAFT_ONLY.inputValue);
+  if (profile === PRIMARY || t === null) return t;
+  const iv = (v) => without(v, unselected(profile, "inputValue"));
   return {
-    ...without(t, DRAFT_ONLY.type),
+    ...without(t, unselected(profile, "type")),
     fields: t.fields && t.fields.map((f) => ({ ...f, args: f.args.map(iv) })),
     inputFields: t.inputFields && t.inputFields.map(iv),
   };
 };
 export const directiveFor = (profile, d) =>
-  profile === "draft" ? d : { ...without(d, DRAFT_ONLY.directive), args: d.args.map((v) => without(v, DRAFT_ONLY.inputValue)) };
+  profile === PRIMARY ? d : { ...without(d, unselected(profile, "directive")), args: d.args.map((v) => without(v, unselected(profile, "inputValue"))) };
 
 // The expected `wrappers`: __Schema's fields, each with its type as the
 // Wrapper fragment selects it. Wrappers have only kind and ofType; a named
@@ -491,7 +498,7 @@ const wrappersJson = (builtins, profile) => {
 // the built-ins (vectors.json's builtins[profile], already in the
 // profile's shape), for a __schema vector, its lookups' types, or for the
 // wrappers vector, __Schema's fields as the profile's built-ins have them.
-export const fullResponse = (vector, builtins, profile = "draft") => {
+export const fullResponse = (vector, builtins, profile = PRIMARY) => {
   if (vector.wrappers) return { data: { wrappers: wrappersJson(builtins[profile], profile) } };
   const d = vector.expected.response.data;
   if (vector.lookups) return { data: Object.fromEntries(Object.entries(d).map(([k, t]) => [k, typeFor(profile, t)])) };

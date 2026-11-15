@@ -1,6 +1,6 @@
 # A union resolved to its member types, __typename, a nested list, and
 # results of the wrong shape: an object for a scalar (a result coercion
-# error), a non-list for a list, and a runtime type that isn't a member.
+# error) and a non-list for a list.
 # maxListLength: 1
 # invalidResults: true
 # spec: 3.8, 3.11, 3.5, 6.4.3, 6.4.4

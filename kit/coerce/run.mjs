@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { Crash, answerOrCrash, crashResponse } from "../areas.mjs";
 import { REPORT_FORMAT, provenance, section } from "../report.mjs";
 import { CHECKS } from "./checks.mjs";
-import { NO_RESPONSE, classify, contextFor, describeAccepted, judge, malformed, noResponseCheck, planFor, sameAnswer, summary } from "./judge.mjs";
+import { NO_RESPONSE, classify, contextFor, describeAccepted, fieldErrorKindCheck, judge, malformed, noResponseCheck, planFor, releaseName, sameAnswer, summary } from "./judge.mjs";
 
 // Whether a JSON text holds a string with a lone surrogate: the one input an
 // adapter may answer `unsupported` for (docs/kit-areas.md).
@@ -72,9 +72,25 @@ export const attribute = (outcomes) => {
 
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
-// A vector whose answer only the draft gives: October 2021 doesn't coerce
-// default values, and has no OneOf input objects.
-const isDraft = (vector) => vector.edition === "draft";
+// The release that introduced the rule a vector's answer relies on
+// (`since`), or undefined if October 2021 gives the same answer. Every coerce
+// vector with one has September 2025: default value coercion, OneOf input
+// objects, and SourceCharacter as any Unicode scalar value.
+const sinceOf = (vector) => vector.since;
+// Whether October 2021 can't take the vector's input at all: its schema has
+// a OneOf input object, or its document a code point above U+FFFF, which
+// October 2021's SourceCharacter leaves out.
+const SUPPLEMENTARY = /[\u{10000}-\u{10FFFF}]/u;
+const newInput = (vector, schema) => /@oneOf\b/.test(schema) || SUPPLEMENTARY.test(vector.document);
+// The release a failure is counted under. A crash fails in every edition
+// where the vector's input is valid, so it counts under the vector's
+// release only where October 2021 can't take the input (docs/kit-areas.md,
+// "Editions"); a default value vector's crash counts in every edition.
+export const failureSince = (vector, schema, crash) => (crash && !newInput(vector, schema) ? undefined : sinceOf(vector));
+// Adds one to counts[release], for a release that isn't undefined.
+const countSince = (counts, release) => {
+  if (release) counts[release] = (counts[release] ?? 0) + 1;
+};
 const isMap = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 
 export const loadVectors = () => JSON.parse(readFileSync(join(root, "kit/coerce/vectors.json"), "utf8"));
@@ -135,7 +151,7 @@ const editAt = (v, path, value, remove = false) => {
 
 // Correct answers must pass; deliberately wrong ones must each be caught.
 // Returns the number of wrong answers, or a list of problems.
-export const selfTest = (graded, inputs, capabilities) => {
+export const selfTest = (graded, inputs, capabilities, schemaOf = () => "") => {
   const problems = [];
   let controls = 0;
   const run = ({ vector, plan }, raw, rejectedByValidator) => {
@@ -191,9 +207,10 @@ export const selfTest = (graded, inputs, capabilities) => {
         caught(g, rawFor({ ...want, arguments: editAt(partial, paths[1], "wrong") }), "some defaults left out and a wrong value", plan.check);
       }
     }
-    // October 2021's answer to a draft-only vector fails the vector's check,
-    // and so does the answer of October 2021's §3.11 table of examples.
-    for (const a of plan.editions) caught(g, rawFor(a, field), "October 2021's answer to a draft-only vector", plan.check);
+    // October 2021's answer to a vector whose rule is new since then fails
+    // the vector's check, and so does the answer of October 2021's §3.11
+    // table of examples.
+    for (const a of plan.editions) caught(g, rawFor(a, field), "October 2021's answer to a vector with a newer rule", plan.check);
     for (const a of plan.examples) caught(g, rawFor(a, field), "the answer of October 2021's §3.11 table", plan.check);
     // A valid document refused by the implementation's own validator fails
     // acceptsValid, even where the reference's answer is a request error;
@@ -208,11 +225,23 @@ export const selfTest = (graded, inputs, capabilities) => {
       const nested = withUndeclaredNull(want.arguments, true);
       if (nested) caught(g, rawFor({ ...want, arguments: nested }), "an undeclared null input field");
     }
-    // No response at all, even with a response attached: the vector's
-    // check where the reference expects a request error, else responds.
+    // No response at all, even with a response attached: responds, whatever
+    // the reference's answer.
     caught(g, Object.assign(new Crash("NullPointerException"), rawFor(want, field)), "no response", noResponseCheck(plan));
     // Responses the classification must not accept.
     const raw = rawFor(want, field);
+    // A top-level entry other than data, errors and extensions, and an
+    // extensions entry that isn't a map, wherever the outcome would
+    // otherwise pass (§7.1.8, §7.1.7); a map extensions passes.
+    caught(g, { ...raw, response: { ...raw.response, label: "x" } }, "a result with another top-level entry", "additionalEntries");
+    caught(g, { ...raw, response: { ...raw.response, extensions: [] } }, "a result whose extensions is a list", "extensions");
+    if (run(g, { ...raw, response: { ...raw.response, extensions: { cost: 1 } } }, false)) problems.push(`a result with a map extensions fails ${vector.id}`);
+    // A request error where the reference gives a field error:
+    // argumentErrorKind's SHOULD, or the vector's own check where §3.10 or
+    // §3.10.1 requires the execution error.
+    if (want.outcome === "field-error" && !accepted(g, { outcome: "request-error" }) && !plan.examples.some((a) => a.outcome === "request-error")) {
+      caught(g, rawFor({ outcome: "request-error" }, field), "a request error for a field error", fieldErrorKindCheck(vector, plan), undefined, false);
+    }
     // Errors that aren't maps with a string message: errorFormat, wherever
     // the outcome would otherwise pass.
     if (want.outcome !== "value") {
@@ -241,6 +270,16 @@ export const selfTest = (graded, inputs, capabilities) => {
     const fieldError = { response: { data: { [field]: null }, errors: [{ message: "field error", path: ["v"] }] }, calls: [] };
     if (!accepted(g, { outcome: "field-error", field })) caught(g, fieldError, "an unexpected field error at the argument's path", undefined, "fieldErrorPath");
   });
+  // A crash counts under the vector's release only where October 2021 can't
+  // take its input (a OneOf schema, a code point above U+FFFF); a wrong
+  // answer always does.
+  for (const g of graded.filter((x) => sinceOf(x.vector))) {
+    const schema = schemaOf(g.vector);
+    const expected = newInput(g.vector, schema) ? sinceOf(g.vector) : undefined;
+    controls += 2;
+    if (failureSince(g.vector, schema, true) !== expected) problems.push(`a crash on ${g.vector.id} is ${expected ? "not " : ""}counted under ${sinceOf(g.vector)}`);
+    if (failureSince(g.vector, schema, false) !== sinceOf(g.vector)) problems.push(`a wrong answer to ${g.vector.id} isn't counted under ${sinceOf(g.vector)}`);
+  }
   // `unsupported` leaves a vector ungraded only where its variables hold a
   // lone surrogate; anywhere else it is a crash.
   for (const g of graded) {
@@ -308,7 +347,7 @@ export const run = async ({ adapter, strict, log = console.log }) => {
       skipped++;
       continue;
     }
-    const known = validator && vector.valid === false ? await rejects(vector) : undefined;
+    const known = validator && vector.valid === false && !vector.literalOnly ? await rejects(vector) : undefined;
     graded.push({ vector, plan: planFor(vector, capabilities, { known, validator }) });
   }
   const modes = [
@@ -352,7 +391,7 @@ export const run = async ({ adapter, strict, log = console.log }) => {
   if (unsupported.length) log(`- ${plural(unsupported.length, "vector")} not graded: the adapter couldn't receive the variables (${unsupported[0].reason})`);
   const gradedIds = new Set(outcomes.map((o) => o.vector.id));
 
-  const stats = new Map(CHECKS.map((c) => [c.id, { cases: 0, failing: 0, failingDraftOnly: 0, observed: {} }]));
+  const stats = new Map(CHECKS.map((c) => [c.id, { cases: 0, failing: 0, failingSince: {}, observed: {} }]));
   const findings = new Map();
   const malformedResults = outcomes.filter((o) => o.problem);
   for (const { vector, plan, result, got, failure } of outcomes.filter((o) => !o.problem)) {
@@ -366,28 +405,35 @@ export const run = async ({ adapter, strict, log = console.log }) => {
       observed[label] = (observed[label] ?? 0) + 1;
     }
     if (!failure) continue;
-    stats.get(failure.check).failing++;
-    if (isDraft(vector)) stats.get(failure.check).failingDraftOnly++;
-    const key = `${failure.kind}\u0000${failure.check}`;
-    const input = `${vector.document}  variables: ${vector.variables}${vector.operationName !== undefined ? `  operationName: ${vector.operationName}` : ""}`;
     const crash = result instanceof Crash;
-    const f = findings.get(key) ?? { ...(crash ? { kind: "crash" } : {}), checks: [failure.check], summary: summary(failure), cases: 0, draftOnly: 0, fixtures: {} };
+    const since = failureSince(vector, schemaOf(vector), crash);
+    stats.get(failure.check).failing++;
+    countSince(stats.get(failure.check).failingSince, since);
+    const key = `${failure.kind}\u0000${failure.check}\u0000${failure.hint ?? ""}\u0000${failure.since ?? ""}`;
+    const input = `${vector.document}  variables: ${vector.variables}${vector.operationName !== undefined ? `  operationName: ${vector.operationName}` : ""}`;
+    const f = findings.get(key) ?? { ...(crash ? { kind: "crash" } : {}), checks: [failure.check], summary: summary(failure), cases: 0, since: {}, fixtures: {} };
     f.cases++;
     // How many of them are lists or input objects that fail through an item
     // or field that fails on its own (restsOn).
     if (failure.restsOn) f.throughInner = (f.throughInner ?? 0) + 1;
-    if (isDraft(vector)) f.draftOnly++;
+    countSince(f.since, since);
     f.fixtures[vector.family] = (f.fixtures[vector.family] ?? 0) + 1;
-    if (!f.example || input.length < f.example.input.length) {
+    const shown = `${since ? `[since ${releaseName(since)}] ` : ""}${input}`;
+    if (!f.example || shown.length < f.example.input.length) {
       f.fixture = vector.family;
       if (crash) f.problem = result.message;
-      f.example = { vector: vector.id, input: `${isDraft(vector) ? "[draft] " : ""}${input}`, response: crash ? crashResponse(result) : result, outcome: got, expected: describeAccepted(plan) };
+      f.example = { vector: vector.id, input: shown, response: crash ? crashResponse(result) : result, outcome: got, expected: describeAccepted(plan) };
     }
     findings.set(key, f);
   }
   const level = new Map(CHECKS.map((c) => [c.id, c.level]));
   const fatal = (f) => f.checks.some((id) => level.get(id) === "MUST" || (strict && level.get(id) === "SHOULD"));
+  // A finding's `since` counts its vectors that rely on a rule new in each
+  // release; it is left out where there are none.
+  for (const f of findings.values()) if (Object.keys(f.since).length === 0) delete f.since;
   const sorted = [...findings.values()].sort((a, b) => b.cases - a.cases);
+  const sinceText = (counts, total) =>
+    Object.entries(counts ?? {}).map(([release, n]) => `${n === total ? "all" : `${n} of ${total}`} since ${releaseName(release)}`).join(", ");
 
   // A run where nothing was graded proves nothing.
   let ok = outcomes.length > 0;
@@ -400,9 +446,9 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     if (fatal(f)) ok = false;
     const lv = level.get(f.checks[0]);
     const note = fatal(f) ? "" : lv === "SHOULD" ? ": a SHOULD, fails with --strict" : ": informational";
-    const draft = f.draftOnly > 0 ? `; ${f.draftOnly === f.cases ? "all" : `${f.draftOnly} of ${f.cases}`} rely on the draft` : "";
+    const newer = f.since ? `; ${sinceText(f.since, f.cases)}` : "";
     const inner = f.throughInner ? `; ${f.throughInner} through an item or field that fails on its own` : "";
-    log(`${fatal(f) ? "✗" : "!"} ${f.summary} [${f.checks[0]}] (${plural(f.cases, "vector")}${draft}${inner})${note}`);
+    log(`${fatal(f) ? "✗" : "!"} ${f.summary} [${f.checks[0]}] (${plural(f.cases, "vector")}${newer}${inner})${note}`);
     log(`    e.g.:     ${f.example.input}`);
     log(`    got:      ${JSON.stringify(f.example.outcome)}`);
     log(`    expected: ${f.example.expected.length > 160 ? `${f.example.expected.slice(0, 160)}…` : f.example.expected}`);
@@ -411,17 +457,28 @@ export const run = async ({ adapter, strict, log = console.log }) => {
   const wellFormed = outcomes.length - malformedResults.length;
   const crashed = outcomes.filter((o) => o.result instanceof Crash).length;
   log(`${failing === 0 && ok ? "✓" : "✗"} ${wellFormed - failing} of ${wellFormed} results match the reference${crashed ? `; ${crashed} produced no response` : ""}`);
-  const draftOnly = {
-    vectors: outcomes.filter((o) => isDraft(o.vector)).length,
-    failing: outcomes.filter((o) => !o.problem && o.failure && isDraft(o.vector)).length,
-  };
-  if (failing > 0) log(`  ${draftOnly.failing} of the ${failing} failing vectors rely on the draft (of ${draftOnly.vectors} draft-only vectors run)`);
+  // For each release that introduced a rule some vector relies on: how many
+  // such vectors were run, and how many failed (a crash only where October
+  // 2021 can't take the input).
+  const since = {};
+  for (const o of outcomes) {
+    const release = sinceOf(o.vector);
+    if (!release) continue;
+    since[release] ??= { vectors: 0, failing: 0 };
+    since[release].vectors++;
+    if (!o.problem && o.failure && failureSince(o.vector, schemaOf(o.vector), o.result instanceof Crash)) since[release].failing++;
+  }
+  if (failing > 0) {
+    for (const [release, s] of Object.entries(since)) {
+      log(`  ${s.failing} of the ${failing} failing vectors rely on rules new in ${releaseName(release)} (of ${s.vectors} such vectors run)`);
+    }
+  }
   for (const check of CHECKS) {
     const { observed } = stats.get(check.id);
     if (Object.keys(observed).length > 0) log(`  ${check.id}: ${Object.entries(observed).map(([label, n]) => `${label} ${n}`).join(", ")}`);
   }
 
-  const test = selfTest(graded.filter((g) => gradedIds.has(g.vector.id)), inputs, capabilities);
+  const test = selfTest(graded.filter((g) => gradedIds.has(g.vector.id)), inputs, capabilities, schemaOf);
   if (Array.isArray(test)) {
     ok = false;
     for (const p of test.slice(0, 5)) log(`✗ self-test: ${p}`);
@@ -446,7 +503,7 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     checkerSelfTest: Array.isArray(test) ? "failed" : `passed (${test} negative controls)`,
     cases: { submitted: outcomes.length, distinct: outcomes.length, malformed: malformedResults.length },
     adapterProblems: malformedResults.length,
-    draftOnly,
+    since,
     checks: CHECKS.map((check) => {
       const s = stats.get(check.id);
       const observed = Object.entries(s.observed);
@@ -454,14 +511,16 @@ export const run = async ({ adapter, strict, log = console.log }) => {
         id: check.id,
         title: check.title,
         level: check.level,
-        ...(check.oct2021 ? { oct2021: check.oct2021 } : {}),
+        // Older releases' levels, where their wording differs.
+        ...(check.levels ? { levels: check.levels } : {}),
         spec: check.spec.map(section),
         ...(check.basis ? { basis: check.basis } : {}),
         status: s.failing > 0 ? "fail" : s.cases > 0 ? "pass" : "untested",
         cases: s.cases,
         failing: s.failing,
-        // How many of the failing vectors rely on the draft.
-        failingDraftOnly: s.failingDraftOnly,
+        // How many of the failing vectors rely on a rule new in each
+        // release.
+        failingSince: s.failingSince,
         ...(check.untested ? { note: check.untested } : {}),
         ...(observed.length ? { observed: s.observed, note: observed.map(([label, n]) => `${label}: ${n}`).join("; ") } : {}),
       };

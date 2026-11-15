@@ -13,6 +13,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AREAS } from "../kit/areas.mjs";
+import { REPORT_FORMAT } from "../kit/report.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
 const argv = process.argv.slice(2);
@@ -22,6 +23,11 @@ const { implementations } = JSON.parse(readFileSync(join(root, "conformance/impl
 for (const impl of implementations.filter((x) => argv.length === 0 || argv.includes(x.key))) {
   if (impl.build && !existsSync(join(root, impl.build))) {
     console.log(`- ${impl.key}: not built (${impl.build}), skipped`);
+    // The sheet reads only the kit's current report format.
+    const old = AREAS.map((area) => `conformance/reports/${impl.key}${area === "execution" ? "" : `.${area}`}.json`).filter(
+      (f) => existsSync(join(root, f)) && JSON.parse(readFileSync(join(root, f), "utf8")).format !== REPORT_FORMAT,
+    );
+    if (old.length) console.log(`  its old reports aren't format ${REPORT_FORMAT}, so the sheet won't build until it is rerun: ${old.join(", ")}`);
     continue;
   }
   const env = { ...process.env };

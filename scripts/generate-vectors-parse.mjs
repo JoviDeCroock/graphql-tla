@@ -33,9 +33,10 @@
 // The tags are this script's attribution of one edit. The reference only
 // says accepted or rejected.
 //
-// A vector whose verdict differs under the October 2021 edition gets
-// `edition: "draft"`, with the reason in `editionNote` (see "Editions"
-// below).
+// The verdicts are September 2026's. A vector whose verdict differs under
+// an older release gets `since`, the first release whose text gives its
+// verdict ("September2025" or "September2026"), with the reason in
+// `editionNote` (see "Editions" below).
 //
 // Usage: node scripts/generate-vectors-parse.mjs [--check]
 //   --check  regenerates the vectors and fails if kit/parse/vectors.json
@@ -748,20 +749,32 @@ const lexicalSection = (source, verdict) => {
 // Editions
 //
 // Where the October 2021 edition's grammar of executable documents differs
-// from the draft's:
+// from September 2026's, and which release changed it:
 //
 //   - SourceCharacter is U+0009, U+000A, U+000D and U+0020–U+FFFF. That
 //     leaves out the other control characters and every code point above
 //     U+FFFF, but lets in surrogates, which aren't Unicode scalar values.
+//     September 2025 (§2.1): "Any Unicode scalar value", and "an unpaired
+//     surrogate code point is not a valid source character".
 //   - EscapedUnicode is four hex digits: no `\u{…}`, and no rule about
-//     surrogates ("Return the code point {value}").
-//   - SelectionSet is { Selection+ }, and operations, fragments and variable
-//     definitions take no Description.
+//     surrogates ("Return the code point {value}"). September 2025
+//     (§2.10.4) adds `\u{…}`, and "The hexadecimal number encoded by a
+//     Unicode escape sequence must describe a Unicode scalar value,
+//     otherwise must result in a parse error."
+//   - Operations, fragments and variable definitions take no Description.
+//     September 2025 adds one to each (§2.4, §2.9, §2.11).
+//   - SelectionSet is { Selection+ }. September 2025 still has that;
+//     September 2026 (§2.5) has { Selection* }.
+//
+// So September 2025 is September 2026 without empty selection sets. Its
+// grammar is a subset of September 2026's, so a source September 2026
+// rejects, September 2025 rejects too.
 //
 // asOctober splits a source into comments, block strings and strings the
-// way both editions do, and returns a draft source that October 2021 reads
+// way every release does, and returns a source that October 2021 reads
 // the same way: each fixed-width escape of a surrogate, and each raw
-// surrogate in a comment or string, is replaced by one the draft accepts.
+// surrogate in a comment or string, is replaced by one September 2026
+// accepts.
 // It also says whether a string holds a `\u{` escape, and whether a code
 // point is outside October 2021's SourceCharacter.
 
@@ -820,24 +833,43 @@ const asOctober = (source) => {
   return { source: out, variableWidth, outside };
 };
 
-// Whether October 2021 accepts a source, and if the draft's verdict differs,
-// why. verdictOf gives the reference's verdict on a draft source.
+// The releases after October 2021, oldest first.
+const RELEASES = ["September2025", "September2026"];
+
+// Whether October 2021 accepts a source, and if September 2026's verdict
+// differs, why, and since which release. verdictOf gives the reference's
+// verdict (September 2026's) on a source.
+//
+// A source September 2026 accepts and October 2021 rejects needs every
+// newer rule it uses, so its `since` is the latest of their releases. A
+// source September 2026 rejects and October 2021 accepts holds a surrogate
+// October 2021 lets in; September 2025 rejects it already, being a subset
+// of September 2026.
 const octoberEdition = (source, verdictOf) => {
-  const draft = verdictOf(source).ok;
+  const latest = verdictOf(source).ok;
   const october = asOctober(source);
   const v = verdictOf(october.source);
   const rejects = [
-    ...(v.newer.includes("2.5") ? ["October 2021 has no empty selection sets"] : []),
-    ...(v.newer.includes("2.2") ? ["October 2021 has no descriptions on operations, fragments or variable definitions"] : []),
-    ...(october.variableWidth ? ["October 2021 has no variable-width unicode escapes"] : []),
-    ...(october.outside ? ["October 2021's SourceCharacter has no control characters other than tab, LF and CR, and nothing above U+FFFF"] : []),
+    ...(v.newer.includes("2.5")
+      ? [["September2026", "empty selection sets are new in September 2026 (§2.5 SelectionSet : { Selection* }); October 2021 and September 2025 have { Selection+ }"]]
+      : []),
+    ...(v.newer.includes("2.2") ? [["September2025", "descriptions on operations, fragments and variable definitions are new in September 2025; October 2021 has none"]] : []),
+    ...(october.variableWidth ? [["September2025", "variable-width unicode escapes (\\u{…}) are new in September 2025; October 2021 has only four hex digits"]] : []),
+    ...(october.outside
+      ? [["September2025", "since September 2025 SourceCharacter is any Unicode scalar value; October 2021's has no control characters other than tab, LF and CR, and nothing above U+FFFF"]]
+      : []),
   ];
   const ok = v.ok && rejects.length === 0;
-  if (ok === draft) return {};
-  const note = draft
-    ? rejects.join("; ")
-    : "October 2021 accepts a fixed-width escape of any 16-bit value, and a surrogate in a string or comment, as the draft doesn't";
-  return { edition: "draft", editionNote: note };
+  if (ok === latest) return {};
+  if (!latest) {
+    return {
+      since: "September2025",
+      editionNote:
+        "October 2021 accepts a fixed-width escape of any 16-bit value, and a surrogate in a string or comment; since September 2025 an escape must describe a Unicode scalar value, and an unpaired surrogate is not a source character",
+    };
+  }
+  const since = RELEASES[Math.max(...rejects.map(([r]) => RELEASES.indexOf(r)))];
+  return { since, editionNote: rejects.map(([, note]) => note).join("; ") };
 };
 
 // ---------------------------------------------------------------------------
@@ -1041,9 +1073,9 @@ const build = async () => {
   // its section first, and one missing rule makes one finding instead of
   // spreading over the sections of every edit near it:
   //
-  //   - an empty selection set (§2.5), or a description on an operation,
-  //     fragment or variable (§2.2): the draft added both after the October
-  //     2021 edition;
+  //   - an empty selection set (§2.5, new in September 2026), or a
+  //     description on an operation, fragment or variable (§2.2, new in
+  //     September 2025);
   //   - a keyword, such as `on` or `query`, as a variable's type (§2.12):
   //     NamedType is any Name;
   //   - a Byte Order Mark between tokens (§2.1.6): "a Byte Order Mark may
@@ -1061,8 +1093,8 @@ const build = async () => {
     v.spec.forEach(section);
   }
 
-  // Editions: the draft sources October 2021 reads like the vectors, where
-  // they differ from the vectors themselves.
+  // Editions: the sources October 2021 reads like the vectors, where they
+  // differ from the vectors themselves.
   const octoberSources = [...new Set(list.map((v) => asOctober(v.source).source))].filter((s) => !verdicts.has(s));
   if (octoberSources.length > 0) for (const [s, v] of await evaluate(octoberSources)) verdicts.set(s, v);
   for (const v of list) Object.assign(v, octoberEdition(v.source, (s) => verdicts.get(s)));
@@ -1082,8 +1114,10 @@ const out = serialize(vectors);
 const accepted = vectors.filter((v) => v.expected.ok).length;
 const paired = vectors.filter((v) => v.sibling).length;
 console.log(`  ${vectors.length} vectors: ${accepted} accepted, ${vectors.length - accepted} rejected, ${paired} in minimal pairs`);
-const draftOnly = vectors.filter((v) => v.edition === "draft");
-console.log(`  draft only: ${draftOnly.length} (${draftOnly.filter((v) => v.expected.ok).length} accepted, ${draftOnly.filter((v) => !v.expected.ok).length} rejected)`);
+for (const release of RELEASES) {
+  const since = vectors.filter((v) => v.since === release);
+  console.log(`  since ${release}: ${since.length} (${since.filter((v) => v.expected.ok).length} accepted, ${since.filter((v) => !v.expected.ok).length} rejected)`);
+}
 const bySection = new Map();
 for (const v of vectors) bySection.set(v.spec[0], (bySection.get(v.spec[0]) ?? 0) + 1);
 console.log(`  by section: ${[...bySection].sort((a, b) => byNumber(a[0], b[0])).map(([s, n]) => `${s} ${n}`).join(", ")}`);

@@ -2,10 +2,10 @@
 
 `graphql-tla run schema` checks schema validation: whether an implementation accepts an SDL schema exactly when the type system rules of §3, and §4's Reserved Names, allow it. The reference is [`specs/TypeSystem.tla`](../../specs/TypeSystem.tla), whose `Verdict(S)` is the set of rules a schema breaks. It covers the Type Validation rules of:
 
-- §3.3 Schema and §3.3.1 Root Operation Types;
+- §3.3 Schema, with "a document must include at most one `schema` definition", and §3.3.1 Root Operation Types;
 - §3.6 Objects, including IsValidImplementation, and §3.7 Interfaces;
 - §3.8 Unions, §3.9 Enums, §3.10 Input Objects (with OneOf, and both kinds of cycle);
-- §3.13 Directives, and §3.13.3's rule that a required argument or input field can't be deprecated;
+- §3.13 Directives, with "Directives must only be used in the locations they are declared to belong in" for the directives a document applies, and §3.13.3's rule that a required argument or input field can't be deprecated;
 - §4's Reserved Names, for enum values: "any Name within a GraphQL type system must not start with two underscores". §3.9 says nothing about `__`.
 
 ```shell
@@ -55,22 +55,30 @@ That gives a verdict per rule without asking which rule the implementation appli
 - rejecting a valid sibling fails a separate check, `acceptsValid`. The kit doesn't know which rule the implementation applied, so the rule the sibling's pair breaks is only a **hint**.
 - the implementation **crashes** on a schema when the adapter answers it with an `error`. On an invalid schema a crash fails the rule, as accepting it would; on a valid one it fails `acceptsValid`.
 
-There is one check per rule in `TypeSystem!Rules`, at the section that states it, and `acceptsValid` (§3: a schema is invalid only when it breaks a rule). Every check is a MUST. [`kit/schema/rules.mjs`](../../kit/schema/rules.mjs) lists the rules:
+There is one check per rule in `TypeSystem!Rules`, at the sections that state it, and `acceptsValid` (§3: a schema is invalid only when it breaks a rule). Every check is a MUST, and each has a `basis` that quotes the sentences it rests on, which the sheet prints. [`kit/schema/rules.mjs`](../../kit/schema/rules.mjs) lists the rules:
 
 | Section | Checks |
 | --- | --- |
-| §3.3 | `typeNamesUnique`, `typeNameNotBuiltin`, `typeNameReserved`, `directiveNamesUnique`, `directiveNameReserved` |
+| §3.3 | `typeNamesUnique`, `typeNameNotBuiltin`, `typeNameReserved`, `directiveNamesUnique`, `directiveNameReserved`, `schemaDefinitionUnique` |
 | §3.3.1 | `queryRootProvided`, `rootTypesAreObjects`, `rootTypesDifferent` |
 | §3.6, §3.7 | `fieldsDefined`, `fieldNamesUnique`, `fieldNameReserved`, `fieldOutputType`, `argNameReserved`, `argNamesUnique`, `argInputType`, `requiredArgNotDeprecated`, `argDefaultCompatible`, `implementsUnique`, `implementsInterfaces`, `implementsItself` |
-| §3.6 IsValidImplementation | `implTransitive`, `implFieldProvided`, `implArgProvided`, `implArgInvariant`, `implExtraArgOptional`, `implFieldCovariant`, `implDeprecation` |
+| §3.6 IsValidImplementation (and §3.7, which applies it) | `implTransitive`, `implFieldProvided`, `implArgProvided`, `implArgInvariant`, `implExtraArgOptional`, `implFieldCovariant`, `implDeprecation` |
 | §3.8 | `unionMembersDefined`, `unionMembersUnique`, `unionMembersObjects` |
 | §3.9 | `enumValuesDefined`, `enumValuesUnique` |
 | §4 | `enumValueNameReserved` |
 | §3.10, §3.10.1 | `inputFieldsDefined`, `inputFieldNamesUnique`, `inputFieldNameReserved`, `inputFieldInputType`, `requiredInputFieldNotDeprecated`, `oneOfFieldNullable`, `oneOfFieldNoDefault`, `inputObjectUnbreakableCycle`, `inputObjectDefaultValueCycle` |
-| §3.13 | `directiveLocationsDefined`, `directiveUsesItself`, `directiveReferencesItselfIndirectly` |
+| §3.13 | `directiveLocationsDefined`, `directiveUsesItself`, `directiveReferencesItselfIndirectly`, `directivesDefined`, `directiveLocationsValid` |
 | §3 | `acceptsValid`: the valid schemas are accepted |
 
+A check cites every section its vectors rest on, not just the first. `fieldOutputType` and `argInputType` also cite §3.7 and §3.4.2 (and `argInputType` §3.13, for directive arguments); `implTransitive` also cites §3.7, whose "Interface definitions must not contain cyclic references nor implement themselves" a cycle of interfaces breaks. `argDefaultCompatible` cites the coercion rules a default is checked by: §3.5, §3.9, §3.10, §3.10.1, §3.11 and §3.12. A required input field that a default leaves out (`argDefaultCompatible.6`) is incompatible by §3.12, "If an argument or input-object field of a Non-Null type is not provided … then a request error must be raised"; §3.10's own sentence for that case says only "an error should be raised".
+
 `directiveLocationsDefined` is always untested: SDL requires `on` and at least one location, so no document breaks it.
+
+**References to undefined types.** A name the document doesn't define is no type. `TypeSystem.tla` gives it no kind, so §3.4.2's IsOutputType and IsInputType return false for it ("Return false"), and it isn't an Object or Interface type. So `type Query { a: Missing }` breaks `fieldOutputType`, an argument or input field of an undefined type `argInputType` or `inputFieldInputType`, `schema { query: Missing }` `rootTypesAreObjects`, `union U = Query | Missing` `unionMembersObjects`, and `implements Missing` `implementsInterfaces`. Each of these has a pair.
+
+**Directives applied in SDL.** §3.13: "Directives must only be used in the locations they are declared to belong in." The same sentence is in October 2021. The kit reads where a document applies each directive (`kit/schema/tla.mjs`, `schemaVerdictData`) and `TypeSystem.tla` checks it against the directive's definition in the document, or the built-in directive of that name: `@skip` and `@include` on executable locations, `@deprecated` on field, argument, input field and enum value definitions and on directive definitions, `@specifiedBy` on scalars and `@oneOf` on input objects (§3.13.1 to §3.13.5). `directiveLocationsValid` fails for `directive @d on FIELD` applied to a field definition, and for `type Query @deprecated`. A directive that is neither defined nor built in isn't declared to belong anywhere, so applying it fails `directivesDefined`. A service "may provide any additional custom directive", so the vectors use a name no service is likely to provide, `@undefinedInThisSchema`. Applied directives' arguments, and a non-repeatable directive applied twice, aren't checked.
+
+**One schema definition.** §3.3: "When using the type system definition language, a document must include at most one `schema` definition." `schemaDefinitionUnique` has one pair. Its invalid schema has two definitions that name the same root, so its roots are the same however a reader takes the two.
 
 A failing vector counts toward one finding. Each finding has a `kind`: `not enforced`, `over-strict` (a rejected valid schema), `crash` or `malformed`.
 
@@ -80,20 +88,21 @@ A failing vector counts toward one finding. Each finding has a `kind`: `not enfo
 
 The run fails on any failing check, an answer without a boolean `valid`, or a failed self-test.
 
-**Editions.** Some rules, and some syntax, are in the draft but not in the October 2021 edition:
+**Editions.** The kit grades September 2026, the latest release: every expected answer is `TypeSystem!Verdict`, and every `basis` quotes September 2026. October 2021 lacks some of its rules and syntax, and each of those first appeared in September 2025 or September 2026:
 
-- rules: `argNamesUnique` (October 2021's Type Validation lists for objects, interfaces and directives have no argument uniqueness rule), `requiredArgNotDeprecated` and `requiredInputFieldNotDeprecated` (deprecated arguments and input fields), `argDefaultCompatible` and `inputObjectDefaultValueCycle` (default value validation), `implDeprecation`, `oneOfFieldNullable` and `oneOfFieldNoDefault`;
-- syntax: `@oneOf`, `@deprecated` on an argument or input field, and directives on a directive definition.
+- rules new in September 2025, with the same wording as in September 2026: `argNamesUnique` (October 2021's Type Validation lists for objects, interfaces and directives have no argument uniqueness rule), `requiredArgNotDeprecated` and `requiredInputFieldNotDeprecated` (deprecated arguments and input fields), `argDefaultCompatible` and `inputObjectDefaultValueCycle` (default value validation), `implDeprecation`, `oneOfFieldNullable` and `oneOfFieldNoDefault`, and `directiveLocationsDefined` (October 2021's list for directives starts at "must not contain the use of a directive which references itself directly"). Their checks carry `"since": "September2025"`;
+- syntax new in September 2025: `@oneOf`, and `@deprecated` on an argument or input field. New in September 2026: directives on a directive definition (`DIRECTIVE_DEFINITION`, graphql-spec #1206). No vector uses that yet;
+- a rule that changed in September 2026: `inputObjectUnbreakableCycle`. September 2025 and October 2021 say "If an Input Object references itself either directly or through referenced Input Objects, at least one of the fields in the chain of references must be either a nullable or a List type." September 2026 replaced that with "InputObjectHasUnbreakableCycle(inputObject) must be false" (graphql-spec #1211), which also finds OneOf input objects that no finite value inhabits. The two agree on plain input objects. A OneOf input object's fields are nullable, so the older rule never finds a chain through one. `TypeSystem.tla` states the older rule too (`HasNoUnbrokenNonNullChain`, used only by `VerdictSeptember2025`), and the generator compares the two verdicts on every schema. Two invalid schemas differ: `inputObjectUnbreakableCycle.4.invalid` (`input First @oneOf { second: Second } input Second { first: First! }`) and `.5.invalid` (`input A @oneOf { b: B } input B @oneOf { a: A }`). September 2025 accepts both. Their valid siblings are valid in both releases.
 
-Their checks carry `"edition": "draft"`. A vector carries it, with the features in `editionNote`, when its own verdict or syntax differs under October 2021: an invalid schema that breaks a draft-only rule (October 2021 would accept it), or any schema that uses draft-only syntax. A valid sibling of a draft-only rule is not tagged unless it uses draft syntax itself, because dropping a rule can't make a valid schema invalid. `type Query { f(x: Int, y: Int): Int }`, the sibling of an `argNamesUnique` pair, is valid in both editions, so rejecting it is a failure under either.
+A vector carries `since`, the first release whose text gives its verdict, with the features in `editionNote`, when October 2021 doesn't give that verdict. That is an invalid schema that breaks a rule new in September 2025 (October 2021 would accept it), any schema that uses new syntax, or a schema whose validity differs under September 2025's rules (since September 2026). A valid sibling of a new rule is not tagged unless it uses new syntax itself, because dropping a rule can't make a valid schema invalid. `type Query { f(x: Int, y: Int): Int }`, the sibling of an `argNamesUnique` pair, is valid in every release, so rejecting it is a failure under any of them.
 
-A failing vector is **draft only** when it is tagged and the answer is a verdict: accepting a tagged invalid schema, or rejecting a tagged valid one. An implementation of the October 2021 edition can give that answer and still follow its edition. A **crash is never draft only**. Under October 2021 every tagged schema still has a verdict, valid (`input I { i: I = {} }` breaks no October 2021 rule) or invalid (it uses a directive or location October 2021 doesn't define), and a crash is neither, so it fails in both editions. Findings count their draft-only vectors (`draftOnly`), and mark their example `[draft]`; a finding whose every vector is draft only carries `"edition": "draft"` too. Each check gives `failingDraftOnly`, how many of its failing vectors are draft only. A draft-only rule's check whose failures include crashes says so in its note. The report's `draftOnly` gives how many graded vectors are draft only and how many failed as draft only.
+A failing vector **relies on** its `since` release when the answer is a verdict: accepting a tagged invalid schema, or rejecting a tagged valid one. An implementation of an older release can give that answer and still follow its edition. A **crash is never tagged by release**. Under older releases every tagged schema still has a verdict, valid (`input I { i: I = {} }` breaks no October 2021 rule) or invalid (it uses a directive or location October 2021 doesn't define), and a crash is neither, so it fails in every release. Findings count the vectors that rely on each release (`since`, such as `{ "September2025": 3 }`), and mark their example `[since September 2025]` or `[since September 2026]`. A check with such failures gives `failingSince`, how many of its failing vectors rely on each release (zeros left out). A new rule's check whose failures include crashes says so in its note. The report's `since` gives, for each release, how many graded vectors are tagged with it and how many failed relying on it.
 
-**Self-test.** Every run also judges deliberately wrong answers, and requires each to be caught: every vector's verdict flipped, the next vector's answer where it differs, an answer without `valid`, and a crash on a valid and on an invalid schema, which must count as crashes even with the right `valid`. It also builds reports from answers that are right but for a few, and requires that a crash on a draft-only invalid schema isn't counted as draft only, that rejecting (or crashing on) one valid schema fails `acceptsValid` and not its pair's rule and names no rule as likely over-strict, and that one message on valid siblings of two rules is one finding. That makes 343 negative controls. The expected answers themselves must all pass. The checker also fails if an `unspecified` vector is graded.
+**Self-test.** Every run also judges deliberately wrong answers, and requires each to be caught: every vector's verdict flipped, the next vector's answer where it differs, an answer without `valid`, and a crash on a valid and on an invalid schema, which must count as crashes even with the right `valid`. It also builds reports from answers that are right but for a few, and requires, for each release, that a crash on an invalid schema tagged with it isn't counted under it while accepting the schema is, that rejecting (or crashing on) one valid schema fails `acceptsValid` and not its pair's rule and names no rule as likely over-strict, and that one message on valid siblings of two rules is one finding. That makes 409 negative controls. The expected answers themselves must all pass. The checker also fails if an `unspecified` vector is graded.
 
 ## Vectors
 
-[`kit/schema/vectors.json`](../../kit/schema/vectors.json) holds 172 vectors: 87 pairs, in which two invalid schemas have two valid siblings each, so 85 invalid and 87 valid schemas. 168 are graded; 4 are `unspecified`. [`scripts/generate-vectors-schema.mjs`](../../scripts/generate-vectors-schema.mjs) writes it from the pairs it lists, after evaluating `TypeSystem!Verdict` on each schema with tla-ts. It fails unless every invalid schema breaks exactly its rule and every sibling breaks none, so a pair can't quietly test something else. `--check` regenerates the file and fails if it differs. graphql-js only parses the SDL.
+[`kit/schema/vectors.json`](../../kit/schema/vectors.json) holds 202 vectors: 102 pairs, in which two invalid schemas have two valid siblings each, so 100 invalid and 102 valid schemas. 198 are graded; 4 are `unspecified`. [`scripts/generate-vectors-schema.mjs`](../../scripts/generate-vectors-schema.mjs) writes it from the pairs it lists, after evaluating `TypeSystem!Verdict` on each schema with tla-ts. It fails unless every invalid schema breaks exactly its rule and every sibling breaks none, so a pair can't quietly test something else. `--check` regenerates the file and fails if it differs. graphql-js only parses the SDL; the generator reads it with `schemaVerdictData`, which adds the number of schema definitions and the directives the document applies to the schema data the introspect area also uses.
 
 Each vector has:
 - **`rule`:** the rule its pair is about;
@@ -101,25 +110,25 @@ Each vector has:
 - **`expected`:** `{ "valid": verdict = [] }`;
 - **`pair`:** its sibling's id. A valid sibling names its invalid schema;
 - **`siblings`:** on an invalid schema with more than one valid sibling, all of them. `inputObjectUnbreakableCycle.1.invalid` (§3.10's `self: Example!`) has a nullable and a list sibling, and `requiredArgNotDeprecated.1.invalid` a nullable one and one with a default. The generator keeps an invalid schema listed in two pairs once, so it isn't graded twice;
-- **`edition`** and **`editionNote`:** `"draft"` and the draft-only features, for a vector whose own verdict or syntax differs under the October 2021 edition (36 vectors: 25 invalid, 11 valid);
+- **`since`** and **`editionNote`:** the first release whose text gives the vector's verdict, `"September2025"` or `"September2026"`, and the features it relies on, for a vector whose verdict or syntax October 2021 doesn't have (38 vectors: 36 since September 2025, 24 invalid and 12 valid; 2 since September 2026, both invalid);
 - **`unspecified`:** why the spec doesn't settle the vector's verdict. These vectors aren't sent to the adapter or graded (4 vectors, below);
 - **`origin`:** for the 16 pairs taken from the spec's own examples, counter-examples and coercion rules, where they come from. They're the ones `specs/TypeSystemVectors.tla` also checks, such as §3.10's circular input objects, §3.7's `Image` that must also implement `Node`, and §3.13's `@invalidExample`.
 
-The schemas come from [`scripts/differential-type-system.mjs`](../../scripts/differential-type-system.mjs): its hand-written cases and its scenario families, which are the vectors' `family`:
+The schemas come from [`scripts/differential-type-system.mjs`](../../scripts/differential-type-system.mjs): its hand-written cases and its scenario families, which are the vectors' `family`. The generator adds what the differential doesn't generate: undefined types, two schema definitions, and directives applied where they don't belong.
 
 | Family | Vectors | What it is |
 | --- | --- | --- |
-| `names` | 26 | duplicate names, names starting with `__`, types named like built-ins |
-| `root` | 14 | root operation types, with and without a schema definition |
-| `typeUse` | 21 | output and input types in the wrong place, empty types, deprecated required arguments |
+| `names` | 28 | duplicate names, names starting with `__`, types named like built-ins |
+| `root` | 18 | root operation types, with and without a schema definition, an undefined root, two schema definitions |
+| `typeUse` | 27 | output and input types in the wrong place, undefined types, empty types, deprecated required arguments |
 | `defaults` | 20 | default values that don't coerce, including §3.10's and §3.10.1's coercion tables, and a Float out of a double's range |
-| `implementation` | 32 | IsValidImplementation, step by step |
-| `union` | 10 | union members |
+| `implementation` | 36 | IsValidImplementation, step by step, an undefined interface, a cycle of interfaces |
+| `union` | 12 | union members, an undefined one included |
 | `enum` | 6 | enum values |
-| `input` | 31 | input fields, OneOf, cycles of Non-Null fields and of default values |
-| `directive` | 12 | directives that reference themselves |
+| `input` | 33 | input fields, OneOf, cycles of Non-Null fields and of default values |
+| `directive` | 22 | directives that reference themselves, undefined directives, directives in the wrong location |
 
-Some rules have a second pair that only steers around a restriction an implementation adds, so that the invalid schema can't be rejected for that other reason: `implementsItself.2` gives the interface an implementing object type (Hot Chocolate rejects an interface nothing implements), and `directiveUsesItself.2` and `directiveReferencesItselfIndirectly.4` allow their directives on `INPUT_FIELD_DEFINITION` too (graphql-ruby checks a directive's arguments as input fields). The first pairs stay as they are.
+Some rules have a second pair that only steers around a restriction an implementation adds, so that the invalid schema can't be rejected for that other reason. Hot Chocolate rejects a referenced interface that no object type implements, a rule the spec doesn't have, so it would reject an interface-only invalid schema whatever it does about the rule under test. `implementsItself.2`, `fieldNamesUnique.3`, `requiredArgNotDeprecated.5` and `implTransitive.3` give the interface an implementing object type. `implTransitive.3` is the cycle `interface A implements B`, `interface B implements A`, with `type Query implements A & B`: §3.7's "Interface definitions must not contain cyclic references nor implement themselves". `directiveUsesItself.2` and `directiveReferencesItselfIndirectly.4` allow their directives on `INPUT_FIELD_DEFINITION` too (graphql-ruby checks a directive's arguments as input fields). The first pairs stay as they are.
 
 **Where the formal rule and the prose disagree.** §3.13 rule 3 says "A Directive definition must not contain the use of a Directive which references itself indirectly by referencing a Type or Directive which transitively includes a reference to this Directive." It speaks only of the directives a definition uses. The prose above it is broader: "While defining a directive, it must not reference itself directly or indirectly". `TypeSystem.tla` follows the prose, and also follows the directive's own argument types. Two invalid schemas depend on that reading, since their directive definition uses no directive at all and reaches itself only through its argument's type. They are `unspecified` and aren't graded:
 
@@ -130,7 +139,7 @@ Some rules have a second pair that only steers around a restriction an implement
 
 Their valid siblings are valid under either reading, and are graded. So is `directiveReferencesItselfIndirectly.2.invalid`, where `@d` uses `@e` and `@e` uses `@d`, which breaks the formal rule too.
 
-**A type named Mutation that isn't an object type.** `rootTypesAreObjects.2.invalid` is `type Query { a: Int } interface Mutation { a: Int }`, with no schema definition. `TypeSystem.tla` takes `Mutation` as the mutation root, an interface, so the schema breaks "If it is provided, it must be an Object type" (§3.3.1). No normative sentence says so. The draft's §3.3.1 says "The type system definition language can omit the schema definition when each _root operation type_ uses its respective _default root type name_, no other type uses any _default root type name_, and the schema does not have a description", a condition on writing SDL that doesn't say what a reader makes of a document that omits the definition anyway. The reading rests on an example: "The schema definition must be included, otherwise the {"Mutation"} type would be incorrectly presumed to be the {`mutation`} _root operation type_ of the schema." October 2021 has neither the "no other type" clause nor that example, and its text allows reading the schema as one without a mutation root, which is valid. The vector is `unspecified`:
+**A type named Mutation that isn't an object type.** `rootTypesAreObjects.2.invalid` is `type Query { a: Int } interface Mutation { a: Int }`, with no schema definition. `TypeSystem.tla` takes `Mutation` as the mutation root, an interface, so the schema breaks "If it is provided, it must be an Object type" (§3.3.1). No normative sentence says so. September 2026's §3.3.1 (and September 2025's) says "The type system definition language can omit the schema definition when each _root operation type_ uses its respective _default root type name_, no other type uses any _default root type name_, and the schema does not have a description", a condition on writing SDL that doesn't say what a reader makes of a document that omits the definition anyway. The reading rests on an example: "The schema definition must be included, otherwise the {"Mutation"} type would be incorrectly presumed to be the {`mutation`} _root operation type_ of the schema." October 2021 has neither the "no other type" clause nor that example, and its text allows reading the schema as one without a mutation root, which is valid. The vector is `unspecified`:
 
 | Vector | Schema |
 | --- | --- |
@@ -156,23 +165,24 @@ Both versions:
 - **`directiveReferencesItselfIndirectly`:** accept a directive that reaches itself through another directive (2 schemas). They also accept the two `unspecified` schemas above, which aren't graded.
 
 17 also:
-- **`argDefaultCompatible`:** accepts `type Query { f(x: Float = 1e400): Int }`, a Float default that no finite double represents (§3.5.2).
+- **`argDefaultCompatible`:** accepts `type Query { f(x: Float = 1e400): Int }`, a Float default that no finite double represents (§3.5.2; since September 2025).
 
 16 also:
-- **`argDefaultCompatible`:** doesn't validate default values (10 schemas);
+- **`argDefaultCompatible`:** doesn't validate default values (10 schemas, all since September 2025);
 - **`rootTypesDifferent`:** accepts the same type for two root operations;
-- **`implDeprecation`:** accepts a deprecated field implementing one that isn't;
-- **`inputObjectUnbreakableCycle`:** ignores OneOf input objects, so it misses `input A @oneOf { b: B } input B @oneOf { a: A }`;
-- **crashes:** overflows the stack (`RangeError: Maximum call stack size exceeded`) on an input field whose default is an object literal of an input type still being built, with a default value cycle or without. That fails `inputObjectDefaultValueCycle` on its 4 invalid schemas, such as `input I { i: I = {} }`, and `acceptsValid` on 3 valid ones, such as `input I { i: I = {i: null} }`, which break no rule in either edition. The crashes are not draft only: October 2021 has no default value rule, so it calls all 7 schemas valid.
+- **`implDeprecation`:** accepts a deprecated field implementing one that isn't (since September 2025);
+- **`inputObjectUnbreakableCycle`:** ignores OneOf input objects, so it accepts `inputObjectUnbreakableCycle.4.invalid` and `.5.invalid`, such as `input A @oneOf { b: B } input B @oneOf { a: A }`. Both are since September 2026: September 2025's rule accepts them too;
+- **crashes:** overflows the stack (`RangeError: Maximum call stack size exceeded`) on an input field whose default is an object literal of an input type still being built, with a default value cycle or without. That fails `inputObjectDefaultValueCycle` on its 4 invalid schemas, such as `input I { i: I = {} }`, and `acceptsValid` on 3 valid ones, such as `input I { i: I = {i: null} }`, which break no rule in any release. The crashes aren't tagged by release: October 2021 has no default value rule, so it calls all 7 schemas valid, and a crash is no verdict.
 
-Of the 45 checks with vectors, 17 passes 41 and 16 passes 36.
+Of the 48 checks with vectors, 17 passes 44 and 16 passes 39. Both enforce the rules this round added: undefined types, two schema definitions, and directive locations and definitions in SDL.
 
 ## Limits
 
 - **Pairs, not coverage:** each rule is exercised by a handful of hand-picked pairs. The differential runs hundreds of generated schemas against graphql-js; the kit doesn't, so an implementation can pass here and still get a rarer schema wrong.
-- **The reference's rules only:** the SDL rules outside §3's Type Validation, such as unknown types or a directive applied at a location it doesn't allow, aren't checked. Every valid sibling avoids them.
-- **Default values:** the draft states default value compatibility for object field arguments only (§3.6). An implementation that also checks interface field arguments, input fields and directive arguments, as graphql-js 17 does, isn't marked over-strict, because no valid sibling has a bad default there.
+- **The reference's rules only:** undefined types, directive locations and undefined directives are checked (see [What is checked](#what-is-checked)). Type system extensions aren't: the request format excludes them, so none of their Type Validation rules is checked. The arguments of a directive applied in SDL aren't checked either, nor is a non-repeatable directive applied twice. Every valid sibling avoids them.
+- **Default values:** September 2026 states default value compatibility for object field arguments only (§3.6). An implementation that also checks interface field arguments, input fields and directive arguments, as graphql-js 17 does, isn't marked over-strict, because no valid sibling has a bad default there.
 - **Input field defaults inside a default:** when the reference checks an argument's default value, an input field the value leaves out isn't given its own default. §3.10 says the coerced default "should be used", a SHOULD. With `input I { x: Int = "a" }`, the reference finds `f(a: I = {}): Int` compatible, though following the SHOULD makes it incompatible. No vector depends on this: none has an argument default that leaves out an input field with a default.
 - **Float defaults:** a Float default must be a finite double, so `1e400` is rejected. "A value outside the available precision" isn't checked.
-- **One schema definition:** §3.3 says "a document must include at most one `schema` definition". The reference reads only one, and the kit's SDL reader keeps the last, so this sentence isn't checked and no vector has two.
+- **Two schema definitions:** `schemaDefinitionUnique` checks that a document has at most one. Which roots a document with two definitions has isn't defined (the kit's SDL reader keeps the last), so its only invalid vector has two that name the same root.
+- **Int defaults of any size coerce:** §3.5.1 says an Int input value outside 32 bits should raise a request error, a SHOULD, so the reference doesn't reject one, the weaker reading. No vector has one.
 - **Introspection types:** the spec doesn't settle whether user SDL may refer to an introspection type, as in `type Query { s: __Schema }`. §3.3 counts them as built-in types and §3.4.2 makes every Object and Enum type an output type. §4's Reserved Names says "any Name within a GraphQL type system must not start with two underscores", which, read literally, forbids the reference. `TypeSystem.tla` treats such a name as an unknown type, and no vector uses one. graphql-js accepts them.
