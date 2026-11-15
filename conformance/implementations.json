@@ -1,11 +1,11 @@
 {
-  "comment": "How scripts/conformance-reports.mjs runs each implementation. Build the adapter first (see its README). env values may use ~ for the home directory. notes are hand-written and shown, labelled as such, on the implementation's page.",
+  "comment": "How scripts/conformance-reports.mjs runs each implementation. Build the adapter first (see its README). env values may use ~ for the home directory. executionArgs are extra kit options for the execution run. notes are hand-written and shown, labelled as such, on the implementation's page.",
   "implementations": [
     {
       "key": "graphql-js-16",
       "adapter": "node adapters/graphql-js/adapter.mjs --graphql 16",
       "notes": [
-        "The kit doesn't cover parsing, validation, coercion or schema validity yet. graphql-js is checked against those references by the differential scripts, which document where it departs from the draft: [lexer and parser](../scripts/differential-lexer.mjs) (`KNOWN`), [validation](../scripts/differential-validation.mjs) (`DISCREPANCIES`), [coercion](../scripts/differential-coercion.mjs) (`KNOWN`) and [type system](../scripts/differential-type-system.mjs) (`VALIDATION_DEVIATIONS`).",
+        "The differential scripts check graphql-js against the references more broadly than the kit's vectors, and document where it departs from the draft: [lexer and parser](../scripts/differential-lexer.mjs) (`KNOWN`), [validation](../scripts/differential-validation.mjs) (`DISCREPANCIES`), [coercion](../scripts/differential-coercion.mjs) (`KNOWN`) and [type system](../scripts/differential-type-system.mjs) (`VALIDATION_DEVIATIONS`).",
         "Behaviour outside the kit's fixtures is described in the README's [What graphql-js does](../README.md#what-graphql-js-does)."
       ]
     },
@@ -13,7 +13,7 @@
       "key": "graphql-js-17",
       "adapter": "node adapters/graphql-js/adapter.mjs --graphql 17",
       "notes": [
-        "The kit doesn't cover parsing, validation, coercion or schema validity yet. graphql-js is checked against those references by the differential scripts, which document where it departs from the draft: [lexer and parser](../scripts/differential-lexer.mjs) (`KNOWN`), [validation](../scripts/differential-validation.mjs) (`DISCREPANCIES`), [coercion](../scripts/differential-coercion.mjs) (`KNOWN`) and [type system](../scripts/differential-type-system.mjs) (`VALIDATION_DEVIATIONS`).",
+        "The differential scripts check graphql-js against the references more broadly than the kit's vectors, and document where it departs from the draft: [lexer and parser](../scripts/differential-lexer.mjs) (`KNOWN`), [validation](../scripts/differential-validation.mjs) (`DISCREPANCIES`), [coercion](../scripts/differential-coercion.mjs) (`KNOWN`) and [type system](../scripts/differential-type-system.mjs) (`VALIDATION_DEVIATIONS`).",
         "Behaviour outside the kit's fixtures is described in the README's [What graphql-js does](../README.md#what-graphql-js-does)."
       ]
     },
@@ -61,8 +61,21 @@
       "adapter": "adapters/graphql-ruby/run.sh --invalid-results",
       "build": "adapters/graphql-ruby/vendor/bundle",
       "notes": [
-        "The sheet runs graphql-ruby with `--invalid-results`: a schema that uses graphql-ruby's documented `type_error` and `rescue_from` hooks. Out of the box, a resolver result of the wrong shape (a non-list for a list, an object for an Int, a runtime type that isn't a possible type, an unknown enum value) raises out of `execute` instead of becoming a field error (\u00a76.4.4), so the client gets no response at all.",
-        "The `resultCoercion` finding is graphql-ruby's Int coercion, which calls `to_i`, so `1.2` becomes `1`. Boolean is `!!value`, so `\"false\"` becomes `true`; the kit doesn't probe Boolean, since \u00a73.5.4 leaves reasonable coercions to the service. See the [adapter's README](../adapters/graphql-ruby/README.md)."
+        "The sheet runs graphql-ruby with `--invalid-results`: a schema that uses graphql-ruby's documented `type_error` and `rescue_from` hooks. Out of the box, a resolver result of the wrong shape (a non-list for a list, an object for an Int, a runtime type that isn't a possible type, an unknown enum value) raises out of `execute` instead of becoming a field error (§6.4.4), so the client gets no response at all.",
+        "The `resultCoercion` finding is graphql-ruby's Int coercion, which calls `to_i`, so `1.2` becomes `1`. Boolean is `!!value`, so `\"false\"` becomes `true`; the kit doesn't probe Boolean, since §3.5.4 leaves reasonable coercions to the service. See the [adapter's README](../adapters/graphql-ruby/README.md)."
+      ]
+    },
+    {
+      "key": "graphql-go",
+      "adapter": "adapters/graphql-go/run.sh",
+      "build": "adapters/graphql-go/bin/graphql-tla-graphql-go",
+      "executionArgs": [
+        "--grace",
+        "10"
+      ],
+      "notes": [
+        "graphql-go doesn't make runs deterministic (it resolves fields in Go map order), so the adapter doesn't claim `idle` and the kit waits 10 ms after each settle instead; the sheet's cases are random runs only.",
+        "The resolver returns a thunk, graphql-go's way to keep several resolvers pending. The Non-Null propagation and mutation ordering findings come from thunks; with `--sync` only the key order, leaf coercion and mutation error findings remain. See the [adapter's README](../adapters/graphql-go/README.md#known-graphql-go-deviations)."
       ]
     }
   ]

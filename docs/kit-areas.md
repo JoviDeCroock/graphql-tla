@@ -47,6 +47,7 @@ Each area exports `run({ adapter, strict, option, flag, log })` from `kit/<area>
   findings: [{ checks: [id], summary, cases, fixtures: { family: n }, fixture, problem?,
                example: { input: "<the vector, briefly>", response: <the answer>, expected: "<the reference's answer>" } }],
   fixtures: [],
+  ok,                                                  // the run's verdict, matching its exit code
 }
 ```
 

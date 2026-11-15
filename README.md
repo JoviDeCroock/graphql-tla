@@ -91,9 +91,10 @@ An adapter is a small program that speaks newline-delimited JSON. It builds the 
 | [`hotchocolate`](adapters/hotchocolate) | Hot Chocolate 15.1.21 (.NET) | Two deviations. When a list item at a Non-Null position is null, the list is nulled but no error is reported (§6.4.3, §6.4.4). A fraction returned for an Int is truncated instead of raising an error (§3.5.1). |
 | [`graphql-core`](adapters/graphql-core) | graphql-core 3.2.14 (Python) | Calls every mutation root field's resolver at once, and only awaits them in order. Resolvers that return a future or task run early (§6.3.4). `async def` resolvers aren't affected. graphql-core 3.3 fixes this. |
 | [`graphql-ruby`](adapters/graphql-ruby) | graphql-ruby 2.6.15 | Truncates a fraction returned for an Int (§3.5.1). Out of the box, results of the wrong shape raise out of `execute` instead of becoming field errors; the documented `type_error` and `rescue_from` hooks fix that. |
+| [`graphql-go`](adapters/graphql-go) | graphql-go 0.8.1 | With thunks, a Non-Null error inside a thunk nulls all of `data` and drops the other errors (§6.4.4), and mutation root fields aren't serial (§6.3.4). In any mode, uncoercible leaves become null with no error, or truncate (§3.5.1); a non-finite Float leaves the client without a response; and keys come out sorted (§7.2.2, a SHOULD). |
 | [`async-graphql`](adapters/async-graphql) | async-graphql 7.0.17, dynamic schemas | Its dynamic schema API breaks four rules: resolver errors have no `path`; errors don't stop at the nearest nullable field; an explicit null isn't treated as null; merged fields run their resolver twice. |
 
-The kit checks the checker too. Every run evaluates a shipped corpus of 22 negative controls, and each must be caught by the clause or check it names.
+The kit checks the checker too. Every run evaluates a shipped corpus of 25 negative controls, and each must be caught by the clause or check it names.
 
 **[The conformance sheet](conformance/README.md)** shows what each implementation was checked against and what it breaks, by spec section and by check, with the shortest failing case for each failure. Every cell is a count from a kit report (`--report`); `npm run conformance` regenerates it.
 

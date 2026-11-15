@@ -30,6 +30,7 @@ export const CHECKS = [
   { id: "callsOnce", level: "MUST", spec: ["6.3.2", "6.3.3"], title: "Each field is executed once, merged selections included" },
   { id: "callsSelected", level: "MUST", spec: ["6.3.2"], title: "Only fields the operation selects are executed" },
   { id: "callsReachable", level: "MUST", spec: ["6.3.3", "6.4.3"], title: "A field executes only once its parent has a value that contains it" },
+  { id: "responds", level: "MUST", spec: ["7.1"], title: "A request gets a response" },
   { id: "eventYieldsResult", level: "MUST", spec: ["6.2.3.2"], title: "A subscription event yields an execution result, even when its data is null", subscriptionOnly: true },
   { id: "dataShape", level: "MUST", spec: ["7.1.5"], title: "data holds only positions the operation selects" },
   { id: "resultCoercion", level: "MUST", spec: ["3.5.1", "3.5.2", "3.9", "6.4.3"], title: "A leaf value its type can't represent (a fraction for an Int, a non-finite Float, an unknown enum value) raises an execution error" },

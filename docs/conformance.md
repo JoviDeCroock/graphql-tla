@@ -19,7 +19,7 @@ npx graphql-tla check execution cases.jsonl
 
 `run` drives the adapter, then checks. `check` reads cases you recorded yourself, in the [case format](#case-format), for implementations where a driven adapter is awkward.
 
-Both take `--report FILE`, which writes what the run found as JSON: every check in [`kit/execution/checks.mjs`](../kit/execution/checks.mjs) with the spec sections it rests on, how many cases it applied to, how many broke it and the shortest one that did, plus which fixtures ran or were skipped and why. [`scripts/conformance-sheet.mjs`](../scripts/conformance-sheet.mjs) turns the reports in [`conformance/reports/`](../conformance/reports) into the [conformance sheet](../conformance/README.md). To add an implementation to the sheet, add its adapter to [`conformance/implementations.json`](../conformance/implementations.json) and run `npm run conformance`.
+Both take `--report FILE`, which writes what the run found as JSON: every check in [`kit/execution/checks.mjs`](../kit/execution/checks.mjs) with the spec sections it rests on, how many cases it applied to, how many broke it and the shortest one that did, plus which fixtures ran or were skipped and why, and `ok`, the run's verdict, which matches its exit code. [`scripts/conformance-sheet.mjs`](../scripts/conformance-sheet.mjs) turns the reports in [`conformance/reports/`](../conformance/reports) into the [conformance sheet](../conformance/README.md). To add an implementation to the sheet, add its adapter to [`conformance/implementations.json`](../conformance/implementations.json) and run `npm run conformance`.
 
 ## What your adapter does
 
@@ -52,6 +52,7 @@ The adapter:
 {"type":"response","id":7,"response":{"data":{"search":[{"__typename":"User","name":null}]},"errors":[{"message":"…","path":["search",0,"name"]}]}}
 {"type":"idle","id":7}
 {"type":"stream-error","id":7,"message":"…"}
+{"type":"no-response","id":7,"message":"…"}
 {"type":"error","id":7,"message":"the adapter couldn't build the schema: …"}
 ```
 
@@ -63,6 +64,7 @@ Field by field:
 - **`after`:** optional but recommended. The number of `settle`s for this execution the adapter had applied when the resolver was called. Increment the count before completing the future. The kit uses it to place each call in the order the engine saw things, which is what makes `calledSerially` conclusive. A stamp can only be late, never early, so it's sound on any threading model.
 - **`response`:** the response the client would get, serialized as JSON.
 - **`stream-error`:** for a subscription whose response stream failed instead of yielding the event's result, so the client got no response at all. The kit counts it against `eventYieldsResult`. Don't make up a response for it.
+- **`no-response`:** the implementation produced no response at all for a query or mutation, for example because serializing its result failed, or execution raised out to the caller. The kit counts it against `resultCoercion` when a resolver had returned an `uncoercible` value, and against `responds` otherwise. Only use it where a client would get nothing; an adapter bug is an `error`.
 - **`error`:** the adapter itself failed. The kit stops.
 - **`end`:** the kit is done with the execution. The adapter can drop it, and anything still pending can be abandoned.
 - **`errorPropagation: false`:** execute without error propagation. graphql-js 17 does this with `@experimental_disableErrorPropagation`. The document doesn't carry the directive, so add it, or use your implementation's own switch.
@@ -132,7 +134,8 @@ Before that, the kit rejects malformed cases. It works out each position's type 
 - a resolver is called before its parent position settled to an object, or to a list long enough for its index;
 - a call's `after` stamp is negative, or more than the settles the adapter had been sent;
 - a resolver settles twice, or settles without having been called;
-- a subscription's response stream failed instead of yielding the event's result (`stream-error`).
+- a subscription's response stream failed instead of yielding the event's result (`stream-error`);
+- the implementation produced no response (`no-response`): `resultCoercion` after an `uncoercible` value, otherwise `responds`.
 
 Extra entries in an error are reported as a SHOULD (§7.1.6).
 
@@ -172,6 +175,7 @@ One JSON object per line. `run --out FILE` writes them, and `check` reads them.
 - **`after`** on a call: the adapter's stamp, if it sent one.
 - **`inline`:** marks the call and settle of a list item that came with its list's settle (adapters without `deferred-items`). Stamps don't count inline settles.
 - **`streamError`** instead of `response`: the subscription's response stream failed with this message.
+- **`noResponse`** instead of `response`: the implementation produced no response, with this message.
 - **`v`:** the format version. The kit refuses versions it doesn't know.
 
 ## Limits

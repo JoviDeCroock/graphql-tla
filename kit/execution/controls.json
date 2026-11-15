@@ -709,6 +709,78 @@
   },
   {
    "v": 1,
+   "fixture": "leaves",
+   "trace": [
+    {
+     "call": [
+      "count"
+     ],
+     "type": "Int",
+     "after": 0
+    },
+    {
+     "call": [
+      "ratio"
+     ],
+     "type": "Float",
+     "after": 0
+    },
+    {
+     "call": [
+      "color"
+     ],
+     "type": "Color",
+     "after": 0
+    },
+    {
+     "settle": [
+      "count"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "ratio"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "color"
+     ],
+     "outcome": {
+      "kind": "uncoercible"
+     }
+    }
+   ],
+   "response": {
+    "errors": [
+     {
+      "message": "Enum \"Color\" cannot represent value: \"NOT_A_VALUE\"",
+      "locations": [
+       {
+        "line": 4,
+        "column": 3
+       }
+      ],
+      "path": [
+       "color"
+      ]
+     }
+    ],
+    "data": {
+     "count": null,
+     "ratio": null,
+     "color": null
+    }
+   }
+  },
+  {
+   "v": 1,
    "fixture": "fragments",
    "trace": [
     {
@@ -1731,10 +1803,96 @@
    }
   },
   {
+   "name": "produces no response after a resolver returned a value its type can't represent",
+   "clause": "malformed",
+   "check": "resultCoercion",
+   "base": 12,
+   "case": {
+    "v": 1,
+    "fixture": "leaves",
+    "trace": [
+     {
+      "call": [
+       "count"
+      ],
+      "type": "Int",
+      "after": 0
+     },
+     {
+      "call": [
+       "ratio"
+      ],
+      "type": "Float",
+      "after": 0
+     },
+     {
+      "call": [
+       "color"
+      ],
+      "type": "Color",
+      "after": 0
+     },
+     {
+      "settle": [
+       "count"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "ratio"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "color"
+      ],
+      "outcome": {
+       "kind": "uncoercible"
+      }
+     }
+    ],
+    "noResponse": "can't serialize Infinity"
+   }
+  },
+  {
+   "name": "produces no response",
+   "clause": "malformed",
+   "check": "responds",
+   "base": 7,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "noResponse": "the server failed"
+   }
+  },
+  {
    "name": "calls a field that @include(if: false) leaves out",
    "clause": "malformed",
    "check": "callsSelected",
-   "base": 12,
+   "base": 13,
    "case": {
     "v": 1,
     "fixture": "fragments",
@@ -1823,7 +1981,7 @@
    "name": "calls a field before its parent has a value",
    "clause": "malformed",
    "check": "callsReachable",
-   "base": 12,
+   "base": 13,
    "case": {
     "v": 1,
     "fixture": "fragments",

@@ -174,6 +174,26 @@ export const CONTROLS = [
     },
   },
   {
+    name: "produces no response after a resolver returned a value its type can't represent",
+    clause: "malformed",
+    check: "resultCoercion",
+    make: (c) => {
+      if (!c.trace.some((e) => e.settle && e.outcome.kind === "uncoercible")) return [];
+      // response: undefined drops the base's response when the variant is
+      // merged into it, and when it's written to controls.json.
+      return [{ response: undefined, noResponse: "can't serialize Infinity" }];
+    },
+  },
+  {
+    name: "produces no response",
+    clause: "malformed",
+    check: "responds",
+    make: (c) => {
+      if (c.trace.some((e) => e.settle && e.outcome.kind === "uncoercible")) return [];
+      return [{ response: undefined, noResponse: "the server failed" }];
+    },
+  },
+  {
     name: "calls a field that @include(if: false) leaves out",
     clause: "malformed",
     check: "callsSelected",

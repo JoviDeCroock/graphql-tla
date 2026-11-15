@@ -50,9 +50,11 @@ const only = option("--fixtures", "")?.split(",").filter(Boolean);
 const allFixtures = loadFixtures(join(root, "fixtures"));
 const fixtures = allFixtures.filter((f) => !only?.length || only.includes(f.id));
 const strict = flag("--strict");
-const writeReport = (report) => {
+// The report records the run's verdict, so a reader (and
+// scripts/check-conformance.mjs) can tell a passing run from a failing one.
+const writeReport = (report, ok) => {
   const path = option("--report");
-  if (path) writeFileSync(path, JSON.stringify(report, null, 2) + "\n");
+  if (path) writeFileSync(path, JSON.stringify({ ...report, ok }, null, 2) + "\n");
 };
 
 if (command === "check") {
@@ -67,7 +69,7 @@ if (command === "check") {
     process.exit(2);
   }
   const { ok, report } = await check(allFixtures, cases, { strict });
-  writeReport(report);
+  writeReport(report, ok);
   process.exit(ok ? 0 : 1);
 }
 
@@ -90,8 +92,8 @@ if (area !== "execution") {
     }
     const { run } = await import(`./${area}/run.mjs`);
     const result = await run({ adapter, strict, option, flag, log: console.log });
-    writeReport(result.report);
     ok = result.ok;
+    writeReport(result.report, ok);
   } catch (error) {
     console.error(`✗ ${error.message}`);
   }
@@ -118,6 +120,7 @@ try {
           runs.map((r) => [
             r.trace,
             r.streamError !== undefined,
+            r.noResponse !== undefined,
             r.response?.data,
             (Array.isArray(r.response?.errors) ? r.response.errors.map((e) => JSON.stringify(e?.path ?? null)) : []).sort(),
           ]),
@@ -159,8 +162,8 @@ try {
     skipped,
     run: { random: count, seed, exhaustive: Boolean(runExhaustive) },
   });
-  writeReport(result.report);
   ok = result.ok && cases.length > 0;
+  writeReport(result.report, ok);
 } catch (error) {
   console.error(`✗ ${error.message}`);
   adapter.close();

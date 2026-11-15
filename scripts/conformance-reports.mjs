@@ -32,7 +32,7 @@ for (const impl of implementations.filter((x) => argv.length === 0 || argv.inclu
   for (const area of AREAS) {
     const report = `conformance/reports/${impl.key}${area === "execution" ? "" : `.${area}`}.json`;
     const args = ["kit/cli.mjs", "run", area, "--adapter", impl.adapter, "--strict", "--report", report];
-    if (area === "execution") args.push("--random", random);
+    if (area === "execution") args.push("--random", random, ...(impl.executionArgs ?? []));
     const { status } = spawnSync("node", args, { cwd: root, env, stdio: ["ignore", "inherit", "inherit"] });
     // 3: the adapter doesn't claim the area, so any old report is stale.
     if (status === 3) rmSync(join(root, report), { force: true });

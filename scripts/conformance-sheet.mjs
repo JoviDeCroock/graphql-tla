@@ -216,7 +216,11 @@ const page = (key) => {
             f.problem && `problem:  ${f.problem}`,
             e.input !== undefined ? `input:    ${e.input}` : `trace:    ${e.trace}`,
             e.sibling !== undefined && `sibling:  ${typeof e.sibling === "string" ? e.sibling : JSON.stringify(e.sibling)}`,
-            e.streamError !== undefined ? `stream:   failed: ${e.streamError}` : `response: ${JSON.stringify(e.response)}`,
+            e.streamError !== undefined
+              ? `stream:   failed: ${e.streamError}`
+              : e.noResponse !== undefined
+                ? `response: none: ${e.noResponse}`
+                : `response: ${JSON.stringify(e.response)}`,
             e.expected && `expected: ${e.expected}`,
           ]
             .filter(Boolean)

@@ -133,6 +133,19 @@ export const normalize = (fixture, c) => {
     } else add("protocol", `a stream error for a ${fixture.operationType}`);
     return { problems, ids };
   }
+  // The implementation produced no response at all. Where a resolver
+  // returned a value its type can't represent, that's the root cause: it
+  // should have raised a field error (graphql-go passes Infinity through,
+  // and then can't serialize it).
+  if ("noResponse" in c) {
+    traceProblems(c.trace, add);
+    causalProblems(c.trace, add);
+    const message = JSON.stringify(c.noResponse);
+    if (c.trace.some((e) => e.settle && e.outcome?.kind === "uncoercible")) {
+      add("resultCoercion", `the implementation produced no response, after a resolver returned a value its type can't represent: ${message}`);
+    } else add(fixture.operationType === "subscription" ? "eventYieldsResult" : "responds", `the implementation produced no response: ${message}`);
+    return { problems, ids };
+  }
   const response = c.response;
   if (!isMap(response)) return { problems: ["the response isn't a map"], ids: ["errorFormat"] };
   traceProblems(c.trace, add);
@@ -433,7 +446,13 @@ const problemKind = (problem) =>
     .replace(/ \(§[^)]*\)$/, "")
     .replace(/^[\w.]+ is .*, not the canonical .*/, "a leaf isn't the canonical value")
     .replace(/\[.*?\]|\S+\.\S+|"[^"]*"/g, "…");
-const responseText = (raw) => ("streamError" in raw ? `the response stream failed: ${JSON.stringify(raw.streamError)}` : JSON.stringify(raw.response));
+const responseText = (raw) =>
+  "streamError" in raw
+    ? `the response stream failed: ${JSON.stringify(raw.streamError)}`
+    : "noResponse" in raw
+      ? `no response: ${JSON.stringify(raw.noResponse)}`
+      : JSON.stringify(raw.response);
+const answered = (raw) => !("streamError" in raw) && !("noResponse" in raw);
 
 export const check = async (fixtures, rawCases, { strict = false, log = console.log, implementation, capabilities = [], skipped = [], run = {} } = {}) => {
   const byId = new Map(fixtures.map((f) => [f.id, f]));
@@ -594,9 +613,11 @@ const APPLIES = {
   errorEntries: (raw) => hasErrors(raw.response),
   responsePosition: (raw) =>
     hasErrors(raw.response) && raw.response.errors.some((e) => Array.isArray(e?.path) && e.path.some((x) => typeof x === "number" || /^\d+$/.test(x))),
-  dataPresent: (raw) => !("streamError" in raw),
-  errorsList: (raw) => !("streamError" in raw),
-  additionalEntries: (raw) => !("streamError" in raw),
+  dataPresent: answered,
+  errorsList: answered,
+  // Only cases where a resolver returned a value its type can't represent.
+  resultCoercion: (raw) => (raw.trace ?? []).some((e) => e.settle && e.outcome?.kind === "uncoercible"),
+  additionalEntries: answered,
 };
 
 const buildReport = ({ byId, rawCases, cases, results, malformed, warned, strict, selfTest, controls, implementation, capabilities, skipped, run }) => {
@@ -613,7 +634,7 @@ const buildReport = ({ byId, rawCases, cases, results, malformed, warned, strict
   };
   const example = (raw, extra = {}) => ({
     trace: raw.trace ?? [],
-    ...("streamError" in raw ? { streamError: raw.streamError } : { response: raw.response }),
+    ...("streamError" in raw ? { streamError: raw.streamError } : "noResponse" in raw ? { noResponse: raw.noResponse } : { response: raw.response }),
     ...extra,
   });
 

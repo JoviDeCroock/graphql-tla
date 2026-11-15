@@ -13,6 +13,8 @@ const LEAF = { kind: "leaf" };
 const UNCOERCIBLE = { kind: "uncoercible" };
 // Stands in for the response when the adapter reports a stream error.
 const STREAM_FAILED = Symbol("stream failed");
+const NO_RESPONSE = Symbol("no response");
+const RESPONSES = new Set(["response", "stream-error", "no-response"]);
 
 // The type named in a call, against the fixture's schema.
 const typeOf = (fixture, name) => {
@@ -115,7 +117,7 @@ export class Driver {
       if (message.id !== id) {
         // A late message from an earlier execution: the engine may still
         // call abandoned resolvers, but it must not respond twice.
-        if (this.finished.has(message.id) && (message.type === "response" || message.type === "stream-error")) {
+        if (this.finished.has(message.id) && RESPONSES.has(message.type)) {
           throw new Error(`a second response for execution ${message.id}: ${JSON.stringify(message.response)}`);
         }
         continue;
@@ -133,14 +135,17 @@ export class Driver {
         if (run.response === undefined) {
           run.trace.push({ call: path, type: message.returnType, ...(Number.isInteger(message.after) ? { after: message.after } : {}) });
         }
-      } else if (message.type === "response" || message.type === "stream-error") {
+      } else if (RESPONSES.has(message.type)) {
         if (run.response !== undefined) {
           throw new Error(`${run.fixture.id}: a second response for one execution: ${JSON.stringify(message)}`);
         }
         // A subscription's response stream that failed instead of yielding
         // the event's result: the client got no execution result.
+        // A query or mutation for which the implementation produced no
+        // response at all, for example because serializing it failed.
         if (message.type === "stream-error") run.streamError = String(message.message ?? "");
-        run.response = message.type === "response" ? message.response : STREAM_FAILED;
+        if (message.type === "no-response") run.noResponse = String(message.message ?? "");
+        run.response = { response: message.response, "stream-error": STREAM_FAILED, "no-response": NO_RESPONSE }[message.type];
       } else {
         throw new Error(`${run.fixture.id}: unexpected message ${JSON.stringify(message)}`);
       }
@@ -153,7 +158,7 @@ export class Driver {
     for (;;) {
       const message = await this.adapter.next(wait);
       if (message === null) return;
-      if ((message.type === "response" || message.type === "stream-error") && this.finished.has(message.id)) {
+      if (RESPONSES.has(message.type) && this.finished.has(message.id)) {
         throw new Error(`a second response for execution ${message.id}: ${JSON.stringify(message.response)}`);
       }
     }
@@ -198,7 +203,11 @@ export class Driver {
       fixture: fixture.id,
       implementation: this.adapter.name,
       trace: run.trace,
-      ...(run.response === STREAM_FAILED ? { streamError: run.streamError } : { response: run.response }),
+      ...(run.response === STREAM_FAILED
+        ? { streamError: run.streamError }
+        : run.response === NO_RESPONSE
+          ? { noResponse: run.noResponse }
+          : { response: run.response }),
     };
   }
 }

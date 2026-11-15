@@ -37,6 +37,9 @@ try {
       } else if (!existsSync(committed)) {
         console.error(`✗ ${name}: no committed report; run npm run conformance`);
         failed++;
+      } else if (JSON.parse(readFileSync(join(dir, name), "utf8")).ok !== (status === 0)) {
+        console.error(`✗ ${name}: the report's ok doesn't match the run's exit status (${status})`);
+        failed++;
       } else if (strip(JSON.parse(readFileSync(join(dir, name), "utf8"))) !== strip(JSON.parse(readFileSync(committed, "utf8")))) {
         console.error(`✗ ${name}: differs from the committed report; run npm run conformance and review the change`);
         failed++;
