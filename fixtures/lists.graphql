@@ -1,0 +1,19 @@
+# List items complete in parallel (§6.4.3). An error in a Non-Null item
+# nulls the whole list, and a nullable item absorbs its own error.
+# maxListLength: 2
+
+type Query {
+  posts: [Post!]
+  tags: [String]!
+}
+
+type Post {
+  title: String!
+}
+
+query {
+  posts {
+    title
+  }
+  tags
+}

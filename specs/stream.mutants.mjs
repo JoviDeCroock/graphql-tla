@@ -1,0 +1,86 @@
+export default [
+  {
+    name: "publishes items in completion order instead of source order",
+    find: "if (first !== held.length) return;",
+    replace: "if (first < held.length) return;",
+    property: "clientHoldsSourcePrefix",
+  },
+  {
+    name: "streams a failed Non-Null item as null, like a nullable one",
+    find: '(item[i as Idx] === "error" && !nonNullItems)',
+    replace: 'item[i as Idx] === "error"',
+    property: "clientHoldsSourcePrefix",
+  },
+  {
+    name: "propagates a streamed Non-Null item error to the already delivered list",
+    find: 'completed = "errors";\n      errors.push(NAME_ERRORS[first + count]);',
+    replace: 'completed = "errors";\n      errors.push(NAME_ERRORS[first + count]);\n      itemsData = "null";\n      held = [];',
+    property: "nothingIsRetracted",
+  },
+  {
+    name: "cancellation closes the source but leaves the stream in the work queue",
+    find: "cancelled = true;\n  stream = \"stopped\";",
+    replace: "cancelled = true;",
+    property: "nothingAfterTheEnd",
+  },
+  {
+    name: "only sends completed together with items",
+    find: "if (count === 0 && !finish) return;",
+    replace: "if (count === 0) return;",
+    property: "announcedStreamCompletes",
+  },
+  {
+    name: "never completes a stream whose source threw",
+    find: '(n === yielded && (source === "done" || source === "threw"))',
+    replace: '(n === yielded && source === "done")',
+    property: "announcedStreamCompletes",
+  },
+  {
+    name: "waits for the pending next() to settle before calling return()",
+    find: 'if (stream === "none" && (source === "pulling" || source === "hung")) return;',
+    replace: 'if (source === "pulling" || source === "hung") return;',
+    property: "abandonedIteratorIsClosed",
+  },
+  {
+    name: "only cleans up iterators of streams the publisher announced",
+    find: 'if (returned || !abandoned() || source === "done") return;',
+    replace: 'if (returned || !abandoned() || source === "done" || !announced) return;',
+    property: "abandonedIteratorIsClosed",
+  },
+  {
+    name: "reports a filtered stream's cancellation as a field error",
+    find: 'if (stream === "running" && !live) stream = "stopped";',
+    replace: 'if (stream === "running" && !live) {\n    stream = "stopped";\n    errors.push("items");\n  }',
+    property: "errorsAreReal",
+  },
+  {
+    name: "reports a failed Non-Null item's error with the item and again in completed",
+    find: "errors.push(NAME_ERRORS[first + count]);",
+    replace: "errors.push(NAME_ERRORS[first + count]);\n      errors.push(NAME_ERRORS[first + count]);",
+    property: "oneErrorPerPath",
+  },
+  {
+    name: "takes a batch's errors from its first item only",
+    find: 'if (item[(first + 1) as Idx] === "error") errors.push(NAME_ERRORS[first + 1]);',
+    replace: "",
+    property: "nullsAreExplained",
+  },
+  {
+    name: "checks the parent object but not the list itself before announcing",
+    find: 'const live = feedData === "object" && itemsData === "list";',
+    replace: 'const live = feedData === "object";',
+    property: "announcedUnderLiveParent",
+  },
+  {
+    name: "filters the stream from pending but leaves it in the work queue",
+    find: 'if (stream === "running" && !live) stream = "stopped";',
+    replace: "",
+    property: "completedWereAnnounced",
+  },
+  {
+    name: "sends hasNext: false with the last items, before the completion notice",
+    find: 'hasNext = stream === "running";\n};\n\n// The client calls',
+    replace: 'hasNext = !(source === "done" && held.length === yielded);\n};\n\n// The client calls',
+    property: "hasNextIsHonest",
+  },
+];

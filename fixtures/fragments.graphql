@@ -1,0 +1,43 @@
+# Field collection (§6.3.2): fragments, type conditions on an interface,
+# @skip and @include, aliases, and merging fields that share a response key.
+# variables: { "withName": false }
+# maxListLength: 0
+
+interface Node {
+  id: ID!
+}
+
+type User implements Node {
+  id: ID!
+  name: String
+}
+
+type Bot implements Node {
+  id: ID!
+}
+
+type Query {
+  node: Node
+}
+
+query ($withName: Boolean!) {
+  node {
+    id
+    ... on User {
+      name
+    }
+    ...UserFields
+    ... on Bot @skip(if: true) {
+      botId: id
+    }
+    ... on Node {
+      nodeId: id
+    }
+    key: id @include(if: $withName)
+  }
+}
+
+fragment UserFields on User {
+  id
+  name @include(if: $withName)
+}

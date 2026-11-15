@@ -1,222 +1,309 @@
 /*
- * GraphQL query execution: parallel field resolution and null propagation.
+ * GraphQL query execution as a small-step state machine, generic over the
+ * schema and query in specs/lib/fixtures.ts (generated from fixtures/*.graphql).
  *
- * Models GraphQL spec §6.3 (Executing Selection Sets) and §6.4.4 (Handling
- * Field Errors) for one fixed operation against one fixed schema:
+ * This is the executor's view: every response position is a resolver that
+ * starts as soon as its parent produced an object or a list and settles
+ * whenever the scheduler likes, to any outcome its type allows (a value, a
+ * list of up to maxListLength items, an object of any possible runtime type,
+ * null, or an error). A field error nulls the nearest nullable position, at
+ * once, while siblings may still be running. The response is sent as soon
+ * as the root completes, and work in abandoned subtrees may carry on after.
  *
- *   type Query { version: String!   user: User }
- *   type User  { id: ID!   name: String   bestFriend: User! }
+ * Three variants cover what the spec allows for errors in subtrees that a
+ * field error already nulled:
  *
- *   query {
- *     version
- *     user {
- *       id
- *       name
- *       bestFriend { id }
- *     }
- *   }
+ *   reportAll     report them anyway (graphql-js before 16.15)
+ *   filterNulled  drop them (graphql-js 16.15 and 17: _hasNulledPosition)
+ *   cancelNulled  drop them and cancel those resolvers (§6.3.3: siblings
+ *                 "which have not yet executed or have not yet yielded a
+ *                 value" may be cancelled)
  *
- * Every resolver may return a value, return null, or raise an error, and
- * resolvers of a query run in parallel, so they finish in any order. The
- * executor builds the response incrementally the way graphql-js does: as each
- * resolver settles it writes its slot, and an error (or a null in a Non-Null
- * position) nulls the nearest nullable ancestor, or `data` itself.
- *
- * The invariants compare that operational executor with a declarative reading
- * of the spec's CompleteValue, so model checking proves that every schedule of
- * every combination of resolver outcomes produces the response the spec
- * defines.
+ * The executor shares no code with specs/Reference.tla. It does its own
+ * field collection and completion. specs/ExecutionConformance.tla checks
+ * that every behavior of every variant, on every fixture, refines
+ * specs/GraphQLResponse.tla: one response, sent once, valid by
+ * Reference!Valid at the moment it's sent.
  */
 
-// A response position, named by its path in the query above.
-type Field = "version" | "user" | "userId" | "userName" | "friend" | "friendId";
-type Parent = Field | "root";
-type Outcome = "value" | "null" | "error";
-type Slot = "unset" | "value" | "null";
+import { FIXTURES, type FixtureId } from "./lib/fixtures";
+import type { Condition, Fixture, Json, Outcome, Path, Selection, TypeRef } from "./lib/graphql";
 
-const FIELDS = new Set<Field>(["version", "user", "userId", "userName", "friend", "friendId"]);
+type Variant = "reportAll" | "filterNulled" | "cancelNulled";
 
-const parentOf: Record<Field, Parent> = {
-  version: "root",
-  user: "root",
-  userId: "user",
-  userName: "user",
-  friend: "user",
-  friendId: "friend",
-};
+// A grouped field set entry: a response key and the fields selected under it.
+type Group = { key: string; fields: Selection[] };
+type Collected = { groups: Group[]; visited: Set<string> };
 
-// Non-Null wrapping of each field's type in the schema.
-const nonNull: Record<Field, boolean> = {
-  version: true,
-  user: false,
-  userId: true,
-  userName: false,
-  friend: true,
-  friendId: true,
-};
+// A response position: its declared type and the fields that select it.
+type Position = { type: TypeRef; fields: Selection[] };
 
-// Leaf (scalar) fields have no sub-selection.
-const isLeaf: Record<Field, boolean> = {
-  version: true,
-  user: false,
-  userId: true,
-  userName: true,
-  friend: false,
-  friendId: true,
-};
+// The status of a position: settled to a value, a resolver null, nulled by a
+// field error at or below it, a field error that propagates to its parent,
+// or still pending.
+type Status = "value" | "null" | "nulled" | "error" | "pending";
+
+const NULL: Json = { kind: "null", entries: [], items: [] };
+const LEAF: Json = { kind: "leaf", entries: [], items: [] };
 
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 
-// Resolver lifecycle of each field.
-let status: Record<Field, "idle" | "running" | "done"> = {
-  version: "idle",
-  user: "idle",
-  userId: "idle",
-  userName: "idle",
-  friend: "idle",
-  friendId: "idle",
-};
+let fixture!: FixtureId;
+let variant!: Variant;
+let started = false;
 
-// What each resolver produced. "none" until it settles.
-let outcome: Record<Field, Outcome | "none"> = {
-  version: "none",
-  user: "none",
-  userId: "none",
-  userName: "none",
-  friend: "none",
-  friendId: "none",
-};
+// Positions whose resolver is running.
+let running = new Set<Path>();
+// What each settled resolver produced.
+let outcomes = new Map<Path, Outcome>();
+// The executor's error list, in the order errors were added.
+let errors: Path[] = [];
 
-// The response under construction. `dataIsNull` is `{ "data": null }`.
-let slot: Record<Field, Slot> = {
-  version: "unset",
-  user: "unset",
-  userId: "unset",
-  userName: "unset",
-  friend: "unset",
-  friendId: "unset",
-};
-let dataIsNull = false;
-
-// Paths in the response's "errors" list.
-let errors = new Set<Field>();
+// The response, once sent.
+let sent = false;
+let sentData: Json = NULL;
+let sentErrors: Path[] = [];
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Field collection
 // ---------------------------------------------------------------------------
 
-const childrenOf: Record<Parent, Set<Field>> = {
-  root: new Set<Field>(["version", "user"]),
-  version: new Set<Field>(),
-  user: new Set<Field>(["userId", "userName", "friend"]),
-  userId: new Set<Field>(),
-  userName: new Set<Field>(),
-  friend: new Set<Field>(["friendId"]),
-  friendId: new Set<Field>(),
+const fx = (): Fixture => FIXTURES[fixture];
+
+const isNonNull = (type: TypeRef) => type.wrappers.length > 0 && type.wrappers[0] === "nonNull";
+const nullable = (type: TypeRef): TypeRef =>
+  isNonNull(type) ? { name: type.name, wrappers: type.wrappers.slice(1) } : type;
+const isList = (type: TypeRef) => type.wrappers.length > 0 && type.wrappers[0] === "list";
+const itemType = (listType: TypeRef): TypeRef => ({
+  name: listType.name,
+  wrappers: listType.wrappers.slice(1),
+});
+
+const ifValue = (condition: Condition) =>
+  condition.kind === "literal" ? condition.value : fx().variables.get(condition.variable)!;
+
+const isIncluded = (selection: Selection) =>
+  !(selection.skip.kind !== "absent" && ifValue(selection.skip)) &&
+  !(selection.include.kind !== "absent" && !ifValue(selection.include));
+
+const applies = (objectType: string, condition: string) =>
+  fx().schema.types.get(condition)!.kind === "object"
+    ? objectType === condition
+    : fx().schema.types.get(condition)!.possibleTypes.has(objectType);
+
+const addField = (groups: Group[], key: string, field: Selection): Group[] =>
+  groups.some((g) => g.key === key)
+    ? groups.map((g) => (g.key === key ? { key: g.key, fields: [...g.fields, field] } : g))
+    : [...groups, { key, fields: [field] }];
+
+const collect = (objectType: string, selections: Selection[], i: number, acc: Collected): Collected =>
+  i >= selections.length
+    ? acc
+    : collect(objectType, selections, i + 1, collectOne(objectType, selections[i], acc));
+
+const collectOne = (objectType: string, selection: Selection, acc: Collected): Collected =>
+  !isIncluded(selection)
+    ? acc
+    : selection.kind === "field"
+      ? {
+          groups: addField(acc.groups, selection.alias === "" ? selection.name : selection.alias, selection),
+          visited: acc.visited,
+        }
+      : selection.kind === "inlineFragment"
+        ? selection.typeCondition !== "" && !applies(objectType, selection.typeCondition)
+          ? acc
+          : collect(objectType, selection.selectionSet, 0, acc)
+        : acc.visited.has(selection.name)
+          ? acc
+          : applies(objectType, fx().fragments.get(selection.name)!.typeCondition)
+            ? collect(objectType, fx().fragments.get(selection.name)!.selectionSet, 0, {
+                groups: acc.groups,
+                visited: acc.visited.union(new Set([selection.name])),
+              })
+            : { groups: acc.groups, visited: acc.visited.union(new Set([selection.name])) };
+
+// Each field's sub-selection is collected with its own visited fragments.
+const collectSubfields = (objectType: string, fields: Selection[], i: number, groups: Group[]): Group[] =>
+  i >= fields.length
+    ? groups
+    : collectSubfields(
+        objectType,
+        fields,
+        i + 1,
+        collect(objectType, fields[i].selectionSet, 0, { groups, visited: new Set<string>() }).groups,
+      );
+
+const rootGroups = () =>
+  collect(fx().schema.query, fx().operation, 0, { groups: [], visited: new Set<string>() }).groups;
+
+const fieldType = (objectType: string, group: Group) =>
+  fx().schema.types.get(objectType)!.fields.get(group.fields[0].name)!;
+
+// ---------------------------------------------------------------------------
+// Positions
+// ---------------------------------------------------------------------------
+
+// The groups under a settled object position.
+const groupsOf = (path: Path, position: Position) =>
+  collectSubfields(outcomes.get(path)!.type, position.fields, 0, []);
+
+const positionOf = (path: Path): Position =>
+  path.length === 1
+    ? {
+        type: fieldType(fx().schema.query, rootGroups().find((g) => g.key === path[0])!),
+        fields: rootGroups().find((g) => g.key === path[0])!.fields,
+      }
+    : childPosition(path.slice(0, -1), positionOf(path.slice(0, -1)), path[path.length - 1]);
+
+const childPosition = (parent: Path, position: Position, key: string): Position =>
+  isList(nullable(position.type))
+    ? { type: itemType(nullable(position.type)), fields: position.fields }
+    : {
+        type: fieldType(outcomes.get(parent)!.type, groupsOf(parent, position).find((g) => g.key === key)!),
+        fields: groupsOf(parent, position).find((g) => g.key === key)!.fields,
+      };
+
+// The child positions an object or list outcome creates, in order.
+const childPaths = (path: Path, position: Position, outcome: Outcome): Path[] =>
+  outcome.kind === "list"
+    ? Array.from({ length: outcome.length }, (_, i) => [...path, `${i}`])
+    : outcome.kind === "object"
+      ? collectSubfields(outcome.type, position.fields, 0, []).map((g) => [...path, g.key])
+      : [];
+
+// The child positions of a settled position.
+const childrenOf = (path: Path, position: Position): Path[] =>
+  childPaths(path, position, outcomes.get(path)!);
+
+// What a resolver at this position may produce.
+const choicesFor = (position: Position): Set<Outcome> =>
+  new Set<Outcome>([
+    { kind: "null", type: "", length: 0 },
+    { kind: "error", type: "", length: 0 },
+  ]).union(
+    isList(nullable(position.type))
+      ? new Set(
+          Array.from({ length: fx().maxListLength + 1 }, (_, n) => ({ kind: "list", type: "", length: n }) as Outcome),
+        )
+      : fx().schema.types.get(position.type.name)!.kind === "scalar"
+        ? new Set<Outcome>([{ kind: "leaf", type: "", length: 0 }])
+        : new Set(
+            fx()
+              .schema.types.get(position.type.name)!
+              .possibleTypes.values()
+              .map((t) => ({ kind: "object", type: t, length: 0 }) as Outcome),
+          ),
+  );
+
+// ---------------------------------------------------------------------------
+// Completion, as the executor tracks it
+// ---------------------------------------------------------------------------
+
+const statusOf = (path: Path): Status =>
+  !outcomes.has(path)
+    ? "pending"
+    : outcomes.get(path)!.kind === "error"
+      ? isNonNull(positionOf(path).type) ? "error" : "nulled"
+      : outcomes.get(path)!.kind === "null"
+        ? isNonNull(positionOf(path).type) ? "error" : "null"
+        : outcomes.get(path)!.kind === "leaf"
+          ? "value"
+          : childrenOf(path, positionOf(path)).some((c) => statusOf(c) === "error")
+            ? isNonNull(positionOf(path).type) ? "error" : "nulled"
+            : childrenOf(path, positionOf(path)).some((c) => statusOf(c) === "pending")
+              ? "pending"
+              : "value";
+
+const rootStatus = (): Status =>
+  rootGroups().some((g) => statusOf([g.key]) === "error")
+    ? "nulled"
+    : rootGroups().some((g) => statusOf([g.key]) === "pending")
+      ? "pending"
+      : "value";
+
+// Whether a field error already nulled this position or one above it.
+const isInNulledSubtree = (path: Path): boolean =>
+  rootStatus() === "nulled" ||
+  Array.from({ length: path.length - 1 }, (_, i) => path.slice(0, i + 1)).some(
+    (p) => statusOf(p) === "nulled" || statusOf(p) === "error",
+  );
+
+// A resolver result that is a field error: an error, or null where the
+// type is Non-Null.
+const raisesError = (path: Path, outcome: Outcome) =>
+  outcome.kind === "error" || (outcome.kind === "null" && isNonNull(positionOf(path).type));
+
+const jsonOf = (path: Path): Json =>
+  statusOf(path) !== "value"
+    ? NULL
+    : outcomes.get(path)!.kind === "leaf"
+      ? LEAF
+      : outcomes.get(path)!.kind === "list"
+        ? { kind: "list", entries: [], items: childrenOf(path, positionOf(path)).map((c) => jsonOf(c)) }
+        : {
+            kind: "object",
+            items: [],
+            entries: childrenOf(path, positionOf(path)).map((c) => ({ key: c[c.length - 1], value: jsonOf(c) })),
+          };
+
+const responseData = (): Json =>
+  rootStatus() !== "value"
+    ? NULL
+    : { kind: "object", items: [], entries: rootGroups().map((g) => ({ key: g.key, value: jsonOf([g.key]) })) };
+
+// ---------------------------------------------------------------------------
+// Actions
+// ---------------------------------------------------------------------------
+
+// Actions compute everything they need before they change any state. A read
+// after an assignment makes tla-ts inline helpers to see the new state, and
+// the recursive helpers here can't be inlined.
+
+// ExecuteQuery: collect the root fields and start their resolvers.
+/** @fair */
+export const start = () => {
+  if (started) return;
+  const roots = new Set(rootGroups().map((g) => [g.key]));
+  started = true;
+  running = roots;
 };
 
-const ancestorsOf = (field: Field): Set<Field> =>
-  parentOf[field] === "root"
-    ? new Set<Field>()
-    : ancestorsOf(parentOf[field] as Field).union(new Set<Field>([parentOf[field] as Field]));
-
-// §6.4.4: "the null result will propagate to the next nullable field".
-const nearestNullable = (field: Parent): Parent =>
-  field === "root" ? "root" : !nonNull[field] ? field : nearestNullable(parentOf[field]);
-
-// A field error is a raised error, or null in a Non-Null position.
-const isFieldError = (field: Field, result: Outcome) =>
-  result === "error" || (result === "null" && nonNull[field]);
-
-// ---------------------------------------------------------------------------
-// Executor (operational)
-// ---------------------------------------------------------------------------
-
-// A root field may start at once. A sub-field starts once its parent's
-// resolver returned an object, even if a sibling later nulls that parent:
-// graphql-js does not cancel work, it discards the result.
-export const startResolver = (field: Field) => {
-  if (status[field] !== "idle") return;
-  if (parentOf[field] !== "root" && outcome[parentOf[field] as Field] !== "value") return;
-  status[field] = "running";
+// A resolver settles. An object or a list starts its children's resolvers
+// in the same step, as graphql-js does when it completes the value.
+/** @fair */
+export const settle = (path: Path, outcome: Outcome) => {
+  if (!running.has(path)) return;
+  if (!choicesFor(positionOf(path)).has(outcome)) return;
+  const reported =
+    raisesError(path, outcome) && (variant === "reportAll" || !isInNulledSubtree(path));
+  const children = new Set(childPaths(path, positionOf(path), outcome));
+  running = running.difference(new Set([path])).union(children);
+  outcomes.set(path, outcome);
+  if (reported) errors.push(path);
 };
 
-export const settleResolver = (field: Field, result: Outcome) => {
-  if (status[field] !== "running") return;
-  status[field] = "done";
-  outcome[field] = result;
-  if (isFieldError(field, result)) {
-    errors.add(field);
-    const target = nearestNullable(field);
-    if (target === "root") {
-      dataIsNull = true;
-    } else {
-      slot[target as Field] = "null";
-    }
-  } else {
-    slot[field] = result === "value" ? "value" : "null";
-  }
+// §6.3.3: positions inside a nulled subtree may be cancelled.
+export const cancel = (path: Path) => {
+  if (!running.has(path)) return;
+  if (variant !== "cancelNulled" || !isInNulledSubtree(path)) return;
+  running.delete(path);
 };
 
-// ---------------------------------------------------------------------------
-// The spec's response (declarative)
-// ---------------------------------------------------------------------------
-
-// CompleteValue: what a field contributes to its parent once every resolver
-// beneath it has settled.
-const completed = (field: Field): "value" | "null" =>
-  outcome[field] !== "value"
-    ? "null"
-    : isLeaf[field]
-      ? "value"
-      : childrenOf[field].values().some((c) => nonNull[c] && completed(c) === "null")
-        ? "null"
-        : "value";
-
-const expectedDataIsNull = () =>
-  childrenOf.root.values().some((f) => nonNull[f] && completed(f) === "null");
-
-// A field appears in the response when `data` and all its ancestors are objects.
-const isVisible = (field: Field) =>
-  !dataIsNull && ancestorsOf(field).values().every((a) => slot[a] === "value");
-
-// A field is settled when its resolver finished, or when it will never run
-// because its parent settled to something other than an object.
-const isSettled = (field: Field): boolean =>
-  status[field] === "done" ||
-  (parentOf[field] !== "root" &&
-    isSettled(parentOf[field] as Field) &&
-    outcome[parentOf[field] as Field] !== "value");
+// The response is sent as soon as the root completes.
+/** @fair */
+export const respond = () => {
+  if (!started || sent || rootStatus() === "pending") return;
+  const data = responseData();
+  sent = true;
+  sentData = data;
+  sentErrors = errors;
+};
 
 // ---------------------------------------------------------------------------
 // Properties
 // ---------------------------------------------------------------------------
 
 /** @terminating */
-export const isFinished = () => FIELDS.values().every(isSettled);
-
-// No Non-Null position in the response ever holds null.
-export const nonNullNeverNull = () =>
-  FIELDS.values().every((f) => !nonNull[f] || !isVisible(f) || slot[f] !== "null");
-
-// Every path in "errors" belongs to a resolver that really failed, and a field
-// that failed is reported exactly once (errors is a set keyed by path).
-export const errorsAreReal = () =>
-  errors.values().every((f) => outcome[f] !== "none" && isFieldError(f, outcome[f] as Outcome));
-
-export const failuresAreReported = () =>
-  FIELDS.values().every((f) => outcome[f] === "none" || !isFieldError(f, outcome[f] as Outcome) || errors.has(f));
-
-// `data` is null only when a Non-Null root field failed (§6.4.4).
-export const dataNullOnlyFromRootBubbling = () =>
-  !dataIsNull || errors.values().some((f) => nearestNullable(f) === "root");
-
-// Once every resolver has settled, the response the executor built is the
-// response the spec defines, whatever order the resolvers finished in.
-export const matchesSpec = () =>
-  !isFinished() ||
-  (dataIsNull === expectedDataIsNull() &&
-    (dataIsNull ||
-      FIELDS.values().every((f) => !isVisible(f) || slot[f] === completed(f))));
+export const isFinished = () => sent && running.size === 0;

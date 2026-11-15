@@ -2,16 +2,18 @@
   "name": "graphql-tla",
   "version": "0.0.0",
   "private": true,
-  "description": "GraphQL execution semantics as TLA+ specifications, written in TypeScript and model checked with tla-ts",
+  "description": "GraphQL execution semantics as TLA+ specifications: a hand-written reference, a generic executor, and incremental delivery, mutation and subscription models, model checked with tla-ts and checked against graphql-js",
   "type": "module",
   "scripts": {
-    "check": "node scripts/check.mjs",
-    "check:execution": "tla-ts specs/execution.ts",
-    "check:mutation": "tla-ts specs/mutation.ts",
-    "check:defer": "tla-ts specs/defer.ts",
+    "fixtures": "node scripts/generate-fixtures.mjs",
+    "check": "node scripts/generate-fixtures.mjs --check && node scripts/check.mjs && node scripts/graphql-js.mjs",
+    "check:specs": "node scripts/check.mjs",
+    "check:graphql-js": "node scripts/graphql-js.mjs",
     "typecheck": "tsc"
   },
   "devDependencies": {
+    "graphql16": "npm:graphql@16.15.0",
+    "graphql17": "npm:graphql@17.1.0",
     "tla-ts": "0.0.10",
     "typescript": "^6.0.3"
   },
