@@ -189,7 +189,7 @@ Combine(path, results, json) ==
 RECURSIVE CompletePosition(_, _, _, _, _), CompleteNullable(_, _, _, _, _), CompleteFields(_, _, _, _, _)
 
 \* The fields an object completes, in order: __typename is answered from
-\* the runtime type without a resolver (§4.4); every other field is
+\* the runtime type without a resolver (§4.1); every other field is
 \* executed.
 CompleteFields(fx, O, path, objectType, grouped) ==
   [i \in DOMAIN grouped |->

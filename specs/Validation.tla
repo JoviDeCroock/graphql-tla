@@ -67,7 +67,7 @@ IsLeaf(S, name) == Kind(S, name) \in {"scalar", "enum"}
 IsInputType(S, type) == Kind(S, type.name) \in {"scalar", "enum", "input"}
 
 \* The meta-field __typename is "implicitly defined" on every Object,
-\* Interface and Union type (§4.4); __schema and __type on the query root:
+\* Interface and Union type (§4.1); __schema and __type on the query root:
 \* "accessible from the type of the root of a query operation" (§4.2).
 IntrospectionFields == {"__typename", "__schema", "__type"}
 MetaRef(name, wrappers) == [name |-> name, wrappers |-> wrappers]
@@ -492,7 +492,7 @@ MergeFuel == 6
 \* An argument's value as "identical sets of arguments" compares it: the
 \* value, not its syntax, and with an input object's fields as a set, since
 \* "Input object literal values are unordered lists of keyed input values"
-\* (§2.9.8). The spec doesn't define "identical", so this is one reading of
+\* (§2.10.8). The spec doesn't define "identical", so this is one reading of
 \* three: the literal's text, its value (this one: a block string equals the
 \* quoted string, but 1 differs from 1.0), or the coerced argument values
 \* (where 1 equals 1.0 for a Float, and an omitted argument equals its

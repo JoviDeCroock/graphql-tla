@@ -62,7 +62,7 @@ Unwrapped(type) == [type EXCEPT !.wrappers = <<>>]
 
 BuiltinScalarNames == {"Int", "Float", "String", "Boolean", "ID"}
 
-\* §4.5: the introspection types are built in too.
+\* §4.2: the introspection types are built in too.
 IntrospectionTypeNames ==
   {"__Schema", "__Type", "__TypeKind", "__Field", "__InputValue",
    "__EnumValue", "__Directive", "__DirectiveLocation"}
