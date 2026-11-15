@@ -4,7 +4,10 @@
 // and awaits a TaskCompletionSource that the stdin reader completes when the
 // kit settles that call.
 //
-// Usage: run.sh [--idle]
+// Usage: run.sh [--idle] [--introspection-list-depth N]
+//
+// The kit's other areas are answered in Areas.cs. --introspection-list-depth
+// raises Hot Chocolate's introspection depth limit (see AreaSchemas).
 //
 // Hot Chocolate runs resolvers on the thread pool, so by default the adapter
 // doesn't claim `idle` and the kit falls back to --grace. With --idle, after
@@ -31,6 +34,8 @@ using Microsoft.Extensions.DependencyInjection;
 var output = new StreamWriter(Console.OpenStandardOutput(), new UTF8Encoding(false)) { AutoFlush = true };
 var writeLock = new object();
 var idle = args.Contains("--idle");
+var depthFlag = Array.IndexOf(args, "--introspection-list-depth");
+if (depthFlag >= 0) AreaSchemas.IntrospectionListDepth = ushort.Parse(args[depthFlag + 1]);
 var idleSent = false; // guarded by writeLock
 var brokenIdles = 0;
 void Send(JsonObject message)
@@ -67,10 +72,18 @@ Send(new JsonObject
     ["type"] = "hello",
     ["protocol"] = 1,
     ["name"] = $"Hot Chocolate {version}",
-    ["capabilities"] = idle
-        ? new JsonArray("idle", "invalid-results", "uncoercible-results", "mutation", "subscription")
-        : new JsonArray("invalid-results", "uncoercible-results", "mutation", "subscription"),
+    ["capabilities"] = Capabilities(),
 });
+
+JsonArray Capabilities()
+{
+    var capabilities = new JsonArray();
+    if (idle) capabilities.Add("idle");
+    foreach (var c in new[] { "invalid-results", "uncoercible-results", "mutation", "subscription" }) capabilities.Add(c);
+    foreach (var area in Areas.Names) capabilities.Add(area);
+    foreach (var c in Areas.Capabilities) capabilities.Add(c);
+    return capabilities;
+}
 
 async Task StartAsync(JsonElement message)
 {
@@ -155,6 +168,18 @@ while ((line = Console.In.ReadLine()) is not null)
     {
         var id = message.GetProperty("id").GetInt32();
         if (executions.TryRemove(id, out var execution)) execution.End();
+        continue;
+    }
+    else if (Areas.Names.Contains(type))
+    {
+        // The other areas (docs/kit-areas.md): one answer per request, on
+        // this thread, and no `idle`, which only execution uses.
+        Send(Areas.Answer(type!, message.GetProperty("id").GetInt32(), message));
+        continue;
+    }
+    else
+    {
+        Send(new JsonObject { ["type"] = "error", ["id"] = message.GetProperty("id").GetInt32(), ["message"] = $"unknown message type {type}" });
         continue;
     }
     if (idle)

@@ -40,13 +40,14 @@
     },
     {
       "key": "hotchocolate",
-      "adapter": "adapters/hotchocolate/run.sh --idle",
+      "adapter": "adapters/hotchocolate/run.sh --idle --introspection-list-depth 2",
       "build": "adapters/hotchocolate/bin/Release",
       "env": {
         "DOTNET_ROOT": "~/.cache/graphql-tla-toolchains/dotnet"
       },
       "notes": [
         "The sheet runs the adapter with `--idle`, which claims `idle` by waiting for .NET's thread pool to go quiet: runtime behaviour, not something Hot Chocolate promises. The kit's determinism replay passed, and a run without `--idle` (grace-based, random runs only) found the same failures. See the [adapter's README](../adapters/hotchocolate/README.md).",
+        "The sheet also passes `--introspection-list-depth 2`, which raises Hot Chocolate's own introspection depth limit (`ValidationOptions`); with the default, Hot Chocolate refuses the kit's full introspection queries. For validate only, the adapter builds the kit's schema with `StrictValidation = false`, because Hot Chocolate refuses an interface with no implementation; that option affects schema checks, not document validation. See the [adapter's README](../adapters/hotchocolate/README.md).",
         "Both findings are described, with source locations and a standalone reproduction, in the [adapter's README](../adapters/hotchocolate/README.md#known-hot-chocolate-deviations)."
       ]
     },
