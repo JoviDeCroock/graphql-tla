@@ -20,8 +20,8 @@ public static class Schemas
     // A schema for the kit's SDL, built with graphql-dotnet's schema-first
     // support (Schema.For), plus what an application has to supply for any
     // SDL:
-    // - resolvers: the kit's resolver on every field, and a one-event source
-    //   stream on every field (graphql-dotnet only uses it on the
+    // - resolvers: the kit's resolver on every field, and the execution's
+    //   source stream on every field (graphql-dotnet only uses it on the
     //   subscription root). Schema validation rejects a subscription root
     //   field without a StreamResolver (SchemaValidationVisitor), so the
     //   validate, schema and introspect areas get them too, though they
@@ -34,7 +34,9 @@ public static class Schemas
     //   definitions, so a reference to X fails to resolve unless the
     //   application registers a ScalarGraphType named X. This registers
     //   graphql-dotnet's ComplexScalarGraphType, which accepts any value,
-    //   with the definition's description.
+    //   with the definition's description (KitScalar: its serializer also
+    //   raises on the one value the kit's resolver returns for an
+    //   `uncoercible` outcome, custom-scalar-results).
     public static Schema Build(string sdl)
     {
         var definitions = GraphQLParser.Parser.Parse(sdl).Definitions;
@@ -43,14 +45,18 @@ public static class Schemas
         {
             builder.Types.ForAll(type => type.ResolveType = value =>
                 value is TlaObject o ? (schema!.AllTypes[o.TypeName] as IObjectGraphType)! : null!);
-            foreach (var definition in definitions.OfType<GraphQLObjectTypeDefinition>())
+            // Object types and object type extensions (the only extension
+            // SchemaBuilder applies; see README.md).
+            var objects = definitions.OfType<GraphQLObjectTypeDefinition>().Select(d => (d.Name, d.Fields))
+                .Concat(definitions.OfType<GraphQLObjectTypeExtension>().Select(d => (d.Name, d.Fields)));
+            foreach (var (name, fields) in objects)
             {
-                var type = builder.Types.For(definition.Name.StringValue);
-                foreach (var field in definition.Fields?.Items ?? [])
+                var type = builder.Types.For(name.StringValue);
+                foreach (var field in fields?.Items ?? [])
                 {
                     var config = type.FieldFor(field.Name.StringValue);
                     config.Resolver = KitResolver.Instance;
-                    config.StreamResolver = OneEventStream.Instance;
+                    config.StreamResolver = KitStreamResolver.Instance;
                 }
             }
         });
@@ -61,7 +67,7 @@ public static class Schemas
             // object, interface, enum and input types it builds.
             if (!SpecScalars.Contains(name))
             {
-                schema.RegisterType(new ComplexScalarGraphType { Name = name, Description = scalar.Description?.Value.ToString() });
+                schema.RegisterType(new KitScalar { Name = name, Description = scalar.Description?.Value.ToString() });
             }
         }
         schema.Initialize();

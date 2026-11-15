@@ -13,10 +13,12 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using HotChocolate;
+using HotChocolate.Configuration;
 using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using HotChocolate.Types.Descriptors.Definitions;
 using HotChocolate.Validation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -24,19 +26,37 @@ namespace GraphQLTla.HotChocolate;
 
 public static class Areas
 {
-    public static readonly string[] Names = ["parse", "validate", "coerce", "schema", "introspect"];
+    public static readonly string[] Names = ["parse", "validate", "coerce", "schema", "introspect", "coordinate"];
 
+    // parse: parse-sdl, since Utf8GraphQLParser reads the type system
+    // language too (see Parse).
     // validate: a custom scalar is Hot Chocolate's JsonType (AreaSchemas),
     // whose IsInstanceOfType accepts every literal.
     // validate and introspect: custom-directives, since Hot Chocolate builds
     // the `directive @label(...) on ...` definitions of the SDL.
-    // coerce: exact-numbers, but not absent-vs-null or unvalidated (see Coerce).
-    public static readonly string[] Capabilities = ["custom-scalar-literals", "custom-directives", "exact-numbers"];
+    // coerce: exact-numbers, nested-fields, subscription-source and
+    // request-extensions, but not absent-vs-null or unvalidated (see Coerce).
+    // schema: schema-extensions, since AddDocumentFromString applies the
+    // SDL's object, interface, union, enum and input object extensions (see
+    // README.md for the kinds it drops).
+    public static readonly string[] Capabilities =
+    [
+        "parse-sdl",
+        "custom-scalar-literals",
+        "custom-directives",
+        "exact-numbers",
+        "nested-fields",
+        "subscription-source",
+        "request-extensions",
+        "schema-extensions",
+    ];
 
-    // The parser options a request executor parses requests with
-    // (DocumentParserMiddleware takes them from the application's services).
-    private static readonly ParserOptions RequestParserOptions =
-        new ServiceCollection().AddGraphQL().Services.BuildServiceProvider().GetRequiredService<ParserOptions>();
+    // What a server's request parser is made with, from the application's
+    // services: the parser options (which DocumentParserMiddleware uses
+    // too), the document cache and the hash provider.
+    private static readonly IServiceProvider RequestServices =
+        new ServiceCollection().AddGraphQL().Services.BuildServiceProvider();
+    private static readonly ParserOptions RequestParserOptions = RequestServices.GetRequiredService<ParserOptions>();
 
     private static readonly Dictionary<string, Built> Executors = [];
     private static readonly Dictionary<string, Built> ValidationExecutors = [];
@@ -53,6 +73,7 @@ public static class Areas
                 "coerce" => Coerce(request),
                 "schema" => SchemaValid(request),
                 "introspect" => Introspect(request),
+                "coordinate" => Coordinate(request),
                 _ => throw new InvalidOperationException($"unknown area {area}"),
             };
         }
@@ -89,25 +110,32 @@ public static class Areas
     // reaches Hot Chocolate as it would on a server. The parser also reads
     // the type system language, so every definition must be an operation or
     // a fragment.
+    //
+    // With parse-sdl, a request may name a type system grammar
+    // (docs/kit/parse.md, "Grammars"). That source is read the way
+    // AddDocumentFromString reads a schema's SDL: Utf8GraphQLParser.Parse
+    // with the default options. The parser reads every kind of definition
+    // into one DocumentNode, so the answer is whether every definition is of
+    // a kind the grammar allows.
     private static JsonObject Parse(JsonElement request)
     {
         var source = request.GetProperty("source");
         if (source.ValueKind != JsonValueKind.String) throw new InvalidOperationException("source isn't a string");
-        var raw = source.GetRawText();
-        if (raw == "\"\"")
-        {
-            // An empty query. A server's request parser has a document
-            // cache, and with one ParseQuery leaves an empty query
-            // unparsed, so the request has no document and no id: a
-            // SyntaxException, NoIdAndNoQuery (Utf8GraphQLRequestParser.cs,
-            // ParseQuery and ParseMutableRequest). The adapter's parser has
-            // no cache, so it answers that here.
-            return new JsonObject { ["ok"] = false, ["error"] = "Utf8GraphQLRequestParser: no id and no query" };
-        }
-        var body = Encoding.UTF8.GetBytes("{\"query\":" + raw + "}");
+        var grammar = request.TryGetProperty("grammar", out var g) && g.ValueKind == JsonValueKind.String ? g.GetString()! : "executable";
+        if (grammar != "executable") return ParseTypeSystem(source.GetString()!, grammar);
+        var body = Encoding.UTF8.GetBytes("{\"query\":" + source.GetRawText() + "}");
         try
         {
-            var document = Utf8GraphQLRequestParser.Parse(body, RequestParserOptions)[0].Query
+            // An empty query is left unparsed by a parser with a document
+            // cache, so the request has no document and no id: a
+            // SyntaxException (NoIdAndNoQuery, Utf8GraphQLRequestParser.cs,
+            // ParseQuery and ParseMutableRequest).
+            var parser = new Utf8GraphQLRequestParser(
+                body,
+                RequestParserOptions,
+                RequestServices.GetRequiredService<IDocumentCache>(),
+                RequestServices.GetRequiredService<IDocumentHashProvider>());
+            var document = parser.Parse()[0].Query
                 ?? throw new InvalidOperationException("Utf8GraphQLRequestParser returned no document");
             var executable = document.Definitions.All(d => d is OperationDefinitionNode or FragmentDefinitionNode);
             return new JsonObject { ["ok"] = executable };
@@ -120,6 +148,26 @@ public static class Areas
         // something other than a SyntaxException on some sources, and
         // DocumentParserMiddleware only catches SyntaxException. Answer
         // turns it into an `error`, which the kit reports as a crash.
+    }
+
+    private static JsonObject ParseTypeSystem(string source, string grammar)
+    {
+        Func<IDefinitionNode, bool> allowed = grammar switch
+        {
+            "typeSystem" => d => d is ITypeSystemDefinitionNode,
+            "typeSystemExtension" => d => d is ITypeSystemDefinitionNode or ITypeSystemExtensionNode,
+            "document" => _ => true,
+            _ => throw new InvalidOperationException($"unknown grammar {grammar}"),
+        };
+        try
+        {
+            var document = Utf8GraphQLParser.Parse(source);
+            return new JsonObject { ["ok"] = document.Definitions.All(allowed) };
+        }
+        catch (SyntaxException error)
+        {
+            return new JsonObject { ["ok"] = false, ["error"] = error.Message };
+        }
     }
 
     // The executor validate uses. Every vector's schema is valid, but Hot
@@ -186,13 +234,37 @@ public static class Areas
     // records the field's path and the arguments Hot Chocolate coerced, and
     // returns "ok".
     //
-    // The variables are read with Utf8GraphQLRequestParser.ParseVariables,
-    // the routine the request parser uses for a request's "variables" entry.
-    // A syntax error there is a request error, as a server answers it. The
-    // parser turns each JSON value into a GraphQL literal and keeps a
-    // number's text as it is (Utf8GraphQLRequestParser.Syntax.cs,
-    // ParseScalarSyntax), so every number is read exactly: `exact-numbers`.
-    // That also makes JSON 1.0 a Float literal (see README.md).
+    // The request is read the way a Hot Chocolate server reads a POST body
+    // (AspNetCore's DefaultHttpRequestParser): the JSON body
+    // {"query", "operationName", "variables", "extensions"} goes through
+    // Utf8GraphQLRequestParser, with the application's ParserOptions,
+    // IDocumentCache and IDocumentHashProvider. It parses the document, the
+    // variables and the extensions. A SyntaxException there is the server's
+    // request error: DefaultHttpRequestParser turns it into one error with
+    // the exception's message and location and the code HC0011, and the
+    // middleware answers OperationResultBuilder.CreateError with it. That is
+    // also how an empty document fails (NoIdAndNoQuery). The executor then
+    // gets OperationRequestBuilder.From(request), as the server's middleware
+    // does.
+    //
+    // The parser turns each JSON value of the variables into a GraphQL
+    // literal and keeps a number's text as it is
+    // (Utf8GraphQLRequestParser.Syntax.cs, ParseScalarSyntax), so every
+    // number is read exactly: `exact-numbers`. That also makes JSON 1.0 a
+    // Float literal (see README.md).
+    //
+    // `nested-fields`: the middleware returns an object for a field of an
+    // object type and two for a list of objects (AreaSchemas).
+    //
+    // `subscription-source`: a subscription operation runs through the
+    // executor's subscription pipeline, whose subscribe resolver
+    // (AreaSchemas) records its call in sourceCalls and then returns a
+    // source stream of one event, or raises, as the request's `subscribe`
+    // says. The response is the response stream's first result, or the
+    // result the executor gives instead of a stream.
+    //
+    // `request-extensions`: the request's extensions are part of the body,
+    // and reach the executor as the request's extensions.
     //
     // `unvalidated` isn't claimed: OperationResolverMiddleware compiles an
     // operation only when the request context holds a passing validation
@@ -205,43 +277,80 @@ public static class Areas
     // tell a variable with no value from one set to null.
     private static JsonObject Coerce(JsonElement request)
     {
-        var executor = Executor(request.GetProperty("schema").GetString()!).Executor;
-        var calls = new Calls();
+        var built = Executor(request.GetProperty("schema").GetString()!);
+        var subscribe = request.TryGetProperty("subscribe", out var s) && s.ValueKind == JsonValueKind.String ? s.GetString() : null;
+        var calls = new Calls(subscribe);
 
-        IReadOnlyDictionary<string, object?>? variables = null;
-        if (request.TryGetProperty("variables", out var raw) && raw.ValueKind == JsonValueKind.String)
-        {
-            try
-            {
-                var parsed = Utf8GraphQLRequestParser.ParseVariables(Encoding.UTF8.GetBytes(raw.GetString()!), RequestParserOptions);
-                variables = parsed is { Count: > 0 } ? parsed[0] : null;
-            }
-            catch (SyntaxException error)
-            {
-                return new JsonObject
-                {
-                    ["response"] = new JsonObject
-                    {
-                        ["errors"] = new JsonArray(new JsonObject { ["message"] = $"variables: {error.Message}" }),
-                    },
-                    ["calls"] = new JsonArray(),
-                };
-            }
-        }
-
-        var builder = OperationRequestBuilder.New()
-            .SetDocument(request.GetProperty("document").GetString()!)
-            .SetGlobalState(Calls.Key, calls);
-        if (variables is not null) builder.SetVariableValues(variables);
+        // The body as a client sends it. The document's JSON string goes in
+        // as the kit wrote it; the variables and extensions are JSON text.
+        var body = new StringBuilder("{\"query\":").Append(request.GetProperty("document").GetRawText());
         if (request.TryGetProperty("operationName", out var name) && name.ValueKind == JsonValueKind.String)
         {
-            builder.SetOperationName(name.GetString());
+            body.Append(",\"operationName\":").Append(name.GetRawText());
+        }
+        if (request.TryGetProperty("variables", out var variables) && variables.ValueKind == JsonValueKind.String)
+        {
+            body.Append(",\"variables\":").Append(variables.GetString());
+        }
+        if (request.TryGetProperty("extensions", out var extensions) && extensions.ValueKind == JsonValueKind.String)
+        {
+            body.Append(",\"extensions\":").Append(extensions.GetString());
+        }
+        body.Append('}');
+
+        GraphQLRequest parsed;
+        try
+        {
+            parsed = new Utf8GraphQLRequestParser(Encoding.UTF8.GetBytes(body.ToString()), built.ParserOptions, built.DocumentCache, built.HashProvider)
+                .Parse()[0];
+        }
+        catch (SyntaxException error)
+        {
+            // DefaultHttpRequestParser_SyntaxError, answered by the HTTP
+            // middleware with OperationResultBuilder.CreateError.
+            var requestError = OperationResultBuilder.CreateError(ErrorBuilder.New()
+                .SetMessage(error.Message)
+                .AddLocation(error.Line, error.Column)
+                .SetCode(ErrorCodes.Server.SyntaxError)
+                .Build());
+            return new JsonObject { ["response"] = JsonNode.Parse(requestError.ToJson(false)), ["calls"] = new JsonArray() };
         }
 
-        var result = executor.ExecuteAsync(builder.Build()).GetAwaiter().GetResult();
-        var json = result.ToJson(false);
-        result.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        return new JsonObject { ["response"] = JsonNode.Parse(json), ["calls"] = calls.ToJson() };
+        var builder = OperationRequestBuilder.From(parsed).SetGlobalState(Calls.Key, calls);
+        var result = built.Executor.ExecuteAsync(builder.Build()).GetAwaiter().GetResult();
+        string json;
+        if (result is IResponseStream stream)
+        {
+            // A subscription: the response is the first result of the
+            // response stream, which is then closed.
+            json = FirstResult(stream).GetAwaiter().GetResult();
+        }
+        else
+        {
+            json = result.ToJson(false);
+            result.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+        var answer = new JsonObject { ["response"] = JsonNode.Parse(json), ["calls"] = calls.ToJson() };
+        if (subscribe is not null) answer["sourceCalls"] = calls.SourceCallsToJson();
+        return answer;
+    }
+
+    private static async Task<string> FirstResult(IResponseStream stream)
+    {
+        try
+        {
+            await foreach (var r in stream.ReadResultsAsync())
+            {
+                var json = r.ToJson(false);
+                await r.DisposeAsync();
+                return json;
+            }
+            throw new InvalidOperationException("the response stream completed without a result");
+        }
+        finally
+        {
+            await stream.DisposeAsync();
+        }
     }
 
     // Is the SDL schema valid? The request executor is built, which builds
@@ -294,26 +403,79 @@ public static class Areas
         result.DisposeAsync().AsTask().GetAwaiter().GetResult();
         return new JsonObject { ["response"] = JsonNode.Parse(json) };
     }
+    // Parses the schema coordinate with Hot Chocolate's parser
+    // (SchemaCoordinate.Parse, which reads it with Utf8GraphQLParser's
+    // ParseSchemaCoordinate) and resolves it in the schema the SDL builds
+    // with ISchema.TryGetMember. A SyntaxException is `ok: false`.
+    //
+    // Hot Chocolate has two resolvers: TryGetMember, which returns false
+    // whenever no element is found, and GetMember, which throws
+    // InvalidSchemaCoordinateException whenever no element is found. Neither
+    // tells a missing element from a missing container, as §2.14 does (no
+    // element, or an error). The adapter uses TryGetMember, so it never
+    // answers `error` (see README.md).
+    //
+    // `kind` and `path` come from the element TryGetMember returns: its
+    // class, its name, and the names of the type, field or directive that
+    // declares it.
+    private static JsonObject Coordinate(JsonElement request)
+    {
+        var schema = Executor(request.GetProperty("sdl").GetString()!).Executor.Schema;
+        SchemaCoordinate coordinate;
+        try
+        {
+            coordinate = SchemaCoordinate.Parse(request.GetProperty("coordinate").GetString()!);
+        }
+        catch (SyntaxException error)
+        {
+            return new JsonObject { ["ok"] = false, ["error"] = error.Message };
+        }
+        if (!schema.TryGetMember(coordinate, out var member))
+        {
+            return new JsonObject { ["ok"] = true, ["resolved"] = null };
+        }
+        var (kind, path) = member switch
+        {
+            INamedType type => ("type", new[] { type.Name }),
+            DirectiveType directive => ("directive", new[] { directive.Name }),
+            DirectiveArgument argument => ("directiveArgument", new[] { ((DirectiveType)argument.DeclaringType).Name, argument.Name }),
+            Argument argument => ("argument", new[] { argument.Coordinate.Name, argument.Coordinate.MemberName!, argument.Name }),
+            InputField field => ("inputField", new[] { ((INamedType)field.DeclaringType).Name, field.Name }),
+            IOutputField field => ("field", new[] { field.DeclaringType.Name, field.Name }),
+            IEnumValue value => ("enumValue", new[] { EnumTypeOf(schema, value).Name, value.Name }),
+            _ => throw new InvalidOperationException($"TryGetMember returned a {member.GetType().Name}"),
+        };
+        return new JsonObject
+        {
+            ["ok"] = true,
+            ["resolved"] = new JsonObject
+            {
+                ["kind"] = kind,
+                ["path"] = new JsonArray(path.Select(p => (JsonNode)JsonValue.Create(p)!).ToArray()),
+            },
+        };
+    }
+
+    // An enum value doesn't name its type: the schema's enum type that holds it.
+    private static EnumType EnumTypeOf(ISchema schema, IEnumValue value) =>
+        schema.Types.OfType<EnumType>().Single(t => t.Values.Any(v => ReferenceEquals(v, value)));
 }
 
 // The resolver calls of one coerce request.
-public sealed class Calls
+public sealed class Calls(string? subscribe = null)
 {
     public const string Key = "graphql-tla.calls";
 
     private readonly List<JsonObject> _calls = [];
+    private readonly List<JsonObject> _sourceCalls = [];
+
+    // What the subscribe resolver does (subscription-source): "stream" or
+    // "raise", or null when the request has no `subscribe`.
+    public string? Subscribe => subscribe;
 
     public void Add(IResolverContext context)
     {
-        // Every argument the field declares, coerced by Hot Chocolate, read
-        // the way a resolver method's parameters are (ArgumentValue). An
-        // argument that fails to coerce throws here, before the call is
-        // recorded, as it would before a resolver method's body ran.
-        var arguments = new JsonObject();
-        foreach (var argument in context.Selection.Field.Arguments)
-        {
-            arguments[argument.Name] = ToJson(context.ArgumentValue<object?>(argument.Name));
-        }
+        var arguments = Arguments(context);
         var path = new JsonArray();
         foreach (var segment in context.Path.ToList())
         {
@@ -322,9 +484,36 @@ public sealed class Calls
         lock (_calls) _calls.Add(new JsonObject { ["path"] = path, ["arguments"] = arguments });
     }
 
+    // A call of the subscribe resolver: the field's name and its coerced
+    // arguments.
+    public void AddSource(IResolverContext context)
+    {
+        var arguments = Arguments(context);
+        lock (_sourceCalls) _sourceCalls.Add(new JsonObject { ["field"] = context.Selection.Field.Name, ["arguments"] = arguments });
+    }
+
+    // Every argument the field declares, coerced by Hot Chocolate, read the
+    // way a resolver method's parameters are (ArgumentValue). An argument
+    // that fails to coerce throws here, before the call is recorded, as it
+    // would before a resolver method's body ran.
+    private static JsonObject Arguments(IResolverContext context)
+    {
+        var arguments = new JsonObject();
+        foreach (var argument in context.Selection.Field.Arguments)
+        {
+            arguments[argument.Name] = ToJson(context.ArgumentValue<object?>(argument.Name));
+        }
+        return arguments;
+    }
+
     public JsonArray ToJson()
     {
         lock (_calls) return new JsonArray(_calls.Select(c => (JsonNode)c.DeepClone()).ToArray());
+    }
+
+    public JsonArray SourceCallsToJson()
+    {
+        lock (_sourceCalls) return new JsonArray(_sourceCalls.Select(c => (JsonNode)c.DeepClone()).ToArray());
     }
 
     // A coerced runtime value as JSON (docs/kit/coerce.md). Hot Chocolate's
@@ -347,7 +536,14 @@ public sealed class Calls
     };
 }
 
-public sealed record Built(IRequestExecutor Executor, IDocumentValidator Validator);
+// A request executor, with what the application's services give the
+// request pipeline and a server's request parser.
+public sealed record Built(
+    IRequestExecutor Executor,
+    IDocumentValidator Validator,
+    ParserOptions ParserOptions,
+    IDocumentCache DocumentCache,
+    IDocumentHashProvider HashProvider);
 
 public static class AreaSchemas
 {
@@ -374,20 +570,26 @@ public static class AreaSchemas
     // resolver ("The field `Query.a` has no resolver"). So every field gets
     // the same field middleware, in every area, though it only runs in
     // coerce: it records the call when the request carries a Calls recorder,
-    // and returns "ok".
+    // and returns "ok" for a leaf, an object for a field of an object type,
+    // and two objects for a list of objects (nested-fields).
+    //
+    // A subscription root field needs a subscribe resolver to run
+    // (SubscriptionExecutor throws without one), so every subscription root
+    // field gets one (SubscribeInterceptor), though it only runs in coerce.
     public static async Task<Built> BuildAsync(string sdl, bool strict = true)
     {
         var services = new ServiceCollection();
         var builder = services
             .AddGraphQL()
             .AddDocumentFromString(sdl)
+            .TryAddTypeInterceptor<SubscribeInterceptor>()
             .UseField(_ => context =>
             {
                 if (context.ContextData.TryGetValue(Calls.Key, out var calls) && calls is Calls recorder)
                 {
                     recorder.Add(context);
                 }
-                context.Result = "ok";
+                context.Result = ValueFor(context.Selection.Field.Type);
                 return ValueTask.CompletedTask;
             });
         foreach (var name in CustomScalars(sdl)) builder.AddType(new JsonType(name));
@@ -399,7 +601,24 @@ public static class AreaSchemas
         var provider = services.BuildServiceProvider();
         var executor = await provider.GetRequiredService<IRequestExecutorResolver>().GetRequestExecutorAsync();
         var validator = provider.GetRequiredService<IDocumentValidatorFactory>().CreateValidator(executor.Schema.Name);
-        return new Built(executor, validator);
+        return new Built(
+            executor,
+            validator,
+            provider.GetRequiredService<ParserOptions>(),
+            provider.GetRequiredService<IDocumentCache>(),
+            provider.GetRequiredService<IDocumentHashProvider>());
+    }
+
+    // What a field's resolver returns, by its type.
+    private static object ValueFor(IType type)
+    {
+        var nullable = type.IsNonNullType() ? type.InnerType() : type;
+        if (nullable.IsListType())
+        {
+            var item = ValueFor(nullable.ListType().ElementType);
+            return item is string ? new List<object> { item } : new List<object> { item, new object() };
+        }
+        return nullable.IsObjectType() ? new object() : "ok";
     }
 
     // The scalars the SDL defines that Hot Chocolate can't resolve by name.
@@ -420,5 +639,51 @@ public static class AreaSchemas
             .Select(d => d.Name.Value)
             .Where(n => !Scalars.IsBuiltIn(n))
             .Distinct();
+    }
+}
+
+// Gives every subscription root field a subscribe resolver. In coerce, it
+// records its call and returns a source stream of one event, or raises, as
+// the request's `subscribe` says.
+internal sealed class SubscribeInterceptor : TypeInterceptor
+{
+    private ObjectTypeDefinition? _subscription;
+
+    public override void OnAfterResolveRootType(
+        ITypeCompletionContext completionContext,
+        ObjectTypeDefinition definition,
+        OperationType operationType)
+    {
+        if (operationType is OperationType.Subscription) _subscription = definition;
+    }
+
+    public override void OnBeforeCompleteType(ITypeCompletionContext completionContext, DefinitionBase definition)
+    {
+        if (definition != _subscription || definition is not ObjectTypeDefinition objectType) return;
+        foreach (var field in objectType.Fields)
+        {
+            if (field.IsIntrospectionField) continue;
+            field.SubscribeResolver = context =>
+            {
+                var calls = context.ContextData.TryGetValue(Calls.Key, out var c) ? c as Calls : null;
+                calls?.AddSource(context);
+                if (calls?.Subscribe == "raise")
+                {
+                    throw new GraphQLException(ErrorBuilder.New().SetMessage("the source stream can't be established").Build());
+                }
+                return new ValueTask<ISourceStream>(new OneEvent());
+            };
+        }
+    }
+
+    private sealed class OneEvent : ISourceStream
+    {
+        public async IAsyncEnumerable<object?> ReadEventsAsync()
+        {
+            await Task.Yield();
+            yield return new object();
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

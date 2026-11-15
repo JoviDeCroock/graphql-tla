@@ -21,7 +21,15 @@ module Areas
 
   CAPABILITIES = [
     "parse", "validate", "coerce", "schema", "introspect",
+    # GraphQL.parse reads the type system language too.
+    "parse-sdl",
     "absent-vs-null",
+    # coerce: resolvers return objects for object fields; a subscription
+    # runs its subscribe step and one update through GraphQL::Subscriptions;
+    # graphql-ruby takes no request extensions, so they are read and dropped.
+    "nested-fields", "subscription-source", "request-extensions",
+    # from_definition applies the document's type extensions to its types.
+    "schema-extensions",
     # from_definition builds the SDL's `directive @label(...) on ...`
     # definitions, so validate knows them and introspection lists them.
     "custom-directives",
@@ -37,22 +45,42 @@ module Areas
     default_logger(Logger.new($stderr, level: Logger::ERROR))
   end
 
-  EXECUTABLE = [GraphQL::Language::Nodes::OperationDefinition, GraphQL::Language::Nodes::FragmentDefinition].freeze
+  N = GraphQL::Language::Nodes
+  EXECUTABLE = [N::OperationDefinition, N::FragmentDefinition].freeze
+  TYPE_SYSTEM = [
+    N::SchemaDefinition, N::DirectiveDefinition, N::ScalarTypeDefinition, N::ObjectTypeDefinition,
+    N::InterfaceTypeDefinition, N::UnionTypeDefinition, N::EnumTypeDefinition, N::InputObjectTypeDefinition,
+  ].freeze
+  # graphql-ruby has no node for a directive extension: its parser doesn't
+  # read `extend directive`.
+  TYPE_SYSTEM_EXTENSION = [
+    N::SchemaExtension, N::ScalarTypeExtension, N::ObjectTypeExtension, N::InterfaceTypeExtension,
+    N::UnionTypeExtension, N::EnumTypeExtension, N::InputObjectTypeExtension,
+  ].freeze
+  # Which definitions each grammar allows (docs/kit/parse.md).
+  GRAMMARS = {
+    "executable" => EXECUTABLE,
+    "typeSystem" => TYPE_SYSTEM,
+    "typeSystemExtension" => TYPE_SYSTEM + TYPE_SYSTEM_EXTENSION,
+    "document" => EXECUTABLE + TYPE_SYSTEM + TYPE_SYSTEM_EXTENSION,
+  }.freeze
 
   module_function
 
   # parse (docs/kit/parse.md): GraphQL.parse, as Schema.execute parses a
-  # request's document. The parser also reads the type system language, so
-  # every definition must be an operation or a fragment. A ParseError is
-  # `ok: false`; any other exception is a crash.
+  # request's document and from_definition parses SDL. The parser reads the
+  # whole Document grammar, so every definition must be of a kind the
+  # request's grammar allows (an operation or a fragment without `grammar`).
+  # A ParseError is `ok: false`; any other exception is a crash.
   def parse(request)
+    allowed = GRAMMARS.fetch(request.fetch("grammar", "executable")) { raise ArgumentError, "unknown grammar #{request["grammar"].inspect}" }
     document =
       begin
         GraphQL.parse(request["source"])
       rescue GraphQL::ParseError
         return { ok: false }
       end
-    { ok: document.definitions.all? { |d| EXECUTABLE.include?(d.class) } }
+    { ok: document.definitions.all? { |d| allowed.include?(d.class) } }
   end
 
   # validate (docs/kit/validate.md): Schema.validate, which runs
@@ -72,11 +100,29 @@ module Areas
 
   # coerce (docs/kit/coerce.md): Schema.execute with one resolver on every
   # field, which records the field's path and the arguments graphql-ruby
-  # gave it, and returns "ok". Variables are read with Ruby's JSON.parse, as
-  # Rack and Rails read a request body: integers exactly, other numbers as
-  # Floats, so `1e400` is Infinity and `exact-numbers` isn't claimed. The
-  # response is Query::Result#to_json, read back: a result that can't be
-  # serialized raises there, and is a crash.
+  # gave it, and returns what the field's type needs: "ok" for a leaf, an
+  # object for an object type, two for a list of objects (nested-fields).
+  # Variables are read with Ruby's JSON.parse, as Rack and Rails read a
+  # request body: integers exactly, other numbers as Floats, so `1e400` is
+  # Infinity and `exact-numbers` isn't claimed. The response is
+  # Query::Result#to_json, read back: a result that can't be serialized
+  # raises there, and is a crash. A document that doesn't parse goes to
+  # Schema.execute like any other: graphql-ruby answers it with its parse
+  # error (Schema.parse_error, schema.rb:1770).
+  #
+  # A subscription (subscription-source) runs as graphql-ruby runs one: the
+  # schema uses GraphQL::Subscriptions (CoerceSubscriptions, below), and
+  # Schema.execute runs the subscribe step, where the root field's resolver
+  # is graphql-ruby's equivalent of the source stream resolver: it records
+  # its call in sourceCalls, then returns `context.skip` ("stream") or
+  # raises a GraphQL::ExecutionError ("raise"), the documented way to refuse
+  # a subscription. If graphql-ruby wrote the subscription, the adapter
+  # triggers its one event with Subscriptions#execute, which reruns the
+  # operation as an update, and the response is what graphql-ruby delivers.
+  # Otherwise the response is what the subscribe step returned.
+  #
+  # The request's `extensions` have no place in graphql-ruby's
+  # Schema.execute, so they are read and dropped.
   #
   # Ruby's JSON parser refuses an escaped lone high surrogate ("\ud800"),
   # so such variables never reach graphql-ruby: a Ruby server would refuse
@@ -84,7 +130,9 @@ module Areas
   # (docs/kit/coerce.md) instead of making up a response graphql-ruby didn't
   # give. Any other JSON the parser refuses is the adapter's failure.
   def coerce(request)
-    schema = cached(:coerce, request["schema"]) { AreaSchema.from_definition(request["schema"], default_resolve: EchoResolver.new) }
+    schema = cached(:coerce, request["schema"]) do
+      AreaSchema.from_definition(request["schema"], default_resolve: EchoResolver.new, using: { CoerceSubscriptions => {} })
+    end
     variables =
       begin
         JSON.parse(request["variables"])
@@ -93,24 +141,92 @@ module Areas
 
         return { unsupported: "lone surrogate: Ruby's JSON parser refuses the variables (#{e.message.lines.first&.strip})" }
       end
+    JSON.parse(request["extensions"]) if request.key?("extensions")
     calls = []
+    source_calls = []
+    subscriptions = schema.subscriptions
+    subscriptions.reset
+    context = { calls: calls, source_calls: source_calls, subscribe: request["subscribe"] }
     result = schema.execute(
       request["document"],
       variables: variables,
       operation_name: request["operationName"],
       validate: !UNVALIDATED,
-      context: { calls: calls },
+      context: context,
     )
-    { response: JSON.parse(result.to_json), calls: calls }
+    if request.key?("subscribe") && (subscription = subscriptions.subscriptions.first)
+      id, data = subscription
+      subscriptions.execute(id, data[:events].first, {})
+      result = subscriptions.delivered or raise "graphql-ruby delivered no result for the event"
+    end
+    {
+      response: JSON.parse(result.to_json), calls: calls,
+      **(request.key?("subscribe") ? { sourceCalls: source_calls } : {}),
+    }
   end
 
   # The coerce resolver. graphql-ruby passes the arguments as keyword
   # arguments, keyed by each argument's `keyword`, and leaves out an argument
-  # that has no value (absent-vs-null).
+  # that has no value (absent-vs-null). In a subscription's subscribe step,
+  # the root field's resolver stands for the source stream resolver.
   class EchoResolver
     def call(_type, field, _object, args, context)
-      context[:calls] << { path: context.current_path.map(&:to_s), arguments: Areas.arguments_json(field.arguments(context), args, context) }
-      "ok"
+      query = context.query
+      arguments = Areas.arguments_json(field.arguments(context), args, context)
+      if query.subscription? && !query.subscription_update? && context.current_path.length == 1 && context[:subscribe]
+        context[:source_calls] << { field: field.graphql_name, arguments: arguments }
+        raise GraphQL::ExecutionError, "the source stream can't be established" if context[:subscribe] == "raise"
+
+        return context.skip
+      end
+      context[:calls] << { path: context.current_path.dup, arguments: arguments }
+      Areas.value_for(field.type)
+    end
+  end
+
+  # What a field's resolver returns, by its type: "ok" for a leaf, an object
+  # for an object type, two of them for a list of objects.
+  def value_for(type)
+    type = type.of_type if type.non_null?
+    if type.list?
+      item = value_for(type.of_type)
+      return item.is_a?(Hash) ? [item, item.dup] : [item]
+    end
+    type.kind.object? ? {} : "ok"
+  end
+
+  # Subscriptions kept in memory, for coerce: the adapter stands in for the
+  # transport, triggers the subscription's event and takes what
+  # graphql-ruby delivers.
+  class CoerceSubscriptions < GraphQL::Subscriptions
+    attr_reader :subscriptions, :delivered
+
+    def initialize(**options)
+      super
+      @subscriptions = {}
+      @delivered = nil
+    end
+
+    def write_subscription(query, events)
+      @subscriptions[build_id] = {
+        query_string: query.query_string,
+        variables: query.provided_variables,
+        context: query.context.to_h.slice(:calls, :source_calls, :subscribe),
+        operation_name: query.operation_name,
+        events: events,
+      }
+    end
+
+    def read_subscription(id) = @subscriptions[id]
+    def delete_subscription(id) = @subscriptions.delete(id)
+
+    def deliver(_id, result)
+      @delivered = result
+    end
+
+    def reset
+      @subscriptions.clear
+      @delivered = nil
     end
   end
 

@@ -1,6 +1,8 @@
 // The kit's areas beyond execution (docs/kit-areas.md, docs/kit/*.md):
 // parse, validate, coerce, schema and introspect. Each answers a request
 // with graphql-java's own APIs, the way an application would use them.
+// coordinate isn't claimed: graphql-java has no schema coordinate parser or
+// resolver (FieldCoordinates is a type and field name pair, not §2.14).
 
 package graphqltla;
 
@@ -19,10 +21,23 @@ import graphql.language.Definition;
 import graphql.language.Document;
 import graphql.language.FragmentDefinition;
 import graphql.language.OperationDefinition;
+import graphql.language.SDLDefinition;
+import graphql.language.SDLExtensionDefinition;
 import graphql.language.SourceLocation;
+import graphql.parser.InvalidSyntaxException;
+import graphql.parser.exceptions.ParseCancelledException;
+import graphql.parser.exceptions.ParseCancelledTooDeepException;
+import graphql.parser.exceptions.ParseCancelledTooManyCharsException;
+import graphql.parser.exceptions.ParseCancelledTooManyNumericLiteralCharactersException;
 import graphql.parser.Parser;
+import graphql.parser.ParserEnvironment;
+import graphql.parser.ParserOptions;
 import graphql.schema.DataFetcher;
+import graphql.schema.GraphQLList;
+import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
+import graphql.schema.GraphQLType;
+import graphql.schema.GraphQLTypeUtil;
 import graphql.schema.idl.FieldWiringEnvironment;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
@@ -37,6 +52,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Flow;
+import java.util.concurrent.TimeUnit;
 
 final class Areas {
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -49,6 +66,11 @@ final class Areas {
 
     static List<String> capabilities() {
         List<String> capabilities = new ArrayList<>(NAMES);
+        // parse: the type system grammars, with the parser SchemaParser uses.
+        capabilities.add("parse-sdl");
+        // schema: SchemaParser and SchemaGenerator take a document with type
+        // system extensions, and apply them to the definitions they extend.
+        capabilities.add("schema-extensions");
         // validate: RuntimeWiring.MOCKED_WIRING's custom scalars parse every
         // literal (MockedWiringFactory#getScalar).
         capabilities.add("custom-scalar-literals");
@@ -60,13 +82,19 @@ final class Areas {
         // absent and null differ.
         capabilities.add("absent-vs-null");
         if (!validating) capabilities.add("unvalidated");
+        // coerce: objects for object fields, a subscription through
+        // GraphQL.execute's subscription strategy, and the request's
+        // extensions in ExecutionInput.
+        capabilities.add("nested-fields");
+        capabilities.add("subscription-source");
+        capabilities.add("request-extensions");
         return capabilities;
     }
 
     // The result's fields for a request, or throws if the adapter failed.
     static Map<String, Object> answer(String area, JsonNode request) throws Exception {
         return switch (area) {
-            case "parse" -> parse(request.get("source").asText());
+            case "parse" -> parse(request.get("source").asText(), request.hasNonNull("grammar") ? request.get("grammar").asText() : "executable");
             case "validate" -> validate(request.get("schema").asText(), request.get("document").asText());
             case "coerce" -> coerce(request);
             case "schema" -> schema(request.get("sdl").asText());
@@ -77,11 +105,18 @@ final class Areas {
 
     // ---- parse ----
 
-    // Parsed as GraphQL parses a request's document: ParseAndValidate.parse,
-    // with the default operation parser options. graphql-java's parser also
-    // reads the type system language, so every definition must be an
-    // operation or a fragment.
-    static Map<String, Object> parse(String source) {
+    // An executable document is parsed as GraphQL parses a request's
+    // document: ParseAndValidate.parse, with the default operation parser
+    // options. graphql-java's parser reads the whole Document grammar, so
+    // every definition must be an operation or a fragment. A type system
+    // grammar (parse-sdl) is parsed as SchemaParser parses SDL: Parser.parse
+    // with the default SDL parser options, without building a registry. Then
+    // every definition must be of a kind the grammar allows. graphql-java's
+    // limits (ParserOptions: tokens, characters, rule depth, numeric literal
+    // length) throw ParseCancelledException, an InvalidSyntaxException: a
+    // refusal, `ok: false`.
+    static Map<String, Object> parse(String source, String grammar) {
+        if (!"executable".equals(grammar)) return parseSdl(source, grammar);
         ParseAndValidateResult result = ParseAndValidate.parse(ExecutionInput.newExecutionInput().query(source).build());
         Map<String, Object> answer = new LinkedHashMap<>();
         if (result.isFailure()) {
@@ -94,6 +129,32 @@ final class Areas {
             if (!(d instanceof OperationDefinition || d instanceof FragmentDefinition)) executable = false;
         }
         answer.put("ok", executable);
+        return answer;
+    }
+
+    static Map<String, Object> parseSdl(String source, String grammar) {
+        Map<String, Object> answer = new LinkedHashMap<>();
+        Document document;
+        try {
+            document = Parser.parse(ParserEnvironment.newParserEnvironment()
+                    .document(source)
+                    .parserOptions(ParserOptions.getDefaultSdlParserOptions())
+                    .build());
+        } catch (InvalidSyntaxException e) {
+            answer.put("ok", false);
+            answer.put("error", e.getMessage());
+            return answer;
+        }
+        boolean ok = true;
+        for (Definition<?> d : document.getDefinitions()) {
+            ok &= switch (grammar) {
+                case "typeSystem" -> d instanceof SDLDefinition && !(d instanceof SDLExtensionDefinition);
+                case "typeSystemExtension" -> d instanceof SDLDefinition;
+                case "document" -> true;
+                default -> throw new IllegalArgumentException("unknown grammar " + grammar);
+            };
+        }
+        answer.put("ok", ok);
         return answer;
     }
 
@@ -118,10 +179,27 @@ final class Areas {
     // propagates: the caller answers with an `error`, which the kit reports
     // as a crash (docs/kit/validate.md). The validator throws on some
     // subscriptions whose root field has @skip or @include (README.md).
+    //
+    // The document is parsed as GraphQL parses a request's: ParseAndValidate.parse,
+    // with the default operation parser options. A document over one of their
+    // documented limits (ParserOptions; the ParseCancelled* exceptions, such
+    // as a numeric literal longer than 100 characters) is refused, and GraphQL answers it with an
+    // error response: a rejection. Any other syntax error is a crash, since
+    // every vector parses.
     static Map<String, Object> validate(String sdl, String source) {
         GraphQLSchema schema = mockedSchema(sdl);
-        Document document = Parser.parse(source);
         List<Map<String, Object>> errors = new ArrayList<>();
+        ParseAndValidateResult parsed = ParseAndValidate.parse(ExecutionInput.newExecutionInput().query(source).build());
+        if (parsed.isFailure()) {
+            InvalidSyntaxException syntax = parsed.getSyntaxException();
+            if (!(syntax instanceof ParseCancelledException
+                    || syntax instanceof ParseCancelledTooDeepException
+                    || syntax instanceof ParseCancelledTooManyCharsException
+                    || syntax instanceof ParseCancelledTooManyNumericLiteralCharactersException)) throw syntax;
+            errors.add(error(syntax.getMessage(), null));
+            return Map.of("valid", false, "errors", errors);
+        }
+        Document document = parsed.getDocument();
         try {
             for (ValidationError e : new Validator().validateDocument(schema, document, Locale.ENGLISH)) {
                 errors.add(error(e.getMessage(), e.getLocations()));
@@ -148,33 +226,86 @@ final class Areas {
 
     // ---- coerce ----
 
-    // The calls of the request being executed. Everything runs on the thread
-    // that reads stdin, and graphql-java runs synchronous data fetchers on the
-    // calling thread.
+    // The calls of the request being executed, the source stream resolver's
+    // calls (subscription-source), and what that resolver does ("stream" or
+    // "raise"). Everything runs on the thread that reads stdin, and
+    // graphql-java runs synchronous data fetchers on the calling thread.
     private static List<Map<String, Object>> calls;
+    private static List<Map<String, Object>> sourceCalls;
+    private static String subscribe;
 
     private static final Map<String, GraphQL> coerceEngines = new HashMap<>();
 
-    // Every field's data fetcher records its path and the arguments
-    // graphql-java coerced, and returns "ok". graphql-java coerces arguments
-    // lazily, when the data fetcher first asks for them
-    // (ExecutionStrategy#fetchField). If they can't be coerced, asking throws,
-    // graphql-java reports a field error, and no call is recorded: the
-    // resolver never got arguments.
-    private static final DataFetcher<Object> RECORDER = env -> {
-        Map<String, Object> arguments = env.getArguments();
-        List<Object> path = new ArrayList<>(env.getExecutionStepInfo().getPath().toList());
+    // What a field's data fetcher returns, by its type (nested-fields): "ok"
+    // for a leaf, an object for an object type, two of them for a list of
+    // objects.
+    static Object valueFor(GraphQLType type) {
+        GraphQLType bare = GraphQLTypeUtil.unwrapNonNull(type);
+        if (bare instanceof GraphQLList list) {
+            Object item = valueFor(list.getWrappedType());
+            return item instanceof Map ? List.of(new LinkedHashMap<>(), new LinkedHashMap<>()) : List.of(item);
+        }
+        return bare instanceof GraphQLObjectType ? new LinkedHashMap<>() : "ok";
+    }
+
+    static Map<String, Object> call(List<Object> path, Map<String, Object> arguments) {
         Map<String, Object> call = new LinkedHashMap<>();
         call.put("path", path);
         call.put("arguments", toJson(arguments));
-        calls.add(call);
-        return "ok";
+        return call;
+    }
+
+    // Every field's data fetcher records its path and the arguments
+    // graphql-java coerced, and returns what the field's type needs.
+    // graphql-java coerces arguments lazily, when the data fetcher first asks
+    // for them (ExecutionStrategy#fetchField). If they can't be coerced,
+    // asking throws, graphql-java reports a field error, and no call is
+    // recorded: the resolver never got arguments.
+    //
+    // A subscription root field's data fetcher is its source stream resolver
+    // (SubscriptionExecutionStrategy#createSourceEventStream): it records a
+    // source call, then raises or returns a stream of one event. graphql-java
+    // uses each event as the root field's value; it doesn't resolve the root
+    // field again on the event. So, as in execution (README.md), the event
+    // stands for the root field's resolution: when the stream emits it, the
+    // adapter records the root call, with the arguments the source stream
+    // resolver got.
+    private static final DataFetcher<Object> RECORDER = env -> {
+        Map<String, Object> arguments = env.getArguments();
+        List<Object> path = new ArrayList<>(env.getExecutionStepInfo().getPath().toList());
+        if (env.getParentType() == env.getGraphQLSchema().getSubscriptionType()) {
+            Map<String, Object> source = new LinkedHashMap<>();
+            source.put("field", env.getField().getName());
+            source.put("arguments", toJson(arguments));
+            sourceCalls.add(source);
+            if ("raise".equals(subscribe)) throw new RuntimeException("the source stream can't be established");
+            Object event = valueFor(env.getFieldType());
+            List<Map<String, Object>> recorded = calls;
+            Flow.Publisher<Object> stream = subscriber -> subscriber.onSubscribe(new Flow.Subscription() {
+                boolean sent;
+
+                @Override
+                public void request(long n) {
+                    if (sent || n <= 0) return;
+                    sent = true;
+                    recorded.add(call(path, arguments));
+                    subscriber.onNext(event);
+                    subscriber.onComplete();
+                }
+
+                @Override
+                public void cancel() {}
+            });
+            return stream;
+        }
+        calls.add(call(path, arguments));
+        return valueFor(env.getFieldType());
     };
 
     // Unvalidated: a PreparsedDocumentProvider, graphql-java's hook for
     // documents parsed and validated earlier, hands over the parsed document
     // without calling the parse-and-validate function, so GraphQL executes it
-    // without validating.
+    // without validating. A syntax error is GraphQL's own request error.
     private static final PreparsedDocumentProvider PARSE_ONLY = (input, parseAndValidate) -> {
         ParseAndValidateResult parsed = ParseAndValidate.parse(input);
         return CompletableFuture.completedFuture(parsed.isFailure()
@@ -203,10 +334,12 @@ final class Areas {
         });
     }
 
-    // The variables are read with Jackson, as a Java server would read a
-    // request body: integers as Integer, Long or BigInteger (exact), other
-    // numbers as Double. So 1e400 is Infinity before graphql-java sees it, and
-    // the adapter doesn't claim `exact-numbers`.
+    // The variables, and the request's extensions (request-extensions), are
+    // read with Jackson, as a Java server would read a request body:
+    // integers as Integer, Long or BigInteger (exact), other numbers as
+    // Double. So 1e400 is Infinity before graphql-java sees it, and the
+    // adapter doesn't claim `exact-numbers`. The extensions go to
+    // ExecutionInput#extensions, where a server puts them.
     @SuppressWarnings("unchecked")
     static Map<String, Object> coerce(JsonNode request) throws Exception {
         Map<String, Object> variables = JSON.readValue(request.get("variables").asText(), Map.class);
@@ -214,7 +347,13 @@ final class Areas {
                 .query(request.get("document").asText())
                 .variables(variables == null ? Map.of() : variables);
         if (request.hasNonNull("operationName")) input.operationName(request.get("operationName").asText());
+        if (request.hasNonNull("extensions")) {
+            Map<String, Object> extensions = JSON.readValue(request.get("extensions").asText(), Map.class);
+            if (extensions != null) input.extensions(extensions);
+        }
         calls = new ArrayList<>();
+        sourceCalls = new ArrayList<>();
+        subscribe = request.hasNonNull("subscribe") ? request.get("subscribe").asText() : null;
         Map<String, Object> answer = new LinkedHashMap<>();
         try {
             // If GraphQL.execute throws instead of returning a result, the
@@ -223,12 +362,53 @@ final class Areas {
             // (docs/kit/coerce.md). Unvalidated, a document with no operation
             // and no operationName does that (README.md).
             ExecutionResult result = coerceEngine(request.get("schema").asText()).execute(input.build());
+            // A subscription: the response is the first result of the
+            // response stream, which is then closed. A result without a
+            // stream (the source stream couldn't be created) is the response.
+            if (result.getData() instanceof org.reactivestreams.Publisher<?> stream) result = firstResult(stream);
             answer.put("response", result.toSpecification());
             answer.put("calls", calls);
+            if (subscribe != null) answer.put("sourceCalls", sourceCalls);
         } finally {
             calls = null;
+            sourceCalls = null;
+            subscribe = null;
         }
         return answer;
+    }
+
+    // The first result a subscription's response stream publishes. Every
+    // data fetcher is synchronous, so it arrives while request(1) runs; if it
+    // doesn't, or the stream ends without one, the client got no response.
+    @SuppressWarnings("unchecked")
+    static ExecutionResult firstResult(org.reactivestreams.Publisher<?> stream) throws Exception {
+        CompletableFuture<ExecutionResult> first = new CompletableFuture<>();
+        ((org.reactivestreams.Publisher<ExecutionResult>) stream).subscribe(new org.reactivestreams.Subscriber<>() {
+            org.reactivestreams.Subscription subscription;
+
+            @Override
+            public void onSubscribe(org.reactivestreams.Subscription s) {
+                subscription = s;
+                s.request(1);
+            }
+
+            @Override
+            public void onNext(ExecutionResult event) {
+                first.complete(event);
+                subscription.cancel();
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                first.completeExceptionally(t);
+            }
+
+            @Override
+            public void onComplete() {
+                if (!first.isDone()) first.completeExceptionally(new IllegalStateException("the response stream ended without a result"));
+            }
+        });
+        return first.get(10, TimeUnit.SECONDS);
     }
 
     // Arguments as JSON (docs/kit/coerce.md): JSON can't hold a non-finite

@@ -234,6 +234,14 @@ const streamProblems = (c) => {
   let cause = null;
   let completion = null;
   let sourceCancelled = false;
+  // A result with errors that arrived once the source had failed, before
+  // the stream completed: an implementation whose streams can't end with an
+  // error (a stream of results, as in Rust) ends it with such an item, then
+  // completes normally. The spec doesn't say how "complete with that error"
+  // looks to a client, so that passes failsWithSource (checks.mjs), and a
+  // result after the source failed never counts against eventPerSourceEvent:
+  // it answers the failure, not an event.
+  let errorAfterFail = false;
   const unanswered = [];
   for (const entry of log) {
     if (entry?.kit === "emit") {
@@ -242,6 +250,7 @@ const streamProblems = (c) => {
       cause ??= entry.kit;
     } else if (entry?.adapter === "response") {
       if (cause === "cancel") add("nothingAfterCancel", "a result arrived after the client cancelled the response stream");
+      else if (cause === "fail" && !completion && !unanswered.includes(entry.event)) errorAfterFail ||= entry.errors === true;
       else if (completion) add("eventPerSourceEvent", "a result arrived after the response stream completed");
       else if (!unanswered.includes(entry.event)) add("eventPerSourceEvent", "a result arrived for no source event");
       else unanswered.splice(unanswered.indexOf(entry.event), 1);
@@ -266,7 +275,9 @@ const streamProblems = (c) => {
     if (cause !== "cancel" && unanswered.length > 0) add("eventPerSourceEvent", `event ${unanswered[0]} yielded no result before the response stream completed`);
     const ended = completion ? `completed ${completion.how === "done" ? "normally" : "with an error"}` : "never completed";
     if (cause === "complete" && completion?.how !== "done") add("completesWithSource", `the source completed, and the response stream ${ended}`);
-    if (cause === "fail" && completion?.how !== "stream-error") add("failsWithSource", `the source failed, and the response stream ${ended}`);
+    if (cause === "fail" && completion?.how !== "stream-error" && !(completion?.how === "done" && errorAfterFail)) {
+      add("failsWithSource", `the source failed, and the response stream ${ended}${completion?.how === "done" ? " with no result carrying an error before it" : ""}`);
+    }
     if (cause === "cancel") {
       if (completion?.how !== "done") add("cancelCompletes", `the client cancelled the response stream, which then ${ended}`);
       if (!sourceCancelled) add("cancelCancelsSource", "the client cancelled the response stream, and the source stream wasn't cancelled");

@@ -9,6 +9,12 @@
 // The kit's other areas are answered in Areas.cs. --introspection-list-depth
 // raises Hot Chocolate's introspection depth limit (see AreaSchemas).
 //
+// Besides the outcomes every adapter supports, it claims subscription-stream
+// (the kit drives a subscription's source stream, KitSource), parent-values
+// (objects carry the kit's tokens, and each call reports the token of
+// IResolverContext.Parent), custom-scalar-results (KitScalarType) and
+// scalar-results (a leaf outcome's `value` is returned as it is).
+//
 // Hot Chocolate runs resolvers on the thread pool, so by default the adapter
 // doesn't claim `idle` and the kit falls back to --grace. With --idle, after
 // each message from the kit the adapter waits until the thread pool is
@@ -21,9 +27,11 @@
 
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading.Channels;
 using GraphQLTla.HotChocolate;
 using HotChocolate;
 using HotChocolate.Execution;
@@ -79,7 +87,14 @@ JsonArray Capabilities()
 {
     var capabilities = new JsonArray();
     if (idle) capabilities.Add("idle");
-    foreach (var c in new[] { "invalid-results", "uncoercible-results", "mutation", "subscription" }) capabilities.Add(c);
+    foreach (var c in new[]
+    {
+        "invalid-results", "uncoercible-results", "mutation", "subscription",
+        "subscription-stream", "parent-values", "custom-scalar-results", "scalar-results",
+    })
+    {
+        capabilities.Add(c);
+    }
     foreach (var area in Areas.Names) capabilities.Add(area);
     foreach (var c in Areas.Capabilities) capabilities.Add(c);
     return capabilities;
@@ -96,8 +111,13 @@ async Task StartAsync(JsonElement message)
         }
 
         var executor = await ExecutorFor(message.GetProperty("schema").GetString()!);
-        var execution = new Execution(id, Send);
-        executions[id] = execution;
+        // parent-values: the kit sends `initialValue` (and `event` for a
+        // one-event subscription).
+        var parentValues = message.TryGetProperty("initialValue", out var initialValue);
+        var execution = executions[id];
+        execution.Configure(parentValues, message.TryGetProperty("event", out var e) ? JsonNode.Parse(e.GetRawText()) : null);
+        var streamed = message.TryGetProperty("stream", out var st) && st.ValueKind == JsonValueKind.True;
+        if (streamed) execution.Source = new KitSource(execution);
 
         var variables = new Dictionary<string, object?>();
         if (message.TryGetProperty("variables", out var vars) && vars.ValueKind == JsonValueKind.Object)
@@ -105,29 +125,40 @@ async Task StartAsync(JsonElement message)
             foreach (var p in vars.EnumerateObject()) variables[p.Name] = Values.ToValueNode(p.Value);
         }
 
-        var request = OperationRequestBuilder.New()
+        var builder = OperationRequestBuilder.New()
             .SetDocument(message.GetProperty("document").GetString()!)
             .SetVariableValues(variables)
-            .SetGlobalState(Execution.Key, execution)
-            .Build();
+            .SetGlobalState(Execution.Key, execution);
+        // The operation's initial value (§6.2.1): Hot Chocolate's root value
+        // for the request (RootValueResolver reads InitialValue).
+        if (parentValues) builder.SetGlobalState(WellKnownContextData.InitialValue, new TlaRoot(JsonNode.Parse(initialValue.GetRawText())));
 
-        var result = await executor.ExecuteAsync(request);
+        var result = await executor.ExecuteAsync(builder.Build());
+        if (result is IResponseStream stream && streamed)
+        {
+            await execution.ConsumeAsync(stream);
+            return;
+        }
         string json;
-        if (result is IResponseStream stream)
+        if (result is IResponseStream one)
         {
             // A subscription: the source stream yields one event, and the
             // response is the result of executing the selection set for it.
             IOperationResult? first = null;
-            await foreach (var r in stream.ReadResultsAsync())
+            await foreach (var r in one.ReadResultsAsync())
             {
                 first = r;
                 break;
             }
             json = first is null ? throw new InvalidOperationException("the subscription yielded no result") : first.ToJson(false);
-            await stream.DisposeAsync();
+            await one.DisposeAsync();
         }
         else
         {
+            // For a streamed subscription, the executor's answer instead of
+            // a response stream (a request error): reported as the one
+            // response, and the kit's later source steps are ignored.
+            if (streamed) execution.Source = null;
             json = result.ToJson(false);
             await result.DisposeAsync();
         }
@@ -153,7 +184,33 @@ while ((line = Console.In.ReadLine()) is not null)
     var type = message.GetProperty("type").GetString();
     if (type == "execute")
     {
+        var id = message.GetProperty("id").GetInt32();
+        executions[id] = new Execution(id, Send);
         _ = Task.Run(() => StartAsync(message));
+    }
+    else if (type is "source" or "cancel")
+    {
+        // subscription-stream: the kit's source stream emits, completes or
+        // fails, or the client cancels the response stream.
+        var id = message.GetProperty("id").GetInt32();
+        if (!executions.TryGetValue(id, out var execution))
+        {
+            Send(new JsonObject { ["type"] = "error", ["id"] = id, ["message"] = $"no execution {id}" });
+        }
+        else if (type == "cancel")
+        {
+            execution.Cancel();
+        }
+        else
+        {
+            var action = message.GetProperty("action").GetString();
+            var token = message.TryGetProperty("token", out var t) ? JsonNode.Parse(t.GetRawText()) : null;
+            var failure = message.TryGetProperty("message", out var m) ? m.GetString() : null;
+            if (!execution.SourceStep(action!, token, failure))
+            {
+                Send(new JsonObject { ["type"] = "error", ["id"] = id, ["message"] = $"unknown source action {action}" });
+            }
+        }
     }
     else if (type == "settle")
     {
@@ -215,8 +272,19 @@ namespace GraphQLTla.HotChocolate
         }
     }
 
-    // An object whose runtime type the kit chose.
-    public sealed record TlaObject(string TypeName);
+    // An object whose runtime type the kit chose, with the kit's token
+    // (parent-values).
+    public sealed record TlaObject(string TypeName, JsonNode? Token = null);
+
+    // The operation's initial value, and a subscription event: each carries
+    // the kit's token.
+    public sealed record TlaRoot(JsonNode? Token);
+
+    public sealed record TlaEvent(JsonNode? Token);
+
+    // The parent a call reports (parent-values): the token, or null for a
+    // value without one.
+    public sealed record Parent(JsonNode? Token);
 
     // One execution: the resolver calls it has sent and not yet settled.
     public sealed class Execution(int id, Action<JsonObject> send)
@@ -226,20 +294,42 @@ namespace GraphQLTla.HotChocolate
         private sealed record Pending(IType Type, TaskCompletionSource<object?> Result);
 
         private readonly ConcurrentDictionary<int, Pending> _calls = new();
+        private readonly CancellationTokenSource _cancel = new();
         private int _nextCall;
         private int _applied;
         private volatile bool _ended;
+        private int _finished;
 
         public bool Ended => _ended;
 
-        public Task<object?> Call(IReadOnlyList<object> path, IType type)
+        public bool ParentValues { get; private set; }
+
+        // The token of a one-event subscription's event (parent-values).
+        public JsonNode? EventToken { get; private set; }
+
+        // subscription-stream: the source stream the kit drives.
+        public KitSource? Source { get; set; }
+
+        public void Configure(bool parentValues, JsonNode? eventToken)
+        {
+            ParentValues = parentValues;
+            EventToken = eventToken;
+        }
+
+        public void Send(JsonObject message)
+        {
+            message["id"] = id;
+            send(message);
+        }
+
+        public Task<object?> Call(IReadOnlyList<object> path, IType type, Parent? parent)
         {
             var call = Interlocked.Increment(ref _nextCall);
             var result = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
             _calls[call] = new Pending(type, result);
             var jsonPath = new JsonArray();
             foreach (var segment in path) jsonPath.Add(segment is int i ? JsonValue.Create(i) : JsonValue.Create(segment.ToString()));
-            send(new JsonObject
+            var message = new JsonObject
             {
                 ["type"] = "call",
                 ["id"] = id,
@@ -249,7 +339,9 @@ namespace GraphQLTla.HotChocolate
                 // How many settles this execution had applied when the
                 // resolver was called (late, never early, on any thread).
                 ["after"] = Volatile.Read(ref _applied),
-            });
+            };
+            if (parent is not null) message["parent"] = parent.Token?.DeepClone();
+            send(message);
             return result.Task;
         }
 
@@ -269,13 +361,124 @@ namespace GraphQLTla.HotChocolate
             return true;
         }
 
-        // The kit is done with this execution; anything pending is abandoned.
+        // subscription-stream: a `source` step. False for an unknown action.
+        // Ignored when the executor answered without a response stream.
+        public bool SourceStep(string action, JsonNode? token, string? message)
+        {
+            switch (action)
+            {
+                case "emit": Source?.Emit(token); return true;
+                case "complete": Source?.Complete(); return true;
+                case "fail": Source?.Fail(message ?? "the source stream failed"); return true;
+                default: return false;
+            }
+        }
+
+        // The client cancels the response stream, as Hot Chocolate's own
+        // transports do: the token the response stream is read with is
+        // cancelled, and the stream is then disposed (ConsumeAsync).
+        public void Cancel() => _cancel.Cancel();
+
+        // Reads the response stream as a client does (Hot Chocolate's
+        // websocket transport, OperationSession.SendResultsAsync): each
+        // result is a `response`, then the stream is disposed, and its end is
+        // `done`, or `stream-error` if reading it threw. A read the client
+        // cancelled ends the stream normally.
+        public async Task ConsumeAsync(IResponseStream stream)
+        {
+            string? failure = null;
+            try
+            {
+                await foreach (var result in stream.ReadResultsAsync().WithCancellation(_cancel.Token))
+                {
+                    var json = result.ToJson(false);
+                    await result.DisposeAsync();
+                    if (!_ended) Send(new JsonObject { ["type"] = "response", ["response"] = JsonNode.Parse(json) });
+                }
+            }
+            catch (OperationCanceledException) when (_cancel.IsCancellationRequested)
+            {
+            }
+            catch (Exception error)
+            {
+                failure = error.Message;
+            }
+            await stream.DisposeAsync();
+            if (_ended || Interlocked.Exchange(ref _finished, 1) == 1) return;
+            Send(failure is null
+                ? new JsonObject { ["type"] = "done" }
+                : new JsonObject { ["type"] = "stream-error", ["message"] = failure });
+        }
+
+        // The kit is done with this execution; anything pending is abandoned,
+        // and a response stream still open is closed without a report.
         public void End()
         {
             _ended = true;
             foreach (var call in _calls.Keys)
             {
                 if (_calls.TryRemove(call, out var pending)) pending.Result.TrySetCanceled();
+            }
+            _cancel.Cancel();
+        }
+    }
+
+    // The source stream the kit drives (subscription-stream). Its events
+    // come from the kit's `source` messages. Hot Chocolate cancelling it
+    // (cancelling the read, or disposing the stream) before it completed or
+    // failed is reported as `source-cancelled`, once.
+    public sealed class KitSource(Execution execution) : ISourceStream
+    {
+        private sealed record Item(TlaEvent? Event, bool Done = false, string? Error = null);
+
+        private readonly Channel<Item> _items = Channel.CreateUnbounded<Item>();
+        private int _over;
+
+        public void Emit(JsonNode? token) => _items.Writer.TryWrite(new Item(new TlaEvent(token)));
+
+        public void Complete() => _items.Writer.TryWrite(new Item(null, Done: true));
+
+        public void Fail(string message) => _items.Writer.TryWrite(new Item(null, Error: message));
+
+        public IAsyncEnumerable<object?> ReadEventsAsync() => Read();
+
+        private async IAsyncEnumerable<object?> Read([EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                while (true)
+                {
+                    var item = await _items.Reader.ReadAsync(cancellationToken);
+                    if (item.Done)
+                    {
+                        Interlocked.Exchange(ref _over, 1);
+                        yield break;
+                    }
+                    if (item.Error is { } message)
+                    {
+                        Interlocked.Exchange(ref _over, 1);
+                        throw new InvalidOperationException(message);
+                    }
+                    yield return item.Event;
+                }
+            }
+            finally
+            {
+                Cancelled();
+            }
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            Cancelled();
+            return ValueTask.CompletedTask;
+        }
+
+        private void Cancelled()
+        {
+            if (Interlocked.Exchange(ref _over, 1) == 0 && !execution.Ended)
+            {
+                execution.Send(new JsonObject { ["type"] = "source-cancelled" });
             }
         }
     }
@@ -291,21 +494,29 @@ namespace GraphQLTla.HotChocolate
             {
                 case "null":
                     return null;
+                case "leaf" when outcome.TryGetProperty("value", out var value):
+                    // scalar-results: the internal value the kit names, as
+                    // it is: the integer 4 for an ID, 2147483648 for an Int.
+                    return value.TryGetInt32(out var i) ? i : value.TryGetInt64(out var l) ? l : value.GetDouble();
                 case "leaf":
                     // At a list position (a wrong shape), the number 1.
                     return nullable.IsListType() ? 1 : Leaf(nullable.NamedType());
                 case "uncoercible":
                     // A value the type can't represent: a fraction for an Int,
                     // a non-finite number for a Float, a name that isn't one
-                    // of an enum's values.
+                    // of an enum's values, and for a custom scalar a value
+                    // its result coercion raises on.
                     return nullable.NamedType() switch
                     {
                         EnumType => "NOT_A_VALUE",
+                        KitScalarType => Unrepresentable.Value,
                         var named when named.Name == "Int" => 1.2,
                         _ => double.PositiveInfinity,
                     };
                 case "object":
-                    return new TlaObject(outcome.GetProperty("type").GetString()!);
+                    return new TlaObject(
+                        outcome.GetProperty("type").GetString()!,
+                        outcome.TryGetProperty("token", out var token) ? JsonNode.Parse(token.GetRawText()) : null);
                 case "list":
                     var length = outcome.GetProperty("length").GetInt32();
                     var items = new List<object?>(length);
@@ -323,6 +534,15 @@ namespace GraphQLTla.HotChocolate
                     throw new InvalidOperationException($"unknown outcome {outcome}");
             }
         }
+
+        // The token of the value a resolver was given as its parent.
+        public static JsonNode? TokenOf(object? parent) => parent switch
+        {
+            TlaObject o => o.Token,
+            TlaRoot r => r.Token,
+            TlaEvent e => e.Token,
+            _ => null,
+        };
 
         // Int 1, Float 1.5, Boolean true, an enum's first value, anything else "v".
         private static object Leaf(INamedType named) => named switch

@@ -348,7 +348,7 @@ export const CHECKS = [
     title: "A request's extensions with keys of no meaning to the service leave the response as it is",
     level: "INFO",
     requires: ["request-extensions"],
-    spec: ["6.1"],
+    spec: ["6"],
     basis:
       "§6: a request's \"extensions (optional): A map reserved for implementation-specific additional information.\" and \"If present, extensions must be a map, but there are no additional restrictions on its contents.\" The spec gives the entries no meaning and lets an implementation give them one, so it doesn't require a service to ignore them. The vectors (capability request-extensions) send keys under a prefix no service uses, each the twin of the same request without extensions, and record whether the answer stays the same. It never fails the run. October 2021 has no request extensions.",
   },

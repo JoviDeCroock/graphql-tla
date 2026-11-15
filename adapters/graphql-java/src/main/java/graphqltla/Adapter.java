@@ -8,6 +8,11 @@
 // executeAsync or complete() returns, the engine is blocked on kit futures
 // only, and the adapter can say `idle`.
 //
+// It also claims subscription-stream (the kit drives the source stream,
+// a Flow.Publisher, and the adapter consumes graphql-java's response
+// Publisher as a client would), parent-values (objects carry the kit's
+// tokens), custom-scalar-results and scalar-results.
+//
 // Usage: java -jar graphql-java-adapter.jar [--no-idle] [--validate] [--good-faith]
 //
 // --no-idle leaves out `idle`, to exercise the kit's grace-based fallback.
@@ -33,12 +38,16 @@ import graphql.language.Definition;
 import graphql.language.Directive;
 import graphql.language.Document;
 import graphql.language.OperationDefinition;
+import graphql.language.SourceLocation;
 import graphql.parser.Parser;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLEnumType;
+import graphql.schema.Coercing;
+import graphql.schema.CoercingSerializeException;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNamedType;
+import graphql.schema.GraphQLScalarType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeUtil;
@@ -46,6 +55,8 @@ import graphql.schema.TypeResolver;
 import graphql.schema.idl.FieldWiringEnvironment;
 import graphql.schema.idl.InterfaceWiringEnvironment;
 import graphql.schema.idl.RuntimeWiring;
+import graphql.schema.idl.ScalarInfo;
+import graphql.schema.idl.ScalarWiringEnvironment;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.UnionWiringEnvironment;
@@ -54,7 +65,9 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -100,21 +113,67 @@ public final class Adapter {
         // Settles applied so far; each call is stamped with it as `after`.
         int settled;
         boolean ended;
+        // parent-values: the token of a subscription's one event (`event`).
+        String eventToken;
+        // subscription-stream: the kit's source stream, the client's
+        // subscription to graphql-java's response stream, and whether the
+        // client has seen the response stream end (`done` or `stream-error`).
+        KitSource source;
+        org.reactivestreams.Subscription responseSubscription;
+        boolean completed;
 
         Execution(int id, GraphQLSchema schema) {
             this.id = id;
             this.schema = schema;
         }
 
-        int call(List<String> path, GraphQLType type, Consumer<JsonNode> settle) {
+        // `parent` is the token of the value the resolver was called on, or
+        // NO_PARENT without parent-values.
+        int call(List<String> path, GraphQLType type, Object parent, Consumer<JsonNode> settle) {
             int call = nextCall++;
             calls.put(call, new Pending(path, type, settle));
-            send(msg("type", "call", "id", id, "call", call, "path", path, "returnType", GraphQLTypeUtil.simplePrint(type), "after", settled));
+            Map<String, Object> m = msg("type", "call", "id", id, "call", call, "path", path, "returnType", GraphQLTypeUtil.simplePrint(type), "after", settled);
+            if (parent != NO_PARENT) m.put("parent", parent);
+            send(m);
             return call;
         }
     }
 
+    private static final Object NO_PARENT = new Object();
+
     private static final Map<Integer, Execution> executions = new HashMap<>();
+
+    // What a custom scalar's result coercion rejects (custom-scalar-results).
+    static final Object UNREPRESENTABLE = new Object() {
+        @Override
+        public String toString() {
+            return "an unrepresentable value";
+        }
+    };
+
+    // Custom scalars in the SDL need an implementation in graphql-java
+    // (SchemaGenerator refuses a scalar without one). This one passes every
+    // value through, and its result coercion raises on UNREPRESENTABLE, as a
+    // scalar's serializer raises on a value it can't represent (§3.5).
+    static GraphQLScalarType customScalar(String name) {
+        return GraphQLScalarType.newScalar().name(name).coercing(new Coercing<Object, Object>() {
+            @Override
+            public Object serialize(Object value) {
+                if (value == UNREPRESENTABLE) throw new CoercingSerializeException(name + " cannot represent this value");
+                return value;
+            }
+
+            @Override
+            public Object parseValue(Object input) {
+                return input;
+            }
+
+            @Override
+            public Object parseLiteral(Object input) {
+                return input;
+            }
+        }).build();
+    }
 
     // The value a resolver returns for each outcome (docs/conformance.md).
     static Object leafValue(GraphQLType type) {
@@ -136,19 +195,26 @@ public final class Adapter {
             case "null":
                 return null;
             case "leaf":
+                // scalar-results: the internal value the kit names, as it is
+                // (an Integer 4 for an ID, a Long 2147483648 for an Int).
+                if (outcome.has("value")) return JSON.convertValue(outcome.get("value"), Object.class);
                 // At a list position (a wrong shape), the number 1.
                 return nullable instanceof GraphQLList ? 1 : leafValue(nullable);
             case "uncoercible": {
                 // A value the type can't represent: a fraction for an Int, a
                 // non-finite number for a Float, a name that isn't one of an
-                // enum's values.
+                // enum's values, and for a custom scalar a value its result
+                // coercion raises on.
                 GraphQLNamedType named = GraphQLTypeUtil.unwrapAllAs(nullable);
                 if (named instanceof GraphQLEnumType) return "NOT_A_VALUE";
+                if (named instanceof GraphQLScalarType s && !ScalarInfo.isGraphqlSpecifiedScalar(s)) return UNREPRESENTABLE;
                 return "Int".equals(named.getName()) ? (Object) 1.2 : (Object) Double.POSITIVE_INFINITY;
             }
             case "object": {
+                // parent-values: the object carries the kit's token.
                 Map<String, Object> object = new LinkedHashMap<>();
                 object.put("__typename", outcome.get("type").asText());
+                if (outcome.has("token")) object.put("token", outcome.get("token").asText());
                 return object;
             }
             case "list": {
@@ -164,6 +230,13 @@ public final class Adapter {
         }
     }
 
+    // The token of the value a resolver was called on (parent-values): the
+    // root value's, or the object's its parent position completed with, or
+    // null if it has none.
+    static Object tokenOf(Object source) {
+        return source instanceof Map<?, ?> map && map.get("token") instanceof String s ? s : null;
+    }
+
     static List<String> pathOf(DataFetchingEnvironment env) {
         List<String> path = new ArrayList<>();
         for (Object segment : env.getExecutionStepInfo().getPath().toList()) path.add(String.valueOf(segment));
@@ -175,16 +248,23 @@ public final class Adapter {
     }
 
     // The one data fetcher on every field.
-    static DataFetcher<Object> fetcher(Execution execution) {
+    static DataFetcher<Object> fetcher(Execution execution, boolean parentValues) {
         return env -> {
             List<String> path = pathOf(env);
             GraphQLType type = env.getFieldType();
             if (env.getParentType() == execution.schema.getSubscriptionType()) {
                 // Called once, to create the source stream (CreateSourceEventStream).
-                return sourceStream(execution, path, type);
+                SourceLocation location = env.getField().getSourceLocation();
+                if (execution.source != null) {
+                    execution.source.path = path;
+                    execution.source.type = type;
+                    execution.source.location = location;
+                    return execution.source;
+                }
+                return sourceStream(execution, path, type, location, parentValues ? execution.eventToken : NO_PARENT);
             }
             CompletableFuture<Object> future = new CompletableFuture<>();
-            execution.call(path, type, outcome -> {
+            execution.call(path, type, parentValues ? tokenOf(env.getSource()) : NO_PARENT, outcome -> {
                 if ("error".equals(outcome.get("kind").asText())) future.completeExceptionally(failure(path));
                 else future.complete(value(outcome, type));
             });
@@ -197,9 +277,28 @@ public final class Adapter {
     // request for its one event is the root `call`, and the settled outcome is
     // the event (docs/conformance.md, capabilities). The event is a
     // DataFetcherResult (Reactive Streams forbids null events), carrying the
-    // error if the outcome is one; graphql-java reports that error as a field
-    // error of the root field.
-    static Flow.Publisher<Object> sourceStream(Execution execution, List<String> path, GraphQLType type) {
+    // error if the outcome is one, built as a data fetcher builds one for its
+    // field (GraphqlErrorBuilder with the field's path and location);
+    // graphql-java reports that error as a field error of the root field. With parent-values, the call reports the
+    // event's token: graphql-java executes the event with the event as the
+    // root value (SubscriptionExecutionStrategy#executeSubscriptionEvent).
+    static Object event(JsonNode outcome, List<String> path, GraphQLType type, SourceLocation location) {
+        DataFetcherResult.Builder<Object> event = DataFetcherResult.newResult();
+        if ("error".equals(outcome.get("kind").asText())) {
+            List<Object> errorPath = new ArrayList<>();
+            for (String segment : path) errorPath.add(segment);
+            event.data(null).error(GraphqlErrorBuilder.newError()
+                    .message(failure(path).getMessage())
+                    .path(errorPath)
+                    .location(location)
+                    .build());
+        } else {
+            event.data(value(outcome, type));
+        }
+        return event.build();
+    }
+
+    static Flow.Publisher<Object> sourceStream(Execution execution, List<String> path, GraphQLType type, SourceLocation location, Object parent) {
         return subscriber -> subscriber.onSubscribe(new Flow.Subscription() {
             boolean requested;
 
@@ -207,17 +306,8 @@ public final class Adapter {
             public void request(long n) {
                 if (requested || n <= 0) return;
                 requested = true;
-                execution.call(path, type, outcome -> {
-                    DataFetcherResult.Builder<Object> event = DataFetcherResult.newResult();
-                    if ("error".equals(outcome.get("kind").asText())) {
-                        event.data(null).error(GraphqlErrorBuilder.newError()
-                                .message(failure(path).getMessage())
-                                .path(new ArrayList<Object>(path))
-                                .build());
-                    } else {
-                        event.data(value(outcome, type));
-                    }
-                    subscriber.onNext(event.build());
+                execution.call(path, type, parent, outcome -> {
+                    subscriber.onNext(event(outcome, path, type, location));
                     subscriber.onComplete();
                 });
             }
@@ -225,6 +315,95 @@ public final class Adapter {
             @Override
             public void cancel() {}
         });
+    }
+
+    // subscription-stream: a source stream the kit drives. `source` messages
+    // queue an emit, a completion or a failure; they are signalled in order,
+    // an emit only while graphql-java has demand. As above, an emitted event
+    // is the root `call`, and the event goes to graphql-java once the kit
+    // settles it. graphql-java cancelling the subscription is reported as
+    // `source-cancelled`, if the source hadn't completed or failed. After
+    // that, the source signals nothing more (Reactive Streams 1.8), so an
+    // event whose root call is still pending when the client cancels is
+    // never delivered.
+    static final class KitSource implements Flow.Publisher<Object> {
+        final Execution execution;
+        final boolean parentValues;
+        List<String> path;
+        GraphQLType type;
+        SourceLocation location;
+        Flow.Subscriber<? super Object> subscriber;
+        final Deque<JsonNode> queue = new ArrayDeque<>();
+        long demand;
+        boolean awaiting;
+        boolean over;
+        boolean cancelled;
+
+        KitSource(Execution execution, boolean parentValues) {
+            this.execution = execution;
+            this.parentValues = parentValues;
+        }
+
+        @Override
+        public void subscribe(Flow.Subscriber<? super Object> s) {
+            subscriber = s;
+            s.onSubscribe(new Flow.Subscription() {
+                @Override
+                public void request(long n) {
+                    if (n <= 0 || cancelled) return;
+                    demand = demand + n < 0 ? Long.MAX_VALUE : demand + n;
+                    pump();
+                }
+
+                @Override
+                public void cancel() {
+                    if (cancelled) return;
+                    cancelled = true;
+                    queue.clear();
+                    if (!over && !execution.ended) send(msg("type", "source-cancelled", "id", execution.id));
+                }
+            });
+            pump();
+        }
+
+        void push(JsonNode message) {
+            if (over || cancelled) return;
+            queue.add(message);
+            pump();
+        }
+
+        void pump() {
+            while (subscriber != null && !cancelled && !over && !awaiting && !queue.isEmpty()) {
+                JsonNode next = queue.peek();
+                String action = next.get("action").asText();
+                if ("emit".equals(action)) {
+                    if (demand <= 0) return;
+                    queue.poll();
+                    if (demand != Long.MAX_VALUE) demand--;
+                    awaiting = true;
+                    Object parent = parentValues ? (next.has("token") ? next.get("token").asText() : null) : NO_PARENT;
+                    List<String> p = path;
+                    GraphQLType t = type;
+                    SourceLocation l = location;
+                    execution.call(p, t, parent, outcome -> {
+                        awaiting = false;
+                        if (cancelled) return;
+                        subscriber.onNext(event(outcome, p, t, l));
+                        pump();
+                    });
+                } else if ("complete".equals(action)) {
+                    queue.poll();
+                    over = true;
+                    subscriber.onComplete();
+                } else if ("fail".equals(action)) {
+                    queue.poll();
+                    over = true;
+                    subscriber.onError(new RuntimeException(next.has("message") ? next.get("message").asText() : "the source stream failed"));
+                } else {
+                    throw new IllegalArgumentException("unknown source action " + action);
+                }
+            }
+        }
     }
 
     static TypeResolver typeResolver = env -> {
@@ -236,6 +415,8 @@ public final class Adapter {
 
     static void start(JsonNode message) {
         int id = message.get("id").asInt();
+        boolean parentValues = message.has("initialValue");
+        boolean stream = message.has("stream") && message.get("stream").asBoolean();
         GraphQLSchema schema;
         Execution execution;
         try {
@@ -248,7 +429,7 @@ public final class Adapter {
 
                 @Override
                 public DataFetcher<?> getDataFetcher(FieldWiringEnvironment environment) {
-                    return env -> fetcher(holder[0]).get(env);
+                    return env -> fetcher(holder[0], parentValues).get(env);
                 }
 
                 @Override
@@ -270,11 +451,23 @@ public final class Adapter {
                 public TypeResolver getTypeResolver(UnionWiringEnvironment environment) {
                     return typeResolver;
                 }
+
+                @Override
+                public boolean providesScalar(ScalarWiringEnvironment environment) {
+                    return !ScalarInfo.isGraphqlSpecifiedScalar(environment.getScalarTypeDefinition().getName());
+                }
+
+                @Override
+                public GraphQLScalarType getScalar(ScalarWiringEnvironment environment) {
+                    return customScalar(environment.getScalarTypeDefinition().getName());
+                }
             };
             schema = new SchemaGenerator().makeExecutableSchema(
                     new SchemaParser().parse(message.get("schema").asText()),
                     RuntimeWiring.newRuntimeWiring().wiringFactory(wiring).build());
             execution = new Execution(id, schema);
+            if (message.has("event")) execution.eventToken = message.get("event").asText();
+            if (stream) execution.source = new KitSource(execution, parentValues);
             holder[0] = execution;
         } catch (Exception e) {
             send(msg("type", "error", "id", id, "message", "the adapter couldn't build the schema: " + e));
@@ -303,16 +496,24 @@ public final class Adapter {
         }
 
         Map<String, Object> variables = JSON.convertValue(message.get("variables"), Map.class);
-        ExecutionInput input = ExecutionInput.newExecutionInput()
+        ExecutionInput.Builder input = ExecutionInput.newExecutionInput()
                 .query(document)
-                .variables(variables == null ? Map.of() : variables)
-                .build();
+                .variables(variables == null ? Map.of() : variables);
+        // parent-values: the initial value carries the kit's token.
+        if (parentValues) input.root(new LinkedHashMap<>(Map.of("token", message.get("initialValue").asText())));
         GraphQL graphql = GraphQL.newGraphQL(schema).build();
         CompletableFuture<ExecutionResult> result;
         try {
-            result = graphql.executeAsync(input);
+            result = graphql.executeAsync(input.build());
         } catch (Exception e) {
             send(msg("type", "error", "id", id, "message", String.valueOf(e)));
+            return;
+        }
+        if (stream) {
+            result.whenComplete((response, error) -> {
+                if (error != null) send(msg("type", "error", "id", id, "message", String.valueOf(error)));
+                else consume(execution, response);
+            });
             return;
         }
         if ("subscription".equals(message.get("operationType").asText())) {
@@ -329,6 +530,71 @@ public final class Adapter {
                 }
             }
         });
+    }
+
+    // subscription-stream: consume graphql-java's response stream as a client
+    // would, and report each result and how the stream ends. A result without
+    // a stream (an error creating the source stream) is the response itself.
+    @SuppressWarnings("unchecked")
+    static void consume(Execution execution, ExecutionResult result) {
+        int id = execution.id;
+        if (!(result.getData() instanceof org.reactivestreams.Publisher<?> stream)) {
+            if (!execution.ended) send(msg("type", "response", "id", id, "response", result.toSpecification()));
+            return;
+        }
+        ((org.reactivestreams.Publisher<ExecutionResult>) stream).subscribe(new org.reactivestreams.Subscriber<>() {
+            @Override
+            public void onSubscribe(org.reactivestreams.Subscription s) {
+                execution.responseSubscription = s;
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(ExecutionResult event) {
+                if (!execution.ended) send(msg("type", "response", "id", id, "response", event.toSpecification()));
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                if (execution.ended || execution.completed) return;
+                execution.completed = true;
+                Throwable cause = t instanceof java.util.concurrent.CompletionException && t.getCause() != null ? t.getCause() : t;
+                send(msg("type", "stream-error", "id", id, "message", String.valueOf(cause.getMessage())));
+            }
+
+            @Override
+            public void onComplete() {
+                if (execution.ended || execution.completed) return;
+                execution.completed = true;
+                send(msg("type", "done", "id", id));
+            }
+        });
+    }
+
+    // The kit's source stream emits, completes or fails.
+    static void source(JsonNode message) {
+        int id = message.get("id").asInt();
+        Execution execution = executions.get(id);
+        if (execution == null || execution.source == null) {
+            send(msg("type", "error", "id", id, "message", "no streamed subscription to drive"));
+            return;
+        }
+        execution.source.push(message);
+    }
+
+    // The client cancels the response stream. Reactive Streams has no signal
+    // after Subscription#cancel: once it returns, the stream is over for the
+    // client, so that is `done`.
+    static void cancel(JsonNode message) {
+        int id = message.get("id").asInt();
+        Execution execution = executions.get(id);
+        if (execution == null || execution.responseSubscription == null) {
+            send(msg("type", "error", "id", id, "message", "no response stream to cancel"));
+            return;
+        }
+        execution.responseSubscription.cancel();
+        if (!execution.completed && !execution.ended) send(msg("type", "done", "id", id));
+        execution.completed = true;
     }
 
     // The response for a subscription's one event: the first ExecutionResult the
@@ -421,6 +687,15 @@ public final class Adapter {
         pending.settle().accept(message.get("outcome"));
     }
 
+    // The kit is done with an execution. A streamed subscription's response
+    // stream that is still open is closed without reporting it.
+    static void end(int id) {
+        Execution execution = executions.remove(id);
+        if (execution == null) return;
+        execution.ended = true;
+        if (execution.responseSubscription != null && !execution.completed) execution.responseSubscription.cancel();
+    }
+
     public static void main(String[] args) throws Exception {
         List<String> argv = List.of(args);
         boolean idle = !argv.contains("--no-idle");
@@ -430,6 +705,10 @@ public final class Adapter {
         capabilities.add("uncoercible-results");
         capabilities.add("mutation");
         capabilities.add("subscription");
+        capabilities.add("subscription-stream");
+        capabilities.add("parent-values");
+        capabilities.add("custom-scalar-results");
+        capabilities.add("scalar-results");
         capabilities.add("error-propagation-off");
         Areas.validating = argv.contains("--validate");
         Areas.goodFaith = argv.contains("--good-faith");
@@ -463,9 +742,10 @@ public final class Adapter {
                 switch (type) {
                     case "execute" -> start(message);
                     case "settle" -> settle(message);
+                    case "source" -> source(message);
+                    case "cancel" -> cancel(message);
                     case "end" -> {
-                        Execution execution = executions.remove(id);
-                        if (execution != null) execution.ended = true;
+                        end(id);
                         continue;
                     }
                     default -> {

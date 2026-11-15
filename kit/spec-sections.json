@@ -162,6 +162,11 @@
    "url": "https://spec.graphql.org/September2026/#sec-Schema-Coordinates"
   },
   {
+   "number": "3",
+   "title": "Type System",
+   "url": "https://spec.graphql.org/September2026/#sec-Type-System"
+  },
+  {
    "number": "3.1",
    "title": "Type System Extensions",
    "url": "https://spec.graphql.org/September2026/#sec-Type-System-Extensions"
@@ -647,6 +652,11 @@
    "url": "https://spec.graphql.org/September2026/#sec-All-Variable-Usages-Are-Allowed"
   },
   {
+   "number": "6",
+   "title": "Execution",
+   "url": "https://spec.graphql.org/September2026/#sec-Execution"
+  },
+  {
    "number": "6.1",
    "title": "Executing Requests",
    "url": "https://spec.graphql.org/September2026/#sec-Executing-Requests"
@@ -810,6 +820,11 @@
    "number": "7.2.2",
    "title": "Serialized Map Ordering",
    "url": "https://spec.graphql.org/September2026/#sec-Serialized-Map-Ordering"
+  },
+  {
+   "number": "B",
+   "title": "Appendix: Notation Conventions",
+   "url": "https://spec.graphql.org/September2026/#sec-Appendix-Notation-Conventions"
   }
  ]
 }

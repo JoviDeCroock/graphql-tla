@@ -111,8 +111,8 @@ const sinceText = (counts) =>
     .map((r) => `${counts[r]} since ${releaseName(r)}`)
     .join(", ");
 
-// The check for valid schemas. kit/spec-sections.json has no entry for §3
-// itself, so it is cited here.
+// The check for valid schemas, citing §3 itself (also in kit/spec-sections.json;
+// spelled out here as before).
 export const ACCEPTS_VALID = "acceptsValid";
 const TYPE_SYSTEM = { number: "3", title: "Type System", url: "https://spec.graphql.org/September2026/#sec-Type-System" };
 

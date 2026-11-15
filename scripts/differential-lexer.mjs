@@ -422,8 +422,10 @@ const PRINTERS = [
 // The judgement, written from the spec's text: printed lexes (by
 // graphql-js 17) as one string token, nothing else, whose value is text;
 // no code point in it is a non-printable control character (U+0000 to
-// U+001F and U+007F to U+009F); and, outside a block string, no escape is
-// a fixed-width one of a surrogate pair.
+// U+001F and U+007F to U+009F), except that a block string may hold tabs
+// and line breaks (Lexer.tla's BlockStringLayout: the weaker reading, as a
+// block string can't escape them); and, outside a block string, no escape
+// is a fixed-width one of a surrogate pair.
 const isControl = (cp) => cp <= 0x1f || (cp >= 0x7f && cp <= 0x9f);
 const hasPairEscape = (printed) => {
   for (let i = 1; i < printed.length; i++) {
@@ -445,7 +447,8 @@ const judgePrinted = (text, printed) => {
   }
   const block = token.kind === graphql17.TokenKind.BLOCK_STRING;
   if (!(block || token.kind === graphql17.TokenKind.STRING) || token.start !== 0 || token.end !== printed.length || token.value !== text) return false;
-  if (Array.from(printed).some((c) => isControl(c.codePointAt(0)))) return false;
+  const layout = (cp) => block && (cp === 0x09 || cp === 0x0a || cp === 0x0d);
+  if (Array.from(printed).some((c) => isControl(c.codePointAt(0)) && !layout(c.codePointAt(0)))) return false;
   return block || !hasPairEscape(printed);
 };
 

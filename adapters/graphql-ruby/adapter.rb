@@ -13,6 +13,13 @@
 # kit in Execution#await, so whenever it waits there it is blocked on the
 # kit, and the adapter says `idle`.
 #
+# It also claims parent-values (objects carry the kit's tokens, and each
+# call reports the token of the object its resolver was given),
+# custom-scalar-results (a custom scalar's coerce_result raises
+# GraphQL::ExecutionError on a value it can't represent) and scalar-results.
+# Not subscription-stream: graphql-ruby's subscriptions have no source
+# stream to drive (see README.md).
+#
 # The other areas (parse, validate, coerce, schema, introspect) are in
 # areas.rb.
 #
@@ -73,7 +80,20 @@ def read_message
 end
 
 # The value of an `object` outcome. resolve_type picks the type it names.
-KitObject = Struct.new(:typename)
+# With parent-values it carries the kit's token.
+KitObject = Struct.new(:typename, :token)
+
+# What a custom scalar's result coercion rejects (custom-scalar-results).
+UNREPRESENTABLE = Object.new.freeze
+
+# parent-values: the token of the object a resolver was given. The root value
+# and a subscription's event are hashes; objects are KitObjects.
+def token_of(object)
+  case object
+  when KitObject then object.token
+  when Hash then object[:token]
+  end
+end
 
 # The value of an `error` outcome. The resolver raises it as a field error.
 KitFailure = Struct.new(:path)
@@ -82,8 +102,12 @@ KitFailure = Struct.new(:path)
 class Execution
   attr_reader :id
 
-  def initialize(id)
+  # parent-values: each field's call reports its parent's token.
+  attr_reader :parent_values
+
+  def initialize(id, parent_values: false)
     @id = id
+    @parent_values = parent_values
     @next_call = 1
     @calls = {}
     @outcomes = {}
@@ -92,11 +116,15 @@ class Execution
 
   # Tells the kit a resolver was called. `after` is the number of settles
   # this execution had applied, so the kit knows what graphql-ruby had seen.
-  def call(path, type)
+  # `parent` (an array holding the token) is given only with parent-values,
+  # and never for a list item.
+  def call(path, type, parent = nil)
     call = @next_call
     @next_call += 1
     @calls[call] = { path: path.map(&:to_s), type: type }
-    send_message(type: "call", id: @id, call: call, path: path.map(&:to_s), returnType: type.to_type_signature, after: @applied)
+    message = { type: "call", id: @id, call: call, path: path.map(&:to_s), returnType: type.to_type_signature, after: @applied }
+    message[:parent] = parent.first if parent
+    send_message(message)
     call
   end
 
@@ -132,9 +160,10 @@ class Execution
     when "error" then KitFailure.new(path)
     when "null" then nil
     # A leaf at a list position is the number 1, which Ruby doesn't iterate.
-    when "leaf" then nullable.list? ? 1 : leaf_value(nullable)
+    # scalar-results: the internal value the kit names, as it is.
+    when "leaf" then outcome.key?("value") ? outcome["value"] : (nullable.list? ? 1 : leaf_value(nullable))
     when "uncoercible" then uncoercible_value(nullable)
-    when "object" then KitObject.new(outcome["type"])
+    when "object" then KitObject.new(outcome["type"], outcome["token"])
     when "list"
       item_type = nullable.of_type
       Array.new(outcome["length"]) do |i|
@@ -151,9 +180,11 @@ class Execution
   end
 
   # A value the leaf type can't represent: a fraction for an Int, a
-  # non-finite number for a Float, a name that isn't one of an enum's values.
+  # non-finite number for a Float, a name that isn't one of an enum's values,
+  # and for a custom scalar a value its coerce_result raises on.
   def uncoercible_value(type)
     return "NOT_A_VALUE" if type.kind.enum?
+    return UNREPRESENTABLE unless type.default_scalar?
 
     type.graphql_name == "Int" ? 1.2 : Float::INFINITY
   end
@@ -206,7 +237,7 @@ end
 # The one resolver every field gets, and the type resolution for abstract
 # types.
 class KitResolver
-  def call(_type, field, _object, _args, context)
+  def call(_type, field, object, _args, context)
     query = context.query
     # The subscribe step of a subscription: graphql-ruby records the event
     # the subscription listens to. The kit's root call is the root field's
@@ -215,7 +246,7 @@ class KitResolver
 
     execution = context[:kit]
     path = context.current_path
-    call = execution.call(path, field.type)
+    call = execution.call(path, field.type, execution.parent_values ? [token_of(object)] : nil)
     if LAZY
       KitLazy.new(execution, call, path.map(&:to_s))
     else
@@ -225,6 +256,21 @@ class KitResolver
 
   def resolve_type(_abstract_type, value, context)
     context.types.type(value.typename)
+  end
+
+  # from_definition gives every custom scalar these two (build_from_definition.rb:585-589).
+  # Input passes through, as a custom scalar's default coerce_input does.
+  def coerce_input(_type, value, _context)
+    value
+  end
+
+  # custom-scalar-results: the result coercion raises on a value it can't
+  # represent. graphql-ruby turns a GraphQL::ExecutionError from
+  # coerce_result into a field error (execution/interpreter/runtime.rb:708-711).
+  def coerce_result(type, value, _context)
+    raise GraphQL::ExecutionError, "#{type.graphql_name} cannot represent this value" if value.equal?(UNREPRESENTABLE)
+
+    value
   end
 end
 
@@ -282,8 +328,15 @@ class InvalidResultsSchema < GraphQL::Schema
     raise GraphQL::ExecutionError, error.message
   end
 
+  # The encoding errors come from a scalar's coerce_result, inside
+  # graphql-ruby's `rescue GraphQL::ExecutionError` (runtime.rb:708-711), so
+  # raising one there makes a field error with the field's path and
+  # location, as graphql-ruby does for any execution error (runtime.rb:604-609).
+  # An unresolved type is reported outside that rescue (runtime.rb:746),
+  # so it is added to the errors; the kit never sends one.
   def self.type_error(error, context)
     return super if error.is_a?(GraphQL::InvalidNullError)
+    raise GraphQL::ExecutionError, error.message unless error.is_a?(GraphQL::UnresolvedTypeError)
 
     field_error = GraphQL::ExecutionError.new(error.message)
     field_error.path = context[:current_path]
@@ -308,9 +361,12 @@ def schema_for(sdl)
 end
 
 def execute(message)
-  execution = Execution.new(message["id"])
+  parent_values = message.key?("initialValue")
+  execution = Execution.new(message["id"], parent_values: parent_values)
   schema = schema_for(message["schema"])
   options = { variables: message["variables"] || {}, context: { kit: execution } }
+  # parent-values: the root value carries the kit's initial value token.
+  options[:root_value] = { token: message["initialValue"] } if parent_values
   result =
     if message["operationType"] == "subscription"
       # Subscribe, then deliver one event to the subscription, as an
@@ -321,7 +377,7 @@ def execute(message)
       id, subscription = subscriptions.subscriptions.first
       raise AdapterError, "graphql-ruby recorded no subscription" unless id
 
-      subscriptions.execute(id, subscription[:events].first, {})
+      subscriptions.execute(id, subscription[:events].first, parent_values ? { token: message["event"] } : {})
       subscriptions.delivered or raise AdapterError, "graphql-ruby delivered no result for the event"
     else
       schema.execute(message["document"], **options)
@@ -359,6 +415,9 @@ send_message(
     "uncoercible-results",
     "mutation",
     "subscription",
+    "parent-values",
+    "custom-scalar-results",
+    "scalar-results",
     *Areas::CAPABILITIES,
   ],
 )

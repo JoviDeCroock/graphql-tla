@@ -379,7 +379,13 @@ export class Driver {
           event.response = message.response;
           event.duplicateKeys = repeatedKeys(message);
           s.log.push({ adapter: "response", event: event.number });
-        } else s.log.push({ adapter: "response" });
+        } else {
+          // A result the kit can't match to an event, such as the error item
+          // a stream of results ends with after its source failed: whether it
+          // carries errors decides failsWithSource (check.mjs streamProblems).
+          const errors = Array.isArray(message.response?.errors) && message.response.errors.length > 0;
+          s.log.push({ adapter: "response", ...(errors ? { errors: true } : {}) });
+        }
       } else if (message.type === "no-response") {
         // The implementation produced nothing for the event, though the
         // stream goes on: the event yielded no result.

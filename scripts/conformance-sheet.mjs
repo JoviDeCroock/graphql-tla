@@ -50,7 +50,7 @@ const notesOf = (key) => registry.find((x) => x.key === key)?.notes ?? [];
 const reportFor = (key, area) => reports.find((r) => r.key === key && r.area === area);
 const areas = [...new Set(reports.map((r) => r.area))];
 
-const link = (s) => `[§${s.number}](${s.url})`;
+const link = (s) => `[${/^[A-Z]/.test(s.number) ? `Appendix ${s.number}` : `§${s.number}`}](${s.url})`;
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 const header = (cols) => [`| ${cols.join(" | ")} |`, `| ${cols.map((_, i) => (i === 0 ? "---" : ":---:")).join(" | ")} |`];

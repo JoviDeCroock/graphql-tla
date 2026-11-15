@@ -34,7 +34,7 @@ use async_graphql_parser::types::{
 };
 use async_graphql_parser::Positioned;
 use async_graphql_value::ConstValue;
-use futures::channel::oneshot;
+use futures::channel::{mpsc, oneshot};
 use futures::executor::LocalPool;
 use futures::future::{self, RemoteHandle};
 use futures::task::LocalSpawnExt;
@@ -56,9 +56,23 @@ const BUILTIN_SCALARS: [&str; 5] = ["Int", "Float", "String", "Boolean", "ID"];
 const VERSION: &str = "juniper 0.18.0";
 
 fn send(message: Json) {
+    send_line(message.to_string());
+}
+
+// One line to the kit. U+2028 and U+2029 can only be inside JSON strings,
+// where some line readers would take them for line endings, so they are
+// escaped (docs/conformance.md).
+fn send_line(line: String) {
+    let line = line.replace('\u{2028}', "\\u2028").replace('\u{2029}', "\\u2029");
     let mut out = std::io::stdout().lock();
-    let _ = writeln!(out, "{message}");
+    let _ = writeln!(out, "{line}");
     let _ = out.flush();
+}
+
+// A `response` message whose response is Juniper's own serialization, as
+// it would go out, rather than a `serde_json::Value` rebuilt from it.
+fn send_response(id: &Json, response: &str) {
+    send_line(format!("{{\"type\":\"response\",\"id\":{id},\"response\":{response}}}"));
 }
 
 // ---------------------------------------------------------------------------
@@ -95,7 +109,9 @@ fn schema_description(source: &str) -> Option<(String, String)> {
             .last()?
     };
     let token = &before[start..];
-    let document = async_graphql_parser::parse_schema(format!("{token} scalar Description")).ok()?;
+    let wrapped = format!("{token} scalar Description");
+    let mut document = async_graphql_parser::parse_schema(&wrapped).ok()?;
+    block_string_escapes(&wrapped, &mut document);
     let text = document.definitions.into_iter().find_map(|d| match d {
         TypeSystemDefinition::Type(ty) => ty.node.description.map(|d| d.node),
         _ => None,
@@ -103,15 +119,77 @@ fn schema_description(source: &str) -> Option<(String, String)> {
     Some((format!("{}{}", &source[..start], &source[at..]), text))
 }
 
+// async-graphql-parser 7.0.17 reads a block string without its one escape:
+// `block_string_value` (src/parse/utils.rs:28-80) leaves `\"""` as it is,
+// where §2.10.4 reads it as `"""`. Juniper takes descriptions as the
+// application gives them, so the adapter's reader must give the SDL's
+// values: in each description written as a block string, `\"""` becomes
+// `"""`. Dedenting only looks at leading white space, so doing this after
+// it gives the same value. A description's position is its string token's
+// start, as async-graphql-parser counts it (src/pos.rs:136-160: a line per
+// `\n`, `\r` back to column 1, a column per character).
+fn block_string_escapes(source: &str, document: &mut async_graphql_parser::types::ServiceDocument) {
+    let is_block = |pos: async_graphql_parser::Pos| {
+        let (mut line, mut column) = (1, 1);
+        for (offset, ch) in source.char_indices() {
+            if line == pos.line && column == pos.column {
+                return source[offset..].starts_with("\"\"\"");
+            }
+            match ch {
+                '\r' => column = 1,
+                '\n' => {
+                    line += 1;
+                    column = 1;
+                }
+                _ => column += 1,
+            }
+        }
+        false
+    };
+    let fix = |d: &mut Option<Positioned<String>>| {
+        if let Some(d) = d {
+            if d.node.contains("\\\"\"\"") && is_block(d.pos) {
+                d.node = d.node.replace("\\\"\"\"", "\"\"\"");
+            }
+        }
+    };
+    for definition in &mut document.definitions {
+        match definition {
+            TypeSystemDefinition::Type(ty) => {
+                let ty = &mut ty.node;
+                fix(&mut ty.description);
+                match &mut ty.kind {
+                    TypeKind::Object(o) => o.fields.iter_mut().for_each(|f| {
+                        fix(&mut f.node.description);
+                        f.node.arguments.iter_mut().for_each(|a| fix(&mut a.node.description));
+                    }),
+                    TypeKind::Interface(i) => i.fields.iter_mut().for_each(|f| {
+                        fix(&mut f.node.description);
+                        f.node.arguments.iter_mut().for_each(|a| fix(&mut a.node.description));
+                    }),
+                    TypeKind::Enum(e) => e.values.iter_mut().for_each(|v| fix(&mut v.node.description)),
+                    TypeKind::InputObject(o) => o.fields.iter_mut().for_each(|f| fix(&mut f.node.description)),
+                    TypeKind::Scalar | TypeKind::Union(_) => {}
+                }
+            }
+            TypeSystemDefinition::Schema(_) | TypeSystemDefinition::Directive(_) => {}
+        }
+    }
+}
+
 impl Sdl {
     fn parse(source: &str) -> Result<Sdl, String> {
         let (document, description) = match async_graphql_parser::parse_schema(source) {
-            Ok(document) => (document, None),
+            Ok(mut document) => {
+                block_string_escapes(source, &mut document);
+                (document, None)
+            }
             Err(e) => match schema_description(source) {
-                Some((rest, description)) => (
-                    async_graphql_parser::parse_schema(&rest).map_err(|e| e.to_string())?,
-                    Some(description),
-                ),
+                Some((rest, description)) => {
+                    let mut document = async_graphql_parser::parse_schema(&rest).map_err(|e| e.to_string())?;
+                    block_string_escapes(&rest, &mut document);
+                    (document, Some(description))
+                }
                 None => return Err(e.to_string()),
             },
         };
@@ -486,6 +564,24 @@ struct Execution {
     pending: Mutex<HashMap<u64, oneshot::Sender<Json>>>,
     ended: AtomicBool,
     inline_items: bool,
+    // parent-values: whether calls report `parent`, and the token of a
+    // one-event subscription's event.
+    parent_values: bool,
+    event: Json,
+    // subscription-stream: whether the kit drives the source stream, its
+    // `source` actions, read by the first source stream the implementation
+    // asks for, and the client's `cancel`.
+    streamed: bool,
+    source: Mutex<Option<mpsc::UnboundedReceiver<Action>>>,
+    source_tx: Mutex<Option<mpsc::UnboundedSender<Action>>>,
+    cancel_tx: Mutex<Option<oneshot::Sender<()>>>,
+}
+
+// What the kit's source stream does next (subscription-stream).
+enum Action {
+    Emit(Json),
+    Complete,
+    Fail(String),
 }
 
 impl Execution {
@@ -497,17 +593,91 @@ impl Execution {
             pending: Mutex::new(HashMap::new()),
             ended: AtomicBool::new(false),
             inline_items,
+            parent_values: false,
+            event: Json::Null,
+            streamed: false,
+            source: Mutex::new(None),
+            source_tx: Mutex::new(None),
+            cancel_tx: Mutex::new(None),
         })
     }
 
-    fn call(&self, path: &[Json], return_type: String) -> oneshot::Receiver<Json> {
+    // `parent` is the token of the value the resolver was given, left out
+    // for a list item, which has no resolver of its own.
+    fn call(&self, path: &[Json], return_type: String, parent: Option<&Json>) -> oneshot::Receiver<Json> {
         let call = self.next_call.fetch_add(1, Ordering::SeqCst) + 1;
         let (tx, rx) = oneshot::channel();
         self.pending.lock().unwrap().insert(call, tx);
         let after = self.applied.load(Ordering::SeqCst);
-        send(json!({"type": "call", "id": self.id, "call": call, "path": path, "returnType": return_type, "after": after}));
+        let mut message = json!({"type": "call", "id": self.id, "call": call, "path": path, "returnType": return_type, "after": after});
+        if let (true, Some(parent)) = (self.parent_values, parent) {
+            message["parent"] = parent.clone();
+        }
+        send(message);
         rx
     }
+}
+
+// The kit's source stream, as the subscription's root field returns it
+// (subscription-stream). It waits for the kit's `source` actions: an
+// `emit` asks the kit for the event (the root `call`, whose settled
+// outcome is the root field's value), `complete` ends the stream, and
+// `fail` yields the failure as an error item, then ends it: a Rust stream
+// has no way to end with an error, and an item that is an error is how
+// `#[graphql_subscription]` takes a stream of `Result`s. Dropped before it
+// ended, the implementation has cancelled it: `source-cancelled`.
+struct SourceGuard {
+    exec: Arc<Execution>,
+    over: bool,
+}
+
+impl Drop for SourceGuard {
+    fn drop(&mut self) {
+        if !self.over && !self.exec.ended.load(Ordering::SeqCst) {
+            send(json!({"type": "source-cancelled", "id": self.exec.id}));
+        }
+    }
+}
+
+enum SourceItem {
+    Event(Json),
+    Failed(String),
+}
+
+fn kit_source(
+    exec: Arc<Execution>,
+    path: Vec<Json>,
+    return_type: String,
+) -> impl futures::Stream<Item = SourceItem> {
+    let actions = exec.source.lock().unwrap().take();
+    let guard = SourceGuard { exec: exec.clone(), over: actions.is_none() };
+    futures::stream::unfold((guard, actions), move |(mut guard, mut actions)| {
+        let (path, return_type) = (path.clone(), return_type.clone());
+        async move {
+            if guard.over {
+                return None;
+            }
+            let action = match actions.as_mut() {
+                Some(actions) => actions.next().await,
+                None => None,
+            };
+            match action {
+                Some(Action::Emit(token)) => {
+                    let rx = guard.exec.call(&path, return_type, Some(&token));
+                    let outcome = rx.await.unwrap_or_else(|_| json!({"kind": "error"}));
+                    Some((SourceItem::Event(outcome), (guard, actions)))
+                }
+                Some(Action::Fail(message)) => {
+                    guard.over = true;
+                    Some((SourceItem::Failed(message), (guard, actions)))
+                }
+                Some(Action::Complete) | None => {
+                    guard.over = true;
+                    None
+                }
+            }
+        }
+    })
 }
 
 struct Ctx {
@@ -539,6 +709,8 @@ fn response_name(executor: &Executor<Ctx, S>) -> String {
 struct Obj {
     concrete: ArcStr,
     path: Vec<Json>,
+    // parent-values: the kit's token for this value.
+    token: Json,
 }
 
 // What a resolver returns, once settled.
@@ -587,6 +759,7 @@ fn build(sdl: &Sdl, ty: &SdlType, path: &[Json], outcome: &Json, inline: bool) -
         "object" => Dyn::Obj(Obj {
             concrete: outcome["type"].as_str().unwrap_or("").into(),
             path: path.to_vec(),
+            token: outcome.get("token").cloned().unwrap_or(Json::Null),
         }),
         "list" => {
             let item_ty = match &ty.base {
@@ -678,7 +851,7 @@ impl GraphQLValueAsync<S> for Obj {
             };
             let mut path = self.path.clone();
             path.push(json!(response_name(executor)));
-            let rx = executor.context().exec.call(&path, ty.to_string());
+            let rx = executor.context().exec.call(&path, ty.to_string(), Some(&self.token));
             let outcome = rx.await.map_err(|_| FieldError::from("abandoned"))?;
             complete(info, ty, path, outcome, executor).await
         })
@@ -725,21 +898,33 @@ impl GraphQLSubscriptionValue<S> for Obj {
                 None => return Err(FieldError::from(format!("no field {field_name}"))),
             };
             let path = vec![json!(response_name(executor))];
-            // The source stream. Its request for its one event is the root
-            // `call`, and the settled outcome is the event.
+            // The source stream. Its request for an event is the root
+            // `call`, and the settled outcome is the event, which is the
+            // root field's value: no resolver runs on an event. With
+            // parent-values, that call reports the event's token.
             let exec = executor.context().exec.clone();
-            let (p, t) = (path.clone(), ty.clone());
-            let source = futures::stream::once(async move {
-                let rx = exec.call(&p, t.to_string());
-                rx.await.unwrap_or_else(|_| json!({"kind": "error"}))
-            });
+            let streamed = exec.streamed;
+            let source = if streamed {
+                kit_source(exec, path.clone(), ty.to_string()).boxed()
+            } else {
+                let (p, t) = (path.clone(), ty.clone());
+                futures::stream::once(async move {
+                    let rx = exec.call(&p, t.to_string(), Some(&exec.event));
+                    SourceItem::Event(rx.await.unwrap_or_else(|_| json!({"kind": "error"})))
+                })
+                .boxed()
+            };
             let executor = executor.as_owned_executor();
             let info = info.clone();
-            let stream = source.then(move |outcome| {
+            let stream = source.then(move |item| {
                 let executor = executor.clone();
                 let (info, ty, path) = (info.clone(), ty.clone(), path.clone());
                 async move {
                     let ex = executor.as_executor();
+                    let outcome = match item {
+                        SourceItem::Event(outcome) => outcome,
+                        SourceItem::Failed(message) => return Err(vec![ex.new_error(FieldError::from(message))]),
+                    };
                     match kind(&outcome) {
                         "error" => Err(vec![ex.new_error(failure(&path))]),
                         "null" => Ok(Value::null()),
@@ -799,7 +984,7 @@ impl GraphQLValueAsync<S> for Dyn {
             Dyn::Id(v) => Box::pin(async move { executor.resolve_with_ctx_async(&(), v).await }),
             Dyn::Raw(v) => Box::pin(future::ready(Ok(v.clone()))),
             Dyn::Pending { ty, path } => Box::pin(async move {
-                let rx = executor.context().exec.call(path, ty.to_string());
+                let rx = executor.context().exec.call(path, ty.to_string(), None);
                 let outcome = rx.await.map_err(|_| FieldError::from("abandoned"))?;
                 complete(info, ty.clone(), path.clone(), outcome, executor).await
             }),
@@ -819,9 +1004,12 @@ fn panic_message(e: Box<dyn std::any::Any + Send>) -> String {
         .unwrap_or_else(|| "panic".into())
 }
 
-fn build_schema(source: &str) -> Result<Schema, String> {
+// `initial` is the root value's token (parent-values: the `execute`'s
+// `initialValue`), carried by the root objects Juniper resolves the
+// operation's root fields on.
+fn build_schema(source: &str, initial: &Json) -> Result<Schema, String> {
     let sdl = Arc::new(Sdl::parse(source)?);
-    let root = |name: &str| Obj { concrete: name.into(), path: vec![] };
+    let root = |name: &str| Obj { concrete: name.into(), path: vec![], token: initial.clone() };
     let info = |name: &str| Info { sdl: sdl.clone(), name: name.into() };
     let query = sdl.query.clone();
     let mutation = sdl.mutation.clone().unwrap_or_else(|| "_EmptyMutation".into());
@@ -849,18 +1037,34 @@ fn build_schema(source: &str) -> Result<Schema, String> {
 // (`#[serde(skip_serializing_if = "Vec::is_empty")]`,
 // src/server_message.rs:13-25). Serializing `ExecutionOutput` itself would
 // always write `errors`, but no Juniper transport sends it that way.
-fn event_payload(output: &juniper::ExecutionOutput<S>) -> Result<Json, String> {
-    let mut payload = serde_json::Map::new();
-    payload.insert("data".into(), serde_json::to_value(&output.data).map_err(|e| e.to_string())?);
-    if !output.errors.is_empty() {
-        payload.insert("errors".into(), serde_json::to_value(&output.errors).map_err(|e| e.to_string())?);
+fn event_payload(output: &juniper::ExecutionOutput<S>) -> Result<String, String> {
+    let data = serde_json::to_string(&output.data).map_err(|e| e.to_string())?;
+    if output.errors.is_empty() {
+        return Ok(format!("{{\"data\":{data}}}"));
     }
-    Ok(Json::Object(payload))
+    let errors = serde_json::to_string(&output.errors).map_err(|e| e.to_string())?;
+    Ok(format!("{{\"data\":{data},\"errors\":{errors}}}"))
 }
 
 fn start(message: &Json, pool: &LocalPool, inline_items: bool) -> Result<(Arc<Execution>, RemoteHandle<()>), String> {
-    let exec = Execution::new(message["id"].clone(), inline_items);
-    let schema = build_schema(message["schema"].as_str().unwrap_or(""))
+    let mut execution = Execution::new(message["id"].clone(), inline_items);
+    let streamed = message["operationType"] == "subscription" && message["stream"] == true;
+    let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
+    {
+        let e = Arc::get_mut(&mut execution).expect("a new execution");
+        e.parent_values = message.get("initialValue").is_some();
+        e.event = message.get("event").cloned().unwrap_or(Json::Null);
+        e.streamed = streamed;
+        if streamed {
+            let (tx, rx) = mpsc::unbounded();
+            e.source = Mutex::new(Some(rx));
+            e.source_tx = Mutex::new(Some(tx));
+            e.cancel_tx = Mutex::new(Some(cancel_tx));
+        }
+    }
+    let exec = execution;
+    let initial = message.get("initialValue").cloned().unwrap_or(Json::Null);
+    let schema = build_schema(message["schema"].as_str().unwrap_or(""), &initial)
         .map_err(|e| format!("the adapter couldn't build the schema: {e}"))?;
     let variables: Option<InputValue<S>> = serde_json::from_value(message["variables"].clone()).ok();
     let request = GraphQLRequest::new(message["document"].as_str().unwrap_or("").to_string(), None, variables);
@@ -868,7 +1072,43 @@ fn start(message: &Json, pool: &LocalPool, inline_items: bool) -> Result<(Arc<Ex
     let e = exec.clone();
     let task = async move {
         let ctx = Ctx { exec: e.clone() };
-        let response: Result<Json, String> = if subscription {
+        let response: Result<String, String> = if streamed {
+            // subscription-stream: a `Coordinator` connection, consumed as
+            // juniper_graphql_ws consumes it, reporting each output, then
+            // how the stream ended. The client cancels by dropping the
+            // connection, which drops the source stream with it.
+            let coordinator = juniper_subscriptions::Coordinator::new(schema);
+            let mut connection = match coordinator.subscribe(&request, &ctx).await {
+                Ok(connection) => connection,
+                Err(err) => {
+                    return (serde_json::to_string(&GraphQLResponse::<S>::from_result(Err(err))).map_err(|e| e.to_string()), true);
+                }
+            };
+            let mut cancel = cancel_rx;
+            loop {
+                let next = future::select(connection.next(), &mut cancel).await;
+                match next {
+                    future::Either::Left((Some(output), _)) => {
+                        if e.ended.load(Ordering::SeqCst) {
+                            return (Ok(String::new()), true);
+                        }
+                        match event_payload(&output) {
+                            Ok(payload) => send_response(&e.id, &payload),
+                            Err(message) => send(json!({"type": "no-response", "id": e.id, "message": message})),
+                        }
+                    }
+                    future::Either::Left((None, _)) => break,
+                    future::Either::Right(_) => {
+                        drop(connection);
+                        break;
+                    }
+                }
+            }
+            if !e.ended.load(Ordering::SeqCst) {
+                send(json!({"type": "done", "id": e.id}));
+            }
+            return (Ok(String::new()), true);
+        } else if subscription {
             // As juniper_graphql_ws does: a `Coordinator` from
             // juniper_subscriptions, and the first `ExecutionOutput` of its
             // connection.
@@ -879,13 +1119,13 @@ fn start(message: &Json, pool: &LocalPool, inline_items: bool) -> Result<(Arc<Ex
                     Some(output) => event_payload(&output),
                     None => Err("the response stream ended without an event".into()),
                 },
-                Err(err) => serde_json::to_value(GraphQLResponse::<S>::from_result(Err(err)))
+                Err(err) => serde_json::to_string(&GraphQLResponse::<S>::from_result(Err(err)))
                     .map_err(|e| e.to_string()),
             };
             response
         } else {
             let response = request.execute(&schema, &ctx).await;
-            serde_json::to_value(&response).map_err(|e| e.to_string())
+            serde_json::to_string(&response).map_err(|e| e.to_string())
         };
         (response, subscription)
     };
@@ -895,7 +1135,9 @@ fn start(message: &Json, pool: &LocalPool, inline_items: bool) -> Result<(Arc<Ex
             return;
         }
         match result {
-            Ok((Ok(response), _)) => send(json!({"type": "response", "id": e.id, "response": response})),
+            // A streamed subscription has reported everything already.
+            Ok((Ok(response), _)) if streamed && response.is_empty() => {}
+            Ok((Ok(response), _)) => send_response(&e.id, &response),
             Ok((Err(message), true)) => send(json!({"type": "stream-error", "id": e.id, "message": message})),
             Ok((Err(message), false)) => send(json!({"type": "no-response", "id": e.id, "message": message})),
             Err(panic) => send(json!({"type": "no-response", "id": e.id, "message": format!("Juniper panicked: {}", panic_message(panic))})),
@@ -931,7 +1173,7 @@ fn parse(message: &Json, schema: &Schema) -> Json {
 // validate: parse, then `visit_all_rules`, as `ValidatedOperation::new` does.
 fn validate(message: &Json) -> Json {
     let id = message["id"].clone();
-    let schema = match build_schema(message["schema"].as_str().unwrap_or("")) {
+    let schema = match build_schema(message["schema"].as_str().unwrap_or(""), &Json::Null) {
         Ok(schema) => schema,
         Err(e) => return json!({"type": "error", "id": id, "message": format!("the adapter couldn't build the schema: {e}")}),
     };
@@ -987,18 +1229,21 @@ fn validate(message: &Json) -> Json {
     }
 }
 
-fn introspect(message: &Json) -> Json {
+// The answer is a line: the response is Juniper's own serialization, as it
+// would go out.
+fn introspect(message: &Json) -> String {
     let id = message["id"].clone();
-    let schema = match build_schema(message["sdl"].as_str().unwrap_or("")) {
+    let schema = match build_schema(message["sdl"].as_str().unwrap_or(""), &Json::Null) {
         Ok(schema) => schema,
-        Err(e) => return json!({"type": "result", "id": id, "response": {"errors": [{"message": e}]}}),
+        Err(e) => return json!({"type": "result", "id": id, "response": {"errors": [{"message": e}]}}).to_string(),
     };
     let request = GraphQLRequest::<S>::new(message["query"].as_str().unwrap_or("").to_string(), None, None);
     let ctx = Ctx { exec: Execution::new(id.clone(), false) };
     let response = catch_unwind(AssertUnwindSafe(|| futures::executor::block_on(request.execute(&schema, &ctx))));
-    match response {
-        Ok(response) => json!({"type": "result", "id": id, "response": serde_json::to_value(&response).unwrap_or(Json::Null)}),
-        Err(panic) => json!({"type": "error", "id": id, "message": format!("Juniper panicked: {}", panic_message(panic))}),
+    match response.map(|r| serde_json::to_string(&r)) {
+        Ok(Ok(response)) => format!("{{\"type\":\"result\",\"id\":{id},\"response\":{response}}}"),
+        Ok(Err(e)) => json!({"type": "error", "id": id, "message": format!("serializing the response failed: {e}")}).to_string(),
+        Err(panic) => json!({"type": "error", "id": id, "message": format!("Juniper panicked: {}", panic_message(panic))}).to_string(),
     }
 }
 
@@ -1007,7 +1252,16 @@ fn main() {
     std::panic::set_hook(Box::new(|_| {}));
     let idle = !std::env::args().any(|a| a == "--no-idle");
     let inline_items = std::env::args().any(|a| a == "--inline-items");
-    let mut capabilities = vec!["uncoercible-results", "mutation", "subscription", "parse", "validate", "introspect"];
+    let mut capabilities = vec![
+        "uncoercible-results",
+        "mutation",
+        "subscription",
+        "subscription-stream",
+        "parent-values",
+        "parse",
+        "validate",
+        "introspect",
+    ];
     if !inline_items {
         capabilities.insert(0, "deferred-items");
     }
@@ -1027,7 +1281,7 @@ fn main() {
         "nullItems": false,
     }));
 
-    let parse_schema = build_schema(PARSE_SCHEMA).expect("the parse schema builds");
+    let parse_schema = build_schema(PARSE_SCHEMA, &Json::Null).expect("the parse schema builds");
     let mut pool = LocalPool::new();
     // Dropping a RemoteHandle cancels its task, which is what `end` wants.
     let mut executions: HashMap<String, (Arc<Execution>, RemoteHandle<()>)> = HashMap::new();
@@ -1071,7 +1325,7 @@ fn main() {
                 continue;
             }
             "introspect" => {
-                send(introspect(&message));
+                send_line(introspect(&message));
                 continue;
             }
             "execute" => match start(&message, &pool, inline_items) {
@@ -1095,6 +1349,35 @@ fn main() {
                         let _ = tx.send(message["outcome"].clone());
                     }
                     None => send(json!({"type": "error", "id": id, "message": format!("no pending call {call}")})),
+                }
+            }
+            // subscription-stream: the kit's source stream emits, completes
+            // or fails.
+            "source" => {
+                let action = match message["action"].as_str().unwrap_or("") {
+                    "emit" => Some(Action::Emit(message.get("token").cloned().unwrap_or(Json::Null))),
+                    "complete" => Some(Action::Complete),
+                    "fail" => Some(Action::Fail(message["message"].as_str().unwrap_or("").to_string())),
+                    _ => None,
+                };
+                let tx = executions.get(&key).and_then(|(exec, _)| exec.source_tx.lock().unwrap().clone());
+                match (action, tx) {
+                    (Some(action), Some(tx)) => {
+                        let _ = tx.unbounded_send(action);
+                    }
+                    (None, _) => send(json!({"type": "error", "id": id, "message": format!("unknown source action {}", message["action"])})),
+                    (_, None) => send(json!({"type": "error", "id": id, "message": "no streamed subscription to drive"})),
+                }
+            }
+            // The client cancels the response stream.
+            "cancel" => {
+                let tx = executions.get(&key).and_then(|(exec, _)| exec.cancel_tx.lock().unwrap().take());
+                match tx {
+                    // The stream may have ended already.
+                    Some(tx) => {
+                        let _ = tx.send(());
+                    }
+                    None => send(json!({"type": "error", "id": id, "message": "no response stream to cancel"})),
                 }
             }
             "end" => {

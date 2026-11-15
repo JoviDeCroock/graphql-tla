@@ -136,7 +136,9 @@ const levelOf = (rule) => LEVEL[rule] ?? "MUST";
 // Descriptions and comments: twins of vectors (`twinOf`) with a description
 // on every executable definition, or a comment after every line. A twin is
 // graded only here, and only when its original was answered right: then a
-// wrong answer on the twin is the description's or the comment's doing.
+// wrong answer on the twin is the description's or the comment's doing. A
+// crash on a twin also counts when its original was answered wrong without
+// a crash.
 export const DESCRIPTIONS_INERT = "descriptionsInert";
 const INERT = {
   id: DESCRIPTIONS_INERT,
@@ -144,7 +146,7 @@ const INERT = {
   level: "MUST",
   spec: ["2.2", "2.1.4"],
   basis:
-    '§2.2 (since September 2025): "Descriptions in GraphQL executable documents are purely for documentation purposes. They MUST NOT affect the execution, validation, or response of a GraphQL document. It is safe to remove all descriptions and comments from executable documents without changing their behavior or results." §2.1.4 (every release): comments "have no significance to the semantic meaning of a GraphQL Document". Each twin is a vector of another check with a description on every operation, fragment and variable definition (since September 2025), or a comment after every line. It is graded only when the implementation answers its original right, so a failure here is the description\'s or the comment\'s doing; a parser without descriptions crashes on the first kind.',
+    '§2.2 (since September 2025): "Descriptions in GraphQL executable documents are purely for documentation purposes. They MUST NOT affect the execution, validation, or response of a GraphQL document. It is safe to remove all descriptions and comments from executable documents without changing their behavior or results." §2.1.4 (every release): comments "have no significance to the semantic meaning of a GraphQL Document". Each twin is a vector of another check with a description on every operation, fragment and variable definition (since September 2025), or a comment after every line. It is graded only when the implementation answers its original right, or, for a crash, answers it without crashing, so a failure here is the description\'s or the comment\'s doing; a parser without descriptions crashes on the first kind.',
 };
 
 // Where the spec's formal text and prose disagree, or it leaves a term
@@ -280,12 +282,17 @@ export const buildReport = ({ data, judged, informational = [], strict, selfTest
   const { partners } = pairsOf(data);
 
   // Twins (descriptions and comments): graded only where the original was
-  // answered right. `inert` holds the twins that count.
+  // answered right, except a crash, which counts wherever the original was
+  // answered without one, right or wrong: a wrong verdict on the original
+  // doesn't explain it, and a crash is never left out of the findings.
+  // `inert` holds the twins that count.
   const byId = new Map(judged.map((j) => [j.vector.id, j]));
   const inert = { cases: 0, failing: 0, failingSince: {}, counted: new Set() };
   for (const j of judged) {
     if (!j.vector.twinOf || j.status === "malformed") continue;
-    if (byId.get(j.vector.twinOf)?.status !== "pass") continue;
+    const original = byId.get(j.vector.twinOf)?.status;
+    const answered = original !== undefined && original !== "crash" && original !== "malformed";
+    if (original !== "pass" && !(j.status === "crash" && answered)) continue;
     inert.cases++;
     inert.counted.add(j);
     if (j.status !== "pass") {
@@ -395,7 +402,7 @@ export const buildReport = ({ data, judged, informational = [], strict, selfTest
     if (f.twin) {
       const what = f.best.vector.family === "descriptions" ? "a description on each operation, fragment and variable definition" : "a comment after each line";
       return f.kind === "crash"
-        ? `crashes on documents with ${what}, though it answers the same documents without them right${byRelease}`
+        ? `crashes on documents with ${what}, though it answers the same documents without them${byRelease}`
         : `answers documents with ${what} otherwise than the same documents without them${byRelease}`;
     }
     if (f.kind === "crash") {
@@ -530,7 +537,7 @@ export const buildReport = ({ data, judged, informational = [], strict, selfTest
             example: {
               input: `${failureSince(data, f.best) ? `[since ${releaseName(failureSince(data, f.best))}] ` : ""}${f.best.vector.id}: ${oneLine(f.best.vector.document)}`,
               response: crash ? crashResponse(f.best.answer) : f.best.answer,
-              expected: `${expected(f.best.vector)}, as for ${f.best.vector.twinOf}, which was answered right`,
+              expected: `${expected(f.best.vector)}, as for ${f.best.vector.twinOf}, which was answered ${byId.get(f.best.vector.twinOf)?.status === "pass" ? "right" : "without a crash"}`,
             },
           };
         }
@@ -788,6 +795,25 @@ export const selfTest = (data, vectors = gradedVectors(data).graded) => {
       if (inert.status !== "fail" || inert.failingSince?.September2025 !== 1) failures.push(`${name}: ${DESCRIPTIONS_INERT} doesn't count it toward September 2025`);
       if (r.findings.length !== 1 || r.findings[0].kind !== "crash") failures.push(`${name}: not one crash finding`);
     },
+    // A crash on a twin whose original is answered wrong (not a crash):
+    // the original's wrong verdict counts against its rules, and the crash
+    // against descriptionsInert, in a crash finding of its own.
+    () => {
+      const name = "a crash on a twin whose original is answered wrong";
+      const twin = twins.find((v) => v.family === "descriptions" && !v.expected.valid);
+      if (!twin) return failures.push(`${name}: no described twin of an invalid vector`);
+      const original = byId.get(twin.twinOf);
+      const answers = vectors.map((v, i) => (v === twin ? new Crash("Syntax Error: Unexpected description") : v === original ? { valid: true } : right[i]));
+      const r = report(answers);
+      if (statusOf(r, DESCRIPTIONS_INERT) !== "fail") failures.push(`${name}: ${DESCRIPTIONS_INERT} doesn't fail`);
+      const crashes = r.findings.filter((f) => f.kind === "crash");
+      if (crashes.length !== 1 || crashes[0].cases !== 1 || crashes[0].checks.join() !== DESCRIPTIONS_INERT) {
+        failures.push(`${name}: the crash isn't one crash finding under ${DESCRIPTIONS_INERT}`);
+      }
+      const failed = r.checks.filter((c) => c.status === "fail" && c.id !== DESCRIPTIONS_INERT).map((c) => c.id).sort().join(",");
+      const want = brokenRules(original).map(checkId).sort().join(",");
+      if (failed !== want) failures.push(`${name}: fails ${failed || "nothing"} besides ${DESCRIPTIONS_INERT}, not ${want}`);
+    },
     // A SHOULD check that fails fails the run only with --strict.
     () => {
       const name = "a SHOULD check fails";
@@ -840,8 +866,14 @@ export const check = (data, vectors, answers, { strict = false, log = console.lo
     log(`✗ ${malformed} answers aren't {"valid": true|false}, e.g. ${JSON.stringify(first.answer)} for ${first.vector.id}`);
   }
   const passed = judged.filter((j) => j.status === "pass").length;
-  const crashed = judged.filter((j) => j.status === "crash").length;
-  log(`${passed === judged.length ? "✓" : "✗"} ${passed} of ${judged.length} answers agree with the reference${crashed ? `; ${crashed} crashed` : ""}`);
+  // A crash on a twin whose original crashed too is the original's crash
+  // (one cause), so it has no finding of its own: said apart.
+  const statusById = new Map(judged.map((j) => [j.vector.id, j.status]));
+  const crashes = judged.filter((j) => j.status === "crash");
+  const echoes = crashes.filter((j) => j.vector.twinOf && statusById.get(j.vector.twinOf) === "crash").length;
+  const crashed = crashes.length - echoes;
+  const echoed = echoes ? ` (and ${echoes} on twins of vectors that crashed too)` : "";
+  log(`${passed === judged.length ? "✓" : "✗"} ${passed} of ${judged.length} answers agree with the reference${crashed || echoes ? `; ${crashed} crashed${echoed}` : ""}`);
   if (passed < judged.length - malformed) {
     for (const [release, s] of Object.entries(report.since)) {
       log(`  ${s.failing} of the ${judged.length - malformed - passed} failing vectors rely on rules since ${releaseName(release)} (of ${s.vectors} such vectors graded)`);

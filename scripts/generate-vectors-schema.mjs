@@ -745,6 +745,7 @@ const newSyntax = (sdl) => {
     if ((def.directives ?? []).some((d) => d.name.value === "oneOf")) out.push(["September2025", "OneOf input objects"]);
     if (def.kind === "DirectiveDefinition" && (def.directives ?? []).length > 0) out.push(["September2026", "directives on directive definitions"]);
     if (def.kind === "DirectiveExtension") out.push(["September2026", "directive extensions"]);
+    if (def.kind === "DirectiveDefinition" && def.locations.some((l) => l.value === "DIRECTIVE_DEFINITION")) out.push(["September2026", "the DIRECTIVE_DEFINITION location"]);
     const args = def.kind === "DirectiveDefinition" ? (def.arguments ?? []) : (def.fields ?? []).flatMap((f) => f.arguments ?? []);
     if (args.some(deprecated)) out.push(["September2025", "deprecated arguments"]);
     const inputObject = def.kind === "InputObjectTypeDefinition" || def.kind === "InputObjectTypeExtension";

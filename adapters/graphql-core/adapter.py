@@ -6,8 +6,13 @@ after each message from the kit it runs the loop until no callback is ready,
 then says `idle`, which makes runs deterministic. Nothing else can wake the
 loop, because stdin is read outside it and graphql-core sets no timers.
 
+It also claims the execution capabilities subscription-stream (the kit drives
+a subscription's source stream), parent-values (objects carry the kit's
+tokens, and each call reports its parent's), custom-scalar-results and
+scalar-results.
+
 It also answers the kit's other areas (docs/kit-areas.md): parse, validate,
-coerce, schema and introspect, in areas.py.
+coerce, schema, introspect and coordinate, in areas.py.
 
 Usage: python adapter.py [--no-idle] [--coroutine-resolvers] [--validate]
 
@@ -31,10 +36,13 @@ from graphql import (
     ExecutionResult,
     build_schema,
     execute,
+    GraphQLError,
     get_named_type,
     is_enum_type,
     is_list_type,
     is_non_null_type,
+    is_scalar_type,
+    is_specified_scalar_type,
     parse,
     subscribe,
 )
@@ -62,19 +70,47 @@ send(
             "uncoercible-results",
             "mutation",
             "subscription",
+            "subscription-stream",
+            "parent-values",
+            "custom-scalar-results",
+            "scalar-results",
             *(c for area, capabilities in CAPABILITIES.items() for c in (area, *capabilities)),
         ],
     }
 )
 
 
+# What a custom scalar's result coercion rejects (custom-scalar-results).
+UNREPRESENTABLE = object()
+
+
 def uncoercible_value(type_):
     """A value the leaf type can't represent: a fraction for an Int, a
-    non-finite number for a Float, a name that isn't one of an enum's values."""
+    non-finite number for a Float, a name that isn't one of an enum's values,
+    and for a custom scalar a value its result coercion raises on."""
     named = get_named_type(type_)
     if is_enum_type(named):
         return "NOT_A_VALUE"
+    if not is_specified_scalar_type(named):
+        return UNREPRESENTABLE
     return 1.2 if named.name == "Int" else float("inf")
+
+
+def coerce_custom_scalars(schema):
+    """Custom scalars built from SDL pass every value through. Give each a
+    result coercion (`serialize`) that raises on UNREPRESENTABLE, as a custom
+    scalar's serializer would on a value it can't represent (§3.5), the way
+    graphql-core's own scalars raise a GraphQLError."""
+    for type_ in schema.type_map.values():
+        if not is_scalar_type(type_) or is_specified_scalar_type(type_) or type_.name.startswith("__"):
+            continue
+
+        def serialize(value, name=type_.name):
+            if value is UNREPRESENTABLE:
+                raise GraphQLError(f"{name} cannot represent this value")
+            return value
+
+        type_.serialize = serialize
 
 
 def leaf_value(type_):
@@ -114,8 +150,58 @@ class StreamError(Exception):
     pass
 
 
+class KitSource:
+    """A source stream the kit drives (subscription-stream). `__anext__`
+    waits for the kit's `source` messages; `aclose`, graphql-core cancelling
+    the stream, is reported as `source-cancelled`."""
+
+    def __init__(self, execution):
+        self.execution = execution
+        self.queue = []
+        self.waiter = None
+        self.over = False
+
+    def push(self, item):
+        if self.over:
+            return
+        if self.waiter is not None and not self.waiter.done():
+            self.waiter.set_result(item)
+            self.waiter = None
+        else:
+            self.queue.append(item)
+
+    def answer(self, item):
+        if "error" in item:
+            self.over = True
+            raise item["error"]
+        if item.get("done"):
+            self.over = True
+            raise StopAsyncIteration
+        return item["value"]
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if self.queue:
+            return self.answer(self.queue.pop(0))
+        if self.over:
+            raise StopAsyncIteration
+        self.waiter = loop.create_future()
+        return self.answer(await self.waiter)
+
+    async def aclose(self):
+        if not self.over and not self.execution.ended:
+            send({"type": "source-cancelled", "id": self.execution.id})
+        self.over = True
+        self.queue.clear()
+        if self.waiter is not None and not self.waiter.done():
+            self.waiter.set_result({"done": True})
+        self.waiter = None
+
+
 class Execution:
-    def __init__(self, id_):
+    def __init__(self, id_, parent_values):
         self.id = id_
         self.calls = {}
         self.next_call = 1
@@ -123,50 +209,115 @@ class Execution:
         # resolver was called, so the kit knows what the engine had seen.
         self.applied = 0
         self.ended = False
+        # parent-values: each call reports the token of the object its
+        # resolver was given.
+        self.parent_values = parent_values
+        # subscription-stream: the kit's source, graphql-core's response
+        # stream, and whether that stream has completed.
+        self.source = None
+        self.stream = None
+        self.completed = False
 
-    def control(self, path, type_):
+    def control(self, path, type_, parent=None):
+        """Tells the kit a resolver was called, and returns the future its
+        `settle` completes. `parent` is the token of the resolver's object,
+        given only with parent-values, and never for a list item."""
         call = self.next_call
         self.next_call += 1
         future = loop.create_future()
         self.calls[call] = (path, type_, future)
-        send(
-            {
-                "type": "call",
-                "id": self.id,
-                "call": call,
-                "path": path,
-                "returnType": str(type_),
-                "after": self.applied,
-            }
-        )
+        message = {
+            "type": "call",
+            "id": self.id,
+            "call": call,
+            "path": path,
+            "returnType": str(type_),
+            "after": self.applied,
+        }
+        if parent is not None:
+            message["parent"] = parent[0]
+        send(message)
         return future
 
-    def resolve(self, _source, info, **_args):
+    def resolve(self, source, info, **_args):
         path = [str(key) for key in info.path.as_list()]
+        # parent-values: the token of the object graphql-core gave the
+        # resolver (null if it got something without one).
+        parent = ((source.get("token") if isinstance(source, dict) else None),) if self.parent_values else None
         if COROUTINE_RESOLVERS:
 
             async def body():
-                return await self.control(path, info.return_type)
+                return await self.control(path, info.return_type, parent)
 
             return body()
-        return self.control(path, info.return_type)
+        return self.control(path, info.return_type, parent)
 
 
 def start(message):
     id_ = message["id"]
-    execution = Execution(id_)
+    parent_values = "initialValue" in message
+    execution = Execution(id_, parent_values)
     executions[id_] = execution
     if not message.get("errorPropagation", True):
         send({"type": "error", "id": id_, "message": "graphql-core 3.2 can't execute without error propagation"})
         return
     schema = build_schema(message["schema"])
+    coerce_custom_scalars(schema)
     document = parse(message["document"])
     variables = message.get("variables") or {}
+    # parent-values: the root value carries the kit's initial value token.
+    root_value = {"token": message["initialValue"]} if parent_values else None
+
+    def respond(result):
+        send({"type": "response", "id": id_, "response": result.formatted})
+
+    if message["operationType"] == "subscription" and message.get("stream"):
+        # subscription-stream: the source stream is the kit's. Every result
+        # the response stream yields is reported, then how it ended.
+        execution.source = KitSource(execution)
+
+        async def consume():
+            try:
+                stream = await subscribe(
+                    schema,
+                    document,
+                    root_value=root_value,
+                    variable_values=variables,
+                    field_resolver=execution.resolve,
+                    subscribe_field_resolver=lambda _root, _info, **_args: execution.source,
+                )
+            except Exception:
+                send({"type": "error", "id": id_, "message": traceback.format_exc()})
+                return
+            if isinstance(stream, ExecutionResult):
+                if not execution.ended:
+                    respond(stream)
+                return
+            execution.stream = stream
+            while True:
+                try:
+                    result = await stream.__anext__()
+                except StopAsyncIteration:
+                    if not execution.completed and not execution.ended:
+                        send({"type": "done", "id": id_})
+                    execution.completed = True
+                    return
+                except Exception as error:
+                    if not execution.completed and not execution.ended:
+                        send({"type": "stream-error", "id": id_, "message": f"{type(error).__name__}: {error}"})
+                    execution.completed = True
+                    return
+                if execution.ended:
+                    return
+                respond(result)
+
+        loop.create_task(consume())
+        return
 
     async def source(_root, _info, **_args):
         # A subscription's source stream yields one event; the root field's
         # resolver then runs on it, as in graphql-js.
-        yield {}
+        yield {"token": message.get("event")} if parent_values else {}
 
     async def run():
         if message["operationType"] != "subscription":
@@ -174,11 +325,14 @@ def start(message):
             # resolver, which reads `__typename` from a dict. That is also
             # what the subscription's event execution uses, since `subscribe`
             # doesn't pass a type resolver on.
-            result = execute(schema, document, variable_values=variables, field_resolver=execution.resolve)
+            result = execute(
+                schema, document, root_value=root_value, variable_values=variables, field_resolver=execution.resolve
+            )
             return await result if inspect.isawaitable(result) else result
         stream = await subscribe(
             schema,
             document,
+            root_value=root_value,
             variable_values=variables,
             field_resolver=execution.resolve,
             subscribe_field_resolver=source,
@@ -194,7 +348,7 @@ def start(message):
         finally:
             await stream.aclose()
 
-    async def respond():
+    async def answer():
         try:
             result = await run()
         except StreamError as error:
@@ -205,9 +359,49 @@ def start(message):
             send({"type": "error", "id": id_, "message": traceback.format_exc()})
             return
         if not execution.ended:
-            send({"type": "response", "id": id_, "response": result.formatted})
+            respond(result)
 
-    loop.create_task(respond())
+    loop.create_task(answer())
+
+
+def source_message(message):
+    """The kit's source stream emits, completes or fails."""
+    execution = executions.get(message["id"])
+    if execution is None or execution.source is None:
+        send({"type": "error", "id": message["id"], "message": "no streamed subscription to drive"})
+        return
+    action = message.get("action")
+    if action == "emit":
+        execution.source.push({"value": {"token": message["token"]} if "token" in message else {}})
+    elif action == "complete":
+        execution.source.push({"done": True})
+    elif action == "fail":
+        execution.source.push({"error": Exception(message.get("message", "the source stream failed"))})
+    else:
+        send({"type": "error", "id": message["id"], "message": f"unknown source action {action}"})
+
+
+def cancel(message):
+    """The client cancels the response stream: `aclose()`. Once it returns,
+    the client sees the stream complete."""
+    execution = executions.get(message["id"])
+    if execution is None or execution.stream is None:
+        send({"type": "error", "id": message["id"], "message": "no response stream to cancel"})
+        return
+
+    async def close():
+        try:
+            await execution.stream.aclose()
+        except Exception as error:
+            if not execution.completed and not execution.ended:
+                send({"type": "stream-error", "id": execution.id, "message": f"{type(error).__name__}: {error}"})
+            execution.completed = True
+            return
+        if not execution.completed and not execution.ended:
+            send({"type": "done", "id": execution.id})
+        execution.completed = True
+
+    loop.create_task(close())
 
 
 def settle(message):
@@ -225,17 +419,37 @@ def settle(message):
         future.set_exception(Exception(f"resolver at {'.'.join(path)} failed"))
     elif kind == "null":
         future.set_result(None)
+    elif kind == "leaf" and "value" in outcome:
+        # scalar-results: the internal value the kit names, as it is.
+        future.set_result(outcome["value"])
     elif kind == "leaf":
         # A leaf at a list position is the number 1, which isn't iterable.
         future.set_result(1 if is_list_type(inner) else leaf_value(inner))
     elif kind == "uncoercible":
         future.set_result(uncoercible_value(inner))
     elif kind == "object":
-        future.set_result({"__typename": outcome["type"]})
+        value = {"__typename": outcome["type"]}
+        if "token" in outcome:
+            value["token"] = outcome["token"]
+        future.set_result(value)
     else:
         future.set_result(
             [execution.control([*path, str(i)], inner.of_type) for i in range(outcome["length"])]
         )
+
+
+def close(execution):
+    """The streamed subscription's response stream, which may still be open
+    when the kit is done with it: closed quietly."""
+    if execution.stream is not None and not execution.completed:
+
+        async def quietly():
+            try:
+                await execution.stream.aclose()
+            except Exception:
+                pass
+
+        loop.create_task(quietly())
 
 
 async def flush():
@@ -286,10 +500,16 @@ def main():
                 send({"type": "error", "id": message["id"], "message": traceback.format_exc()})
         elif kind == "settle":
             settle(message)
+        elif kind == "source":
+            source_message(message)
+        elif kind == "cancel":
+            cancel(message)
         elif kind == "end":
             execution = executions.pop(message["id"], None)
             if execution:
                 execution.ended = True
+                close(execution)
+                loop.run_until_complete(flush())
             continue
         loop.run_until_complete(flush())
         if IDLE:

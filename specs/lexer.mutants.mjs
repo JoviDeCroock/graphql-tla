@@ -141,4 +141,11 @@ export default [
     file,
     property: "StringsPrintWell",
   },
+  {
+    name: "a printer may leave any control character raw in a block string",
+    find: "BlockStringLayout == {9, 10, 13}",
+    replace: "BlockStringLayout == 0..159",
+    file,
+    property: "StringsPrintWell",
+  },
 ];

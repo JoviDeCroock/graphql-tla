@@ -18,13 +18,24 @@ public static class Areas
     // validate and introspect: custom-directives, since Schema.For builds
     // the SDL's `directive @label(...) on ...` definitions.
     //
+    // parse: parse-sdl, since GraphQL-Parser reads the type system language.
+    //
+    // schema: schema-extensions, since Schema.For takes a document with
+    // extensions. SchemaBuilder applies only object type extensions
+    // (`extend type`) and drops the other kinds without an error
+    // (SchemaBuilder.BuildSchemaFrom); that is graphql-dotnet's answer to
+    // such a document, so the kit grades it (see README.md).
+    //
+    // Not coordinate: graphql-dotnet has no schema coordinate API. Not
+    // coerce: the area isn't implemented for this adapter.
+    //
     // Not custom-scalar-literals: a custom scalar is graphql-dotnet's
     // ComplexScalarGraphType (Schemas.Build), which accepts every literal
     // except one that holds a variable. graphql-dotnet hands a scalar the
     // raw literal, with variables not substituted (ExecutionHelper), and
     // ComplexScalarGraphType's ParseAnyLiteral has no case for a variable,
     // so `json(value: {a: $v})` is refused whatever $v is.
-    public static readonly string[] Capabilities = ["custom-directives"];
+    public static readonly string[] Capabilities = ["custom-directives", "parse-sdl", "schema-extensions"];
 
     // The document builder DocumentExecuter uses by default.
     private static readonly GraphQLDocumentBuilder DocumentBuilder = new();
@@ -58,10 +69,22 @@ public static class Areas
         return result;
     }
 
-    // Is the source a syntactically valid executable document? Parsed the
-    // way DocumentExecuter parses a request's query. GraphQLParser also
-    // reads the type system language, so every definition must be an
-    // operation or a fragment.
+    // Is the source a syntactically valid document of the requested grammar
+    // (docs/kit/parse.md)? Without `grammar`, an executable document, parsed
+    // the way DocumentExecuter parses a request's query (its default
+    // GraphQLDocumentBuilder). For a type system grammar (`parse-sdl`), the
+    // way Schema.For parses SDL: GraphQLParser.Parser.Parse with comments
+    // ignored (SchemaBuilder.Build). GraphQL-Parser reads the whole Document
+    // grammar either way, so every definition must then be of a kind the
+    // grammar allows.
+    //
+    // GraphQL-Parser has a documented recursion limit (ParserOptions.MaxDepth,
+    // 128 by default), which throws GraphQLMaxDepthExceededException. That is
+    // a refusal of a document too deep for it, not a crash (docs/kit/parse.md,
+    // "Crash probes"), so it is `ok: false`. GraphQLDocumentBuilder doesn't
+    // wrap it in a SyntaxError, so it is caught on its own.
+    private static readonly GraphQLParser.ParserOptions SdlParserOptions = new() { Ignore = GraphQLParser.IgnoreOptions.Comments };
+
     private static JsonObject Parse(JsonElement request)
     {
         string source;
@@ -79,17 +102,37 @@ public static class Areas
             // grade the vector (docs/kit/parse.md).
             return new JsonObject { ["unsupported"] = "lone surrogate: System.Text.Json can't read the source into a string" };
         }
+        var grammar = request.TryGetProperty("grammar", out var g) && g.ValueKind == JsonValueKind.String ? g.GetString()! : "executable";
+        Func<ASTNode, bool> allowed = grammar switch
+        {
+            "executable" => d => d is GraphQLExecutableDefinition,
+            "typeSystem" => IsTypeSystemDefinition,
+            "typeSystemExtension" => d => IsTypeSystemDefinition(d) || IsTypeSystemExtension(d),
+            "document" => _ => true,
+            _ => throw new InvalidOperationException($"unknown grammar {grammar}"),
+        };
         try
         {
-            var document = DocumentBuilder.Build(source);
-            var executable = document.Definitions.All(d => d is GraphQLOperationDefinition or GraphQLFragmentDefinition);
-            return new JsonObject { ["ok"] = executable };
+            var document = grammar == "executable"
+                ? DocumentBuilder.Build(source)
+                : GraphQLParser.Parser.Parse(source, SdlParserOptions);
+            return new JsonObject { ["ok"] = document.Definitions.All(allowed) };
         }
         catch (SyntaxError error)
         {
             return new JsonObject { ["ok"] = false, ["error"] = error.Message };
         }
+        catch (GraphQLParserException error) when (error is GraphQLSyntaxErrorException or GraphQLMaxDepthExceededException)
+        {
+            return new JsonObject { ["ok"] = false, ["error"] = error.Message };
+        }
     }
+
+    // GraphQL-Parser's AST: GraphQLDirectiveDefinition is a
+    // GraphQLTypeDefinition there.
+    private static bool IsTypeSystemDefinition(ASTNode d) => d is GraphQLSchemaDefinition or GraphQLTypeDefinition;
+
+    private static bool IsTypeSystemExtension(ASTNode d) => d is GraphQLSchemaExtension or GraphQLTypeExtension;
 
     // Whether a JSON string literal, as written in the request, escapes a
     // UTF-16 surrogate that isn't half of a pair.
@@ -199,7 +242,8 @@ public static class Areas
         _ => false,
     };
 
-    // Is the SDL schema valid? Schema.For, then Initialize, which validates
+    // Is the SDL schema valid (with schema-extensions, an SDL that may hold
+    // extensions)? Schema.For, then Initialize, which validates
     // the schema. graphql-dotnet reports an invalid schema by throwing
     // ArgumentException (SchemaBuilder's duplicate names, NameValidator) or
     // InvalidOperationException (SchemaTypes, SchemaValidationVisitor), and

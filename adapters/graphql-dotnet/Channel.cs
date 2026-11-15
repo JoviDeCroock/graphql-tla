@@ -21,7 +21,7 @@ public static class Channel
         {
             // `idle` relies on graphql-dotnet only running on the stdin
             // thread. Report anything that contradicts it.
-            if (type is "call" or "response" or "stream-error" && Environment.CurrentManagedThreadId != StdinThread)
+            if (type is "call" or "response" or "stream-error" or "no-response" or "done" or "source-cancelled" && Environment.CurrentManagedThreadId != StdinThread)
             {
                 _brokenIdles++;
                 Console.Error.WriteLine($"graphql-dotnet adapter: {type} sent off the stdin thread ({_brokenIdles}), so idle may be wrong: {line}");

@@ -13,6 +13,11 @@
 // value instead of a thunk, so one resolver is pending at a time and list
 // items come inline. That is graphql-go without its concurrency.
 //
+// With parent-values, the root value, the subscription's events and every
+// object a resolver returns carry the kit's token, and each field's call
+// reports the token of the value it was called on. With subscription-stream,
+// the source stream is a channel the kit's `source` messages feed (stream.go).
+//
 // graphql-go passes a non-finite Float through to its result, which
 // encoding/json then can't serialize, so the client gets no response. The
 // adapter says so with `no-response` (see README.md).
@@ -20,6 +25,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -36,28 +42,45 @@ import (
 )
 
 type outcome struct {
-	Kind   string    `json:"kind"`
-	Type   string    `json:"type"`
-	Length int       `json:"length"`
-	Items  []outcome `json:"items"`
+	Kind   string          `json:"kind"`
+	Type   string          `json:"type"`
+	Length int             `json:"length"`
+	Items  []outcome       `json:"items"`
+	Token  *string         `json:"token"`
+	Value  json.RawMessage `json:"value"`
 }
 
 type message struct {
-	Type             string         `json:"type"`
-	ID               int            `json:"id"`
-	Schema           string         `json:"schema"`
-	Document         string         `json:"document"`
-	OperationType    string         `json:"operationType"`
-	Variables        map[string]any `json:"variables"`
-	ErrorPropagation *bool          `json:"errorPropagation"`
-	Call             int            `json:"call"`
-	Outcome          outcome        `json:"outcome"`
+	Type          string `json:"type"`
+	ID            int    `json:"id"`
+	Schema        string `json:"schema"`
+	Document      string `json:"document"`
+	OperationType string `json:"operationType"`
+	// An object for execute, JSON text for coerce.
+	Variables        json.RawMessage `json:"variables"`
+	ErrorPropagation *bool           `json:"errorPropagation"`
+	Call             int             `json:"call"`
+	Outcome          outcome         `json:"outcome"`
+	InitialValue     *string         `json:"initialValue"`
+	Event            *string         `json:"event"`
+	Stream           bool            `json:"stream"`
+	Action           string          `json:"action"`
+	Token            *string         `json:"token"`
+	Message          string          `json:"message"`
+	// The areas beyond execution (areas.go).
+	Source        json.RawMessage `json:"source"`
+	Grammar       string          `json:"grammar"`
+	SDL           string          `json:"sdl"`
+	Query         string          `json:"query"`
+	OperationName *string         `json:"operationName"`
+	Subscribe     *string         `json:"subscribe"`
+	Extensions    *string         `json:"extensions"`
 }
 
 var (
-	outMu       sync.Mutex
-	out         = bufio.NewWriter(os.Stdout)
-	syncMode    = false
+	outMu    sync.Mutex
+	out      = bufio.NewWriter(os.Stdout)
+	syncMode = false
 )
 
 func send(m map[string]any) {
@@ -92,13 +115,19 @@ type execution struct {
 	next    int
 	applied atomic.Int64
 	ended   chan struct{}
+	// parent-values: the calls report their parent's token.
+	parentValues bool
+	// The token of a one-event subscription's event (parent-values).
+	event *string
+	// subscription-stream: the source stream the kit drives.
+	stream *kitStream
 }
 
 var errAbandoned = errors.New("the kit ended the execution")
 
 // control reports a call to the kit and returns the thunk that waits for
 // its settle and turns the outcome into the resolver's result.
-func (e *execution) control(path []string, typ graphql.Type) func() (any, error) {
+func (e *execution) control(path []string, typ graphql.Type, parent ...any) func() (any, error) {
 	p := &pending{path: path, typ: typ, done: make(chan outcome, 1)}
 	e.mu.Lock()
 	e.next++
@@ -107,7 +136,13 @@ func (e *execution) control(path []string, typ graphql.Type) func() (any, error)
 	e.mu.Unlock()
 	// `after`: how many settles this execution had applied when the resolver
 	// was called, so the kit knows what the engine had seen.
-	send(map[string]any{"type": "call", "id": e.id, "call": call, "path": path, "returnType": typ.String(), "after": e.applied.Load()})
+	m := map[string]any{"type": "call", "id": e.id, "call": call, "path": path, "returnType": typ.String(), "after": e.applied.Load()}
+	// `parent`: the token of the value the resolver was called on, left
+	// out for a list item, which has no resolver of its own.
+	if len(parent) > 0 {
+		m["parent"] = parent[0]
+	}
+	send(m)
 	return func() (any, error) {
 		select {
 		case o := <-p.done:
@@ -131,6 +166,11 @@ func (e *execution) value(path []string, typ graphql.Type, o outcome) (any, erro
 	case "null":
 		return nil, nil
 	case "leaf":
+		// scalar-results: the internal value the kit names, as it is: the
+		// integer 4 for an ID, 2147483648 for an Int.
+		if len(o.Value) > 0 {
+			return internalValue(o.Value)
+		}
 		// A leaf at a list position is the number 1, which isn't a slice.
 		if isList {
 			return 1, nil
@@ -147,6 +187,11 @@ func (e *execution) value(path []string, typ graphql.Type, o outcome) (any, erro
 		}
 		return math.Inf(1), nil
 	case "object":
+		// With parent-values the object carries the kit's token, which its
+		// fields' resolvers report as their parent.
+		if o.Token != nil {
+			return map[string]any{"__typename": o.Type, "token": *o.Token}, nil
+		}
 		return map[string]any{"__typename": o.Type}, nil
 	case "list":
 		items := make([]any, o.Length)
@@ -164,6 +209,24 @@ func (e *execution) value(path []string, typ graphql.Type, o outcome) (any, erro
 		return items, nil
 	}
 	return nil, fmt.Errorf("unknown outcome %q", o.Kind)
+}
+
+// internalValue decodes a leaf outcome's value, with JSON integers as Go
+// ints, the type a Go resolver returns for an integer.
+func internalValue(raw json.RawMessage) (any, error) {
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.UseNumber()
+	var v any
+	if err := d.Decode(&v); err != nil {
+		return nil, err
+	}
+	if n, ok := v.(json.Number); ok {
+		if i, err := n.Int64(); err == nil {
+			return int(i), nil
+		}
+		return n.Float64()
+	}
+	return v, nil
 }
 
 func (e *execution) leaf(typ graphql.Type) any {
@@ -191,7 +254,18 @@ func resolve(p graphql.ResolveParams) (any, error) {
 	for _, k := range p.Info.Path.AsArray() {
 		path = append(path, fmt.Sprint(k))
 	}
-	thunk := e.control(path, p.Info.ReturnType)
+	var thunk func() (any, error)
+	if e.parentValues {
+		// The root value, an event or an object an earlier resolver
+		// returned; null if the value carries no token.
+		var parent any
+		if m, ok := p.Source.(map[string]any); ok {
+			parent = m["token"]
+		}
+		thunk = e.control(path, p.Info.ReturnType, parent)
+	} else {
+		thunk = e.control(path, p.Info.ReturnType)
+	}
 	if syncMode {
 		return thunk()
 	}
@@ -199,10 +273,19 @@ func resolve(p graphql.ResolveParams) (any, error) {
 }
 
 // A subscription's source stream yields one event, and the root field's
-// resolver runs on it, as in graphql-js.
-func subscribe(graphql.ResolveParams) (any, error) {
+// resolver runs on it, as in graphql-js. With subscription-stream, it is the
+// stream the kit drives.
+func subscribe(p graphql.ResolveParams) (any, error) {
+	e := p.Context.Value(contextKey{}).(*execution)
+	if e.stream != nil {
+		return e.stream.source(p.Context), nil
+	}
+	event := map[string]any{}
+	if e.event != nil {
+		event["token"] = *e.event
+	}
 	events := make(chan any, 1)
-	events <- map[string]any{}
+	events <- event
 	close(events)
 	return events, nil
 }
@@ -212,11 +295,23 @@ var (
 	executions = map[int]*execution{}
 )
 
+// buildExecutionSchema builds a fixture's schema with the adapter's
+// resolvers. A panic in graphql-go while building is the adapter's error
+// here: execution has no crash outcome for it.
+func buildExecutionSchema(sdl string) (b *built, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+	return buildSchema(sdl, buildOptions{resolve: resolve, subscribe: subscribe, keepDirectives: true})
+}
+
 func start(m message) {
 	b, ok := schemas[m.Schema]
 	if !ok {
 		var err error
-		if b, err = buildSchema(m.Schema, resolve, subscribe); err != nil {
+		if b, err = buildExecutionSchema(m.Schema); err != nil {
 			send(map[string]any{"type": "error", "id": m.ID, "message": "the adapter couldn't build the schema: " + err.Error()})
 			return
 		}
@@ -226,13 +321,27 @@ func start(m message) {
 		send(map[string]any{"type": "error", "id": m.ID, "message": "graphql-go can't execute without error propagation"})
 		return
 	}
-	e := &execution{id: m.ID, schema: b, calls: map[int]*pending{}, ended: make(chan struct{})}
+	e := &execution{id: m.ID, schema: b, calls: map[int]*pending{}, ended: make(chan struct{}), parentValues: m.InitialValue != nil, event: m.Event}
 	executions[m.ID] = e
+	var variables map[string]any
+	if len(m.Variables) > 0 {
+		if err := json.Unmarshal(m.Variables, &variables); err != nil {
+			send(map[string]any{"type": "error", "id": m.ID, "message": "bad variables: " + err.Error()})
+			return
+		}
+	}
 	params := graphql.Params{
 		Schema:         b.schema,
 		RequestString:  m.Document,
-		VariableValues: m.Variables,
+		VariableValues: variables,
 		Context:        context.WithValue(context.Background(), contextKey{}, e),
+	}
+	if m.InitialValue != nil {
+		params.RootObject = map[string]any{"token": *m.InitialValue}
+	}
+	if m.OperationType == "subscription" && m.Stream {
+		startStream(e, params)
+		return
 	}
 	go func() {
 		var result *graphql.Result
@@ -294,12 +403,16 @@ func main() {
 		switch a {
 		case "--sync":
 			syncMode = true
+		case "--area-worker":
+			runWorker()
+			return
 		}
 	}
-	capabilities := []string{"invalid-results", "uncoercible-results", "mutation", "subscription"}
+	capabilities := []string{"invalid-results", "uncoercible-results", "scalar-results", "mutation", "subscription", "subscription-stream", "parent-values"}
 	if !syncMode {
 		capabilities = append([]string{"deferred-items"}, capabilities...)
 	}
+	capabilities = append(capabilities, areaCapabilities...)
 	send(map[string]any{"type": "hello", "protocol": 1, "name": "graphql-go/graphql " + version(), "capabilities": capabilities})
 
 	in := bufio.NewReader(os.Stdin)
@@ -309,15 +422,24 @@ func main() {
 			var m message
 			if jerr := json.Unmarshal(line, &m); jerr != nil {
 				send(map[string]any{"type": "error", "message": "bad message: " + jerr.Error()})
+			} else if areaTypes[m.Type] {
+				forwardArea(line, m.ID)
 			} else {
 				switch m.Type {
 				case "execute":
 					start(m)
 				case "settle":
 					settle(m)
+				case "source":
+					source(m)
+				case "cancel":
+					cancel(m)
 				case "end":
 					if e := executions[m.ID]; e != nil {
 						close(e.ended)
+						if e.stream != nil {
+							e.stream.close()
+						}
 						delete(executions, m.ID)
 					}
 				}

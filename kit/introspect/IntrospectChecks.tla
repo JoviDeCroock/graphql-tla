@@ -151,13 +151,15 @@ StringTokens(src, i, acc) ==
 \* code points, empty for null), by §2.10.4: "When producing a StringValue,
 \* implementations should use escape sequences to represent non-printable
 \* control characters (U+0000 to U+001F and U+007F to U+009F)" ("printedControl";
-\* a block string can't escape one, so one there counts too), and "If an
+\* a block string can't escape one, so one there counts too, except the tabs
+\* and line breaks of multi-line text: Lexer.tla's BlockStringLayout), and "If an
 \* implementation chooses to escape a supplementary character, it should
 \* only use a variable-width unicode escape sequence" ("printedPair"). The
 \* two are Lexer.tla's WellPrintedStringAt, told apart.
 PrintingProblems(where, printed) ==
   LET tokens == StringTokens(printed, 1, <<>>) IN
-  (IF \E t \in Range(tokens) : \E k \in t[1]..(t[2] - 1) : L!IsNonPrintableControl(printed[k])
+  (IF \E t \in Range(tokens) : \E k \in t[1]..(t[2] - 1) :
+        L!IsNonPrintableControl(printed[k]) /\ ~(t[3] /\ printed[k] \in L!BlockStringLayout)
    THEN {P("printedControl", where)} ELSE {})
   \cup (IF \E t \in Range(tokens) : ~t[3] /\ L!PairEscapeFrom(printed, t[1] + 1)
         THEN {P("printedPair", where)} ELSE {})

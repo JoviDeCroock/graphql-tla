@@ -5316,7 +5316,7 @@
       "family": "directive",
       "rule": "DIRECTIVE_LOCATIONS_VALID",
       "since": "September2026",
-      "editionNote": "new in September 2026: directives on directive definitions",
+      "editionNote": "new in September 2026: directives on directive definitions, the DIRECTIVE_DEFINITION location",
       "pair": "directiveLocationsValid.14.invalid",
       "sdl": "directive @d on DIRECTIVE_DEFINITION directive @e @d on FIELD type Query { a: Int }",
       "verdict": [],
@@ -5674,7 +5674,7 @@
       "family": "directive",
       "rule": "DIRECTIVE_USES_ITSELF",
       "since": "September2026",
-      "editionNote": "new in September 2026: directives on directive definitions",
+      "editionNote": "new in September 2026: directives on directive definitions, the DIRECTIVE_DEFINITION location",
       "pair": "directiveUsesItself.3.valid",
       "sdl": "directive @d @d on DIRECTIVE_DEFINITION type Query { a: Int }",
       "verdict": [
@@ -5691,6 +5691,8 @@
       ],
       "family": "directive",
       "rule": "DIRECTIVE_USES_ITSELF",
+      "since": "September2026",
+      "editionNote": "new in September 2026: the DIRECTIVE_DEFINITION location",
       "pair": "directiveUsesItself.3.invalid",
       "sdl": "directive @d on DIRECTIVE_DEFINITION type Query { a: Int }",
       "verdict": [],
@@ -5706,7 +5708,7 @@
       "family": "directive",
       "rule": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
       "since": "September2026",
-      "editionNote": "new in September 2026: directives on directive definitions",
+      "editionNote": "new in September 2026: directives on directive definitions, the DIRECTIVE_DEFINITION location",
       "pair": "directiveReferencesItselfIndirectly.5.valid",
       "sdl": "directive @a @b on DIRECTIVE_DEFINITION directive @b @a on DIRECTIVE_DEFINITION type Query { a: Int }",
       "verdict": [
@@ -5724,7 +5726,7 @@
       "family": "directive",
       "rule": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
       "since": "September2026",
-      "editionNote": "new in September 2026: directives on directive definitions",
+      "editionNote": "new in September 2026: directives on directive definitions, the DIRECTIVE_DEFINITION location",
       "pair": "directiveReferencesItselfIndirectly.5.invalid",
       "sdl": "directive @a @b on DIRECTIVE_DEFINITION directive @b on DIRECTIVE_DEFINITION type Query { a: Int }",
       "verdict": [],
@@ -8566,7 +8568,7 @@
       "family": "extension",
       "rule": "DIRECTIVE_EXTENSION_DEFINED",
       "since": "September2026",
-      "editionNote": "new in September 2026: directive extensions",
+      "editionNote": "new in September 2026: directive extensions, the DIRECTIVE_DEFINITION location",
       "requires": [
         "schema-extensions"
       ],
@@ -8587,7 +8589,7 @@
       "family": "extension",
       "rule": "DIRECTIVE_EXTENSION_DEFINED",
       "since": "September2026",
-      "editionNote": "new in September 2026: directive extensions",
+      "editionNote": "new in September 2026: directive extensions, the DIRECTIVE_DEFINITION location",
       "requires": [
         "schema-extensions"
       ],
@@ -8606,7 +8608,7 @@
       "family": "extension",
       "rule": "DIRECTIVE_EXTENSION_NOT_REAPPLIED",
       "since": "September2026",
-      "editionNote": "new in September 2026: directive extensions, directives on directive definitions",
+      "editionNote": "new in September 2026: directive extensions, directives on directive definitions, the DIRECTIVE_DEFINITION location",
       "requires": [
         "schema-extensions"
       ],
@@ -8627,7 +8629,7 @@
       "family": "extension",
       "rule": "DIRECTIVE_EXTENSION_NOT_REAPPLIED",
       "since": "September2026",
-      "editionNote": "new in September 2026: directive extensions, directives on directive definitions",
+      "editionNote": "new in September 2026: directive extensions, directives on directive definitions, the DIRECTIVE_DEFINITION location",
       "requires": [
         "schema-extensions"
       ],
@@ -8686,7 +8688,7 @@
       "family": "extension",
       "rule": "DIRECTIVE_EXTENSION_NOT_REAPPLIED",
       "since": "September2026",
-      "editionNote": "new in September 2026: directive extensions",
+      "editionNote": "new in September 2026: directive extensions, the DIRECTIVE_DEFINITION location",
       "requires": [
         "schema-extensions"
       ],
@@ -8707,7 +8709,7 @@
       "family": "extension",
       "rule": "DIRECTIVE_EXTENSION_NOT_REAPPLIED",
       "since": "September2026",
-      "editionNote": "new in September 2026: directive extensions",
+      "editionNote": "new in September 2026: directive extensions, the DIRECTIVE_DEFINITION location",
       "requires": [
         "schema-extensions"
       ],
@@ -8726,7 +8728,7 @@
       "family": "extension",
       "rule": "DIRECTIVE_EXTENSION_USES_PREVIOUS",
       "since": "September2026",
-      "editionNote": "new in September 2026: directive extensions",
+      "editionNote": "new in September 2026: directive extensions, the DIRECTIVE_DEFINITION location",
       "requires": [
         "schema-extensions"
       ],
@@ -8747,7 +8749,7 @@
       "family": "extension",
       "rule": "DIRECTIVE_EXTENSION_USES_PREVIOUS",
       "since": "September2026",
-      "editionNote": "new in September 2026: directive extensions",
+      "editionNote": "new in September 2026: directive extensions, the DIRECTIVE_DEFINITION location",
       "requires": [
         "schema-extensions"
       ],
@@ -8766,7 +8768,7 @@
       "family": "extension",
       "rule": "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
       "since": "September2026",
-      "editionNote": "new in September 2026: directive extensions, directives on directive definitions",
+      "editionNote": "new in September 2026: directive extensions, directives on directive definitions, the DIRECTIVE_DEFINITION location",
       "requires": [
         "schema-extensions"
       ],
@@ -8787,7 +8789,7 @@
       "family": "extension",
       "rule": "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
       "since": "September2026",
-      "editionNote": "new in September 2026: directive extensions",
+      "editionNote": "new in September 2026: directive extensions, the DIRECTIVE_DEFINITION location",
       "requires": [
         "schema-extensions"
       ],
@@ -8806,7 +8808,7 @@
       "family": "extension",
       "rule": "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
       "since": "September2026",
-      "editionNote": "new in September 2026: directive extensions",
+      "editionNote": "new in September 2026: directive extensions, the DIRECTIVE_DEFINITION location",
       "requires": [
         "schema-extensions"
       ],
@@ -8827,7 +8829,7 @@
       "family": "extension",
       "rule": "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
       "since": "September2026",
-      "editionNote": "new in September 2026: directive extensions",
+      "editionNote": "new in September 2026: directive extensions, the DIRECTIVE_DEFINITION location",
       "requires": [
         "schema-extensions"
       ],
@@ -8867,7 +8869,7 @@
       "family": "extension",
       "rule": "DIRECTIVE_LOCATIONS_VALID",
       "since": "September2026",
-      "editionNote": "new in September 2026: directive extensions",
+      "editionNote": "new in September 2026: directive extensions, the DIRECTIVE_DEFINITION location",
       "requires": [
         "schema-extensions"
       ],

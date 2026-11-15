@@ -459,16 +459,23 @@ PairEscapeFrom(src, k) ==
               \/ PairEscapeFrom(src, escape.end)
     [] OTHER -> PairEscapeFrom(src, k + 1)
 
+\* Line breaks and tabs a block string holds as text. A block string has
+\* no escapes, so read literally the first SHOULD would rule out every
+\* multi-line block string, which §2.10.4 itself recommends for longer
+\* text. The kit takes the weaker reading: in a block string these three
+\* don't count, and any other control character does.
+BlockStringLayout == {9, 10, 13}
+
 \* The StringValue that starts at i is valid and follows both SHOULDs: no
 \* code point in it, between its quotes included, is a non-printable
-\* control character, and it escapes no supplementary character with a
-\* pair. A block string has no escapes, so one that holds a control
-\* character, a line feed among them, can't follow the first.
+\* control character (in a block string, BlockStringLayout aside), and it
+\* escapes no supplementary character with a pair.
 WellPrintedStringAt(src, i) ==
   LET scan == StringValueAt(src, i) IN
   /\ Ch(src, i) = Quote
   /\ scan.ok
-  /\ \A k \in i..(scan.end - 1) : ~IsNonPrintableControl(src[k])
+  /\ \A k \in i..(scan.end - 1) :
+       ~IsNonPrintableControl(src[k]) \/ (IsBlockStringAt(src, i) /\ src[k] \in BlockStringLayout)
   /\ (~IsBlockStringAt(src, i) => ~PairEscapeFrom(src, i + 1))
 
 \* printed is one StringValue, and nothing else, whose value is text and
@@ -698,7 +705,9 @@ PrintingVectors == <<
   \* An escaped backslash: the text is the six characters \uD83D.
   W(Text("\\uD83D"), Text("\"\\\\uD83D\""), TRUE),
   W(Text("ab"), Text("\"\"\"ab\"\"\""), TRUE),
-  W(Text("a\nb"), Text("\"\"\"a\nb\"\"\""), FALSE),
+  W(Text("a\nb"), Text("\"\"\"a\nb\"\"\""), TRUE),
+  W(<<97, 9, 98>>, <<Quote, Quote, Quote, 97, 9, 98, Quote, Quote, Quote>>, TRUE),
+  W(<<97, 1, 98>>, <<Quote, Quote, Quote, 97, 1, 98, Quote, Quote, Quote>>, FALSE),
   W(Text("a"), Text("\"b\""), FALSE),
   W(Text("a"), Text("\"a\" "), FALSE),
   W(Text("a"), Text(" \"a\""), FALSE),

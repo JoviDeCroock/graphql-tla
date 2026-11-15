@@ -32,6 +32,10 @@ capabilities.Add("invalid-results");
 capabilities.Add("uncoercible-results");
 capabilities.Add("mutation");
 capabilities.Add("subscription");
+capabilities.Add("subscription-stream");
+capabilities.Add("parent-values");
+capabilities.Add("custom-scalar-results");
+capabilities.Add("scalar-results");
 foreach (var area in Areas.Names) capabilities.Add(area);
 foreach (var capability in Areas.Capabilities) capabilities.Add(capability);
 
@@ -70,6 +74,17 @@ while ((line = input.ReadLine()) is not null)
             {
                 Channel.Send(new JsonObject { ["type"] = "error", ["id"] = id, ["message"] = $"no pending call {call}" });
             }
+            break;
+        case "source":
+            // subscription-stream: the kit's source stream emits, completes
+            // or fails; graphql-dotnet runs inline until it waits on the kit.
+            if (executions.TryGetValue(id, out var streamed)) streamed.Source(message.Clone());
+            else Channel.Send(new JsonObject { ["type"] = "error", ["id"] = id, ["message"] = "no streamed subscription to drive" });
+            break;
+        case "cancel":
+            // The client cancels the response stream.
+            if (executions.TryGetValue(id, out var cancelled)) cancelled.Cancel();
+            else Channel.Send(new JsonObject { ["type"] = "error", ["id"] = id, ["message"] = "no response stream to cancel" });
             break;
         case "end":
             // Anything still pending is abandoned: its Task never completes.

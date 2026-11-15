@@ -3,7 +3,7 @@
 A [graphql-tla conformance adapter](../../docs/conformance.md) for
 [graphql-core](https://github.com/graphql-python/graphql-core) 3.2.14, the
 Python port of graphql-js. It answers every area of the kit: execution, and
-`parse`, `validate`, `coerce`, `schema` and `introspect`
+`parse`, `validate`, `coerce`, `schema`, `introspect` and `coordinate`
 ([docs/kit-areas.md](../../docs/kit-areas.md)).
 
 Source references below are to graphql-core 3.2.14, under `src/graphql/`.
@@ -32,6 +32,7 @@ node kit/cli.mjs run validate --adapter "adapters/graphql-core/run.sh" --strict
 node kit/cli.mjs run coerce --adapter "adapters/graphql-core/run.sh" --strict
 node kit/cli.mjs run schema --adapter "adapters/graphql-core/run.sh" --strict
 node kit/cli.mjs run introspect --adapter "adapters/graphql-core/run.sh" --strict
+node kit/cli.mjs run coordinate --adapter "adapters/graphql-core/run.sh" --strict
 ```
 
 `run.sh` runs `adapter.py` with `.venv/bin/python`, and passes its arguments
@@ -75,6 +76,26 @@ Capabilities:
   field's resolver then runs on the event and is the root `call`.
   `subscribe` passes no type resolver to the event's execution, which is one
   reason the adapter relies on the default type resolver everywhere.
+- `subscription-stream`: the `subscribe_field_resolver` returns the kit's
+  source stream, an async iterator whose `__anext__` waits for the kit's
+  `source` messages and whose `aclose` reports `source-cancelled`.
+  `subscribe` maps it with `MapAsyncIterator`, and the adapter consumes the
+  response stream as a client does: each result is a `response`,
+  `StopAsyncIteration` is `done`, any other exception `stream-error`. The
+  kit's `cancel` is `aclose()` on the response stream, then `done`.
+- `parent-values`: the root value is `{"token": initialValue}`, each object a
+  resolver returns carries its outcome's `token`, a subscription's event is
+  `{"token": …}`, and the resolver reports the `token` of the `source`
+  graphql-core gave it.
+- `custom-scalar-results`: a scalar `build_schema` makes from SDL passes every
+  value through. The adapter gives each custom scalar a `serialize` that
+  raises a `GraphQLError` on one sentinel value, as graphql-core's own scalars
+  do on a value they can't represent, and returns that sentinel for the
+  `uncoercible` outcome. `complete_leaf_value` turns the raise into a field
+  error (`execution/execute.py:956`).
+- `scalar-results`: the resolver returns the integer the kit names as it is.
+  `GraphQLID.serialize` turns `4` into `"4"`, and `GraphQLInt.serialize`
+  raises on `2147483648`.
 - `error-propagation-off` isn't claimed. graphql-core 3.2 has no switch for
   it and doesn't know `@experimental_disableErrorPropagation`.
 
@@ -101,11 +122,22 @@ graphql-core's own source. Anything else, such as a `RecursionError` or a
 
 ### parse
 
-`graphql.language.parse` with its default options. It also reads the type
-system language, so the answer is `ok: true` only if every definition is an
-operation or a fragment (`is_executable_definition_node`). A
-`GraphQLSyntaxError` is `ok: false`. Python strings hold lone surrogates, so
-those sources reach the parser as sent.
+`graphql.language.parse` with its default options. It reads the whole
+Document grammar, so the answer is `ok: true` only if every definition is of
+a kind the request's grammar allows: an operation or a fragment
+(`is_executable_definition_node`) without `grammar`, and with `parse-sdl`
+type system definitions for `"typeSystem"`, those and extensions for
+`"typeSystemExtension"`, anything for `"document"`. graphql-core's
+`TypeExtensionNode` is a subclass of `TypeSystemDefinitionNode`
+(`language/ast.py:1106`), so `is_type_system_definition_node` is true for a
+type extension too; the adapter leaves extensions out of `"typeSystem"`
+itself. A `GraphQLSyntaxError` is `ok: false`. Python strings hold lone
+surrogates, so those sources reach the parser as sent. graphql-core turns a
+`RecursionError` in the parser into a `GraphQLSyntaxError`
+(`language/parser.py:201-205`), so a crash probe too deep for it is
+`ok: false`, not a crash.
+
+Capability: `parse-sdl`.
 
 ### validate
 
@@ -143,7 +175,14 @@ serialization.
   claims `unvalidated`, as the graphql-js adapter does.
 - With `run.sh --validate`, it calls `graphql_sync`, which parses, validates
   and executes, as a server does. Then it doesn't claim `unvalidated`, and the
-  kit grades invalid documents under `invalidNotExecuted`.
+  kit grades invalid documents under `invalidNotExecuted` where its validate
+  run rejects them, and under `onlyValidExecuted` (SHOULD) otherwise.
+
+A document that doesn't parse gets graphql-core's own answer to it, the one
+`graphql_sync` gives (`graphql.py:293-296`): `ExecutionResult(data=None,
+errors=[syntax_error])`, serialized with `formatted`. A subscription
+operation goes through `subscribe` (with `--validate`, after `validate`, as
+`graphql_sync` does for other operations).
 
 Capabilities:
 
@@ -152,6 +191,17 @@ Capabilities:
   `{ int(v: null) }` with `v=None`. `coerce_input_value` and `value_from_ast`
   leave out such an input field the same way.
 - `unvalidated`, unless `--validate`.
+- `nested-fields`: the resolver returns `{}` for an object type, two of them
+  for a list of objects, and `"ok"` for a leaf, and records
+  `info.path.as_list()`, which has the list indices.
+- `subscription-source`: the `subscribe_field_resolver` records its call
+  (`info.field_name` and its keyword arguments) in `sourceCalls`, then
+  returns an async generator of one event, or raises. The response is the
+  first result of the stream `subscribe` returns, or the `ExecutionResult` it
+  returns instead (`create_source_event_stream` turns the raise into one,
+  `execution/subscribe.py:303-305`).
+- `request-extensions`: `execute` and `graphql_sync` take no request
+  extensions, so the adapter reads them and drops them.
 - Not `exact-numbers`: `json.loads` reads integers exactly, so 2^53 + 1
   stays exact, but reads floats as doubles, and `1e400` becomes `inf`. The
   kit grades those vectors under the informational `jsonNumbers`.
@@ -164,36 +214,63 @@ internal values. A non-finite float is sent as a string (`"Infinity"`).
 `build_schema`, then `validate_schema`. Rejections and crashes are told apart
 as above.
 
+Capability: `schema-extensions`. `build_schema` takes a document with type
+system extensions and applies each to the type it names
+(`build_ast_schema` calls `extend_schema_impl` with the whole document), and
+`assert_valid_sdl` checks them (Possible Type Extensions, Unique Directives
+Per Location and the like).
+
 ### introspect
 
 `build_schema`, then `graphql_sync` with the kit's query. A schema
 graphql-core rejects is answered with a request error. graphql-core answers
-the draft's query, so the run is graded against the draft.
+September 2026's query, so the run is graded against September 2026.
+
+A query that doesn't parse is answered by `graphql_sync` itself, as
+`ExecutionResult(data=None, errors=[...])`, which `formatted` writes with
+`"data": null` (see the coerce deviation below). That is graphql-core's
+answer, not the adapter's, so the adapter passes it through.
+
+### coordinate
+
+`parse_schema_coordinate`, then `resolve_ast_schema_coordinate`
+(`utilities/resolve_schema_coordinate.py`), against the schema
+`build_schema` makes from the SDL. A `GraphQLError` from the parser is
+`ok: false`. The resolver raises a `TypeError` for a missing type, field or
+directive and for a type of the wrong kind; one raised by a `raise` in
+graphql-core is `error`, anything else a crash. The answer's `kind` comes from
+the resolved element's `kind`, and its `path` from the resolved objects: a
+type's or directive's `name`, and for a field, argument, input field or enum
+value, the key graphql-core keeps that object under in its type's,
+field's or directive's map (those objects carry no name of their own).
 
 ## Results
 
-From full runs with `--strict` on graphql-core 3.2.14 (execution with
-`--random 1500 --seed 1`, the sheet's run):
+From runs with `--strict` on graphql-core 3.2.14 and the kit as of this
+writing (execution with `--random 1500 --seed 1`, the sheet's run):
 
 | Area | Result |
 | --- | --- |
-| execution | 11858 cases, 2704 distinct. `calledSerially` fails on 510 mutation cases (below); every other check passes. With `--coroutine-resolvers`, every case passes. |
-| parse | 1973 of 1983 vectors agree. `selectionSets` and `stringValue` fail, on draft-only vectors only. |
-| validate | 3029 of 3088 vectors agree; 11 of the 59 failures are crashes. `fieldSelectionMerging` and `singleRootField` fail; `operationTypeExistence` and `allVariableUsagesAreAllowed` fail on draft-only vectors only. §5.6.2 and §5.6.4 are `subsumed`. |
-| coerce | 1239 of 2036 vectors match. `requestErrorNoData` fails on 790 (below). `float`, `floatPrecision` (SHOULD), `inputObject` and `list` fail on 7 more. A lone surrogate is kept as sent. With `--validate`: 450 of 2010 match (26 skipped), and only `requestErrorNoData` fails, on 1560. |
-| schema | 140 of 165 schemas agree. The other 25 include 7 crashes. 36 of 44 tested rules pass, 8 fail. |
-| introspect | 13 of 38 results pass, graded against the draft. `builtinDefinitions` fails on every `__schema` result, and `executes` on the 3 draft-only `directiveDeprecation` results. |
+| execution | 29642 cases, 6777 distinct, and 36 subscription streams. `calledSerially` (SHOULD) fails on 1394 mutation cases (510 in `mutation`, 884 in `mutationRoot`, below), and `nothingAfterCancel` (SHOULD) on 4 streams (below); every other check passes. With `--coroutine-resolvers` (`--random 200`), only `nothingAfterCancel` fails. |
+| parse | 2815 of 2847 vectors agree, with `parse-sdl`. 32 fail, every one on a vector with `since`: §2.5 (11), §3.13 (5) and §3.13.6 (14), since September 2026, and §2.10.4 (2), since September 2025. No crash, crash probes included. |
+| validate | 3275 of 3354 vectors agree; 16 of the failures are crashes. `fieldSelectionMerging`, `singleRootField`, `valuesOfCorrectType`, `operationTypeExistence`, `allVariableUsagesAreAllowed`, and through syntax crashes `executableDefinitions`, `leafFieldSelections` and `acceptsValid`, fail (below). |
+| coerce | 1375 of 2219 vectors match. `requestErrorNoData` fails on 829 (below); `inputObject` (5), `notExecutable` (5), `oneOf` (2), `unvalidatedBranches` (2) and `float` (1) on 15 more. Every new check of this round passes: `syntaxError`, `argumentsBelowRoot`, `sourceStream`, `sourceStreamError`. A lone surrogate is kept as sent. With `--validate`: 558 match, and only `requestErrorNoData` (1660) and `float` (1) fail. |
+| schema | 436 of 490 schemas agree, 7 of the failures crashes. 11 checks fail, one of them informational (below). |
+| introspect | 26 of 66 graded results satisfy the reference, graded against September 2026; 38 more fail only `builtinNullability` (SHOULD), and 2 fail `executes`. 5 aren't graded: their schemas use September 2026 syntax `build_schema` can't parse. |
+| coordinate | 203 of 203 vectors agree; every `containerKind` vector gets an error, as the Asserts say. |
 
 ### Compared with graphql-js 16
 
 graphql-core 3.2 tracks graphql-js 16. In parse, validate, schema and
-introspect, every check has the same status and the same number of failing
-vectors as in [graphql-js 16.15.0's
-reports](../../conformance/reports/), and the findings are the same, with the
-same counts, crashes included (validate's 11 `validate()` throws, as of the
-adapter change that answers them with `error`). In coerce, every check is the same except `requestErrorNoData`,
-which graphql-js 16 passes: `JSON.stringify` drops graphql-js's `data:
-undefined`, but graphql-core's `formatted` always writes `"data"` (below).
+coordinate, every check has the same status and the same number of failing
+vectors as graphql-js 16.15.0's run on the same kit, crashes included. In
+coerce and introspect, the only differences come from one cause:
+graphql-core's `formatted` always writes `"data"`, which `JSON.stringify`
+leaves out of graphql-js's `data: undefined` (below). That fails
+`requestErrorNoData` in coerce, which graphql-js 16 passes, and `executes`
+on the two introspect queries with an empty selection set, which neither
+parses, but which graphql-js 16 answers with a request error that isn't
+graded.
 
 The only difference in how a finding shows up: on `input I { i: I = {} }`,
 graphql-js 16 overflows the stack with a `RangeError`, and graphql-core with
@@ -245,16 +322,28 @@ Whether a user sees this depends on what the resolver does when it is called:
   root field nulls `data`, the resolvers after it have still been called,
   though their results are never awaited.
 
+### Execution: a result after the client cancelled (SHOULD)
+
+In the stream scenario "cancelled while an event executes", graphql-core
+delivers the event's result after `aclose()` on the response stream has
+returned, so the kit sees the stream complete and then a result
+(`nothingAfterCancel`, a SHOULD, 4 streams). `MapAsyncIterator.__anext__`
+(`execution/map_async_iterator.py:55-83`) runs the event's execution (its
+callback) once the source has yielded, and `aclose` only closes the source
+and sets a flag; it doesn't stop an `__anext__` already past the source, so
+that call still returns the result. graphql-js 16 does the same. Every other
+lifecycle check passes: the stream completes with its source, fails with it,
+completes when cancelled, and cancels the source.
+
 ### Coerce: a request error has `"data": null`
 
 `ExecutionResult.formatted` always writes a `data` entry
 (`execution/execute.py:188-195`), and a request error is an
-`ExecutionResult` with `data=None` (`execution/execute.py:1345`, and
-`graphql.py:290`, `:296` and `:303` for schema, syntax and validation
-errors). So it serializes as `{"data": null, "errors": [...]}`, where the
-draft's §7.1.3 says a request error result must not contain `data`.
-October 2021 says "must not be present" too, in §7.1 and under "Request
-errors" in §7.1.2 (its "Data" paragraph alone says "should not"):
+`ExecutionResult` with `data=None` (`execution/execute.py:1345`,
+`execution/subscribe.py:290` and `:305`, and `graphql.py:290`, `:296` and
+`:303` for schema, syntax and validation errors). So it serializes as
+`{"data": null, "errors": [...]}`, where §7.1.3 says a request error result
+must not contain `data` (MUST in every edition):
 
 ```
 graphql_sync(schema, "{ int(v: 1) }", operation_name="A").formatted
@@ -262,39 +351,70 @@ graphql_sync(schema, "{ int(v: 1) }", operation_name="A").formatted
 ```
 
 The kit classifies these as request errors, so the other checks still grade
-them, and only `requestErrorNoData` fails: 790 vectors, and 1560 with
-`--validate`, where validation errors are request errors too.
+them, and only `requestErrorNoData` fails: 829 vectors, and 1660 with
+`--validate`, where validation errors are request errors too. The 16
+documents that don't parse and the 4 source streams that raise are among
+them, and pass `syntaxError` and `sourceStreamError`.
 `ExecutionResult` can't tell no data from null data, since both are `None`;
 a server that wants to leave the entry out has to decide from the errors.
 
-### Coerce: literals that only validation catches
+The introspect area sees the same cause: a query that doesn't parse (the
+two `emptySelection` vectors, `{}`, below) comes back from `graphql_sync`
+with `"data": null`, which the introspect area grades as a failed execution
+(`executes`), not as a request error it would leave ungraded.
+
+### Coerce: what only validation catches
 
 Without validation (`unvalidated`), as in graphql-js 16:
 
-- **§3.5.2 Float (MUST) and `floatPrecision` (SHOULD):** `parse_float_literal`
-  returns `float(value_node.value)` with no range check
-  (`type/scalars.py:151-158`). `{ float(v: 1e400) }` gets `inf`, and
-  `{ float(v: 99999999999999999999) }` gets `1e+20`.
-- **§3.10 and §3.11 (MUST, 5 vectors):** `value_from_ast` reads only the
+- **§3.5.2 Float (MUST):** `parse_float_literal` returns
+  `float(value_node.value)` with no range check (`type/scalars.py:151-158`).
+  `{ float(v: 1e400) }` gets `inf`. `{ float(v: 99999999999999999999) }`
+  gets `1e+20`, which the informational `floatPrecision` records. With
+  `--validate` the first still fails: `ValuesOfCorrectTypeRule` accepts the
+  literal too (below).
+- **§3.10 Input Objects (MUST, 5 vectors):** `value_from_ast` reads only the
   fields the input object type defines, and ignores the rest
   (`utilities/value_from_ast.py:130-149`). `{ point(v: { x: 1, z: 1 }) }`
   gets `{'x': 1, 'y': 0}`. graphql-js 17 rejects this; 16 doesn't.
+- **§3.10.1 OneOf (MUST, 2 vectors, since September 2025):** a OneOf literal
+  whose second entry is a variable with no runtime value,
+  `query($b: Int) { oneOfExample(arg: { a: "abc", b: $b }) }` with `{}`,
+  counts as one entry and resolves to `{'a': 'abc'}`.
+- **§2.3 (`notExecutable`, MUST, 5 vectors):** `execute` skips type system
+  definitions, so `type T { a: Int } query { int(v: 1) }` runs its
+  operation. A document with no operation is a request error.
+- **§6.3.2 and §6.2.3.1 (`unvalidatedBranches`, MUST, 2 vectors):**
+  `execute_subscription` creates the source stream for the first root field
+  only (`execution/subscribe.py:337`) and doesn't refuse a second, and the
+  event's execution then runs every root field.
+  `subscription { event(v: 1) nope }` resolves `event`, and
+  `subscription { event(v: 1) eventNN(v: 1) }` resolves both. graphql-core
+  leaves that to validation (`SingleFieldSubscriptionsRule`).
 
-`ValuesOfCorrectTypeRule` rejects all of these, so with `--validate` none of
-them fails.
+With `--validate`, the validation rules reject all of these but `1e400`.
 
 ### Parse
 
-Both are draft-only. graphql-js 16 rejects the same 10 vectors.
+Every failure is on a vector with `since`. graphql-js 16 rejects the same 32
+vectors.
 
-- **Empty selection sets (8 vectors).** `parse_selection_set` reads
-  `{ Selection+ }` with `many` (`language/parser.py:770-777`), so `{}` gives
-  "Expected Name, found '}'". The draft allows an empty selection set since
-  graphql-spec#1227; October 2021 doesn't.
-- **Variable-width escapes over eight hex digits (2 vectors).**
-  `read_escaped_unicode_variable_width` stops after 12 characters
-  (`language/lexer.py:470-491`), so `"\u{000000041}"` gives "Invalid Unicode
-  escape sequence". `{ HexDigit+ }` has no limit.
+- **Empty selection sets (11 vectors, §2.5, since September 2026).**
+  `parse_selection_set` reads `{ Selection+ }` with `many`
+  (`language/parser.py:770-777`), so `{}` gives "Expected Name, found '}'".
+  September 2026 allows an empty selection set (graphql-spec#1227); September
+  2025 and October 2021 don't.
+- **Directives on a directive definition (5 vectors, §3.13) and directive
+  extensions (14 vectors, §3.13.6), since September 2026.**
+  `directive @d @x on FIELD` and `extend directive @d @x` are syntax errors
+  with the default options. The parser reads both only with
+  `experimental_directives_on_directive_definitions=True`
+  (`language/parser.py:1068`, `:1444`), which the adapter leaves off, as the
+  kit asks.
+- **Variable-width escapes over eight hex digits (2 vectors, §2.10.4, since
+  September 2025).** `read_escaped_unicode_variable_width` stops after 12
+  characters (`language/lexer.py:470-491`), so `"\u{000000041}"` gives
+  "Invalid Unicode escape sequence". `{ HexDigit+ }` has no limit.
 
 ### Validate
 
@@ -309,21 +429,25 @@ behaves the same, vector for vector.
   (`validation/rules/overlapping_fields_can_be_merged.py:946-950`), and only
   compares types when both fields have one (`:709-710`, `:745`). Every one of
   the 22 vectors pairs `__typename` with another field.
-- **§5.2.1.1 Operation Type Existence (12 vectors, draft only).** No rule
-  checks that the schema has a root type for the operation, so
+- **§5.2.1.1 Operation Type Existence (15 vectors, since September 2025).**
+  No rule checks that the schema has a root type for the operation, so
   `mutation { ... }` against a schema without `Mutation` passes. Execution
   then fails it.
-- **§5.2.4.1 with `@skip` or `@include` at a subscription's root (12
-  vectors accepted, 11 crashes; the kit tags them draft only).**
-  `subscription { postAdded @skip(if: true) { id } }` is accepted. The draft
-  forbids `@skip` and `@include` in a subscription's root selection set. But
-  October 2021 forbids this document too: it collects the root fields with no
-  variable values and requires exactly one entry, and `@skip(if: true)` on
-  the only root field leaves none. graphql-core reports an error only when it
-  collects more than one field (`validation/rules/single_field_subscriptions.py:93`).
-  With a variable as the condition (`@include(if: $v)`), `validate` raises
-  instead (above), a crash.
-- **§5.8.5 for OneOf (2 vectors, draft only).** `mutation
+- **§5.2.4.1 with `@skip` or `@include` at a subscription's root (17
+  vectors accepted, 11 crashes).**
+  `subscription { postAdded @skip(if: true) { id } }` is accepted. September
+  2025 forbids `@skip` and `@include` in a subscription's root selection set.
+  October 2021 forbids some of these documents too: it collects the root
+  fields with no variable values and requires exactly one entry, and
+  `@skip(if: true)` on the only root field leaves none. graphql-core reports
+  an error only when it collects more than one field
+  (`validation/rules/single_field_subscriptions.py:93`). With a variable as
+  the condition (`@include(if: $v)`), `validate` raises instead (above), a
+  crash.
+- **§5.6.1 for a Float literal out of range (5 vectors).**
+  `{ echo(float: 1e400) }` is valid to `ValuesOfCorrectTypeRule`:
+  `parse_float_literal` reads it as `inf` without complaint (above).
+- **§5.8.5 for OneOf (2 vectors, since September 2025).** `mutation
   addNullableCat($cat: CatInput) { addPet(pet: {cat: $cat}) { name } }` is
   accepted. `VariablesInAllowedPositionRule` does check for a nullable
   variable in a OneOf field, but tests `is_input_object_type(parent_type)`
@@ -331,61 +455,81 @@ behaves the same, vector for vector.
   type is still wrapped in Non-Null when the OneOf argument or list item is
   non-null (`pet: PetInput!` here). With a nullable `PetInput` argument,
   graphql-core rejects the same document.
+- **September 2026 syntax (5 crashes):** documents with an empty selection
+  set (`leafFieldSelections` 2, `acceptsValid` 1, §5.3.3's
+  `directQueryOnObjectWithEmptySelection`) or a directive on a directive
+  definition (`executableDefinitions` 2) don't parse (above). The validate
+  area takes a document that doesn't parse as a crash, counted toward
+  September 2026.
 
 ### Schema
 
-The same 8 failing rules as graphql-js 16, with the same schemas.
+The same 11 failing checks as graphql-js 16, with the same schemas.
 
-- **`typeNameNotBuiltin`:** `type Int { a: String } type Query { a: String }`
+- **`typeNameNotBuiltin` (3 schemas):** `type Int { a: String } type Query { a: String }`
   is accepted. `build_schema` replaces a definition named like a built-in
   type with the built-in (`utilities/extend_schema.py:274`).
-- **`rootTypesDifferent` (2 schemas):** `validate_root_types` checks only that
+- **`rootTypesDifferent` (4 schemas):** `validate_root_types` checks only that
   each root is an object type, not that they differ
-  (`type/validate.py:136-165`).
-- **`directiveUsesItself`, `directiveReferencesItselfIndirectly`:** nothing in
-  `type/validate.py` follows a directive's uses of directives.
-- **`argDefaultCompatible` (10 schemas, draft only):** default values aren't
-  validated. `build_schema` coerces each with `value_from_ast`
+  (`type/validate.py:137-165`).
+- **`directiveUsesItself` (2), `directiveReferencesItselfIndirectly` (3):**
+  nothing in `type/validate.py` follows a directive's uses of directives.
+- **`argDefaultCompatible` (14 schemas, since September 2025):** default
+  values aren't validated. `build_schema` coerces each with `value_from_ast`
   (`utilities/extend_schema.py:663`), and a default that doesn't coerce
   becomes `Undefined`: `f(x: Int = "1")` silently has no default.
-- **`implDeprecation` (1 schema, draft only):** a deprecated field may
-  implement one that isn't.
-- **`inputObjectUnbreakableCycle` (2 schemas, draft only):** the cycle check
-  follows only Non-Null input object fields (`type/validate.py:589`), so it
-  misses `input A @oneOf { b: B } input B @oneOf { a: A }`, whose fields are
+- **`implDeprecation` (2 schemas, since September 2025):** a deprecated field
+  may implement one that isn't.
+- **`inputObjectUnbreakableCycle` (3 schemas, since September 2026):** the
+  cycle check follows only Non-Null input object fields
+  (`type/validate.py:589`), so it misses
+  `input A @oneOf { b: B } input B @oneOf { a: A }`, whose fields are
   nullable but can't be left all null.
+- **`extensionOneOf` (2 schemas, since September 2025):**
+  `input In { a: Int } extend input In @oneOf` is accepted. §3.10.2 says
+  "The @oneOf directive must not be provided by an Input Object type
+  extension"; graphql-core checks a OneOf input object's fields, wherever
+  `@oneOf` came from (`type/validate.py:526`).
+- **`appliedDirectiveArguments` (informational, 3 schemas):** an applied
+  directive's arguments aren't checked against its definition in SDL, such
+  as `@deprecated(reason: null)`.
 - **`inputObjectDefaultValueCycle`, crashes (4 invalid schemas, 3 valid).**
   `input I { i: I = {i: null} }` raises `RecursionError` from `build_schema`.
   Building `I`'s fields coerces the default `{i: null}` with
   `value_from_ast` (`utilities/extend_schema.py:681`), which reads `I`'s
   fields, which aren't built yet. The `RecursionError` comes out wrapped in
   `TypeError: I fields cannot be resolved. ...`
-  (`type/definition.py:2921-2924`). Valid schemas crash too.
+  (`type/definition.py:2921-2924`). Valid schemas crash too, and count
+  against `acceptsValid`.
+- **September 2026 syntax (`acceptsValid`, 11 valid schemas):** a directive
+  extension (7) or a directive on a directive definition (4) doesn't parse
+  with the default options (see Parse).
 
 ### Introspect
 
-graphql-core 3.2.14 has the draft's introspection fields (`isOneOf`,
+graphql-core 3.2.14 has September 2026's introspection fields (`isOneOf`,
 deprecated arguments, input fields and directives, `DIRECTIVE_DEFINITION`,
 `@oneOf`), with some October 2021 definitions. They fail
-`builtinDefinitions` on all 22 `__schema` results that execute:
+`builtinNullability` (SHOULD) on 38 results:
 
 - `@deprecated(reason: String = "No longer supported")`
   (`type/directives.py:372-380`), and `includeDeprecated: Boolean = false` on
-  `__Type.fields` and `enumValues` (`type/introspection.py:312`, `:328`). The
-  draft has `String!` and `Boolean!`; October 2021 has what graphql-core has.
+  `__Type.fields` and `enumValues` (`type/introspection.py:312`, `:328`).
+  September 2026 has `String!` and `Boolean!`; October 2021 has what
+  graphql-core has.
 - `includeDeprecated: Boolean = false` on `__Type.inputFields`,
   `__Field.args` and `__Directive.args` (`type/introspection.py:337`, `:461`,
-  `:147`). The draft has `Boolean!`, and October 2021 has no argument there.
+  `:147`). September 2026 has `Boolean!`, and October 2021 has no argument
+  there.
 
-`directiveDeprecation` fails `executes` in all 3 of its vectors, which are
-draft only: `build_schema` can't parse `directive @old @deprecated on FIELD`
-("Expected 'on', found '@'"). The failure is the SDL parser's, not
-introspection's. The parser reads directives on a directive definition only
-with `experimental_directives_on_directive_definitions=True`
-(`language/parser.py:1442-1446`), which `build_schema` accepts but which is
-off by default. The adapter keeps the default. With the flag, the schema
-builds and introspection reports the deprecated directive correctly.
+The 2 `emptySelection` results fail `executes`: graphql-core can't parse
+`{}` (see Parse), and its request error has `"data": null` (see Coerce). 5
+results aren't graded: `build_schema` can't parse
+`directive @old @deprecated on FIELD` ("Expected 'on', found '@'"), September
+2026 syntax that the parser reads only with
+`experimental_directives_on_directive_definitions=True`. With the flag, the
+schema builds and introspection reports the deprecated directive correctly.
 
-Every lookup whose schema builds passes, and so does every other check,
-wrapper types included.
-graphql-js 16 fails the same way.
+Every other check passes, wrapper types and printed defaults included.
+graphql-js 16 fails `builtinNullability` the same way; it answers the two
+`emptySelection` queries with a request error, which isn't graded.
