@@ -637,6 +637,78 @@
   },
   {
    "v": 1,
+   "fixture": "leaves",
+   "trace": [
+    {
+     "call": [
+      "count"
+     ],
+     "type": "Int",
+     "after": 0
+    },
+    {
+     "call": [
+      "ratio"
+     ],
+     "type": "Float",
+     "after": 0
+    },
+    {
+     "call": [
+      "color"
+     ],
+     "type": "Color",
+     "after": 0
+    },
+    {
+     "settle": [
+      "count"
+     ],
+     "outcome": {
+      "kind": "uncoercible"
+     }
+    },
+    {
+     "settle": [
+      "ratio"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "color"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "response": {
+    "errors": [
+     {
+      "message": "Int cannot represent non-integer value: 1.2",
+      "locations": [
+       {
+        "line": 2,
+        "column": 3
+       }
+      ],
+      "path": [
+       "count"
+      ]
+     }
+    ],
+    "data": {
+     "count": null,
+     "ratio": null,
+     "color": null
+    }
+   }
+  },
+  {
+   "v": 1,
    "fixture": "fragments",
    "trace": [
     {
@@ -1595,10 +1667,74 @@
    }
   },
   {
+   "name": "truncates a fraction returned for an Int instead of raising an error",
+   "clause": "malformed",
+   "check": "resultCoercion",
+   "base": 11,
+   "case": {
+    "v": 1,
+    "fixture": "leaves",
+    "trace": [
+     {
+      "call": [
+       "count"
+      ],
+      "type": "Int",
+      "after": 0
+     },
+     {
+      "call": [
+       "ratio"
+      ],
+      "type": "Float",
+      "after": 0
+     },
+     {
+      "call": [
+       "color"
+      ],
+      "type": "Color",
+      "after": 0
+     },
+     {
+      "settle": [
+       "count"
+      ],
+      "outcome": {
+       "kind": "uncoercible"
+      }
+     },
+     {
+      "settle": [
+       "ratio"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "color"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "data": {
+      "count": 1,
+      "ratio": null,
+      "color": null
+     }
+    }
+   }
+  },
+  {
    "name": "calls a field that @include(if: false) leaves out",
    "clause": "malformed",
    "check": "callsSelected",
-   "base": 11,
+   "base": 12,
    "case": {
     "v": 1,
     "fixture": "fragments",
@@ -1687,7 +1823,7 @@
    "name": "calls a field before its parent has a value",
    "clause": "malformed",
    "check": "callsReachable",
-   "base": 11,
+   "base": 12,
    "case": {
     "v": 1,
     "fixture": "fragments",

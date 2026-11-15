@@ -66,7 +66,21 @@ npm run fixtures             # regenerate fixture data after editing fixtures/
 
 ```shell
 npx graphql-tla run execution --adapter "<command that starts your adapter>"
+npx graphql-tla run validate --adapter "<command that starts your adapter>"
 ```
+
+The kit has six areas. Each checks one part of the spec against its TLA+ reference:
+
+| Area | Spec | Reference | How |
+| --- | --- | --- | --- |
+| [`execution`](docs/conformance.md) | §6, §7 | `Reference.tla` | drives your resolvers through every outcome and schedule, and checks each response against every response the spec allows |
+| [`parse`](docs/kit/parse.md) | §2 | `Lexer.tla`, `Parser.tla` | accept or reject about 2,000 source texts, mostly in minimal pairs |
+| [`validate`](docs/kit/validate.md) | §5 | `Validation.tla` | about 3,000 documents, each breaking exactly one rule or none, so each rule gets its own verdict |
+| [`coerce`](docs/kit/coerce.md) | §3.5, §3.9–3.12, §6.1.2, §6.4.1 | `Coercion.tla` | about 2,000 operations with variables: a request error, a field error, or the coerced arguments |
+| [`schema`](docs/kit/schema.md) | §3 | `TypeSystem.tla` | 83 minimal pairs of SDL schemas, one per type-system rule |
+| [`introspect`](docs/kit/introspect.md) | §4 | `Introspection.tla` | introspection results for 11 schemas, with the variation the spec allows |
+
+Outside execution, every expected answer comes from evaluating the reference with tla-ts, never from graphql-js. [`docs/kit-areas.md`](docs/kit-areas.md) describes how those areas work.
 
 An adapter is a small program that speaks newline-delimited JSON. It builds the schema the kit sends and installs one resolver on every field, which reports each call and returns whatever the kit says. [`docs/conformance.md`](docs/conformance.md) has the protocol, the outcomes, the clauses and the case format. The adapters in [`adapters/`](adapters) are examples:
 
@@ -74,7 +88,9 @@ An adapter is a small program that speaks newline-delimited JSON. It builds the 
 | --- | --- | --- |
 | [`graphql-js`](adapters/graphql-js) | graphql-js 16.15 and 17.1 | The reference adapter, about 150 lines. Passes `--strict`. |
 | [`graphql-java`](adapters/graphql-java) | graphql-java 26.2 | Passes everything except one subscription case: when an event's Non-Null root field is null, the response stream errors out instead of sending `{ data: null, errors }`. |
-| [`hotchocolate`](adapters/hotchocolate) | Hot Chocolate 15.1.21 (.NET) | Passes everything except one case: when a list item at a Non-Null position is null, the list is nulled but no error is reported (§6.4.3, §6.4.4). |
+| [`hotchocolate`](adapters/hotchocolate) | Hot Chocolate 15.1.21 (.NET) | Two deviations. When a list item at a Non-Null position is null, the list is nulled but no error is reported (§6.4.3, §6.4.4). A fraction returned for an Int is truncated instead of raising an error (§3.5.1). |
+| [`graphql-core`](adapters/graphql-core) | graphql-core 3.2.14 (Python) | Calls every mutation root field's resolver at once, and only awaits them in order. Resolvers that return a future or task run early (§6.3.4). `async def` resolvers aren't affected. graphql-core 3.3 fixes this. |
+| [`graphql-ruby`](adapters/graphql-ruby) | graphql-ruby 2.6.15 | Truncates a fraction returned for an Int (§3.5.1). Out of the box, results of the wrong shape raise out of `execute` instead of becoming field errors; the documented `type_error` and `rescue_from` hooks fix that. |
 | [`async-graphql`](adapters/async-graphql) | async-graphql 7.0.17, dynamic schemas | Its dynamic schema API breaks four rules: resolver errors have no `path`; errors don't stop at the nearest nullable field; an explicit null isn't treated as null; merged fields run their resolver twice. |
 
 The kit checks the checker too. Every run evaluates a shipped corpus of 22 negative controls, and each must be caught by the clause or check it names.

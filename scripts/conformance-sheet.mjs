@@ -17,6 +17,7 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { AREAS } from "../kit/areas.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
 const dir = join(root, "conformance");
@@ -26,7 +27,9 @@ const registry = JSON.parse(readFileSync(join(dir, "implementations.json"), "utf
 const reports = readdirSync(join(dir, "reports"))
   .filter((f) => f.endsWith(".json"))
   .sort()
-  .map((f) => ({ key: basename(f, ".json"), ...JSON.parse(readFileSync(join(dir, "reports", f), "utf8")) }));
+  // <key>.json for execution, <key>.<area>.json for the other areas.
+  .map((f) => ({ key: basename(f, ".json").split(".")[0], ...JSON.parse(readFileSync(join(dir, "reports", f), "utf8")) }))
+  .sort((a, b) => AREAS.indexOf(a.area) - AREAS.indexOf(b.area));
 const keys = [...new Set(reports.map((r) => r.key))].sort(
   (a, b) => registry.findIndex((x) => x.key === a) - registry.findIndex((x) => x.key === b),
 );
@@ -49,7 +52,7 @@ const fixtureList = (f) =>
 // A check's cell: ✓ N (passed in all N cases), ✗ n/N (broke a MUST in n of
 // N), ! n/N (a SHOULD), ~ inconclusive, – not exercised.
 const cell = (check) => {
-  if (!check) return " ";
+  if (!check) return "n/a";
   if (check.status === "fail") return `${check.level === "MUST" || check.level === "ADAPTER" ? "✗" : "!"} ${check.failing}/${check.cases}`;
   if (check.status === "pass") return `✓ ${check.cases}`;
   if (check.status === "inconclusive") return `~ ${check.cases}`;
@@ -61,6 +64,7 @@ const legend = [
   "- **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.",
   "- **~:** inconclusive (see the implementation's page).",
   "- **–:** never exercised: the adapter lacks the capability, or no case reached it.",
+  "- **n/a:** the adapter doesn't take part in this area.",
 ].join("\n");
 
 // A section's verdict, from the checks that cite it (fixtures only say a
@@ -117,7 +121,7 @@ const matrix = () => {
     const findings = reports.filter((r) => r.key === key).flatMap((r) => r.findings);
     lines.push(`- **[${nameOf(key)}](${key}.md):** ${findings.length === 0 ? "none" : ""}`);
     findings.forEach((f, i) => {
-      lines.push(`  - [${f.checks.map((c) => `\`${c}\``).join(", ")}](${key}.md#${anchor(f, i)})${f.summary ? `: ${f.summary}` : ""} (${plural(f.cases, "case")}, ${fixtureList(f)})`);
+      lines.push(`  - [${f.checks.map((c) => `\`${c}\``).join(", ") || "malformed result"}](${key}.md#${anchor(f, i)})${f.summary ? `: ${f.summary}` : ""} (${plural(f.cases, "case")}, ${fixtureList(f)})`);
     });
   }
   lines.push("");
@@ -198,7 +202,7 @@ const page = (key) => {
       lines.push(
         `<a id="${anchor(f, i)}"></a>`,
         "",
-        `#### ${i + 1}. ${checks.map((c) => `\`${c.id}\``).join(", ")}${f.summary ? `: ${f.summary}` : ""}`,
+        `#### ${i + 1}. ${checks.map((c) => `\`${c.id}\``).join(", ") || "malformed result"}${f.summary ? `: ${f.summary}` : ""}`,
         "",
         `${plural(f.cases, "case")}, in ${Object.entries(f.fixtures).sort((a, b) => b[1] - a[1]).map(([id, n]) => `\`${id}\` (${n})`).join(", ")}.`,
         "",
@@ -211,6 +215,7 @@ const page = (key) => {
           [
             f.problem && `problem:  ${f.problem}`,
             e.input !== undefined ? `input:    ${e.input}` : `trace:    ${e.trace}`,
+            e.sibling !== undefined && `sibling:  ${typeof e.sibling === "string" ? e.sibling : JSON.stringify(e.sibling)}`,
             e.streamError !== undefined ? `stream:   failed: ${e.streamError}` : `response: ${JSON.stringify(e.response)}`,
             e.expected && `expected: ${e.expected}`,
           ]

@@ -44,7 +44,25 @@
         "DOTNET_ROOT": "~/.cache/graphql-tla-toolchains/dotnet"
       },
       "notes": [
-        "The sheet runs the adapter with `--idle`, which claims `idle` by waiting for .NET's thread pool to go quiet: runtime behaviour, not something Hot Chocolate promises. The kit's determinism replay passed, and a run without `--idle` (grace-based, random runs only) found the same failures. See the [adapter's README](../adapters/hotchocolate/README.md)."
+        "The sheet runs the adapter with `--idle`, which claims `idle` by waiting for .NET's thread pool to go quiet: runtime behaviour, not something Hot Chocolate promises. The kit's determinism replay passed, and a run without `--idle` (grace-based, random runs only) found the same failures. See the [adapter's README](../adapters/hotchocolate/README.md).",
+        "Both findings are described, with source locations and a standalone reproduction, in the [adapter's README](../adapters/hotchocolate/README.md#known-hot-chocolate-deviations)."
+      ]
+    },
+    {
+      "key": "graphql-core",
+      "adapter": "adapters/graphql-core/run.sh",
+      "build": "adapters/graphql-core/.venv",
+      "notes": [
+        "The `mutation` finding is graphql-core 3.2's `execute_fields_serially`, which calls every root field's resolver in a plain loop and only chains the awaiting. Resolvers written as `async def` don't start until awaited, so they run in order; resolvers that return a future or task (a DataLoader's `load`, `create_task`) and synchronous resolvers with side effects run early. graphql-core 3.3 chains the calls, as graphql-js does. See the [adapter's README](../adapters/graphql-core/README.md)."
+      ]
+    },
+    {
+      "key": "graphql-ruby",
+      "adapter": "adapters/graphql-ruby/run.sh --invalid-results",
+      "build": "adapters/graphql-ruby/vendor/bundle",
+      "notes": [
+        "The sheet runs graphql-ruby with `--invalid-results`: a schema that uses graphql-ruby's documented `type_error` and `rescue_from` hooks. Out of the box, a resolver result of the wrong shape (a non-list for a list, an object for an Int, a runtime type that isn't a possible type, an unknown enum value) raises out of `execute` instead of becoming a field error (\u00a76.4.4), so the client gets no response at all.",
+        "The `resultCoercion` finding is graphql-ruby's Int coercion, which calls `to_i`, so `1.2` becomes `1`. Boolean is `!!value`, so `\"false\"` becomes `true`; the kit doesn't probe Boolean, since \u00a73.5.4 leaves reasonable coercions to the service. See the [adapter's README](../adapters/graphql-ruby/README.md)."
       ]
     }
   ]

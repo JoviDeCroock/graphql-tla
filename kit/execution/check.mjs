@@ -205,6 +205,21 @@ export const normalize = (fixture, c) => {
     }
   }
 
+  // §3.5.1, §3.5.2, §3.9: a leaf value the type can't represent must raise
+  // an execution error, so the position can't hold a value.
+  const valueAt = (path) => path.reduce((v, k) => (v === null || typeof v !== "object" ? undefined : v[k]), response.data ?? null);
+  for (const event of c.trace) {
+    if (event.settle && event.outcome?.kind === "uncoercible") {
+      const value = valueAt(event.settle.map((k) => (/^\d+$/.test(k) ? Number(k) : k)));
+      if (value !== undefined && value !== null) {
+        add(
+          "resultCoercion",
+          `${event.settle.join(".")} is ${JSON.stringify(value)}, though its resolver returned a value its type can't represent, which must raise an execution error`,
+        );
+      }
+    }
+  }
+
   // Leaf values: the reference abstracts them away, so check them here
   // against the canonical value for the position's type in the fixture.
   const walk = (value, path) => {

@@ -82,7 +82,12 @@ if (area !== "execution") {
   try {
     await adapter.hello();
     console.log(`${adapter.name} (capabilities: ${[...adapter.capabilities].sort().join(", ")})`);
-    if (!adapter.capabilities.has(area)) throw new Error(`the adapter doesn't claim the ${area} capability`);
+    if (!adapter.capabilities.has(area)) {
+      // Exit code 3: not an answer, the adapter just doesn't take part.
+      console.error(`- the adapter doesn't claim the ${area} capability`);
+      adapter.close();
+      process.exit(3);
+    }
     const { run } = await import(`./${area}/run.mjs`);
     const result = await run({ adapter, strict, option, flag, log: console.log });
     writeReport(result.report);

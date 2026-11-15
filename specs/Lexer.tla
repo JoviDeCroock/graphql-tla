@@ -2,7 +2,7 @@
 (***************************************************************************)
 (* The lexical grammar of GraphQL and its static semantics, written by     *)
 (* hand from the spec (https://spec.graphql.org/draft/, §2.1 Source Text,  *)
-(* §2.9 Input Values: IntValue, FloatValue, StringValue, BlockString).     *)
+(* §2.10 Input Values: IntValue, FloatValue, StringValue, BlockString).     *)
 (*                                                                         *)
 (* Everything here is a pure operator over plain data:                     *)
 (*                                                                         *)
@@ -110,7 +110,7 @@ IgnoredLength(src, i) ==
     [] OTHER -> 0
 
 -----------------------------------------------------------------------------
-(* §2.1.8 Punctuators *)
+(* §2.1.7 Punctuators *)
 
 \* Punctuator :: one of ! $ & ( ) ... : = @ [ ] { | }
 SinglePunctuators == {33, 36, 38, 40, 41, 58, 61, 64, 91, 93, 123, 124, 125}
@@ -122,7 +122,7 @@ PunctuatorAt(src, i) ==
   ELSE Failed(i)
 
 -----------------------------------------------------------------------------
-(* §2.1.9 Names *)
+(* §2.1.8 Names *)
 
 \* Letter :: one of A-Z a-z;  Digit :: one of 0-9
 IsLetter(c) == (65 <= c /\ c <= 90) \/ (97 <= c /\ c <= 122)
@@ -141,7 +141,7 @@ NameAt(src, i) ==
   LET end == NameContinueEnd(src, i + 1) IN Matched(end, Slice(src, i, end - 1))
 
 -----------------------------------------------------------------------------
-(* §2.9.1 Int Value and §2.9.2 Float Value *)
+(* §2.10.1 Int Value and §2.10.2 Float Value *)
 
 \* The number of Digits in s from index k on.
 RECURSIVE DigitRun(_, _)
@@ -213,7 +213,7 @@ NumberAt(src, i) ==
        IN Matched(end, Slice(src, i, end - 1))
 
 -----------------------------------------------------------------------------
-(* §2.9.4 String Value *)
+(* §2.10.4 String Value *)
 
 \* HexDigit :: one of 0-9 A-F a-f
 IsHexDigit(c) == IsDigit(c) \/ (65 <= c /\ c <= 70) \/ (97 <= c /\ c <= 102)
@@ -301,7 +301,7 @@ StringCharacters(src, k, text) ==
          ELSE escape
     [] OTHER -> StringCharacters(src, k + 1, Append(text, c))
 
-(* §2.9.4 Block Strings *)
+(* §2.10.4 Block Strings *)
 
 RECURSIVE LeadingWhitespace(_, _)
 LeadingWhitespace(line, k) ==
@@ -390,7 +390,7 @@ StringValueAt(src, i) ==
 IsBlockStringAt(src, i) == Slice(src, i, i + 2) = <<Quote, Quote, Quote>>
 
 -----------------------------------------------------------------------------
-(* §2.1.6 Lexical Tokens *)
+(* §2.1.5 Lexical Tokens *)
 
 Token(kind, value) == [kind |-> kind, value |-> value]
 

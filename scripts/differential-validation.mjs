@@ -936,7 +936,7 @@ const DISCREPANCIES = [
   {
     id: "required-argument-null",
     rule: "RequiredArguments",
-    text: "§5.4.2.1 also forbids the null literal for a required argument; graphql-js reports that under ValuesOfCorrectTypeRule instead of ProvidedRequiredArgumentsRule. The document is invalid either way.",
+    text: "§5.4.3 also forbids the null literal for a required argument; graphql-js reports that under ValuesOfCorrectTypeRule instead of ProvidedRequiredArgumentsRule. The document is invalid either way.",
     applies: (c) =>
       c.missing.length === 0 &&
       c.extra.every((s) => {

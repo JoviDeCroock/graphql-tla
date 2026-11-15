@@ -78,6 +78,7 @@ The resolver returns this for each outcome:
 | `{"kind":"list","length":2}` | A list of `length` items. With `deferred-items`, each item is itself pending and is reported with its own `call`. |
 | `{"kind":"null"}` | null |
 | `{"kind":"error"}` | An error, by throwing, rejecting or returning an error value |
+| `{"kind":"uncoercible"}` | A value the leaf type can't represent: `1.2` for an Int, a non-finite number (`Infinity` or `NaN`) for a Float, a name that isn't one of an enum's values. Only sent with `uncoercible-results`. The spec says each must raise an execution error (§3.5.1, §3.5.2, §3.9). |
 
 The kit checks leaf values in the response against the same table, because the reference abstracts them away. Results of the wrong shape are only sent to adapters with `invalid-results`:
 
@@ -92,6 +93,7 @@ The kit checks leaf values in the response against the same table, because the r
 | `idle` | After each `execute` and `settle`, the adapter lets the engine run until it is blocked on the kit, then sends `idle`. That makes runs deterministic, which the exhaustive runs need. Without it, the kit waits `--grace` ms of silence instead and only does random runs. |
 | `deferred-items` | A list's items settle one by one. Without it, a list `settle` carries `items`, the outcome of each item (never `error`), and the adapter returns them inline. |
 | `invalid-results` | The adapter can return results of the wrong shape. Typed implementations usually can't. |
+| `uncoercible-results` | The adapter can return the `uncoercible` values above, in fixtures with invalid results. |
 | `mutation`, `subscription` | It runs those operation types. A subscription's source stream yields one event, and the response is the result for that event. In graphql-js, the root field's resolver runs on the event (`{}`) and is the root `call`. In engines where the stream's item is the root field's value, the source stream's request for its event is the root `call`, and the settled outcome is the event. |
 | `error-propagation-off` | It can execute with `errorPropagation: false`. |
 
@@ -125,6 +127,7 @@ Before that, the kit rejects malformed cases. It works out each position's type 
 - an error path has a string where §7.1.4 wants an integer list index, or names a position the operation doesn't select;
 - `errors` is an empty list;
 - a leaf isn't the canonical value for its position's type;
+- a position whose resolver returned an `uncoercible` value holds a value instead of null (`resultCoercion`);
 - a resolver is called twice, called at a position the operation doesn't select (fragments that don't apply, and `@skip` and `@include` with the fixture's variables, are taken into account), or reported with the wrong type;
 - a resolver is called before its parent position settled to an object, or to a list long enough for its index;
 - a call's `after` stamp is negative, or more than the settles the adapter had been sent;
@@ -176,4 +179,4 @@ One JSON object per line. `run --out FILE` writes them, and `check` reads them.
 - **Fixtures:** the fixtures in [`fixtures/`](../fixtures) are small, and their ids won't change. A pass means no fixture, outcome combination or schedule tried found a response the spec forbids. It doesn't prove the implementation correct.
 - **Without `idle`:** the kit may record a settle the engine never looked at before it responded. The response clauses stay sound, because `Valid` stays true as more resolvers settle after a response (`ExecutionConformance.tla` checks this as `ResponseStaysValid`). With `idle`, the kit replays a few runs before it starts and fails if their traces, data or error paths differ, since exhaustive runs depend on determinism. Error messages, order and extensions may differ.
 - **Without `after` stamps:** `calledSerially` uses the order messages arrived in. It can catch a non-serial engine but can't prove a serial one, and the report says so.
-- **Not covered by the kit yet:** `@defer`/`@stream`, subscription streams beyond one event, validation, coercion and parsing. Those references are checked against graphql-js only, by the differential scripts.
+- **Not covered by this area:** `@defer`/`@stream` and subscription streams beyond one event. Their models are checked against graphql-js only. Parsing, validation, input coercion, schema validity and introspection are separate kit areas: see [Kit areas beyond execution](kit-areas.md).

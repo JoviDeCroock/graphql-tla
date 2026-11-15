@@ -18,14 +18,19 @@ import { createInterface } from "node:readline";
 const version = process.argv[process.argv.indexOf("--graphql") + 1];
 const graphql = version === "16" ? await import("graphql16") : await import("graphql17");
 
-// The kit's other areas (docs/conformance.md): each one this adapter
-// answers is a module in areas/, whose default export maps a request to the
-// result's fields.
+// The kit's other areas (docs/kit-areas.md): each one this adapter answers
+// is a module in areas/, whose default export maps a request to the
+// result's fields, and whose `capabilities` export lists any capabilities
+// the area adds (such as absent-vs-null for coerce).
 const AREAS = ["parse", "validate", "coerce", "schema", "introspect"];
 const areas = new Map();
+const areaCapabilities = [];
 for (const area of AREAS) {
   const file = new URL(`./areas/${area}.mjs`, import.meta.url);
-  if (existsSync(file)) areas.set(area, (await import(file.href)).default);
+  if (!existsSync(file)) continue;
+  const module = await import(file.href);
+  areas.set(area, module.default);
+  areaCapabilities.push(area, ...(module.capabilities ?? []));
 }
 
 const idle = !process.argv.includes("--no-idle");
@@ -55,13 +60,22 @@ send({
     ...(idle ? ["idle"] : []),
     "deferred-items",
     "invalid-results",
+    "uncoercible-results",
     "mutation",
     "subscription",
     // @experimental_disableErrorPropagation is new in graphql-js 17.
     ...(version === "16" ? [] : ["error-propagation-off"]),
-    ...areas.keys(),
+    ...areaCapabilities,
   ],
 });
+
+// A value the leaf type can't represent: a fraction for an Int, a
+// non-finite number for a Float, a name that isn't one of an enum's values.
+const uncoercibleValue = (type) => {
+  const named = graphql.getNamedType(type);
+  if (graphql.isEnumType(named)) return "NOT_A_VALUE";
+  return named.name === "Int" ? 1.2 : Infinity;
+};
 
 // The value a resolver returns for each outcome.
 const leafValue = (type) => {
@@ -144,6 +158,7 @@ const settle = ({ id, call, outcome }) => {
   else if (outcome.kind === "null") resolve(null);
   // A leaf at a list position is the number 1, which no language iterates.
   else if (outcome.kind === "leaf") resolve(graphql.isListType(nullable) ? 1 : leafValue(nullable));
+  else if (outcome.kind === "uncoercible") resolve(uncoercibleValue(nullable));
   else if (outcome.kind === "object") resolve({ __typename: outcome.type });
   else resolve(Array.from({ length: outcome.length }, (_, i) => execution.control([...path, String(i)], nullable.ofType)));
 };

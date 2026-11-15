@@ -162,6 +162,18 @@ export const CONTROLS = [
     },
   },
   {
+    name: "truncates a fraction returned for an Int instead of raising an error",
+    clause: "malformed",
+    check: "resultCoercion",
+    make: (c) => {
+      const settle = c.trace.find((e) => e.settle?.length === 1 && e.settle[0] === "count" && e.outcome.kind === "uncoercible");
+      if (!settle || c.response.data?.count !== null) return [];
+      const errors = (c.response.errors ?? []).filter((e) => JSON.stringify(e.path) !== JSON.stringify(["count"]));
+      const { errors: _, ...rest } = c.response;
+      return [{ response: { ...rest, data: { ...c.response.data, count: 1 }, ...(errors.length ? { errors } : {}) } }];
+    },
+  },
+  {
     name: "calls a field that @include(if: false) leaves out",
     clause: "malformed",
     check: "callsSelected",

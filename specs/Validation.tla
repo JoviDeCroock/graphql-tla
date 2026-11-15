@@ -494,7 +494,7 @@ ArgumentUniqueness(S, D) ==
                      \E k \in DOMAIN a.arguments : k # j /\ a.arguments[k].name = a.arguments[j].name}}
          : a \in AllArgumentSets(S, D)}
 
-\* §5.4.2.1 Required Arguments: "If type is Non-Null and defaultValue does
+\* §5.4.3 Required Arguments: "If type is Non-Null and defaultValue does
 \* not exist: ... Let argument be the argument in arguments named
 \* argumentName. argument must exist. Let value be the value of argument.
 \* value must not be the null literal." Subjects are "field(arg)" or
@@ -818,7 +818,7 @@ Sections ==
     @@ ("LeafFieldSelections" :> "5.3.3")
     @@ ("ArgumentNames" :> "5.4.1")
     @@ ("ArgumentUniqueness" :> "5.4.2")
-    @@ ("RequiredArguments" :> "5.4.2.1")
+    @@ ("RequiredArguments" :> "5.4.3")
     @@ ("FragmentNameUniqueness" :> "5.5.1.1")
     @@ ("FragmentSpreadTypeExistence" :> "5.5.1.2")
     @@ ("FragmentsOnObjectInterfaceOrUnionTypes" :> "5.5.1.3")

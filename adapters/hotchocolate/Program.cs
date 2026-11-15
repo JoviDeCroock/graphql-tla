@@ -68,8 +68,8 @@ Send(new JsonObject
     ["protocol"] = 1,
     ["name"] = $"Hot Chocolate {version}",
     ["capabilities"] = idle
-        ? new JsonArray("idle", "invalid-results", "mutation", "subscription")
-        : new JsonArray("invalid-results", "mutation", "subscription"),
+        ? new JsonArray("idle", "invalid-results", "uncoercible-results", "mutation", "subscription")
+        : new JsonArray("invalid-results", "uncoercible-results", "mutation", "subscription"),
 });
 
 async Task StartAsync(JsonElement message)
@@ -269,6 +269,16 @@ namespace GraphQLTla.HotChocolate
                 case "leaf":
                     // At a list position (a wrong shape), the number 1.
                     return nullable.IsListType() ? 1 : Leaf(nullable.NamedType());
+                case "uncoercible":
+                    // A value the type can't represent: a fraction for an Int,
+                    // a non-finite number for a Float, a name that isn't one
+                    // of an enum's values.
+                    return nullable.NamedType() switch
+                    {
+                        EnumType => "NOT_A_VALUE",
+                        var named when named.Name == "Int" => 1.2,
+                        _ => double.PositiveInfinity,
+                    };
                 case "object":
                     return new TlaObject(outcome.GetProperty("type").GetString()!);
                 case "list":

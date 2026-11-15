@@ -32,6 +32,7 @@ export const CHECKS = [
   { id: "callsReachable", level: "MUST", spec: ["6.3.3", "6.4.3"], title: "A field executes only once its parent has a value that contains it" },
   { id: "eventYieldsResult", level: "MUST", spec: ["6.2.3.2"], title: "A subscription event yields an execution result, even when its data is null", subscriptionOnly: true },
   { id: "dataShape", level: "MUST", spec: ["7.1.5"], title: "data holds only positions the operation selects" },
+  { id: "resultCoercion", level: "MUST", spec: ["3.5.1", "3.5.2", "3.9", "6.4.3"], title: "A leaf value its type can't represent (a fraction for an Int, a non-finite Float, an unknown enum value) raises an execution error" },
   { id: "leafValues", level: "MUST", spec: ["6.4.3"], title: "Leaf values are the resolver's canonical value (Int 1, Float 1.5, Boolean true, an enum's first value, \"v\")" },
   { id: "dataPresent", level: "MUST", spec: ["7.1.1"], title: "An execution result has a data entry" },
   { id: "errorsList", level: "MUST", spec: ["7.1.1"], title: "errors, when present, is a non-empty list" },

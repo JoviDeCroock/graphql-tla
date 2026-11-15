@@ -10,6 +10,7 @@ import * as graphql from "graphql17";
 const NULL = { kind: "null" };
 const ERROR = { kind: "error" };
 const LEAF = { kind: "leaf" };
+const UNCOERCIBLE = { kind: "uncoercible" };
 // Stands in for the response when the adapter reports a stream error.
 const STREAM_FAILED = Symbol("stream failed");
 
@@ -26,7 +27,11 @@ const nullable = (type) => (graphql.isNonNullType(type) ? type.ofType : type);
 // `invalidResults` (the fixture asks for it and the adapter can), also
 // results of the wrong shape: an object for a scalar, a leaf for a list, and
 // a runtime type that isn't one of an abstract type's possible types.
-export const choicesFor = (fixture, type, invalidResults) => {
+// With `uncoercible` (the fixture asks for invalid results and the adapter
+// has `uncoercible-results`), also a value the leaf type can't represent:
+// a fraction for an Int, a non-finite number for a Float, a name that isn't
+// one of an enum's values (§3.5.1, §3.5.2, §3.9).
+export const choicesFor = (fixture, type, invalidResults, uncoercible = false) => {
   const inner = nullable(type);
   const objects = (names) => names.map((name) => ({ kind: "object", type: name }));
   if (graphql.isListType(inner)) {
@@ -41,7 +46,16 @@ export const choicesFor = (fixture, type, invalidResults) => {
   // §3.5 lets a String or ID be coerced from other values "where
   // reasonable", which is the implementation's call.
   const coercible = graphql.isScalarType(inner) && ["Int", "Float", "Boolean"].includes(inner.name);
-  if (graphql.isLeafType(inner)) return [NULL, ERROR, LEAF, ...(invalidResults && coercible ? objects([""]) : [])];
+  const representable = graphql.isEnumType(inner) || (graphql.isScalarType(inner) && ["Int", "Float"].includes(inner.name));
+  if (graphql.isLeafType(inner)) {
+    return [
+      NULL,
+      ERROR,
+      LEAF,
+      ...(invalidResults && coercible ? objects([""]) : []),
+      ...(uncoercible && representable ? [UNCOERCIBLE] : []),
+    ];
+  }
   if (!graphql.isAbstractType(inner)) return [NULL, ERROR, ...objects([inner.name])];
   const possible = fixture.schema.getPossibleTypes(inner).map((t) => t.name);
   const others = Object.values(fixture.schema.getTypeMap())
@@ -52,12 +66,12 @@ export const choicesFor = (fixture, type, invalidResults) => {
 
 // For an adapter without `deferred-items`, a list's items come with the
 // list: each item's outcome is chosen at once, and can't be an error.
-const inlineItems = (fixture, itemType, length, invalidResults, choose) =>
+const inlineItems = (fixture, itemType, length, invalidResults, uncoercible, choose) =>
   Array.from({ length }, () => {
-    const choices = choicesFor(fixture, itemType, invalidResults).filter((c) => c.kind !== "error");
+    const choices = choicesFor(fixture, itemType, invalidResults, uncoercible).filter((c) => c.kind !== "error");
     const outcome = choices[choose(choices.length, "outcome")];
     return outcome.kind === "list"
-      ? { ...outcome, items: inlineItems(fixture, nullable(itemType).ofType, outcome.length, invalidResults, choose) }
+      ? { ...outcome, items: inlineItems(fixture, nullable(itemType).ofType, outcome.length, invalidResults, uncoercible, choose) }
       : outcome;
   });
 
@@ -150,6 +164,7 @@ export class Driver {
   async run(fixture, choose) {
     const id = this.nextId++;
     const invalidResults = fixture.invalidResults && this.adapter.capabilities.has("invalid-results");
+    const uncoercible = fixture.invalidResults && this.adapter.capabilities.has("uncoercible-results");
     const run = { fixture, pending: [], trace: [], response: undefined, calls: new Set() };
     this.adapter.send({
       type: "execute",
@@ -167,10 +182,10 @@ export class Driver {
       if (run.pending.length === 0) throw new Error(`${fixture.id}: no response and no pending resolver`);
       if (++steps > 1000) throw new Error(`${fixture.id}: runaway execution`);
       const [next] = run.pending.splice(choose(run.pending.length, "which"), 1);
-      const choices = choicesFor(fixture, next.type, invalidResults);
+      const choices = choicesFor(fixture, next.type, invalidResults, uncoercible);
       let outcome = choices[choose(choices.length, "outcome")];
       if (outcome.kind === "list" && graphql.isListType(nullable(next.type)) && !this.deferredItems) {
-        outcome = { ...outcome, items: inlineItems(fixture, nullable(next.type).ofType, outcome.length, invalidResults, choose) };
+        outcome = { ...outcome, items: inlineItems(fixture, nullable(next.type).ofType, outcome.length, invalidResults, uncoercible, choose) };
       }
       const { items, ...plain } = outcome;
       run.trace.push({ settle: next.path, outcome: plain }, ...inlineSettles(next.path, next.type, outcome));

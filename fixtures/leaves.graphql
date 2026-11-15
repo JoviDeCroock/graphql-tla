@@ -1,0 +1,25 @@
+# Leaf result coercion (§3.5.1, §3.5.2, §3.9): a resolver value that a leaf
+# type can't represent without losing information must raise an execution
+# error. To adapters with `uncoercible-results`, the kit sends a fraction
+# for an Int, a non-finite number for a Float and a name that isn't one of
+# an enum's values.
+# maxListLength: 0
+# invalidResults: true
+# spec: 3.5.1, 3.5.2, 3.9, 6.4.3
+
+enum Color {
+  RED
+  GREEN
+}
+
+type Query {
+  count: Int
+  ratio: Float
+  color: Color
+}
+
+query {
+  count
+  ratio
+  color
+}

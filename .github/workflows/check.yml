@@ -15,6 +15,7 @@ jobs:
         task:
           - check:specs
           - check:graphql-js
+          - check:vectors
           - check:differentials
           - check:mutants
     name: ${{ matrix.task }}

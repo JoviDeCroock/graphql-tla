@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import {
   Kind,
   buildASTSchema,
+  isEnumType,
   isInterfaceType,
   isObjectType,
   isScalarType,
@@ -92,11 +93,14 @@ const readFixture = (file) => {
   const types = {};
   for (const type of Object.values(schema.getTypeMap())) {
     if (type.name.startsWith("__")) continue;
-    if (!isObjectType(type) && !isInterfaceType(type) && !isUnionType(type) && !isScalarType(type)) {
+    if (!isObjectType(type) && !isInterfaceType(type) && !isUnionType(type) && !isScalarType(type) && !isEnumType(type)) {
       throw new Error(`${file}: ${type.name} is a kind of type the specs don't model`);
     }
+    // The specs treat an enum as a scalar: both are leaf types, and leaf
+    // values are abstracted away. The kit checks the values themselves.
+    const leaf = isScalarType(type) || isEnumType(type);
     const fields = {};
-    if (!isScalarType(type) && !isUnionType(type)) {
+    if (!leaf && !isUnionType(type)) {
       for (const field of Object.values(type.getFields())) fields[field.name] = typeRef(field.astNode.type);
     }
     types[type.name] = {
@@ -110,7 +114,7 @@ const readFixture = (file) => {
       fields,
       possibleTypes: isObjectType(type)
         ? [type.name]
-        : isScalarType(type)
+        : leaf
           ? []
           : schema.getPossibleTypes(type).map((t) => t.name).sort(),
     };

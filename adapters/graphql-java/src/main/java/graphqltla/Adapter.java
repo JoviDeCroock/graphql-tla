@@ -129,6 +129,14 @@ public final class Adapter {
             case "leaf":
                 // At a list position (a wrong shape), the number 1.
                 return nullable instanceof GraphQLList ? 1 : leafValue(nullable);
+            case "uncoercible": {
+                // A value the type can't represent: a fraction for an Int, a
+                // non-finite number for a Float, a name that isn't one of an
+                // enum's values.
+                GraphQLNamedType named = GraphQLTypeUtil.unwrapAllAs(nullable);
+                if (named instanceof GraphQLEnumType) return "NOT_A_VALUE";
+                return "Int".equals(named.getName()) ? (Object) 1.2 : (Object) Double.POSITIVE_INFINITY;
+            }
             case "object": {
                 Map<String, Object> object = new LinkedHashMap<>();
                 object.put("__typename", outcome.get("type").asText());
@@ -410,6 +418,7 @@ public final class Adapter {
         List<String> capabilities = new ArrayList<>();
         if (idle) capabilities.add("idle");
         capabilities.add("invalid-results");
+        capabilities.add("uncoercible-results");
         capabilities.add("mutation");
         capabilities.add("subscription");
         capabilities.add("error-propagation-off");

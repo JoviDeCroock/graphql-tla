@@ -1,7 +1,7 @@
 ---- MODULE Parser ----
 (***************************************************************************)
 (* The syntactic grammar of executable documents, written by hand from the *)
-(* spec (https://spec.graphql.org/draft/, §2.2 to §2.12): a recursive-     *)
+(* spec (https://spec.graphql.org/draft/, §2.3 to §2.13): a recursive-     *)
 (* descent reading of ExecutableDocument over the tokens of Lexer.tla.      *)
 (*                                                                         *)
 (* "The lexical token sequence, omitting Ignored, must be described by a   *)
@@ -89,7 +89,7 @@ OptionalDescription(toks, k) ==
   ELSE Done(NoNode, k)
 
 -----------------------------------------------------------------------------
-(* §2.9 Input Values and §2.10 Variables *)
+(* §2.10 Input Values and §2.11 Variables *)
 
 \* Variable : $ Name
 VariableAt(toks, k) ==
@@ -137,7 +137,7 @@ ObjectFields(toks, k, const, items) ==
        ELSE value
 
 -----------------------------------------------------------------------------
-(* §2.6 Arguments and §2.12 Directives *)
+(* §2.7 Arguments and §2.13 Directives *)
 
 \* Argument[Const] : Name : Value[?Const]
 ArgumentAt(toks, k, const) ==
@@ -174,7 +174,7 @@ DirectiveList(toks, k, const, items) ==
 OptionalDirectives(toks, k, const) == DirectiveList(toks, k, const, <<>>)
 
 -----------------------------------------------------------------------------
-(* §2.11 Type References *)
+(* §2.12 Type References *)
 
 \* NamedType : Name
 NamedType(toks, k) ==
@@ -229,7 +229,7 @@ OptionalVariablesDefinition(toks, k) ==
   ELSE Done(Items("VariablesDefinition", <<>>), k)
 
 -----------------------------------------------------------------------------
-(* §2.4 Selection Sets, §2.5 Fields, §2.8 Fragments *)
+(* §2.5 Selection Sets, §2.6 Fields, §2.9 Fragments *)
 
 \* FragmentName : Name but not `on`
 FragmentName(toks, k) == IF IsKeyword(toks, k, KwOn) THEN Fail(k) ELSE NameNode(toks, k)
@@ -298,7 +298,7 @@ InlineFragment(toks, k) ==
             Done(Node("InlineFragment", <<>>, <<condition.node, directives.node, set.node>>), set.next)
 
 -----------------------------------------------------------------------------
-(* §2.2 Document, §2.3 Operations, §2.8 Fragments *)
+(* §2.3 Document, §2.4 Operations, §2.9 Fragments *)
 
 \* OperationDefinition : SelectionSet   (query shorthand)
 ShorthandQuery(toks, k) ==
