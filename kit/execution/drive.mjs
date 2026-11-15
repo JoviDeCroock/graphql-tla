@@ -10,6 +10,8 @@ import * as graphql from "graphql17";
 const NULL = { kind: "null" };
 const ERROR = { kind: "error" };
 const LEAF = { kind: "leaf" };
+// Stands in for the response when the adapter reports a stream error.
+const STREAM_FAILED = Symbol("stream failed");
 
 // The type named in a call, against the fixture's schema.
 const typeOf = (fixture, name) => {
@@ -68,8 +70,8 @@ const inlineSettles = (path, type, outcome) =>
         const itemPath = [...path, String(i)];
         const { items, ...plain } = item;
         return [
-          { call: itemPath, type: itemType },
-          { settle: itemPath, outcome: plain },
+          { call: itemPath, type: itemType, inline: true },
+          { settle: itemPath, outcome: plain, inline: true },
           ...inlineSettles(itemPath, nullable(type).ofType, item),
         ];
       });
@@ -99,7 +101,7 @@ export class Driver {
       if (message.id !== id) {
         // A late message from an earlier execution: the engine may still
         // call abandoned resolvers, but it must not respond twice.
-        if (this.finished.has(message.id) && message.type === "response") {
+        if (this.finished.has(message.id) && (message.type === "response" || message.type === "stream-error")) {
           throw new Error(`a second response for execution ${message.id}: ${JSON.stringify(message.response)}`);
         }
         continue;
@@ -117,11 +119,14 @@ export class Driver {
         if (run.response === undefined) {
           run.trace.push({ call: path, type: message.returnType, ...(Number.isInteger(message.after) ? { after: message.after } : {}) });
         }
-      } else if (message.type === "response") {
+      } else if (message.type === "response" || message.type === "stream-error") {
         if (run.response !== undefined) {
-          throw new Error(`${run.fixture.id}: a second response for one execution: ${JSON.stringify(message.response)}`);
+          throw new Error(`${run.fixture.id}: a second response for one execution: ${JSON.stringify(message)}`);
         }
-        run.response = message.response;
+        // A subscription's response stream that failed instead of yielding
+        // the event's result: the client got no execution result.
+        if (message.type === "stream-error") run.streamError = String(message.message ?? "");
+        run.response = message.type === "response" ? message.response : STREAM_FAILED;
       } else {
         throw new Error(`${run.fixture.id}: unexpected message ${JSON.stringify(message)}`);
       }
@@ -134,7 +139,7 @@ export class Driver {
     for (;;) {
       const message = await this.adapter.next(wait);
       if (message === null) return;
-      if (message.type === "response" && this.finished.has(message.id)) {
+      if ((message.type === "response" || message.type === "stream-error") && this.finished.has(message.id)) {
         throw new Error(`a second response for execution ${message.id}: ${JSON.stringify(message.response)}`);
       }
     }
@@ -178,7 +183,7 @@ export class Driver {
       fixture: fixture.id,
       implementation: this.adapter.name,
       trace: run.trace,
-      response: run.response,
+      ...(run.response === STREAM_FAILED ? { streamError: run.streamError } : { response: run.response }),
     };
   }
 }

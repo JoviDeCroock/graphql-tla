@@ -296,15 +296,21 @@ RootsBefore(fx, O, i) ==
 \* every error raised under earlier root fields has been raised and can't
 \* be cancelled. Each must be reported unless an earlier error had already
 \* nulled its position (graphql-spec#1184), even if root field i then
-\* nulls data.
+\* nulls data. That exemption can't swallow every cause of a null: each
+\* null the earlier root fields produced still needs an error from its
+\* cause, so the error that nulled `first` stays even once `second` nulls
+\* data.
 SerialErrorsKept(fx, O, errors) ==
   fx.operationType # "mutation" \/
     \A i \in 2..Len(RootGroups(fx)) :
       LET before == RootsBefore(fx, O, i)
+          prefix == ExecuteQuery(fx, before)
           started == \E p \in DOMAIN O : p[1] = RootGroups(fx)[i].key
       IN started =>
-           \A p \in ExecuteQuery(fx, before).raised :
-             IsNulledAbove(fx, before, p) \/ \E e \in DOMAIN errors : errors[e] = p
+           /\ \A p \in prefix.raised :
+                IsNulledAbove(fx, before, p) \/ \E e \in DOMAIN errors : errors[e] = p
+           /\ \A null \in prefix.nulls :
+                \E e \in DOMAIN errors : errors[e] \in null.cause
 
 \* Two JSON values are the same up to the order of object keys.
 RECURSIVE SameJson(_, _)

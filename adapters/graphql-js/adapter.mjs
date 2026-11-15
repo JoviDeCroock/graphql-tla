@@ -12,10 +12,21 @@
 // response on purpose, to see what the kit reports for a broken
 // implementation: drop-errors, reverse-keys or wrong-leaf.
 
+import { existsSync } from "node:fs";
 import { createInterface } from "node:readline";
 
 const version = process.argv[process.argv.indexOf("--graphql") + 1];
 const graphql = version === "16" ? await import("graphql16") : await import("graphql17");
+
+// The kit's other areas (docs/conformance.md): each one this adapter
+// answers is a module in areas/, whose default export maps a request to the
+// result's fields.
+const AREAS = ["parse", "validate", "coerce", "schema", "introspect"];
+const areas = new Map();
+for (const area of AREAS) {
+  const file = new URL(`./areas/${area}.mjs`, import.meta.url);
+  if (existsSync(file)) areas.set(area, (await import(file.href)).default);
+}
 
 const idle = !process.argv.includes("--no-idle");
 const fault = process.argv.includes("--fault") ? process.argv[process.argv.indexOf("--fault") + 1] : "";
@@ -48,6 +59,7 @@ send({
     "subscription",
     // @experimental_disableErrorPropagation is new in graphql-js 17.
     ...(version === "16" ? [] : ["error-propagation-off"]),
+    ...areas.keys(),
   ],
 });
 
@@ -139,6 +151,14 @@ const settle = ({ id, call, outcome }) => {
 for await (const line of createInterface({ input: process.stdin })) {
   if (!line.trim()) continue;
   const message = JSON.parse(line);
+  if (areas.has(message.type)) {
+    try {
+      send({ type: "result", id: message.id, ...(await areas.get(message.type)(graphql, message)) });
+    } catch (error) {
+      send({ type: "error", id: message.id, message: String(error?.stack ?? error) });
+    }
+    continue;
+  }
   if (message.type === "execute") start(message);
   else if (message.type === "settle") settle(message);
   else if (message.type === "end") {

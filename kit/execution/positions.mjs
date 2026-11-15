@@ -28,6 +28,24 @@ export const positions = (fixture, trace) => {
         ? schema.getMutationType()
         : schema.getSubscriptionType();
 
+  // §6.3.2 CollectFields skips a selection whose @skip(if:) is true or whose
+  // @include(if:) is false, with variables from the fixture or their defaults.
+  const defaults = Object.fromEntries(
+    (operation.variableDefinitions ?? [])
+      .filter((v) => v.defaultValue)
+      .map((v) => [v.variable.name.value, graphql.valueFromASTUntyped(v.defaultValue)]),
+  );
+  const argument = (directive) => {
+    const value = directive.arguments?.find((a) => a.name.value === "if")?.value;
+    if (!value) return undefined;
+    if (value.kind === graphql.Kind.VARIABLE) return { ...defaults, ...fixture.variables }[value.name.value];
+    return graphql.valueFromASTUntyped(value);
+  };
+  const included = (node) =>
+    (node.directives ?? []).every((d) =>
+      d.name.value === "skip" ? argument(d) !== true : d.name.value === "include" ? argument(d) === true : true,
+    );
+
   const applies = (objectType, condition) => {
     if (!condition) return true;
     const type = schema.getType(condition.name.value);
@@ -39,6 +57,7 @@ export const positions = (fixture, trace) => {
   const fieldsFor = (objectType, selectionSets, responseKey, seen = new Set()) =>
     selectionSets.flatMap((set) =>
       set.selections.flatMap((s) => {
+        if (!included(s)) return [];
         if (s.kind === graphql.Kind.FIELD) return (s.alias ?? s.name).value === responseKey ? [s] : [];
         if (s.kind === graphql.Kind.INLINE_FRAGMENT) {
           return applies(objectType, s.typeCondition) ? fieldsFor(objectType, [s.selectionSet], responseKey, seen) : [];

@@ -24,6 +24,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Adapter } from "./adapter.mjs";
+import { AREAS } from "./areas.mjs";
 import { CASE_FORMAT, check } from "./execution/check.mjs";
 import { Driver, exhaustive, random } from "./execution/drive.mjs";
 import { loadFixtures } from "./fixtures.mjs";
@@ -40,9 +41,10 @@ const [command, area, file] = argv;
 const usage = () => {
   console.error('usage: graphql-tla run execution --adapter "<command>" [options]');
   console.error("       graphql-tla check execution <cases.jsonl> [--strict]");
+  console.error(`       graphql-tla run <${AREAS.filter((a) => a !== "execution").join("|")}> --adapter "<command>" [--strict] [--report FILE]`);
   process.exit(2);
 };
-if (area !== "execution" || !["run", "check"].includes(command)) usage();
+if (!AREAS.includes(area) || !["run", "check"].includes(command) || (command === "check" && area !== "execution")) usage();
 
 const only = option("--fixtures", "")?.split(",").filter(Boolean);
 const allFixtures = loadFixtures(join(root, "fixtures"));
@@ -73,6 +75,25 @@ const adapterCommand = option("--adapter");
 if (!adapterCommand) usage();
 const adapter = new Adapter(adapterCommand);
 let ok = false;
+
+// Areas other than execution: kit/<area>/run.mjs exports
+// run({ adapter, strict, option, flag, log }), which returns { ok, report }.
+if (area !== "execution") {
+  try {
+    await adapter.hello();
+    console.log(`${adapter.name} (capabilities: ${[...adapter.capabilities].sort().join(", ")})`);
+    if (!adapter.capabilities.has(area)) throw new Error(`the adapter doesn't claim the ${area} capability`);
+    const { run } = await import(`./${area}/run.mjs`);
+    const result = await run({ adapter, strict, option, flag, log: console.log });
+    writeReport(result.report);
+    ok = result.ok;
+  } catch (error) {
+    console.error(`✗ ${error.message}`);
+  }
+  adapter.close();
+  process.exit(ok ? 0 : 1);
+}
+
 try {
   await adapter.hello();
   const driver = new Driver(adapter, { grace: Number(option("--grace", 50)) });
@@ -85,7 +106,17 @@ try {
   if (driver.idle) {
     for (const fixture of fixtures.filter((f) => f.requires.every((c) => adapter.capabilities.has(c)))) {
       const [a, b] = [await random(driver, fixture, 5, 99), await random(driver, fixture, 5, 99)];
-      const strip = (runs) => JSON.stringify(runs.map((r) => [r.trace, r.response]));
+      // What scheduling decides: the trace, data and error paths. Error
+      // messages, order and extensions may legitimately differ.
+      const strip = (runs) =>
+        JSON.stringify(
+          runs.map((r) => [
+            r.trace,
+            r.streamError !== undefined,
+            r.response?.data,
+            (Array.isArray(r.response?.errors) ? r.response.errors.map((e) => JSON.stringify(e?.path ?? null)) : []).sort(),
+          ]),
+        );
       if (strip(a) !== strip(b)) {
         throw new Error(`the adapter reports idle, but replaying ${fixture.id} with the same choices gave different results`);
       }
@@ -121,6 +152,7 @@ try {
     implementation: adapter.name,
     capabilities: [...adapter.capabilities],
     skipped,
+    run: { random: count, seed, exhaustive: Boolean(runExhaustive) },
   });
   writeReport(result.report);
   ok = result.ok && cases.length > 0;

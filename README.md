@@ -74,9 +74,10 @@ An adapter is a small program that speaks newline-delimited JSON. It builds the 
 | --- | --- | --- |
 | [`graphql-js`](adapters/graphql-js) | graphql-js 16.15 and 17.1 | The reference adapter, about 150 lines. Passes `--strict`. |
 | [`graphql-java`](adapters/graphql-java) | graphql-java 26.2 | Passes everything except one subscription case: when an event's Non-Null root field is null, the response stream errors out instead of sending `{ data: null, errors }`. |
+| [`hotchocolate`](adapters/hotchocolate) | Hot Chocolate 15.1.21 (.NET) | Passes everything except one case: when a list item at a Non-Null position is null, the list is nulled but no error is reported (§6.4.3, §6.4.4). |
 | [`async-graphql`](adapters/async-graphql) | async-graphql 7.0.17, dynamic schemas | Its dynamic schema API breaks four rules: resolver errors have no `path`; errors don't stop at the nearest nullable field; an explicit null isn't treated as null; merged fields run their resolver twice. |
 
-The kit checks the checker too. Every run evaluates a shipped corpus of 17 negative controls, and each must be caught by the clause it names.
+The kit checks the checker too. Every run evaluates a shipped corpus of 22 negative controls, and each must be caught by the clause or check it names.
 
 **[The conformance sheet](conformance/README.md)** shows what each implementation was checked against and what it breaks, by spec section and by check, with the shortest failing case for each failure. Every cell is a count from a kit report (`--report`); `npm run conformance` regenerates it.
 

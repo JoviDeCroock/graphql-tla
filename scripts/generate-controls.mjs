@@ -61,7 +61,7 @@ for (const control of CONTROLS) {
   const results = await evaluate(evaluated.map((p) => p.tla));
   const resultOf = new Map(evaluated.map((p, i) => [p, results[i]]));
   const index = prepared.findIndex((p) =>
-    control.clause === "malformed" ? Boolean(p.problems) : !p.problems && resultOf.get(p).failures.includes(control.clause),
+    control.clause === "malformed" ? Boolean(p.problems) && p.ids.includes(control.check) : !p.problems && resultOf.get(p).failures.includes(control.clause),
   );
   if (index === -1) {
     console.log(`✗ no base case can be broken into "${control.name}"`);
@@ -70,7 +70,7 @@ for (const control of CONTROLS) {
   }
   const { base, broken } = tries[index];
   if (!bases.includes(base)) bases.push(base);
-  controls.push({ name: control.name, clause: control.clause, base: bases.indexOf(base), case: broken });
+  controls.push({ name: control.name, clause: control.clause, ...(control.check ? { check: control.check } : {}), base: bases.indexOf(base), case: broken });
   console.log(`✓ ${control.name} (${control.clause}), from a ${base.fixture} case`);
 }
 

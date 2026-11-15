@@ -14,7 +14,8 @@ const withoutErrors = (response, keep) => {
 };
 const firstValueKey = (data) => data && Object.entries(data).find(([, v]) => v !== null)?.[0];
 
-// Each control: a name, what must catch it (a clause, or "malformed"), and
+// Each control: a name, what must catch it (a clause, or "malformed" with
+// the check in kit/execution/checks.mjs it must break), and
 // `make(case, fixture)`, which returns broken variants of a case (any of
 // which may be used) or [] if the case doesn't fit.
 export const CONTROLS = [
@@ -86,6 +87,16 @@ export const CONTROLS = [
         : [],
   },
   {
+    name: "drops the error that nulled an earlier mutation root field",
+    clause: "serialErrorsKept",
+    make: (c, fixture) =>
+      fixture.operationType === "mutation" && c.response.data === null && c.response.errors?.length > 1
+        ? c.response.errors
+            .filter((e) => e.path.length > 1 && e.path[0] !== c.response.errors.at(-1).path[0])
+            .map((dropped) => ({ response: withoutErrors(c.response, (e) => e !== dropped) }))
+        : [],
+  },
+  {
     name: "responds while a resolver it needs is pending",
     clause: "complete",
     make: (c) => {
@@ -109,6 +120,7 @@ export const CONTROLS = [
   {
     name: "writes a list index in an error path as a string",
     clause: "malformed",
+    check: "responsePosition",
     make: (c) => {
       const error = c.response.errors?.find((e) => e.path.some((s) => typeof s === "number"));
       if (!error) return [];
@@ -119,11 +131,13 @@ export const CONTROLS = [
   {
     name: "adds an entry to the response",
     clause: "malformed",
+    check: "additionalEntries",
     make: (c) => [{ response: { ...c.response, status: "ok" } }],
   },
   {
     name: "leaves out data",
     clause: "malformed",
+    check: "dataPresent",
     make: (c) => {
       const { data: _, ...rest } = c.response;
       return [{ response: rest }];
@@ -132,6 +146,7 @@ export const CONTROLS = [
   {
     name: "returns a leaf other than the canonical value",
     clause: "malformed",
+    check: "leafValues",
     make: (c) => {
       const text = JSON.stringify(c.response);
       return /"v"/.test(text) ? [{ response: JSON.parse(text.replace(/"v"/, '"w"')) }] : [];
@@ -140,14 +155,66 @@ export const CONTROLS = [
   {
     name: "calls a resolver twice",
     clause: "malformed",
+    check: "callsOnce",
     make: (c) => {
       const call = c.trace.find((e) => e.call);
       return call ? [{ trace: [...c.trace, call] }] : [];
     },
   },
   {
+    name: "calls a field that @include(if: false) leaves out",
+    clause: "malformed",
+    check: "callsSelected",
+    make: (c) => {
+      if (c.fixture !== "fragments") return [];
+      const i = c.trace.findIndex((e) => e.settle?.length === 1 && e.settle[0] === "node" && e.outcome.kind === "object");
+      if (i === -1) return [];
+      const trace = clone(c.trace);
+      trace.splice(i + 1, 0, { call: ["node", "key"], type: "ID!" }, { settle: ["node", "key"], outcome: { kind: "leaf" } });
+      return [{ trace }];
+    },
+  },
+  {
+    name: "calls a field before its parent has a value",
+    clause: "malformed",
+    check: "callsReachable",
+    make: (c) => {
+      const i = c.trace.findLastIndex((e) => e.call && e.call.length > 1);
+      if (i === -1) return [];
+      const trace = clone(c.trace);
+      const [call] = trace.splice(i, 1);
+      return [{ trace: [call, ...trace] }];
+    },
+  },
+  {
+    name: "calls a list item past the list's length",
+    clause: "malformed",
+    check: "callsReachable",
+    make: (c) => {
+      const i = c.trace.findIndex((e) => e.settle && e.outcome.kind === "list");
+      if (i === -1) return [];
+      const { settle, outcome } = c.trace[i];
+      const trace = clone(c.trace);
+      trace.splice(i + 1, 0, { call: [...settle, String(outcome.length)], type: "Int!" });
+      return [{ trace }];
+    },
+  },
+  {
+    name: "stamps a call with a negative after",
+    clause: "malformed",
+    check: "protocol",
+    make: (c) => {
+      const i = c.trace.findIndex((e) => e.call && Number.isInteger(e.after));
+      if (i === -1) return [];
+      const trace = clone(c.trace);
+      trace[i].after = -1;
+      return [{ trace }];
+    },
+  },
+  {
     name: "reports the wrong type for a call",
     clause: "malformed",
+    check: "protocol",
     make: (c) => {
       const i = c.trace.findIndex((e) => e.call && e.type !== "Boolean");
       if (i === -1) return [];

@@ -1,10 +1,51 @@
 {
-  "comment": "How scripts/conformance-reports.mjs runs each implementation. Build the adapter first (see its README). Each env value may use ~ for the home directory.",
+  "comment": "How scripts/conformance-reports.mjs runs each implementation. Build the adapter first (see its README). env values may use ~ for the home directory. notes are hand-written and shown, labelled as such, on the implementation's page.",
   "implementations": [
-    { "key": "graphql-js-16", "adapter": "node adapters/graphql-js/adapter.mjs --graphql 16" },
-    { "key": "graphql-js-17", "adapter": "node adapters/graphql-js/adapter.mjs --graphql 17" },
-    { "key": "graphql-java", "adapter": "adapters/graphql-java/run.sh", "build": "adapters/graphql-java/target/graphql-java-adapter.jar", "env": { "JAVA_HOME": "~/.cache/graphql-tla-toolchains/jdk/Contents/Home" } },
-    { "key": "async-graphql", "adapter": "adapters/async-graphql/target/release/graphql-tla-async-graphql", "build": "adapters/async-graphql/target/release/graphql-tla-async-graphql" },
-    { "key": "hotchocolate", "adapter": "adapters/hotchocolate/run.sh", "build": "adapters/hotchocolate/bin" }
+    {
+      "key": "graphql-js-16",
+      "adapter": "node adapters/graphql-js/adapter.mjs --graphql 16",
+      "notes": [
+        "The kit doesn't cover parsing, validation, coercion or schema validity yet. graphql-js is checked against those references by the differential scripts, which document where it departs from the draft: [lexer and parser](../scripts/differential-lexer.mjs) (`KNOWN`), [validation](../scripts/differential-validation.mjs) (`DISCREPANCIES`), [coercion](../scripts/differential-coercion.mjs) (`KNOWN`) and [type system](../scripts/differential-type-system.mjs) (`VALIDATION_DEVIATIONS`).",
+        "Behaviour outside the kit's fixtures is described in the README's [What graphql-js does](../README.md#what-graphql-js-does)."
+      ]
+    },
+    {
+      "key": "graphql-js-17",
+      "adapter": "node adapters/graphql-js/adapter.mjs --graphql 17",
+      "notes": [
+        "The kit doesn't cover parsing, validation, coercion or schema validity yet. graphql-js is checked against those references by the differential scripts, which document where it departs from the draft: [lexer and parser](../scripts/differential-lexer.mjs) (`KNOWN`), [validation](../scripts/differential-validation.mjs) (`DISCREPANCIES`), [coercion](../scripts/differential-coercion.mjs) (`KNOWN`) and [type system](../scripts/differential-type-system.mjs) (`VALIDATION_DEVIATIONS`).",
+        "Behaviour outside the kit's fixtures is described in the README's [What graphql-js does](../README.md#what-graphql-js-does)."
+      ]
+    },
+    {
+      "key": "graphql-java",
+      "adapter": "adapters/graphql-java/run.sh",
+      "build": "adapters/graphql-java/target/graphql-java-adapter.jar",
+      "env": {
+        "JAVA_HOME": "~/.cache/graphql-tla-toolchains/jdk/Contents/Home"
+      },
+      "notes": [
+        "The subscription finding is described in the [adapter's README](../adapters/graphql-java/README.md#known-graphql-java-deviation)."
+      ]
+    },
+    {
+      "key": "async-graphql",
+      "adapter": "adapters/async-graphql/target/release/graphql-tla-async-graphql",
+      "build": "adapters/async-graphql/target/release/graphql-tla-async-graphql",
+      "notes": [
+        "The adapter uses async-graphql's dynamic schema API (`async_graphql::dynamic`). The derive-macro API may behave differently. See the [adapter's README](../adapters/async-graphql/README.md)."
+      ]
+    },
+    {
+      "key": "hotchocolate",
+      "adapter": "adapters/hotchocolate/run.sh --idle",
+      "build": "adapters/hotchocolate/bin/Release",
+      "env": {
+        "DOTNET_ROOT": "~/.cache/graphql-tla-toolchains/dotnet"
+      },
+      "notes": [
+        "The sheet runs the adapter with `--idle`, which claims `idle` by waiting for .NET's thread pool to go quiet: runtime behaviour, not something Hot Chocolate promises. The kit's determinism replay passed, and a run without `--idle` (grace-based, random runs only) found the same failures. See the [adapter's README](../adapters/hotchocolate/README.md)."
+      ]
+    }
   ]
 }

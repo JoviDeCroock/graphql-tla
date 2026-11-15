@@ -355,6 +355,90 @@
   },
   {
    "v": 1,
+   "fixture": "mutation",
+   "trace": [
+    {
+     "call": [
+      "first"
+     ],
+     "type": "Payload",
+     "after": 0
+    },
+    {
+     "settle": [
+      "first"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "Payload"
+     }
+    },
+    {
+     "call": [
+      "first",
+      "likes"
+     ],
+     "type": "Int!",
+     "after": 1
+    },
+    {
+     "settle": [
+      "first",
+      "likes"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "call": [
+      "second"
+     ],
+     "type": "Payload!",
+     "after": 2
+    },
+    {
+     "settle": [
+      "second"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "response": {
+    "errors": [
+     {
+      "message": "Cannot return null for non-nullable field Payload.likes.",
+      "locations": [
+       {
+        "line": 3,
+        "column": 5
+       }
+      ],
+      "path": [
+       "first",
+       "likes"
+      ]
+     },
+     {
+      "message": "Cannot return null for non-nullable field Mutation.second.",
+      "locations": [
+       {
+        "line": 5,
+        "column": 3
+       }
+      ],
+      "path": [
+       "second"
+      ]
+     }
+    ],
+    "data": null
+   }
+  },
+  {
+   "v": 1,
    "fixture": "fragments",
    "trace": [
     {
@@ -548,6 +632,73 @@
     "data": {
      "version": "v",
      "user": null
+    }
+   }
+  },
+  {
+   "v": 1,
+   "fixture": "fragments",
+   "trace": [
+    {
+     "call": [
+      "node"
+     ],
+     "type": "Node",
+     "after": 0
+    },
+    {
+     "settle": [
+      "node"
+     ],
+     "outcome": {
+      "kind": "object",
+      "type": "Bot"
+     }
+    },
+    {
+     "call": [
+      "node",
+      "id"
+     ],
+     "type": "ID!",
+     "after": 1
+    },
+    {
+     "call": [
+      "node",
+      "nodeId"
+     ],
+     "type": "ID!",
+     "after": 1
+    },
+    {
+     "settle": [
+      "node",
+      "id"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "response": {
+    "errors": [
+     {
+      "message": "Cannot return null for non-nullable field Bot.id.",
+      "locations": [
+       {
+        "line": 3,
+        "column": 5
+       }
+      ],
+      "path": [
+       "node",
+       "id"
+      ]
+     }
+    ],
+    "data": {
+     "node": null
     }
    }
   }
@@ -1056,9 +1207,85 @@
    }
   },
   {
+   "name": "drops the error that nulled an earlier mutation root field",
+   "clause": "serialErrorsKept",
+   "base": 6,
+   "case": {
+    "v": 1,
+    "fixture": "mutation",
+    "trace": [
+     {
+      "call": [
+       "first"
+      ],
+      "type": "Payload",
+      "after": 0
+     },
+     {
+      "settle": [
+       "first"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "Payload"
+      }
+     },
+     {
+      "call": [
+       "first",
+       "likes"
+      ],
+      "type": "Int!",
+      "after": 1
+     },
+     {
+      "settle": [
+       "first",
+       "likes"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "call": [
+       "second"
+      ],
+      "type": "Payload!",
+      "after": 2
+     },
+     {
+      "settle": [
+       "second"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "data": null,
+     "errors": [
+      {
+       "message": "Cannot return null for non-nullable field Mutation.second.",
+       "locations": [
+        {
+         "line": 5,
+         "column": 3
+        }
+       ],
+       "path": [
+        "second"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
    "name": "responds while a resolver it needs is pending",
    "clause": "complete",
-   "base": 6,
+   "base": 7,
    "case": {
     "v": 1,
     "fixture": "fragments",
@@ -1081,7 +1308,7 @@
   {
    "name": "calls a mutation's root fields at once",
    "clause": "calledSerially",
-   "base": 7,
+   "base": 8,
    "case": {
     "v": 1,
     "fixture": "mutation",
@@ -1139,7 +1366,8 @@
   {
    "name": "writes a list index in an error path as a string",
    "clause": "malformed",
-   "base": 8,
+   "check": "responsePosition",
+   "base": 9,
    "case": {
     "v": 1,
     "fixture": "lists",
@@ -1221,7 +1449,8 @@
   {
    "name": "adds an entry to the response",
    "clause": "malformed",
-   "base": 6,
+   "check": "additionalEntries",
+   "base": 7,
    "case": {
     "v": 1,
     "fixture": "fragments",
@@ -1253,7 +1482,8 @@
   {
    "name": "leaves out data",
    "clause": "malformed",
-   "base": 6,
+   "check": "dataPresent",
+   "base": 7,
    "case": {
     "v": 1,
     "fixture": "fragments",
@@ -1280,7 +1510,8 @@
   {
    "name": "returns a leaf other than the canonical value",
    "clause": "malformed",
-   "base": 9,
+   "check": "leafValues",
+   "base": 10,
    "case": {
     "v": 1,
     "fixture": "noPropagation",
@@ -1327,7 +1558,8 @@
   {
    "name": "calls a resolver twice",
    "clause": "malformed",
-   "base": 6,
+   "check": "callsOnce",
+   "base": 7,
    "case": {
     "v": 1,
     "fixture": "fragments",
@@ -1363,9 +1595,260 @@
    }
   },
   {
+   "name": "calls a field that @include(if: false) leaves out",
+   "clause": "malformed",
+   "check": "callsSelected",
+   "base": 11,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "Bot"
+      }
+     },
+     {
+      "call": [
+       "node",
+       "key"
+      ],
+      "type": "ID!"
+     },
+     {
+      "settle": [
+       "node",
+       "key"
+      ],
+      "outcome": {
+       "kind": "leaf"
+      }
+     },
+     {
+      "call": [
+       "node",
+       "id"
+      ],
+      "type": "ID!",
+      "after": 1
+     },
+     {
+      "call": [
+       "node",
+       "nodeId"
+      ],
+      "type": "ID!",
+      "after": 1
+     },
+     {
+      "settle": [
+       "node",
+       "id"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "errors": [
+      {
+       "message": "Cannot return null for non-nullable field Bot.id.",
+       "locations": [
+        {
+         "line": 3,
+         "column": 5
+        }
+       ],
+       "path": [
+        "node",
+        "id"
+       ]
+      }
+     ],
+     "data": {
+      "node": null
+     }
+    }
+   }
+  },
+  {
+   "name": "calls a field before its parent has a value",
+   "clause": "malformed",
+   "check": "callsReachable",
+   "base": 11,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node",
+       "nodeId"
+      ],
+      "type": "ID!",
+      "after": 1
+     },
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "object",
+       "type": "Bot"
+      }
+     },
+     {
+      "call": [
+       "node",
+       "id"
+      ],
+      "type": "ID!",
+      "after": 1
+     },
+     {
+      "settle": [
+       "node",
+       "id"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "errors": [
+      {
+       "message": "Cannot return null for non-nullable field Bot.id.",
+       "locations": [
+        {
+         "line": 3,
+         "column": 5
+        }
+       ],
+       "path": [
+        "node",
+        "id"
+       ]
+      }
+     ],
+     "data": {
+      "node": null
+     }
+    }
+   }
+  },
+  {
+   "name": "calls a list item past the list's length",
+   "clause": "malformed",
+   "check": "callsReachable",
+   "base": 1,
+   "case": {
+    "v": 1,
+    "fixture": "lists",
+    "trace": [
+     {
+      "call": [
+       "posts"
+      ],
+      "type": "[Post!]",
+      "after": 0
+     },
+     {
+      "call": [
+       "tags"
+      ],
+      "type": "[String]!",
+      "after": 0
+     },
+     {
+      "settle": [
+       "posts"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "tags"
+      ],
+      "outcome": {
+       "kind": "list",
+       "length": 0
+      }
+     },
+     {
+      "call": [
+       "tags",
+       "0"
+      ],
+      "type": "Int!"
+     }
+    ],
+    "response": {
+     "data": {
+      "posts": null,
+      "tags": []
+     }
+    }
+   }
+  },
+  {
+   "name": "stamps a call with a negative after",
+   "clause": "malformed",
+   "check": "protocol",
+   "base": 7,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": -1
+     },
+     {
+      "settle": [
+       "node"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "data": {
+      "node": null
+     }
+    }
+   }
+  },
+  {
    "name": "reports the wrong type for a call",
    "clause": "malformed",
-   "base": 6,
+   "check": "protocol",
+   "base": 7,
    "case": {
     "v": 1,
     "fixture": "fragments",

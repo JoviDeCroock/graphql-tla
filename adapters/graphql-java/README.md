@@ -62,4 +62,4 @@ doesn't publish `{"data": null, "errors": [...]}` (§6.4.4). The event's
 `NonNullableFieldWasNullException` fails the mapped future, and
 `CompletionStageSubscriber` ends the response stream with `onError`. A client
 gets no execution result, only the stream error, so the adapter reports a
-response with only `errors`, which the kit rejects as malformed.
+`stream-error`, which the kit counts against `eventYieldsResult` (§6.2.3.2).

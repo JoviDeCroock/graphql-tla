@@ -305,10 +305,11 @@ public final class Adapter {
             if (error != null) {
                 send(msg("type", "error", "id", id, "message", String.valueOf(error)));
             } else if (!execution.ended) {
-                Map<String, Object> body = response instanceof StreamError e
-                        ? msg("errors", List.of(msg("message", e.message)))
-                        : response.toSpecification();
-                send(msg("type", "response", "id", id, "response", body));
+                if (response instanceof StreamError e) {
+                    send(msg("type", "stream-error", "id", id, "message", e.message));
+                } else {
+                    send(msg("type", "response", "id", id, "response", response.toSpecification()));
+                }
             }
         });
     }
@@ -338,9 +339,10 @@ public final class Adapter {
             // graphql-java ends the response stream with an error, instead of
             // publishing a result, when the event's data is nulled (a Non-Null
             // root field that is null). A client gets no execution result then,
-            // only the stream error, so the adapter reports a response with only
-            // `errors`, which the kit rejects as malformed, rather than stopping
-            // the run. A known graphql-java deviation (README.md).
+            // only the stream error, so the adapter reports it as a
+            // `stream-error`, which the kit counts against eventYieldsResult,
+            // rather than stopping the run. A known graphql-java deviation
+            // (README.md).
             @Override
             public void onError(Throwable t) {
                 Throwable cause = t instanceof java.util.concurrent.CompletionException && t.getCause() != null ? t.getCause() : t;
