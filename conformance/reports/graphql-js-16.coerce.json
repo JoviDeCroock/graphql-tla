@@ -19,7 +19,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "ea0905982bf7",
+    "kit": "5da3deb09c91",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 2036,
@@ -31,7 +31,7 @@
       "big JSON numbers graded under jsonNumbers"
     ]
   },
-  "checkerSelfTest": "passed (11732 negative controls)",
+  "checkerSelfTest": "passed (16593 negative controls)",
   "cases": {
     "submitted": 2036,
     "distinct": 2036,
@@ -358,6 +358,45 @@
       "basis": "The draft: \"The request error result map must not contain an entry with key {\"data\"}.\" October 2021 (§7.1.1): \"If an error was raised before execution begins, the data entry should not be present in the result.\" A request error with \"data\": null is still a request error for the vector's own check, and fails this one.",
       "status": "pass",
       "cases": 801,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "responds",
+      "title": "A request gets a response",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7",
+          "title": "Response",
+          "url": "https://spec.graphql.org/draft/#sec-Response"
+        }
+      ],
+      "basis": "\"When a GraphQL service receives a request, it must return a well-formed response.\" October 2021 says the same. The adapter answers with an `error` when the implementation produced no response at all, for example because it threw. Execution's check of the same name grades the same sentence. A vector whose reference answer is a request error, under a MUST check, counts that against its own check instead: a request error is a response, so no response doesn't match it. Every other vector exercises this check.",
+      "status": "pass",
+      "cases": 1267,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "fieldErrorPath",
+      "title": "A field error's path is the field's response path",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.6",
+          "title": "Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Errors"
+        },
+        {
+          "number": "7.1.4",
+          "title": "Response Position",
+          "url": "https://spec.graphql.org/draft/#sec-Response-Position"
+        }
+      ],
+      "basis": "§7.1.6: an error that \"can be associated to a particular field in the GraphQL result ... must contain an entry with the key {\"path\"} with a response path which describes the response position which raised the error\". §7.1.4: a response path names response positions, not arguments. A result whose data holds the field as null, with one error and no resolver call, is a field error whatever its path. If that is the answer the vector expects, a path other than the field's fails this check. Every vector that accepts a field error exercises it.",
+      "status": "pass",
+      "cases": 793,
       "failing": 0,
       "failingDraftOnly": 0
     },

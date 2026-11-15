@@ -3,14 +3,20 @@
   "area": "execution",
   "implementation": "graphql-ruby 2.6.15",
   "capabilities": [
+    "absent-vs-null",
+    "coerce",
     "idle",
+    "introspect",
     "invalid-results",
     "mutation",
+    "parse",
+    "schema",
     "subscription",
-    "uncoercible-results"
+    "uncoercible-results",
+    "validate"
   ],
   "provenance": {
-    "kit": "0bbe05428474",
+    "kit": "5da3deb09c91",
     "date": "2026-11-15",
     "strict": true,
     "random": 1500,

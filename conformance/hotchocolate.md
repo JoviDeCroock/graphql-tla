@@ -14,7 +14,7 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 - **Cases:** 11972 submitted, 2189 distinct, 384 malformed
 - **Adapter problems:** none
 - **Checker self-test:** passed (35 negative controls)
-- **Run:** kit 0bbe05428474, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
 
 ### Findings
 
@@ -135,10 +135,10 @@ response: {"data":{"search":null,"matrix":[[1]]}}
 
 - **Capabilities:** coerce, custom-scalar-literals, exact-numbers, idle, introspect, invalid-results, mutation, parse, schema, subscription, uncoercible-results, validate
 - **Cases:** 1983 submitted, 1983 distinct, 0 malformed
-- **Draft only:** 61 of the failing vectors (of 105 draft-only vectors) rely on grammar or rules only in the draft
+- **Draft only:** 67 of the failing vectors (of 105 draft-only vectors) rely on grammar or rules only in the draft
 - **Adapter problems:** none
-- **Checker self-test:** passed (3 negative controls)
-- **Run:** kit 0bbe05428474, 2026-11-15, strict
+- **Checker self-test:** passed (4 negative controls)
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict
 
 ### Findings
 
@@ -379,7 +379,25 @@ expected: {"ok":true}
 
 <a id="parse-finding-15"></a>
 
-#### 15. `document`: rejects what §2.3 Document accepts
+#### 15. `stringValue`: crashes on a source §2.10.4 String Value rejects, instead of rejecting it
+
+12 cases, in `lexer-examples` (7), `strings` (5). 6 of them rely on grammar or rules that are only in the draft, not in October 2021.
+
+- String values and block strings (MUST, [§2.10.4](https://spec.graphql.org/draft/#sec-String-Value))
+
+The shortest case, from `strings`:
+
+```
+problem:  IndexOutOfRangeException: Index was outside the bounds of the array.
+input:    "{a(x: \"\\u00\")}"
+sibling:  "{a(x: \"\")}", which the reference accepts
+response: "the adapter answered with an error: IndexOutOfRangeException: Index was outside the bounds of the array."
+expected: {"ok":false}
+```
+
+<a id="parse-finding-16"></a>
+
+#### 16. `document`: rejects what §2.3 Document accepts
 
 9 cases, in `random-documents` (9).
 
@@ -394,9 +412,9 @@ response: {"ok":false,"error":"Unexpected character `ï` (239)."}
 expected: {"ok":true}
 ```
 
-<a id="parse-finding-16"></a>
+<a id="parse-finding-17"></a>
 
-#### 16. `stringValue`: accepts what §2.10.4 String Value rejects
+#### 17. `stringValue`: accepts what §2.10.4 String Value rejects
 
 8 cases, in `lexer-examples` (5), `strings` (3). 3 of them rely on grammar or rules that are only in the draft, not in October 2021.
 
@@ -411,9 +429,9 @@ response: {"ok":true}
 expected: {"ok":false}
 ```
 
-<a id="parse-finding-17"></a>
+<a id="parse-finding-18"></a>
 
-#### 17. `selectionSets`: rejects what §2.5 Selection Sets accepts
+#### 18. `selectionSets`: rejects what §2.5 Selection Sets accepts
 
 6 cases, in `random-documents` (6).
 
@@ -428,9 +446,9 @@ response: {"ok":false,"error":"Unexpected character `ï` (239)."}
 expected: {"ok":true}
 ```
 
-<a id="parse-finding-18"></a>
+<a id="parse-finding-19"></a>
 
-#### 18. `stringValue`: rejects what §2.10.4 String Value accepts
+#### 19. `stringValue`: crashes on a source §2.10.4 String Value accepts, instead of accepting it
 
 4 cases, in `block-strings` (3), `lexer-examples` (1).
 
@@ -439,14 +457,15 @@ expected: {"ok":true}
 The shortest case, from `block-strings`:
 
 ```
+problem:  Utf8EncodingException: The escape char `	` is invalid.
 input:    "{a(x: \"\"\"\\\t\"\"\")}"
-response: {"ok":false,"crash":"Utf8EncodingException: The escape char `\t` is invalid."}
+response: "the adapter answered with an error: Utf8EncodingException: The escape char `\t` is invalid."
 expected: {"ok":true}
 ```
 
-<a id="parse-finding-19"></a>
+<a id="parse-finding-20"></a>
 
-#### 19. `ignoredTokens`: rejects what §2.1.6 Ignored Tokens accepts
+#### 20. `ignoredTokens`: rejects what §2.1.6 Ignored Tokens accepts
 
 4 cases, in `ignored` (4).
 
@@ -460,9 +479,9 @@ response: {"ok":false,"error":"Unexpected character `ï` (239)."}
 expected: {"ok":true}
 ```
 
-<a id="parse-finding-20"></a>
+<a id="parse-finding-21"></a>
 
-#### 20. `document`: accepts what §2.3 Document rejects
+#### 21. `document`: accepts what §2.3 Document rejects
 
 3 cases, in `random-documents` (2), `parser-examples` (1).
 
@@ -477,9 +496,9 @@ response: {"ok":true}
 expected: {"ok":false}
 ```
 
-<a id="parse-finding-21"></a>
+<a id="parse-finding-22"></a>
 
-#### 21. `sourceText`: rejects what §2.1 Source Text accepts
+#### 22. `sourceText`: rejects what §2.1 Source Text accepts
 
 3 cases, in `ignored` (3). All rely on grammar or rules that are only in the draft, not in October 2021.
 
@@ -494,9 +513,9 @@ response: {"ok":false,"error":"Unexpected character `\u000b` (11)."}
 expected: {"ok":true}
 ```
 
-<a id="parse-finding-22"></a>
+<a id="parse-finding-23"></a>
 
-#### 22. `descriptions`: accepts what §2.2 Descriptions rejects
+#### 23. `descriptions`: accepts what §2.2 Descriptions rejects
 
 1 case, in `parser-examples` (1).
 
@@ -510,9 +529,9 @@ response: {"ok":true}
 expected: {"ok":false}
 ```
 
-<a id="parse-finding-23"></a>
+<a id="parse-finding-24"></a>
 
-#### 23. `arguments`: accepts what §2.7 Arguments rejects
+#### 24. `arguments`: accepts what §2.7 Arguments rejects
 
 1 case, in `parser-examples` (1).
 
@@ -526,9 +545,9 @@ response: {"ok":true}
 expected: {"ok":false}
 ```
 
-<a id="parse-finding-24"></a>
+<a id="parse-finding-25"></a>
 
-#### 24. `directives`: accepts what §2.13 Directives rejects
+#### 25. `directives`: accepts what §2.13 Directives rejects
 
 1 case, in `parser-examples` (1).
 
@@ -542,9 +561,9 @@ response: {"ok":true}
 expected: {"ok":false}
 ```
 
-<a id="parse-finding-25"></a>
+<a id="parse-finding-26"></a>
 
-#### 25. `variables`: accepts what §2.11 Variables rejects
+#### 26. `variables`: accepts what §2.11 Variables rejects
 
 1 case, in `parser-examples` (1).
 
@@ -558,9 +577,9 @@ response: {"ok":true}
 expected: {"ok":false}
 ```
 
-<a id="parse-finding-26"></a>
+<a id="parse-finding-27"></a>
 
-#### 26. `whiteSpace`: rejects what §2.1.1 White Space accepts
+#### 27. `whiteSpace`: rejects what §2.1.1 White Space accepts
 
 1 case, in `ignored` (1). All rely on grammar or rules that are only in the draft, not in October 2021.
 
@@ -610,7 +629,7 @@ expected: {"ok":true}
 | Int values (`intValue`) | MUST | [§2.10.1](https://spec.graphql.org/draft/#sec-Int-Value) | ✓ 42 |
 | Float values (`floatValue`) | MUST | [§2.10.2](https://spec.graphql.org/draft/#sec-Float-Value) | ✓ 35 |
 | Boolean values (`booleanValue`) | MUST | [§2.10.3](https://spec.graphql.org/draft/#sec-Boolean-Value) | ✓ 3 |
-| String values and block strings (`stringValue`) | MUST | [§2.10.4](https://spec.graphql.org/draft/#sec-String-Value) | ✗ 12/146 (3 draft only) |
+| String values and block strings (`stringValue`) | MUST | [§2.10.4](https://spec.graphql.org/draft/#sec-String-Value) | ✗ 24/146 (9 draft only) |
 | Null value (`nullValue`) | MUST | [§2.10.5](https://spec.graphql.org/draft/#sec-Null-Value) | ✓ 2 |
 | Enum values (`enumValue`) | MUST | [§2.10.6](https://spec.graphql.org/draft/#sec-Enum-Value) | ✓ 10 |
 | List values (`listValue`) | MUST | [§2.10.7](https://spec.graphql.org/draft/#sec-List-Value) | ✗ 35/101 |
@@ -626,8 +645,8 @@ expected: {"ok":true}
 - **Vectors:** 3088 of 3100 graded (not graded: 12 unspecified)
 - **Draft only:** 27 of the failing vectors (of 206 draft-only vectors) rely on grammar or rules only in the draft
 - **Adapter problems:** none
-- **Checker self-test:** passed (7 negative controls)
-- **Run:** kit 0bbe05428474, 2026-11-15, strict
+- **Checker self-test:** passed (8 negative controls)
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict
 
 ### Findings
 
@@ -979,8 +998,8 @@ expected: valid
 - **Cases:** 1930 submitted, 1930 distinct, 0 malformed
 - **Draft only:** 11 of the failing vectors (of 35 draft-only vectors) rely on grammar or rules only in the draft
 - **Adapter problems:** none
-- **Checker self-test:** passed (10903 negative controls)
-- **Run:** kit 0bbe05428474, 2026-11-15, strict
+- **Checker self-test:** passed (14769 negative controls)
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict
 
 ### Findings
 
@@ -1002,7 +1021,23 @@ expected: a request error
 
 <a id="coerce-finding-2"></a>
 
-#### 2. `list`: rejects what §3.11 (List) accepts
+#### 2. `list`: gives October 2021's answer where the draft changed it, under §3.11 (List)
+
+10 cases, in `literal` (5), `variable` (5). All rely on grammar or rules that are only in the draft, not in October 2021.
+
+- Lists: each item coerced, a single value wrapped in a list (MUST, [§3.11](https://spec.graphql.org/draft/#sec-List))
+
+The shortest case, from `literal`:
+
+```
+input:    [draft] { matrix(v: [1, null, 3]) }  variables: {}
+response: {"response":{"errors":[{"message":"The item syntax node for a nested list must be `ListValue` but the parser found `IntValue`.","locations":[{"line":1,"column":3}],"path":["v",0],"extensions":{"specifiedBy":"https://spec.graphql.org/June2018/#sec-Type-System.List"}}],"data":{"matrix":null}},"calls":[]}
+expected: matrix resolved with {"v":[[1],null,[3]]}
+```
+
+<a id="coerce-finding-3"></a>
+
+#### 3. `list`: rejects what §3.11 (List) accepts
 
 7 cases, in `variable` (5), `nested-variable` (2).
 
@@ -1016,9 +1051,9 @@ response: {"response":{"errors":[{"message":"Int cannot parse the given literal 
 expected: ints resolved with {"v":[1]}
 ```
 
-<a id="coerce-finding-3"></a>
+<a id="coerce-finding-4"></a>
 
-#### 3. `variables`: rejects what §6.1.2 (Coercing Variable Values) accepts
+#### 4. `variables`: rejects what §6.1.2 (Coercing Variable Values) accepts
 
 7 cases, in `variable-default` (7).
 
@@ -1032,36 +1067,20 @@ response: {"response":{"errors":[{"message":"The specified value type of variabl
 expected: intsNN resolved with {"v":[1,2]}
 ```
 
-<a id="coerce-finding-4"></a>
-
-#### 4. `list`: answers with none of the three outcomes, under §3.11 (List)
-
-5 cases, in `literal` (5). All rely on grammar or rules that are only in the draft, not in October 2021.
-
-- Lists: each item coerced, a single value wrapped in a list (MUST, [§3.11](https://spec.graphql.org/draft/#sec-List))
-
-The shortest case, from `literal`:
-
-```
-input:    [draft] { matrix(v: [1, null, 3]) }  variables: {}
-response: {"response":{"errors":[{"message":"The item syntax node for a nested list must be `ListValue` but the parser found `IntValue`.","locations":[{"line":1,"column":3}],"path":["v",0],"extensions":{"specifiedBy":"https://spec.graphql.org/June2018/#sec-Type-System.List"}}],"data":{"matrix":null}},"calls":[]}
-expected: matrix resolved with {"v":[[1],null,[3]]}
-```
-
 <a id="coerce-finding-5"></a>
 
-#### 5. `list`: gives October 2021's answer where the draft changed it, under §3.11 (List)
+#### 5. `fieldErrorPath`: raises the field error with a path other than the field's response path, which §7.1.6 (Errors) requires
 
-5 cases, in `variable` (5). All rely on grammar or rules that are only in the draft, not in October 2021.
+5 cases, in `variable-default` (3), `nullable-variable` (1), `arguments` (1).
 
-- Lists: each item coerced, a single value wrapped in a list (MUST, [§3.11](https://spec.graphql.org/draft/#sec-List))
+- A field error's path is the field's response path (MUST, [§7.1.6](https://spec.graphql.org/draft/#sec-Errors) [§7.1.4](https://spec.graphql.org/draft/#sec-Response-Position))
 
-The shortest case, from `variable`:
+The shortest case, from `variable-default`:
 
 ```
-input:    [draft] query($x: [[Int]]) { matrix(v: $x) }  variables: {"x": [1, null, 3]}
-response: {"response":{"errors":[{"message":"The item syntax node for a nested list must be `ListValue` but the parser found `IntValue`.","path":["x",0],"extensions":{"specifiedBy":"https://spec.graphql.org/June2018/#sec-Type-System.List"}}]},"calls":[]}
-expected: matrix resolved with {"v":[[1],null,[3]]}
+input:    query($x: Int = 3) { intNN(v: $x) }  variables: {"x": null}
+response: {"response":{"errors":[{"message":"Cannot accept null for non-nullable input.","locations":[{"line":1,"column":22}],"path":["v"],"extensions":{"code":"HC0018"}}],"data":{"intNN":null}},"calls":[]}
+expected: a field error at intNN
 ```
 
 <a id="coerce-finding-6"></a>
@@ -1082,23 +1101,7 @@ expected: int resolved with {"v":1}
 
 <a id="coerce-finding-7"></a>
 
-#### 7. `variables`: answers with none of the three outcomes, under §6.1.2 (Coercing Variable Values)
-
-3 cases, in `variable-default` (3).
-
-- CoerceVariableValues: defaults, missing and null values, and failures as request errors (MUST, [§6.1.2](https://spec.graphql.org/draft/#sec-Coercing-Variable-Values))
-
-The shortest case, from `variable-default`:
-
-```
-input:    query($x: Int = 3) { intNN(v: $x) }  variables: {"x": null}
-response: {"response":{"errors":[{"message":"Cannot accept null for non-nullable input.","locations":[{"line":1,"column":22}],"path":["v"],"extensions":{"code":"HC0018"}}],"data":{"intNN":null}},"calls":[]}
-expected: a field error at intNN
-```
-
-<a id="coerce-finding-8"></a>
-
-#### 8. `idCoerced`: rejects what §3.5.5 (ID) accepts
+#### 7. `idCoerced`: rejects what §3.5.5 (ID) accepts
 
 3 cases, in `variable` (3).
 
@@ -1112,25 +1115,9 @@ response: {"response":{"errors":[{"message":"ID cannot parse the given literal o
 expected: id resolved with {"v":"1"}
 ```
 
-<a id="coerce-finding-9"></a>
+<a id="coerce-finding-8"></a>
 
-#### 9. `arguments`: answers with none of the three outcomes, under §6.4.1 (Coercing Field Arguments)
-
-2 cases, in `nullable-variable` (1), `arguments` (1).
-
-- CoerceArgumentValues: defaults, missing variables, and failures as field errors (MUST, [§6.4.1](https://spec.graphql.org/draft/#sec-Coercing-Field-Arguments))
-
-The shortest case, from `nullable-variable`:
-
-```
-input:    query($x: Int) { intNNDefault(v: $x) }  variables: {"x": null}
-response: {"response":{"errors":[{"message":"Cannot accept null for non-nullable input.","locations":[{"line":1,"column":18}],"path":["v"],"extensions":{"code":"HC0018"}}],"data":{"intNNDefault":null}},"calls":[]}
-expected: a field error at intNNDefault
-```
-
-<a id="coerce-finding-10"></a>
-
-#### 10. `loneSurrogates`: treats a JSON string with a lone surrogate in a way that neither keeping it, replacing it with U+FFFD, nor a refusal explains
+#### 8. `loneSurrogates`: treats a JSON string with a lone surrogate in a way that neither keeping it, replacing it with U+FFFD, nor a refusal explains
 
 2 cases, in `variable` (2).
 
@@ -1144,9 +1131,9 @@ response: {"response":{"data":{"id":"ok"}},"calls":[{"path":["id"],"arguments":{
 expected: a request error, or id resolved with {"v":"\ud800"}, or id resolved with {"v":"�"}
 ```
 
-<a id="coerce-finding-11"></a>
+<a id="coerce-finding-9"></a>
 
-#### 11. `arguments`: raises a request error where §6.4.1 (Coercing Field Arguments) requires a field error
+#### 9. `arguments`: raises a request error where §6.4.1 (Coercing Field Arguments) requires a field error
 
 2 cases, in `variable-default` (1), `nested-variable` (1).
 
@@ -1160,9 +1147,9 @@ response: {"response":{"errors":[{"message":"The specified argument value does n
 expected: a field error at intsNN
 ```
 
-<a id="coerce-finding-12"></a>
+<a id="coerce-finding-10"></a>
 
-#### 12. `inputObject`: rejects what §3.10 (Input Objects) accepts
+#### 10. `inputObject`: rejects what §3.10 (Input Objects) accepts
 
 2 cases, in `variable` (2).
 
@@ -1176,9 +1163,9 @@ response: {"response":{"errors":[{"message":"Int cannot parse the given literal 
 expected: pointNN resolved with {"v":{"x":1,"y":0}}
 ```
 
-<a id="coerce-finding-13"></a>
+<a id="coerce-finding-11"></a>
 
-#### 13. `floatPrecision`: accepts what §3.5.2 (Float) rejects
+#### 11. `floatPrecision`: accepts what §3.5.2 (Float) rejects
 
 1 case, in `variable` (1).
 
@@ -1192,9 +1179,9 @@ response: {"response":{"data":{"float":"ok"}},"calls":[{"path":["float"],"argume
 expected: a request error
 ```
 
-<a id="coerce-finding-14"></a>
+<a id="coerce-finding-12"></a>
 
-#### 14. `variables`: gives October 2021's answer where the draft changed it, under §6.1.2 (Coercing Variable Values)
+#### 12. `variables`: gives October 2021's answer where the draft changed it, under §6.1.2 (Coercing Variable Values)
 
 1 case, in `variable-default` (1). All rely on grammar or rules that are only in the draft, not in October 2021.
 
@@ -1235,11 +1222,13 @@ expected: matrix resolved with {"v":[[1],[2]]}
 | OneOf input objects take exactly one non-null field (`oneOf`). Coercion.tla doesn't model OneOf input objects, so there are no vectors for them. | MUST | [§3.10.1](https://spec.graphql.org/draft/#sec-OneOf-Input-Objects) | – |
 | Lists: each item coerced, a single value wrapped in a list (`list`) | MUST | [§3.11](https://spec.graphql.org/draft/#sec-List) | ✗ 17/299 (10 draft only) |
 | Non-Null rejects null (`nonNull`) | MUST | [§3.12](https://spec.graphql.org/draft/#sec-Non-Null) | – |
-| CoerceVariableValues: defaults, missing and null values, and failures as request errors (`variables`) | MUST | [§6.1.2](https://spec.graphql.org/draft/#sec-Coercing-Variable-Values) | ✗ 11/849 (1 draft only) |
-| CoerceArgumentValues: defaults, missing variables, and failures as field errors (`arguments`) | MUST | [§6.4.1](https://spec.graphql.org/draft/#sec-Coercing-Field-Arguments) | ✗ 4/20 |
+| CoerceVariableValues: defaults, missing and null values, and failures as request errors (`variables`) | MUST | [§6.1.2](https://spec.graphql.org/draft/#sec-Coercing-Variable-Values) | ✗ 8/849 (1 draft only) |
+| CoerceArgumentValues: defaults, missing variables, and failures as field errors (`arguments`) | MUST | [§6.4.1](https://spec.graphql.org/draft/#sec-Coercing-Field-Arguments) | ✗ 2/20 |
 | GetOperation: the operation operationName names, or the only one, else a request error (`getOperation`) | MUST | [§6.1](https://spec.graphql.org/draft/#sec-Executing-Requests) | ✓ 18 |
 | An invalid document fails as a request error, without executing (`invalidNotExecuted`) | MUST | [§6.1.1](https://spec.graphql.org/draft/#sec-Validating-Requests) | ✗ 58/775 |
 | A request error result has no data entry (`requestErrorNoData`) | MUST (Oct 2021: SHOULD) | [§7.1.3](https://spec.graphql.org/draft/#sec-Request-Error-Result) | ✓ 1569 |
+| A request gets a response (`responds`) | MUST | [§7](https://spec.graphql.org/draft/#sec-Response) | ✓ 391 |
+| A field error's path is the field's response path (`fieldErrorPath`) | MUST | [§7.1.6](https://spec.graphql.org/draft/#sec-Errors) [§7.1.4](https://spec.graphql.org/draft/#sec-Response-Position) | ✗ 5/8 |
 | JSON strings with a lone surrogate: kept as sent, replaced with U+FFFD, or refused (`loneSurrogates`) | INFO | — | i 2/2 |
 | JSON numbers a double can't hold: read exactly, read as binary64, or refused (`jsonNumbers`) | INFO | — | – |
 
@@ -1255,6 +1244,8 @@ expected: matrix resolved with {"v":[[1],[2]]}
 - **Basis for `getOperation`:** Includes a mutation running on the mutation root type, and only the selected operation's variables being coerced.
 - **Basis for `invalidNotExecuted`:** "If validation errors are known, they should be reported in the list of \"errors\" in the response and the request must fail without operation execution." Graded for adapters without `unvalidated`, on vectors Validation.tla rejects: a request error, no data, no resolver called.
 - **Basis for `requestErrorNoData`:** The draft: "The request error result map must not contain an entry with key {"data"}." October 2021 (§7.1.1): "If an error was raised before execution begins, the data entry should not be present in the result." A request error with "data": null is still a request error for the vector's own check, and fails this one.
+- **Basis for `responds`:** "When a GraphQL service receives a request, it must return a well-formed response." October 2021 says the same. The adapter answers with an `error` when the implementation produced no response at all, for example because it threw. Execution's check of the same name grades the same sentence. A vector whose reference answer is a request error, under a MUST check, counts that against its own check instead: a request error is a response, so no response doesn't match it. Every other vector exercises this check.
+- **Basis for `fieldErrorPath`:** §7.1.6: an error that "can be associated to a particular field in the GraphQL result ... must contain an entry with the key {"path"} with a response path which describes the response position which raised the error". §7.1.4: a response path names response positions, not arguments. A result whose data holds the field as null, with one error and no resolver call, is a field error whatever its path. If that is the answer the vector expects, a path other than the field's fails this check. Every vector that accepts a field error exercises it.
 - **Basis for `loneSurrogates`:** §3.5.3 accepts "only valid Unicode string input values" without defining one, and calls a String "a sequence of Unicode code points", which a lone surrogate is. §3.5.5 says nothing about Unicode. RFC 8259 §8.2 calls the behaviour of software that receives such a string unpredictable. Coercion.tla refuses it, but the check also passes the value kept as sent and the value with U+FFFD, and records which happened. It never fails the run.
 - **Basis for `jsonNumbers`:** Not a GraphQL rule: RFC 8259 §6 lets a JSON parser limit the range and precision of numbers. Vectors whose answer depends on that count here, never against Float or ID, unless the adapter claims exact-numbers.
 
@@ -1266,7 +1257,7 @@ expected: matrix resolved with {"v":[[1],[2]]}
 - **Draft only:** 18 of the failing vectors (of 37 draft-only vectors) rely on grammar or rules only in the draft
 - **Adapter problems:** none
 - **Checker self-test:** passed (330 negative controls)
-- **Run:** kit 0bbe05428474, 2026-11-15, strict
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict
 
 ### Findings
 
@@ -1658,7 +1649,7 @@ expected: invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other ru
 - **Profile:** the oct2021 edition's introspection types. The draft's introspection query was rejected ("The field `isOneOf` does not exist on the type `__Type`.") and October 2021's was answered, so this run grades against October 2021.
 - **Adapter problems:** none
 - **Checker self-test:** passed (148 negative controls)
-- **Run:** kit 0bbe05428474, 2026-11-15, strict
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict
 
 ### Findings
 

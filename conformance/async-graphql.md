@@ -12,7 +12,7 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 - **Cases:** 11213 submitted, 350 distinct, 5801 malformed
 - **Adapter problems:** none
 - **Checker self-test:** passed (35 negative controls)
-- **Run:** kit 0bbe05428474, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
 
 ### Findings
 

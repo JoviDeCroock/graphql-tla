@@ -18,7 +18,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "ea0905982bf7",
+    "kit": "5da3deb09c91",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 3100,
@@ -27,7 +27,7 @@
       "unspecified": 12
     }
   },
-  "checkerSelfTest": "passed (7 negative controls)",
+  "checkerSelfTest": "passed (8 negative controls)",
   "cases": {
     "submitted": 3088,
     "distinct": 3088,
@@ -36,7 +36,7 @@
   "adapterProblems": 0,
   "draftOnly": {
     "vectors": 206,
-    "failing": 6
+    "failing": 28
   },
   "checks": [
     {
@@ -116,8 +116,8 @@
       ],
       "status": "fail",
       "cases": 59,
-      "failing": 1,
-      "failingDraftOnly": 1
+      "failing": 23,
+      "failingDraftOnly": 23
     },
     {
       "id": "fieldSelections",
@@ -540,6 +540,26 @@
     }
   ],
   "findings": [
+    {
+      "kind": "crash",
+      "checks": [
+        "singleRootField"
+      ],
+      "summary": "crashes on documents that break only §5.2.4.1 Single Root Field, instead of rejecting them; all rely on the draft",
+      "cases": 22,
+      "draftOnly": 22,
+      "fixtures": {
+        "operations": 20,
+        "spec": 2
+      },
+      "fixture": "spec",
+      "problem": "java.lang.NullPointerException: Cannot invoke \"java.lang.Boolean.booleanValue()\" because the return value of \"java.util.Map.get(Object)\" is null",
+      "example": {
+        "input": "[draft] SingleRootField-spec-7: subscription sub($bool: Boolean!) { newMessage @include(if: $bool) { body sender } }",
+        "response": "the adapter answered with an error: java.lang.NullPointerException: Cannot invoke \"java.lang.Boolean.booleanValue()\" because the return value of \"java.util.Map.get(Object)\" is null",
+        "expected": "invalid: SingleRootField [\"sub\"]"
+      }
+    },
     {
       "checks": [
         "fieldSelectionMerging"

@@ -17,12 +17,12 @@
     "validate"
   ],
   "provenance": {
-    "kit": "0bbe05428474",
+    "kit": "5da3deb09c91",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 1983
   },
-  "checkerSelfTest": "passed (3 negative controls)",
+  "checkerSelfTest": "passed (4 negative controls)",
   "cases": {
     "submitted": 1983,
     "distinct": 1983,
@@ -31,7 +31,7 @@
   "adapterProblems": 0,
   "draftOnly": {
     "vectors": 105,
-    "failing": 61
+    "failing": 67
   },
   "checks": [
     {
@@ -415,8 +415,8 @@
       ],
       "status": "fail",
       "cases": 146,
-      "failing": 12,
-      "failingDraftOnly": 3
+      "failing": 24,
+      "failingDraftOnly": 9
     },
     {
       "id": "nullValue",
@@ -814,6 +814,27 @@
     },
     {
       "checks": [
+        "stringValue"
+      ],
+      "kind": "crash",
+      "summary": "crashes on a source §2.10.4 String Value rejects, instead of rejecting it",
+      "problem": "IndexOutOfRangeException: Index was outside the bounds of the array.",
+      "cases": 12,
+      "fixtures": {
+        "lexer-examples": 7,
+        "strings": 5
+      },
+      "draftOnly": 6,
+      "fixture": "strings",
+      "example": {
+        "input": "\"{a(x: \\\"\\\\u00\\\")}\"",
+        "response": "the adapter answered with an error: IndexOutOfRangeException: Index was outside the bounds of the array.",
+        "expected": "{\"ok\":false}",
+        "sibling": "\"{a(x: \\\"\\\")}\", which the reference accepts"
+      }
+    },
+    {
+      "checks": [
         "document"
       ],
       "summary": "rejects what §2.3 Document accepts",
@@ -877,7 +898,9 @@
       "checks": [
         "stringValue"
       ],
-      "summary": "rejects what §2.10.4 String Value accepts",
+      "kind": "crash",
+      "summary": "crashes on a source §2.10.4 String Value accepts, instead of accepting it",
+      "problem": "Utf8EncodingException: The escape char `\t` is invalid.",
       "cases": 4,
       "fixtures": {
         "lexer-examples": 1,
@@ -886,10 +909,7 @@
       "fixture": "block-strings",
       "example": {
         "input": "\"{a(x: \\\"\\\"\\\"\\\\\\t\\\"\\\"\\\")}\"",
-        "response": {
-          "ok": false,
-          "crash": "Utf8EncodingException: The escape char `\t` is invalid."
-        },
+        "response": "the adapter answered with an error: Utf8EncodingException: The escape char `\t` is invalid.",
         "expected": "{\"ok\":true}"
       }
     },

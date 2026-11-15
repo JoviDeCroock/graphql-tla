@@ -3,15 +3,23 @@
   "area": "execution",
   "implementation": "graphql-core 3.2.14",
   "capabilities": [
+    "absent-vs-null",
+    "coerce",
+    "custom-scalar-literals",
     "deferred-items",
     "idle",
+    "introspect",
     "invalid-results",
     "mutation",
+    "parse",
+    "schema",
     "subscription",
-    "uncoercible-results"
+    "uncoercible-results",
+    "unvalidated",
+    "validate"
   ],
   "provenance": {
-    "kit": "0bbe05428474",
+    "kit": "5da3deb09c91",
     "date": "2026-11-15",
     "strict": true,
     "random": 1500,

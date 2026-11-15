@@ -19,7 +19,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "ea0905982bf7",
+    "kit": "5da3deb09c91",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 3100,
@@ -28,7 +28,7 @@
       "unspecified": 12
     }
   },
-  "checkerSelfTest": "passed (7 negative controls)",
+  "checkerSelfTest": "passed (8 negative controls)",
   "cases": {
     "submitted": 3088,
     "distinct": 3088,
@@ -37,7 +37,7 @@
   "adapterProblems": 0,
   "draftOnly": {
     "vectors": 206,
-    "failing": 26
+    "failing": 37
   },
   "checks": [
     {
@@ -117,8 +117,8 @@
       ],
       "status": "fail",
       "cases": 59,
-      "failing": 12,
-      "failingDraftOnly": 12
+      "failing": 23,
+      "failingDraftOnly": 23
     },
     {
       "id": "fieldSelections",
@@ -601,6 +601,26 @@
           "errors": []
         },
         "expected": "invalid: SingleRootField [\"S5\"]"
+      }
+    },
+    {
+      "kind": "crash",
+      "checks": [
+        "singleRootField"
+      ],
+      "summary": "crashes on documents that break only §5.2.4.1 Single Root Field, instead of rejecting them; all rely on the draft",
+      "cases": 11,
+      "draftOnly": 11,
+      "fixtures": {
+        "operations": 9,
+        "spec": 2
+      },
+      "fixture": "spec",
+      "problem": "GraphQLError: Argument \"if\" of required type \"Boolean!\" was provided the variable \"$bool\" which was not provided a runtime value.",
+      "example": {
+        "input": "[draft] SingleRootField-spec-7: subscription sub($bool: Boolean!) { newMessage @include(if: $bool) { body sender } }",
+        "response": "the adapter answered with an error: GraphQLError: Argument \"if\" of required type \"Boolean!\" was provided the variable \"$bool\" which was not provided a runtime value.",
+        "expected": "invalid: SingleRootField [\"sub\"]"
       }
     },
     {

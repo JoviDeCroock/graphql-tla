@@ -13,7 +13,7 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 - **Cases:** 12658 submitted, 3014 distinct, 357 malformed
 - **Adapter problems:** none
 - **Checker self-test:** passed (35 negative controls)
-- **Run:** kit 0bbe05428474, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
 
 ### Findings
 
@@ -104,8 +104,8 @@ response: none: GraphQLSerializer.Serialize threw ArgumentException: .NET number
 - **Cases:** 1983 submitted, 1983 distinct, 0 malformed
 - **Draft only:** 96 of the failing vectors (of 105 draft-only vectors) rely on grammar or rules only in the draft
 - **Adapter problems:** none
-- **Checker self-test:** passed (3 negative controls)
-- **Run:** kit 0bbe05428474, 2026-11-15, strict
+- **Checker self-test:** passed (4 negative controls)
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict
 
 ### Findings
 
@@ -275,8 +275,8 @@ expected: {"ok":false}
 - **Vectors:** 3088 of 3100 graded (not graded: 12 unspecified)
 - **Draft only:** 24 of the failing vectors (of 206 draft-only vectors) rely on grammar or rules only in the draft
 - **Adapter problems:** none
-- **Checker self-test:** passed (7 negative controls)
-- **Run:** kit 0bbe05428474, 2026-11-15, strict
+- **Checker self-test:** passed (8 negative controls)
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict
 
 ### Findings
 
@@ -567,7 +567,7 @@ expected: valid
 - **Draft only:** 8 of the failing vectors (of 37 draft-only vectors) rely on grammar or rules only in the draft
 - **Adapter problems:** none
 - **Checker self-test:** passed (330 negative controls)
-- **Run:** kit 0bbe05428474, 2026-11-15, strict
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict
 
 ### Findings
 
@@ -912,7 +912,7 @@ expected: invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other ru
 - **Profile:** the oct2021 edition's introspection types. The draft's introspection query was rejected ("Unknown argument 'includeDeprecated' on field 'directives' of type '__Schema'."), and so was October 2021's ("Cannot query field 'isRepeatable' on type '__Directive'."). The introspection types lack __Type.specifiedByURL and __Directive.isRepeatable, so this run asks October 2021's query without them, grades against October 2021, and counts each missing field against its check.
 - **Adapter problems:** none
 - **Checker self-test:** passed (148 negative controls)
-- **Run:** kit 0bbe05428474, 2026-11-15, strict
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict
 
 ### Findings
 

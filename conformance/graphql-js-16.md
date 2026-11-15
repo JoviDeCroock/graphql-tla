@@ -13,7 +13,7 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 - **Cases:** 11786 submitted, 2239 distinct, 0 malformed
 - **Adapter problems:** none
 - **Checker self-test:** passed (35 negative controls)
-- **Run:** kit ea0905982bf7, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
 
 ### Findings
 
@@ -90,8 +90,8 @@ None.
 - **Cases:** 1983 submitted, 1983 distinct, 0 malformed
 - **Draft only:** 10 of the failing vectors (of 105 draft-only vectors) rely on grammar or rules only in the draft
 - **Adapter problems:** none
-- **Checker self-test:** passed (3 negative controls)
-- **Run:** kit ea0905982bf7, 2026-11-15, strict
+- **Checker self-test:** passed (4 negative controls)
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict
 
 ### Findings
 
@@ -177,10 +177,10 @@ expected: {"ok":true}
 - **Capabilities:** absent-vs-null, coerce, custom-scalar-literals, deferred-items, idle, introspect, invalid-results, mutation, parse, schema, subscription, uncoercible-results, unvalidated, validate
 - **Cases:** 3088 submitted, 3088 distinct, 0 malformed
 - **Vectors:** 3088 of 3100 graded (not graded: 12 unspecified)
-- **Draft only:** 26 of the failing vectors (of 206 draft-only vectors) rely on grammar or rules only in the draft
+- **Draft only:** 37 of the failing vectors (of 206 draft-only vectors) rely on grammar or rules only in the draft
 - **Adapter problems:** none
-- **Checker self-test:** passed (7 negative controls)
-- **Run:** kit ea0905982bf7, 2026-11-15, strict
+- **Checker self-test:** passed (8 negative controls)
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict
 
 ### Findings
 
@@ -234,7 +234,24 @@ expected: invalid: SingleRootField ["S5"]
 
 <a id="validate-finding-4"></a>
 
-#### 4. `allVariableUsagesAreAllowed`: §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; all rely on the draft
+#### 4. `singleRootField`: crashes on documents that break only §5.2.4.1 Single Root Field, instead of rejecting them; all rely on the draft
+
+11 cases, in `operations` (9), `spec` (2). All rely on grammar or rules that are only in the draft, not in October 2021.
+
+- Single Root Field (MUST, [§5.2.4.1](https://spec.graphql.org/draft/#sec-Single-Root-Field))
+
+The shortest case, from `spec`:
+
+```
+problem:  GraphQLError: Argument "if" of required type "Boolean!" was provided the variable "$bool" which was not provided a runtime value.
+input:    [draft] SingleRootField-spec-7: subscription sub($bool: Boolean!) { newMessage @include(if: $bool) { body sender } }
+response: "the adapter answered with an error: GraphQLError: Argument \"if\" of required type \"Boolean!\" was provided the variable \"$bool\" which was not provided a runtime value."
+expected: invalid: SingleRootField ["sub"]
+```
+
+<a id="validate-finding-5"></a>
+
+#### 5. `allVariableUsagesAreAllowed`: §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; all rely on the draft
 
 2 cases, in `spec` (2). All rely on grammar or rules that are only in the draft, not in October 2021.
 
@@ -265,7 +282,7 @@ expected: invalid: AllVariableUsagesAreAllowed ["cat"]
 | Operation Type Existence (`operationTypeExistence`) | MUST | [§5.2.1.1](https://spec.graphql.org/draft/#sec-Operation-Type-Existence) | ✗ 12/12 (all draft only) |
 | Operation Name Uniqueness (`operationNameUniqueness`) | MUST | [§5.2.2.1](https://spec.graphql.org/draft/#sec-Operation-Name-Uniqueness) | ✓ 6 |
 | Lone Anonymous Operation (`loneAnonymousOperation`) | MUST | [§5.2.3.1](https://spec.graphql.org/draft/#sec-Lone-Anonymous-Operation) | ✓ 21 |
-| Single Root Field (`singleRootField`) | MUST | [§5.2.4.1](https://spec.graphql.org/draft/#sec-Single-Root-Field) | ✗ 12/59 (all draft only) |
+| Single Root Field (`singleRootField`) | MUST | [§5.2.4.1](https://spec.graphql.org/draft/#sec-Single-Root-Field) | ✗ 23/59 (all draft only) |
 | Field Selections (`fieldSelections`) | MUST | [§5.3.1](https://spec.graphql.org/draft/#sec-Field-Selections) | ✓ 25 |
 | Field Selection Merging (`fieldSelectionMerging`) | MUST | [§5.3.2](https://spec.graphql.org/draft/#sec-Field-Selection-Merging) | ✗ 22/674 |
 | Leaf Field Selections (`leafFieldSelections`) | MUST | [§5.3.3](https://spec.graphql.org/draft/#sec-Leaf-Field-Selections) | ✓ 39 |
@@ -301,8 +318,8 @@ expected: invalid: AllVariableUsagesAreAllowed ["cat"]
 - **Cases:** 2036 submitted, 2036 distinct, 0 malformed
 - **Draft only:** 0 of the failing vectors (of 36 draft-only vectors) rely on grammar or rules only in the draft
 - **Adapter problems:** none
-- **Checker self-test:** passed (11732 negative controls)
-- **Run:** kit ea0905982bf7, 2026-11-15, strict
+- **Checker self-test:** passed (16593 negative controls)
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict
 
 ### Findings
 
@@ -402,6 +419,8 @@ expected: a field error at points
 | GetOperation: the operation operationName names, or the only one, else a request error (`getOperation`) | MUST | [§6.1](https://spec.graphql.org/draft/#sec-Executing-Requests) | ✓ 22 |
 | An invalid document fails as a request error, without executing (`invalidNotExecuted`) | MUST | [§6.1.1](https://spec.graphql.org/draft/#sec-Validating-Requests) | – |
 | A request error result has no data entry (`requestErrorNoData`) | MUST (Oct 2021: SHOULD) | [§7.1.3](https://spec.graphql.org/draft/#sec-Request-Error-Result) | ✓ 801 |
+| A request gets a response (`responds`) | MUST | [§7](https://spec.graphql.org/draft/#sec-Response) | ✓ 1267 |
+| A field error's path is the field's response path (`fieldErrorPath`) | MUST | [§7.1.6](https://spec.graphql.org/draft/#sec-Errors) [§7.1.4](https://spec.graphql.org/draft/#sec-Response-Position) | ✓ 793 |
 | JSON strings with a lone surrogate: kept as sent, replaced with U+FFFD, or refused (`loneSurrogates`). kept as sent: 2. Observed: kept as sent 2 | INFO | — | ✓ 2 |
 | JSON numbers a double can't hold: read exactly, read as binary64, or refused (`jsonNumbers`) | INFO | — | ✓ 3 |
 
@@ -417,6 +436,8 @@ expected: a field error at points
 - **Basis for `getOperation`:** Includes a mutation running on the mutation root type, and only the selected operation's variables being coerced.
 - **Basis for `invalidNotExecuted`:** "If validation errors are known, they should be reported in the list of \"errors\" in the response and the request must fail without operation execution." Graded for adapters without `unvalidated`, on vectors Validation.tla rejects: a request error, no data, no resolver called.
 - **Basis for `requestErrorNoData`:** The draft: "The request error result map must not contain an entry with key {"data"}." October 2021 (§7.1.1): "If an error was raised before execution begins, the data entry should not be present in the result." A request error with "data": null is still a request error for the vector's own check, and fails this one.
+- **Basis for `responds`:** "When a GraphQL service receives a request, it must return a well-formed response." October 2021 says the same. The adapter answers with an `error` when the implementation produced no response at all, for example because it threw. Execution's check of the same name grades the same sentence. A vector whose reference answer is a request error, under a MUST check, counts that against its own check instead: a request error is a response, so no response doesn't match it. Every other vector exercises this check.
+- **Basis for `fieldErrorPath`:** §7.1.6: an error that "can be associated to a particular field in the GraphQL result ... must contain an entry with the key {"path"} with a response path which describes the response position which raised the error". §7.1.4: a response path names response positions, not arguments. A result whose data holds the field as null, with one error and no resolver call, is a field error whatever its path. If that is the answer the vector expects, a path other than the field's fails this check. Every vector that accepts a field error exercises it.
 - **Basis for `loneSurrogates`:** §3.5.3 accepts "only valid Unicode string input values" without defining one, and calls a String "a sequence of Unicode code points", which a lone surrogate is. §3.5.5 says nothing about Unicode. RFC 8259 §8.2 calls the behaviour of software that receives such a string unpredictable. Coercion.tla refuses it, but the check also passes the value kept as sent and the value with U+FFFD, and records which happened. It never fails the run.
 - **Basis for `jsonNumbers`:** Not a GraphQL rule: RFC 8259 §6 lets a JSON parser limit the range and precision of numbers. Vectors whose answer depends on that count here, never against Float or ID, unless the adapter claims exact-numbers.
 
@@ -428,7 +449,7 @@ expected: a field error at points
 - **Draft only:** 17 of the failing vectors (of 37 draft-only vectors) rely on grammar or rules only in the draft
 - **Adapter problems:** none
 - **Checker self-test:** passed (330 negative controls)
-- **Run:** kit ea0905982bf7, 2026-11-15, strict
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict
 
 ### Findings
 
@@ -644,7 +665,7 @@ expected: invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other ru
 - **Profile:** the draft's introspection types
 - **Adapter problems:** none
 - **Checker self-test:** passed (148 negative controls)
-- **Run:** kit ea0905982bf7, 2026-11-15, strict
+- **Run:** kit 5da3deb09c91, 2026-11-15, strict
 
 ### Findings
 

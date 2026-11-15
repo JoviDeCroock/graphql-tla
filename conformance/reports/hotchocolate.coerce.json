@@ -17,7 +17,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "0bbe05428474",
+    "kit": "5da3deb09c91",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 2036,
@@ -29,7 +29,7 @@
       "exact-numbers"
     ]
   },
-  "checkerSelfTest": "passed (10903 negative controls)",
+  "checkerSelfTest": "passed (14769 negative controls)",
   "cases": {
     "submitted": 1930,
     "distinct": 1930,
@@ -288,7 +288,7 @@
       ],
       "status": "fail",
       "cases": 849,
-      "failing": 11,
+      "failing": 8,
       "failingDraftOnly": 1
     },
     {
@@ -304,7 +304,7 @@
       ],
       "status": "fail",
       "cases": 20,
-      "failing": 4,
+      "failing": 2,
       "failingDraftOnly": 0
     },
     {
@@ -357,6 +357,45 @@
       "status": "pass",
       "cases": 1569,
       "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "responds",
+      "title": "A request gets a response",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7",
+          "title": "Response",
+          "url": "https://spec.graphql.org/draft/#sec-Response"
+        }
+      ],
+      "basis": "\"When a GraphQL service receives a request, it must return a well-formed response.\" October 2021 says the same. The adapter answers with an `error` when the implementation produced no response at all, for example because it threw. Execution's check of the same name grades the same sentence. A vector whose reference answer is a request error, under a MUST check, counts that against its own check instead: a request error is a response, so no response doesn't match it. Every other vector exercises this check.",
+      "status": "pass",
+      "cases": 391,
+      "failing": 0,
+      "failingDraftOnly": 0
+    },
+    {
+      "id": "fieldErrorPath",
+      "title": "A field error's path is the field's response path",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.6",
+          "title": "Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Errors"
+        },
+        {
+          "number": "7.1.4",
+          "title": "Response Position",
+          "url": "https://spec.graphql.org/draft/#sec-Response-Position"
+        }
+      ],
+      "basis": "§7.1.6: an error that \"can be associated to a particular field in the GraphQL result ... must contain an entry with the key {\"path\"} with a response path which describes the response position which raised the error\". §7.1.4: a response path names response positions, not arguments. A result whose data holds the field as null, with one error and no resolver call, is a field error whatever its path. If that is the answer the vector expects, a path other than the field's fails this check. Every vector that accepts a field error exercises it.",
+      "status": "fail",
+      "cases": 8,
+      "failing": 5,
       "failingDraftOnly": 0
     },
     {
@@ -424,9 +463,67 @@
           "calls": []
         },
         "outcome": {
-          "outcome": "other"
+          "outcome": "field-error",
+          "field": "point",
+          "wrongPath": true,
+          "path": [
+            "v"
+          ]
         },
         "expected": "a request error"
+      }
+    },
+    {
+      "checks": [
+        "list"
+      ],
+      "summary": "gives October 2021's answer where the draft changed it, under §3.11 (List)",
+      "cases": 10,
+      "draftOnly": 10,
+      "fixtures": {
+        "literal": 5,
+        "variable": 5
+      },
+      "fixture": "literal",
+      "example": {
+        "vector": "coerce-1357",
+        "input": "[draft] { matrix(v: [1, null, 3]) }  variables: {}",
+        "response": {
+          "response": {
+            "errors": [
+              {
+                "message": "The item syntax node for a nested list must be `ListValue` but the parser found `IntValue`.",
+                "locations": [
+                  {
+                    "line": 1,
+                    "column": 3
+                  }
+                ],
+                "path": [
+                  "v",
+                  0
+                ],
+                "extensions": {
+                  "specifiedBy": "https://spec.graphql.org/June2018/#sec-Type-System.List"
+                }
+              }
+            ],
+            "data": {
+              "matrix": null
+            }
+          },
+          "calls": []
+        },
+        "outcome": {
+          "outcome": "field-error",
+          "field": "matrix",
+          "wrongPath": true,
+          "path": [
+            "v",
+            0
+          ]
+        },
+        "expected": "matrix resolved with {\"v\":[[1],null,[3]]}"
       }
     },
     {
@@ -508,85 +605,54 @@
     },
     {
       "checks": [
-        "list"
+        "fieldErrorPath"
       ],
-      "summary": "answers with none of the three outcomes, under §3.11 (List)",
+      "summary": "raises the field error with a path other than the field's response path, which §7.1.6 (Errors) requires",
       "cases": 5,
-      "draftOnly": 5,
+      "draftOnly": 0,
       "fixtures": {
-        "literal": 5
+        "variable-default": 3,
+        "nullable-variable": 1,
+        "arguments": 1
       },
-      "fixture": "literal",
+      "fixture": "variable-default",
       "example": {
-        "vector": "coerce-1357",
-        "input": "[draft] { matrix(v: [1, null, 3]) }  variables: {}",
+        "vector": "coerce-0203",
+        "input": "query($x: Int = 3) { intNN(v: $x) }  variables: {\"x\": null}",
         "response": {
           "response": {
             "errors": [
               {
-                "message": "The item syntax node for a nested list must be `ListValue` but the parser found `IntValue`.",
+                "message": "Cannot accept null for non-nullable input.",
                 "locations": [
                   {
                     "line": 1,
-                    "column": 3
+                    "column": 22
                   }
                 ],
                 "path": [
-                  "v",
-                  0
+                  "v"
                 ],
                 "extensions": {
-                  "specifiedBy": "https://spec.graphql.org/June2018/#sec-Type-System.List"
+                  "code": "HC0018"
                 }
               }
             ],
             "data": {
-              "matrix": null
+              "intNN": null
             }
           },
           "calls": []
         },
         "outcome": {
-          "outcome": "other"
+          "outcome": "field-error",
+          "field": "intNN",
+          "wrongPath": true,
+          "path": [
+            "v"
+          ]
         },
-        "expected": "matrix resolved with {\"v\":[[1],null,[3]]}"
-      }
-    },
-    {
-      "checks": [
-        "list"
-      ],
-      "summary": "gives October 2021's answer where the draft changed it, under §3.11 (List)",
-      "cases": 5,
-      "draftOnly": 5,
-      "fixtures": {
-        "variable": 5
-      },
-      "fixture": "variable",
-      "example": {
-        "vector": "coerce-1405",
-        "input": "[draft] query($x: [[Int]]) { matrix(v: $x) }  variables: {\"x\": [1, null, 3]}",
-        "response": {
-          "response": {
-            "errors": [
-              {
-                "message": "The item syntax node for a nested list must be `ListValue` but the parser found `IntValue`.",
-                "path": [
-                  "x",
-                  0
-                ],
-                "extensions": {
-                  "specifiedBy": "https://spec.graphql.org/June2018/#sec-Type-System.List"
-                }
-              }
-            ]
-          },
-          "calls": []
-        },
-        "outcome": {
-          "outcome": "request-error"
-        },
-        "expected": "matrix resolved with {\"v\":[[1],null,[3]]}"
+        "expected": "a field error at intNN"
       }
     },
     {
@@ -624,51 +690,6 @@
     },
     {
       "checks": [
-        "variables"
-      ],
-      "summary": "answers with none of the three outcomes, under §6.1.2 (Coercing Variable Values)",
-      "cases": 3,
-      "draftOnly": 0,
-      "fixtures": {
-        "variable-default": 3
-      },
-      "fixture": "variable-default",
-      "example": {
-        "vector": "coerce-0203",
-        "input": "query($x: Int = 3) { intNN(v: $x) }  variables: {\"x\": null}",
-        "response": {
-          "response": {
-            "errors": [
-              {
-                "message": "Cannot accept null for non-nullable input.",
-                "locations": [
-                  {
-                    "line": 1,
-                    "column": 22
-                  }
-                ],
-                "path": [
-                  "v"
-                ],
-                "extensions": {
-                  "code": "HC0018"
-                }
-              }
-            ],
-            "data": {
-              "intNN": null
-            }
-          },
-          "calls": []
-        },
-        "outcome": {
-          "outcome": "other"
-        },
-        "expected": "a field error at intNN"
-      }
-    },
-    {
-      "checks": [
         "idCoerced"
       ],
       "summary": "rejects what §3.5.5 (ID) accepts",
@@ -698,52 +719,6 @@
           "outcome": "request-error"
         },
         "expected": "id resolved with {\"v\":\"1\"}"
-      }
-    },
-    {
-      "checks": [
-        "arguments"
-      ],
-      "summary": "answers with none of the three outcomes, under §6.4.1 (Coercing Field Arguments)",
-      "cases": 2,
-      "draftOnly": 0,
-      "fixtures": {
-        "nullable-variable": 1,
-        "arguments": 1
-      },
-      "fixture": "nullable-variable",
-      "example": {
-        "vector": "coerce-0413",
-        "input": "query($x: Int) { intNNDefault(v: $x) }  variables: {\"x\": null}",
-        "response": {
-          "response": {
-            "errors": [
-              {
-                "message": "Cannot accept null for non-nullable input.",
-                "locations": [
-                  {
-                    "line": 1,
-                    "column": 18
-                  }
-                ],
-                "path": [
-                  "v"
-                ],
-                "extensions": {
-                  "code": "HC0018"
-                }
-              }
-            ],
-            "data": {
-              "intNNDefault": null
-            }
-          },
-          "calls": []
-        },
-        "outcome": {
-          "outcome": "other"
-        },
-        "expected": "a field error at intNNDefault"
       }
     },
     {

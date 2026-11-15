@@ -20,7 +20,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "ea0905982bf7",
+    "kit": "5da3deb09c91",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 3100,
@@ -29,7 +29,7 @@
       "unspecified": 12
     }
   },
-  "checkerSelfTest": "passed (7 negative controls)",
+  "checkerSelfTest": "passed (8 negative controls)",
   "cases": {
     "submitted": 3088,
     "distinct": 3088,
