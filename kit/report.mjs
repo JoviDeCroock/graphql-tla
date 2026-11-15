@@ -26,7 +26,7 @@ export const section = (number) => {
 export const kitCommit = () => {
   const git = (...args) => execFileSync("git", args, { cwd: root, stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
   try {
-    const dirty = git("status", "--porcelain", "--", "kit", "specs", "fixtures") !== "";
+    const dirty = git("status", "--porcelain", "--untracked-files=no", "--", "kit", "specs", "fixtures") !== "";
     return `${git("rev-parse", "--short=12", "HEAD")}${dirty ? "+dirty" : ""}`;
   } catch {
     return "unknown";
