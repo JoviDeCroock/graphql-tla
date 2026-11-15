@@ -11,13 +11,16 @@
 // hand-written cases and scenario families) and from the spec's own
 // examples, which specs/TypeSystemVectors.tla also checks.
 //
-// A vector whose rule (kit/schema/rules.mjs DRAFT) or SDL syntax the
-// October 2021 edition doesn't have gets `edition: "draft"`, with the
-// features in `editionNote`: @oneOf, @deprecated on an argument or input
-// field, and directives on a directive definition are draft syntax.
+// A vector whose own verdict or SDL syntax differs under the October 2021
+// edition gets `edition: "draft"`, with the features in `editionNote`.
+// @oneOf, @deprecated on an argument or input field, and directives on a
+// directive definition are draft syntax. An invalid schema that breaks a
+// rule October 2021 doesn't have (kit/schema/rules.mjs DRAFT) is valid
+// there, so it is draft only too. Its valid sibling isn't, unless it uses
+// draft syntax: dropping a rule can't make a valid schema invalid.
 //
 // A vector whose verdict rests on a reading of the spec that its formal
-// text doesn't settle gets `unspecified`, with the reason (UNSPECIFIED
+// text doesn't settle gets `unspecified`, with the reason (unspecifiedOf
 // below). The kit doesn't grade it.
 //
 // Usage: node scripts/generate-vectors-schema.mjs [--check]
@@ -275,12 +278,28 @@ const PAIRS = [
 // Invalid schemas whose verdict depends on a reading the spec's formal
 // text doesn't settle, and why. Their valid siblings are valid under every
 // reading, and are still graded.
+//
+// `scalar String` and the like: §3.3 says "No provided type may have a
+// name which conflicts with any built in types", and §3.5 says "When
+// representing a GraphQL schema using the type system definition language,
+// all built-in scalars must be omitted for brevity". The second sentence
+// binds whoever prints SDL. Whether a schema that declares a built-in
+// scalar anyway provides a conflicting type, or just names the built-in,
+// the spec doesn't say. `type Int { … }` is a different kind of type with
+// a built-in's name, and stays graded.
+const BUILTIN_SCALARS = new Set(["Int", "Float", "String", "Boolean", "ID"]);
+const BUILTIN_SCALAR_DECLARED =
+  "§3.5 says built-in scalars \"must be omitted for brevity\" from SDL, which binds whoever prints it. Whether a schema that declares one anyway, as `scalar String`, provides a type that conflicts with the built-in (§3.3), and must be rejected, or just names the built-in, the spec doesn't say. TypeSystem.tla reads it as a conflict.";
+const declaresBuiltinScalar = (sdl) =>
+  graphql.parse(sdl).definitions.some((d) => d.kind === "ScalarTypeDefinition" && BUILTIN_SCALARS.has(d.name.value));
 const SELF_REFERENCE_THROUGH_ARGUMENT =
   "§3.13 rule 3 forbids a directive definition to contain the use of a directive that leads back to it. This definition uses no directive: it reaches itself only through its own argument's type. The prose, \"While defining a directive, it must not reference itself directly or indirectly\", forbids it, and TypeSystem.tla follows the prose, but the formal rule doesn't.";
 const UNSPECIFIED = {
   "directive @d(a: In) on INPUT_FIELD_DEFINITION input In { f: Int @d } type Query { a(x: In): Int }": SELF_REFERENCE_THROUGH_ARGUMENT,
   "directive @d(c: Color) on ENUM_VALUE enum Color { RED @d BLUE } type Query { a: Color }": SELF_REFERENCE_THROUGH_ARGUMENT,
 };
+const unspecifiedOf = (rule, sdl) =>
+  UNSPECIFIED[sdl] ?? (rule === "TYPE_NAME_NOT_BUILTIN" && declaresBuiltinScalar(sdl) ? BUILTIN_SCALAR_DECLARED : undefined);
 
 const SHARD = 60;
 
@@ -298,10 +317,11 @@ const draftSyntax = (sdl) => {
   return out;
 };
 
-// `edition` and `editionNote` for a vector, if anything in it is
-// draft-only.
-const editionOf = (rule, sdl) => {
-  const draft = [...new Set([...(rule.draft ? [rule.draft] : []), ...draftSyntax(sdl)])].sort();
+// `edition` and `editionNote` for a vector, if its verdict or syntax is
+// draft only: an invalid schema that breaks a draft-only rule, or any
+// schema that uses draft syntax.
+const editionOf = (rule, sdl, valid) => {
+  const draft = [...new Set([...(rule.draft && !valid ? [rule.draft] : []), ...draftSyntax(sdl)])].sort();
   return draft.length ? { edition: "draft", editionNote: `new in the draft: ${draft.join(", ")}` } : {};
 };
 
@@ -338,10 +358,11 @@ ${moduleFooter}`;
     count.set(rule, n);
     const base = `${r.id}.${n}`;
     const common = { spec: r.spec, family, rule, ...(origin ? { origin } : {}) };
-    const unspecified = UNSPECIFIED[invalid] ? { unspecified: UNSPECIFIED[invalid] } : {};
+    const why = unspecifiedOf(rule, invalid);
+    const unspecified = why ? { unspecified: why } : {};
     vectors.push(
-      { id: `${base}.invalid`, ...common, ...editionOf(r, invalid), ...unspecified, pair: `${base}.valid`, sdl: invalid, verdict: bad, expected: { valid: false } },
-      { id: `${base}.valid`, ...common, ...editionOf(r, valid), pair: `${base}.invalid`, sdl: valid, verdict: good, expected: { valid: true } },
+      { id: `${base}.invalid`, ...common, ...editionOf(r, invalid, false), ...unspecified, pair: `${base}.valid`, sdl: invalid, verdict: bad, expected: { valid: false } },
+      { id: `${base}.valid`, ...common, ...editionOf(r, valid, true), pair: `${base}.invalid`, sdl: valid, verdict: good, expected: { valid: true } },
     );
   });
   const unused = Object.keys(UNSPECIFIED).filter((sdl) => !PAIRS.some(([, , invalid]) => invalid === sdl));

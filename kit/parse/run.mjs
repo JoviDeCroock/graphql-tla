@@ -75,7 +75,7 @@ const shorter = (a, b) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0);
 // for vectors[i]: { ok } and anything else it sent.
 export const judge = (vectors, answers) => {
   const byId = new Map(vectors.map((v) => [v.id, v]));
-  const stats = new Map(CHECKS.map((c) => [c.number, { cases: 0, failing: 0 }]));
+  const stats = new Map(CHECKS.map((c) => [c.number, { cases: 0, failing: 0, failingDraftOnly: 0 }]));
   const findings = new Map();
   const failed = [];
   const malformed = [];
@@ -114,6 +114,7 @@ export const judge = (vectors, answers) => {
     failed.push(i);
     const check = byNumber.get(v.spec[0]);
     stats.get(check.number).failing++;
+    if (v.edition === "draft") stats.get(check.number).failingDraftOnly++;
     const s = section(check.number);
     found(`${check.number}\u0000${v.expected.ok}`, v, {
       checks: [check.id],
@@ -184,6 +185,7 @@ export const run = async ({ adapter, strict, log }) => {
       status: s.failing > 0 ? "fail" : s.cases > 0 ? "pass" : "untested",
       cases: s.cases,
       failing: s.failing,
+      failingDraftOnly: s.failingDraftOnly,
     };
   });
   const report = {

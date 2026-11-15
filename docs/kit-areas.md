@@ -48,7 +48,7 @@ Each area exports `run({ adapter, strict, option, flag, log })` from `kit/<area>
   checkerSelfTest: "passed (n negative controls)",
   cases: { submitted, distinct, malformed },
   adapterProblems: 0,
-  checks: [{ id, title, level, spec: [section(...)], status, cases, failing, oct2021?, edition?, basis?, note? }],
+  checks: [{ id, title, level, spec: [section(...)], status, cases, failing, failingDraftOnly?, oct2021?, edition?, basis?, note?, observed? }],
   findings: [{ checks: [id], summary, cases, fixtures: { family: n }, fixture, problem?,
                example: { input: "<the vector, briefly>", response: <the answer>, expected: "<the reference's answer>" } }],
   fixtures: [],

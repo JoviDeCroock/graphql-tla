@@ -57,7 +57,8 @@ const cell = (check) => {
   if (!check) return "n/a";
   if (check.status === "fail") {
     if (check.level === "INFO") return `i ${check.failing}/${check.cases}`;
-    return `${check.level === "MUST" || check.level === "ADAPTER" ? "✗" : "!"} ${check.failing}/${check.cases}`;
+    const draft = check.failingDraftOnly ? (check.failingDraftOnly >= check.failing ? " (all draft only)" : ` (${check.failingDraftOnly} draft only)`) : "";
+    return `${check.level === "MUST" || check.level === "ADAPTER" ? "✗" : "!"} ${check.failing}/${check.cases}${draft}`;
   }
   if (check.status === "pass") return `✓ ${check.cases}`;
   if (check.status === "inconclusive") return `~ ${check.cases}`;
@@ -71,6 +72,7 @@ const levelText = (c) => (c.oct2021 ? `${c.level} (Oct 2021: ${c.oct2021})` : c.
 const legend = [
   "- **✓ N:** every one of the N cases it applied to satisfied it.",
   "- **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.",
+  "- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.",
   "- **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.",
   "- **~:** inconclusive (see the implementation's page).",
   "- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).",
@@ -87,8 +89,10 @@ const sectionCell = (key, number) => {
     .flatMap((r) => r.checks)
     .filter((c) => c.spec.some((s) => s.number === number));
   if (checks.length === 0) return null;
-  const failed = checks.filter((c) => c.status === "fail");
-  const must = failed.filter((c) => c.level !== "SHOULD");
+  const failed = checks.filter((c) => c.status === "fail" && c.level !== "INFO");
+  const draftOnly = (c) => c.failingDraftOnly && c.failingDraftOnly >= c.failing;
+  if (failed.length && failed.every(draftOnly)) return `✗ (draft only) ${failed.map((c) => `\`${c.id}\``).join(" ")}`;
+  const must = failed.filter((c) => c.level !== "SHOULD" && !draftOnly(c));
   if (must.length) return `✗ ${must.map((c) => `\`${c.id}\``).join(" ")}`;
   if (failed.length) return `! ${failed.map((c) => `\`${c.id}\``).join(" ")}`;
   if (checks.some((c) => c.status === "pass")) return "✓";
@@ -117,7 +121,7 @@ const matrix = () => {
     "",
     "## Implementations",
     "",
-    ...header(["Implementation", "Areas", "Capabilities", "Cases (distinct)", "Findings", "Malformed cases", "Adapter problems", "Checker self-test", "Kit"]),
+    ...header(["Implementation", "Areas", "Capabilities", "Cases (distinct)", "Finding groups", "Cases failing direct checks", "Adapter problems", "Checker self-test", "Kit"]),
   ];
   for (const key of keys) {
     const own = reports.filter((r) => r.key === key);
@@ -127,6 +131,10 @@ const matrix = () => {
     );
   }
 
+  lines.push(
+    "",
+    "**Finding groups** counts kinds of failure, not distinct bugs: one root cause can show up as several groups, and the number isn't a ranking. **Cases failing direct checks** are cases the kit rejected before consulting the reference, for something it checks on its own, such as a response stream that failed, a leaf value that should have raised an error, or a malformed error entry. They are the implementation's failures unless the adapter-problems column says otherwise.",
+  );
   lines.push("", "## Findings", "", "Each finding is one kind of failure: the set of clauses a case broke, or a malformed case's first problem, which is the root cause when one fault shows up several ways. A case counts toward one finding only.", "");
   for (const key of keys) {
     const own = reports.filter((r) => r.key === key);
@@ -254,7 +262,8 @@ const page = (key) => {
     lines.push("### Every check", "", legend, "", ...header(["Check", "Level", "Spec", "Result"]));
     for (const c of r.checks) {
       const level = levelText(c);
-      lines.push(`| ${c.title} (\`${c.id}\`)${c.note ? `. ${c.note}` : ""} | ${level} | ${c.spec.map(link).join(" ") || "—"} | ${cell(c)} |`);
+      const observed = c.observed === undefined ? "" : `. Observed: ${typeof c.observed === "string" ? c.observed : Object.entries(c.observed).map(([k, v]) => `${k} ${v}`).join(", ")}`;
+      lines.push(`| ${c.title} (\`${c.id}\`)${c.note ? `. ${c.note}` : ""}${observed} | ${level} | ${c.spec.map(link).join(" ") || "—"} | ${cell(c)} |`);
     }
     const based = r.checks.filter((c) => c.basis);
     if (based.length) lines.push("", ...based.map((c) => `- **Basis for \`${c.id}\`:** ${c.basis}`));

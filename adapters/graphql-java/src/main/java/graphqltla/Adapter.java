@@ -8,14 +8,21 @@
 // executeAsync or complete() returns, the engine is blocked on kit futures
 // only, and the adapter can say `idle`.
 //
-// Usage: java -jar graphql-java-adapter.jar [--no-idle]
+// Usage: java -jar graphql-java-adapter.jar [--no-idle] [--validate] [--good-faith]
 //
 // --no-idle leaves out `idle`, to exercise the kit's grace-based fallback.
+// --validate makes coerce validate before executing (no `unvalidated`).
+// --good-faith keeps Good Faith Introspection on in the introspect area.
+//
+// The other areas (parse, validate, coerce, schema, introspect) are in
+// Areas.java.
 
 package graphqltla;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.core.json.JsonWriteFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
@@ -57,7 +64,9 @@ import java.util.concurrent.Flow;
 import java.util.function.Consumer;
 
 public final class Adapter {
-    private static final ObjectMapper JSON = new ObjectMapper();
+    // Non-ASCII is escaped, so a lone surrogate (which the coerce and parse
+    // vectors hold) goes out as \ud800, not as the "?" a UTF-8 encoder writes.
+    private static final ObjectMapper JSON = JsonMapper.builder().enable(JsonWriteFeature.ESCAPE_NON_ASCII).build();
     private static final PrintStream OUT = new PrintStream(new java.io.FileOutputStream(java.io.FileDescriptor.out), false, StandardCharsets.UTF_8);
     private static final Object OUT_LOCK = new Object();
 
@@ -422,6 +431,9 @@ public final class Adapter {
         capabilities.add("mutation");
         capabilities.add("subscription");
         capabilities.add("error-propagation-off");
+        Areas.validating = argv.contains("--validate");
+        Areas.goodFaith = argv.contains("--good-faith");
+        capabilities.addAll(Areas.capabilities());
         send(msg("type", "hello", "protocol", 1, "name", "graphql-java " + graphqlJavaVersion(), "capabilities", capabilities));
 
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
@@ -430,6 +442,22 @@ public final class Adapter {
             JsonNode message = JSON.readTree(line);
             String type = message.get("type").asText();
             int id = message.get("id").asInt();
+            if (Areas.NAMES.contains(type)) {
+                // The other areas: one request, one result, no idle. A
+                // Throwable is the adapter's failure, or in the schema area a
+                // crash of graphql-java's (docs/kit/schema.md). Only the
+                // message's first line reaches the report; the stack trace
+                // goes to stderr.
+                try {
+                    Map<String, Object> result = msg("type", "result", "id", id);
+                    result.putAll(Areas.answer(type, message));
+                    send(result);
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                    send(msg("type", "error", "id", id, "message", e.getClass().getName() + ": " + e.getMessage()));
+                }
+                continue;
+            }
             try {
                 switch (type) {
                     case "execute" -> start(message);

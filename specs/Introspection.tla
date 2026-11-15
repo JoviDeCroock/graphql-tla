@@ -46,7 +46,8 @@
 (*   - B may be SpecBuiltins (the draft) or Oct2021Builtins (the October   *)
 (*     2021 edition).                                                      *)
 (*   - A wrapper type's fields other than kind and ofType are null         *)
-(*     (WrapperMatches).                                                   *)
+(*     (WrapperMatches), and the answer they are read from has each of     *)
+(*     __Schema's fields with its type (SchemaFieldsMatch).                *)
 (*   - An interface's `possibleTypes` and a directive's `locations` have   *)
 (*     no source order, and are compared as sets.                          *)
 (*   - The spec gives no descriptions for built-in definitions, so their   *)
@@ -608,6 +609,16 @@ WrapperMatches(w) ==
   /\ w.possibleTypes = None
   /\ w.enumValues = None
   /\ w.inputFields = None
+
+\* The wrapper types WrapperMatches judges are read from __type(name:
+\* "__Schema")'s fields. `fields` holds them as a service returned them,
+\* each [name, type] with type a type ref. Each field of B's __Schema must
+\* be there, once, with its type, so that an empty or partial answer can't
+\* pass vacuously. A service may return more fields.
+SchemaFieldsMatch(B, fields) ==
+  \A f \in Range(TypeNamed(B, "__Schema").fields) :
+    /\ Cardinality({i \in DOMAIN fields : fields[i].name = f.name}) = 1
+    /\ ByName(fields, f.name).type = RefResult(B, f.type)
 
 \* Whether a service's __type(name:) result `actual` (an optional __Type)
 \* is right.

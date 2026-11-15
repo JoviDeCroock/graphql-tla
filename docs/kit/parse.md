@@ -46,7 +46,7 @@ Each vector cites the sections it exercises. The first is the one its verdict re
 - **accepts what §X rejects:** the implementation accepted a source that, by the reference, breaks a rule of §X;
 - **rejects what §X accepts:** it rejected a source that §X allows.
 
-A check is `pass` when some vector cites its section and none of the vectors resting on it got a wrong answer. Findings count their draft-only vectors (`draftOnly`) and mark their example `[draft]`; a finding with nothing else carries `"edition": "draft"`. The report's `draftOnly` gives how many vectors are draft only and how many of those failed. Every run also checks the checker: it must flag every verdict flipped, flag exactly the vectors whose answer differs when each one gets the next vector's answer, count results without `ok` as malformed, and flag none of the reference's own answers.
+A check is `pass` when some vector cites its section and none of the vectors resting on it got a wrong answer. Findings count their draft-only vectors (`draftOnly`) and mark their example `[draft]`; a finding with nothing else carries `"edition": "draft"`. Each check gives `failingDraftOnly`, how many of its failing vectors are draft only, so a check whose failures are all draft only can be told apart. The report's `draftOnly` gives how many vectors are draft only and how many of those failed. Every run also checks the checker: it must flag every verdict flipped, flag exactly the vectors whose answer differs when each one gets the next vector's answer, count results without `ok` as malformed, and flag none of the reference's own answers.
 
 ## The vectors
 

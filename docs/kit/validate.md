@@ -83,7 +83,7 @@ A rule's check has one of four statuses:
 
 `acceptsValid` fails if any valid vector was rejected, and passes otherwise. Findings group failures by kind and rules: "§5.3.2 isn't enforced" and "valid documents rejected, hint §5.3.2" are separate findings. Each finding's example is the spec's own example where one failed, and otherwise the shortest failing document.
 
-**Draft-only vectors.** A vector tagged `"edition": "draft"` relies on something only the draft has, and `editionNote` says what. Findings count them (`draftOnly`), mark their example `[draft]`, and the report's `draftOnly` gives how many graded vectors are draft-only and how many of those failed. They are graded like any other vector. 207 vectors carry the tag, one of them `unspecified` as well:
+**Draft-only vectors.** A vector tagged `"edition": "draft"` relies on something only the draft has, and `editionNote` says what. Findings count them (`draftOnly`) and mark their example `[draft]`. Each check gives `failingDraftOnly`, how many of its failing vectors are draft-only, so a check whose failures are all draft-only can be told apart. The report's `draftOnly` gives how many graded vectors are draft-only and how many of those failed. They are graded like any other vector. 207 vectors carry the tag, one of them `unspecified` as well:
 
 - 12 break §5.2.1.1 Operation Type Existence, which is new in the draft;
 - 23 break §5.2.4.1 Single Root Field with `@skip` or `@include` at a subscription's root, which only the draft forbids. The October 2021 edition applies those directives instead, so it may give these a different answer;

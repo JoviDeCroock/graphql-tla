@@ -64,6 +64,22 @@ export default [
     property: "ListExamples",
   },
   {
+    name: "wraps a non-list item for a list item type even under October 2021's nestedListItems",
+    file: "Coercion.tla",
+    find: '/\\ ~Switch(S, "nestedListItems")',
+    replace: '/\\ FALSE',
+    property: "ListExamples",
+    differential: false,
+  },
+  {
+    name: "rejects a list of lists that has a null item under October 2021's nestedListItems",
+    file: "Coercion.tla",
+    find: 'items[i].kind \\notin {"list", "null", "variable"}',
+    replace: 'items[i].kind \\notin {"list", "variable"}',
+    property: "ListExamples",
+    differential: false,
+  },
+  {
     name: "gives an omitted nullable input field the value null",
     file: "Coercion.tla",
     find: "ELSE IF IsNonNull(field.type) THEN Fail\n            ELSE Ok(ObjV(acc))",

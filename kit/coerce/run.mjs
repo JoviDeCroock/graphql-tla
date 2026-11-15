@@ -13,7 +13,8 @@ import { classify, contextFor, describeAccepted, judge, malformed, planFor, same
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 // A vector whose answer only the draft gives (October 2021 doesn't coerce
-// default values).
+// default values, and doesn't make a list of one for an item whose type is
+// a list).
 const isDraft = (vector) => vector.edition === "draft";
 const isMap = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 
@@ -56,6 +57,22 @@ const dropNulls = (v) =>
     : isMap(v)
       ? Object.fromEntries(Object.entries(v).filter(([, x]) => x !== null).map(([k, x]) => [k, dropNulls(x)]))
       : v;
+
+// The paths to the entries that input field defaults add: in `expected`
+// but not in `without`, the answer with every such default left out.
+const addedPaths = (e, d, path = []) => {
+  if (Array.isArray(e)) return Array.isArray(d) && d.length === e.length ? e.flatMap((x, i) => addedPaths(x, d[i], [...path, i])) : [];
+  if (!isMap(e) || !isMap(d)) return [];
+  return Object.keys(e).flatMap((k) => (Object.hasOwn(d, k) ? addedPaths(e[k], d[k], [...path, k]) : [[...path, k]]));
+};
+// A copy of `v` with the entry at `path` removed, or set to `value`.
+const editAt = (v, path, value, remove = false) => {
+  const out = structuredClone(v);
+  const parent = path.slice(0, -1).reduce((x, k) => x[k], out);
+  if (remove) delete parent[path.at(-1)];
+  else parent[path.at(-1)] = value;
+  return out;
+};
 
 // Correct answers must pass; deliberately wrong ones must each be caught.
 // Returns the number of wrong answers, or a list of problems.
@@ -101,6 +118,18 @@ export const selfTest = (graded, inputs, capabilities) => {
     }
     // Answers that leave a SHOULD undone count against that SHOULD's check.
     for (const d of plan.deviations) caught(g, rawFor(d.answer, field), "an answer that leaves a SHOULD undone", d.check);
+    // Leaving out one input field default, but not another, still counts
+    // against inputFieldDefaults; a wrong value in the one kept doesn't.
+    if (plan.withoutDefaults) {
+      const paths = addedPaths(want.arguments, plan.withoutDefaults.arguments);
+      if (paths.length >= 2) {
+        const partial = editAt(want.arguments, paths[0], undefined, true);
+        caught(g, rawFor({ ...want, arguments: partial }), "an answer that leaves out some input field defaults", "inputFieldDefaults");
+        caught(g, rawFor({ ...want, arguments: editAt(partial, paths[1], "wrong") }), "some defaults left out and a wrong value", plan.check);
+      }
+    }
+    // October 2021's answer to a draft-only vector fails the vector's check.
+    for (const a of plan.editions) caught(g, rawFor(a, field), "October 2021's answer to a draft-only vector", plan.check);
     // Undeclared null entries, as an argument and inside an input object.
     if (want.outcome === "value") {
       caught(g, rawFor({ ...want, arguments: withUndeclaredNull(want.arguments, false) }), "an undeclared null argument");
@@ -110,7 +139,7 @@ export const selfTest = (graded, inputs, capabilities) => {
     // Responses the classification must not accept.
     const raw = rawFor(want, field);
     if (want.outcome === "request-error") {
-      caught(g, { ...raw, response: { ...raw.response, data: null } }, "a request error with data: null");
+      caught(g, { ...raw, response: { ...raw.response, data: null } }, "a request error with data: null", "requestErrorNoData");
       caught(g, { ...raw, calls: [{ path: [field], arguments: {} }] }, "a request error after a resolver ran");
     } else if (want.outcome === "field-error") {
       caught(g, { ...raw, response: { ...raw.response, errors: [{ message: "field error" }] } }, "a field error without a path");
@@ -162,13 +191,21 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     outcomes.push({ ...g, result, problem, got, failure });
   }
 
-  const stats = new Map(CHECKS.map((c) => [c.id, { cases: 0, failing: 0 }]));
+  const stats = new Map(CHECKS.map((c) => [c.id, { cases: 0, failing: 0, failingDraftOnly: 0, observed: {} }]));
   const findings = new Map();
   const malformedResults = outcomes.filter((o) => o.problem);
   for (const { vector, plan, result, got, failure } of outcomes.filter((o) => !o.problem)) {
     for (const id of plan.exercises) stats.get(id).cases++;
+    // For an informational check, which of the accepted answers it was.
+    if (!failure && plan.labels) {
+      const ctx = contextFor(vector, inputs, capabilities);
+      const label = plan.labels[plan.accept.findIndex((a) => sameAnswer(ctx, a, got))];
+      const { observed } = stats.get(plan.check);
+      observed[label] = (observed[label] ?? 0) + 1;
+    }
     if (!failure) continue;
     stats.get(failure.check).failing++;
+    if (isDraft(vector)) stats.get(failure.check).failingDraftOnly++;
     const key = `${failure.kind}\u0000${failure.check}`;
     const input = `${vector.document}  variables: ${vector.variables}${vector.operationName !== undefined ? `  operationName: ${vector.operationName}` : ""}`;
     const f = findings.get(key) ?? { checks: [failure.check], summary: summary(failure), cases: 0, draftOnly: 0, fixtures: {} };
@@ -209,6 +246,10 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     failing: outcomes.filter((o) => !o.problem && o.failure && isDraft(o.vector)).length,
   };
   if (failing > 0) log(`  ${draftOnly.failing} of the ${failing} failing vectors rely on the draft (of ${draftOnly.vectors} draft-only vectors run)`);
+  for (const check of CHECKS) {
+    const { observed } = stats.get(check.id);
+    if (Object.keys(observed).length > 0) log(`  ${check.id}: ${Object.entries(observed).map(([label, n]) => `${label} ${n}`).join(", ")}`);
+  }
 
   const test = selfTest(graded, inputs, capabilities);
   if (Array.isArray(test)) {
@@ -229,16 +270,21 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     draftOnly,
     checks: CHECKS.map((check) => {
       const s = stats.get(check.id);
+      const observed = Object.entries(s.observed);
       return {
         id: check.id,
         title: check.title,
         level: check.level,
+        ...(check.oct2021 ? { oct2021: check.oct2021 } : {}),
         spec: check.spec.map(section),
         ...(check.basis ? { basis: check.basis } : {}),
         status: s.failing > 0 ? "fail" : s.cases > 0 ? "pass" : "untested",
         cases: s.cases,
         failing: s.failing,
+        // How many of the failing vectors rely on the draft.
+        failingDraftOnly: s.failingDraftOnly,
         ...(check.untested ? { note: check.untested } : {}),
+        ...(observed.length ? { observed: s.observed, note: observed.map(([label, n]) => `${label}: ${n}`).join("; ") } : {}),
       };
     }),
     findings: sorted,

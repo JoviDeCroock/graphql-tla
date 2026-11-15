@@ -4,9 +4,13 @@
 // Base cases are recorded from graphql-js 17 through its adapter and must
 // pass the reference. For each control in kit/execution/controls.mjs, the
 // script tries the base cases, shortest first, until breaking one is caught
-// the way the control says. The corpus is committed, so the controls don't
-// depend on the implementation under test. Fixtures outside the spec (error
-// propagation off) give no bases: their failures are only informational.
+// the way the control says. Each report control in the same file gets the
+// shortest passing cases its predicates pick, and the cases it makes from
+// them are stored after checking that their report is right. The corpus is
+// committed, so the controls don't depend on the implementation under
+// test. Fixtures outside the spec (error propagation off) give no bases for
+// controls, since their failures are only informational, but report
+// controls use them.
 //
 // Usage: node scripts/generate-controls.mjs
 
@@ -14,8 +18,8 @@ import { writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Adapter } from "../kit/adapter.mjs";
-import { CASE_FORMAT, caseToTla, controlCaught, evaluate, normalize } from "../kit/execution/check.mjs";
-import { CONTROLS } from "../kit/execution/controls.mjs";
+import { CASE_FORMAT, caseToTla, controlCaught, evaluate, judgeReportControl, normalize } from "../kit/execution/check.mjs";
+import { CONTROLS, REPORT_CONTROLS } from "../kit/execution/controls.mjs";
 import { Driver, exhaustive, random } from "../kit/execution/drive.mjs";
 import { loadFixtures } from "../kit/fixtures.mjs";
 
@@ -27,7 +31,7 @@ const adapter = new Adapter("node adapters/graphql-js/adapter.mjs --graphql 17")
 await adapter.hello();
 const driver = new Driver(adapter);
 const recorded = [];
-for (const fixture of fixtures.filter((f) => f.errorPropagation)) {
+for (const fixture of fixtures) {
   recorded.push(
     ...(await exhaustive(driver, fixture, "fifo")),
     ...(await exhaustive(driver, fixture, "lifo")),
@@ -48,8 +52,9 @@ const candidates = recorded
   .filter(({ prepared }) => !prepared.problems && !seen.has(prepared.tla) && seen.add(prepared.tla))
   .sort((a, b) => a.raw.trace.length - b.raw.trace.length);
 const verdicts = await evaluate(candidates.map((c) => c.prepared.tla));
-const passing = candidates.filter((_, i) => verdicts[i].failures.length === 0).map((c) => c.raw);
-console.log(`${recorded.length} runs, ${passing.length} distinct passing cases`);
+const passingAll = candidates.filter((_, i) => verdicts[i].failures.length === 0).map((c) => c.raw);
+const passing = passingAll.filter((raw) => byId.get(raw.fixture).errorPropagation);
+console.log(`${recorded.length} runs, ${passingAll.length} distinct passing cases, ${passing.length} in fixtures inside the spec`);
 
 const bases = [];
 const controls = [];
@@ -79,8 +84,31 @@ for (const control of CONTROLS) {
   console.log(`✓ ${control.name} (${control.clause}), from a ${base.fixture} case`);
 }
 
+const reportControls = [];
+for (const control of REPORT_CONTROLS) {
+  const picked = [];
+  for (const predicate of control.bases) {
+    const base = passingAll.find((raw) => !picked.includes(raw) && predicate(raw, byId.get(raw.fixture)));
+    if (base) picked.push(base);
+  }
+  if (picked.length < control.bases.length) {
+    console.log(`✗ no passing cases for the report control "${control.name}"`);
+    process.exitCode = 1;
+    continue;
+  }
+  const cases = control.make(picked);
+  const problem = await judgeReportControl(fixtures, control, cases);
+  if (problem) {
+    console.log(`✗ report control "${control.name}": ${problem}`);
+    process.exitCode = 1;
+    continue;
+  }
+  reportControls.push({ name: control.name, cases });
+  console.log(`✓ report control: ${control.name}`);
+}
+
 writeFileSync(
   join(root, "kit/execution/controls.json"),
-  `${JSON.stringify({ generatedFrom: "graphql-js 17.1.0", bases, controls }, null, 1)}\n`,
+  `${JSON.stringify({ generatedFrom: "graphql-js 17.1.0", bases, controls, reportControls }, null, 1)}\n`,
 );
-console.log(`wrote kit/execution/controls.json: ${bases.length} bases, ${controls.length} controls`);
+console.log(`wrote kit/execution/controls.json: ${bases.length} bases, ${controls.length} controls, ${reportControls.length} report controls`);

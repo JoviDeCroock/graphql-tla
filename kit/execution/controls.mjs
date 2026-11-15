@@ -231,6 +231,17 @@ export const CONTROLS = [
     },
   },
   {
+    name: "reports a Float for an Int call, then produces no response after an uncoercible value",
+    clause: "malformed",
+    check: "protocol",
+    make: (c) => {
+      const settle = c.trace.find((e) => e.settle && e.outcome.kind === "uncoercible" && /^Int!?$/.test(callType(c, e.settle) ?? ""));
+      if (!settle) return [];
+      const trace = c.trace.map((e) => (e.call && samePath(e.call, settle.settle) ? { ...e, type: "Float" } : e));
+      return [{ trace, response: undefined, noResponse: "can't serialize the value" }];
+    },
+  },
+  {
     name: "produces no response",
     clause: "malformed",
     check: "responds",
@@ -299,6 +310,80 @@ export const CONTROLS = [
       const trace = clone(c.trace);
       trace[i].type = "Boolean";
       return [{ trace }];
+    },
+  },
+];
+
+// A response with every error's locations at line 0, which breaks the
+// errorLocations SHOULD.
+const lineZero = (c) => ({ ...c, response: { ...c.response, errors: c.response.errors.map((e) => ({ ...e, locations: [{ line: 0, column: 1 }] })) } });
+const check = (report, id) => report.checks.find((c) => c.id === id);
+const fixtureOf = (report, id) => report.fixtures.find((f) => f.id === id);
+const outsideSpec = (fixture) => fixture.errorPropagation === false;
+const hasErrors = (c) => c.response?.errors?.length > 0;
+
+// Report controls: what a single case can't show, how the report counts
+// and grades failures across cases. Each needs passing base cases, one for
+// each predicate in `bases` ((case, fixture) => boolean), makes the cases
+// to check from them with `make(bases)`, and says what's wrong with their
+// report (run with `strict`) with `expect(report, cases)`, or "" if
+// nothing is. scripts/generate-controls.mjs picks the bases and stores the
+// cases in controls.json.
+export const REPORT_CONTROLS = [
+  {
+    name: "a SHOULD warning in a normal fixture, after the same warning outside the spec",
+    strict: true,
+    bases: [(c, fixture) => outsideSpec(fixture) && hasErrors(c), (c, fixture) => !outsideSpec(fixture) && hasErrors(c)],
+    make: (bases) => bases.map(lineZero),
+    expect: (report, [, normal]) => {
+      const problems = [];
+      if (check(report, "errorLocations").failing !== 1) problems.push(`errorLocations fails on ${check(report, "errorLocations").failing} cases, not 1`);
+      if (fixtureOf(report, normal.fixture).status !== "fail") problems.push(`${normal.fixture} passes with --strict`);
+      return problems.join("; ");
+    },
+  },
+  {
+    name: "one case breaks the same SHOULD twice",
+    strict: false,
+    bases: [(c, fixture) => !outsideSpec(fixture) && c.response?.errors?.length > 1],
+    make: (bases) => bases.map(lineZero),
+    expect: (report) => {
+      const { cases, failing } = check(report, "errorLocations");
+      const finding = report.findings.find((f) => f.checks.includes("errorLocations"));
+      return cases === 1 && failing === 1 && finding?.cases === 1 ? "" : `errorLocations fails on ${failing} of ${cases} cases, in a finding of ${finding?.cases} cases`;
+    },
+  },
+  {
+    name: "a call with the wrong type, then no response after an uncoercible Int",
+    strict: false,
+    bases: [(c, fixture) => !outsideSpec(fixture) && c.trace.some((e) => e.settle?.length === 1 && e.settle[0] === "count" && e.outcome.kind === "uncoercible")],
+    make: ([c]) => [
+      {
+        ...c,
+        trace: c.trace.map((e) => (e.call?.length === 1 && e.call[0] === "count" ? { ...e, type: "Float" } : e)),
+        response: undefined,
+        noResponse: "can't serialize the value",
+      },
+    ],
+    expect: (report) =>
+      report.adapterProblems === 1 && check(report, "intFraction").failing === 0
+        ? ""
+        : `adapterProblems is ${report.adapterProblems} and intFraction fails on ${check(report, "intFraction").failing} cases, not 1 and 0`,
+  },
+  {
+    name: "a root field called twice with different types, outside the spec",
+    strict: false,
+    bases: [(c, fixture) => outsideSpec(fixture) && c.trace.some((e) => e.call?.length === 1)],
+    make: ([c]) => {
+      const call = c.trace.find((e) => e.call?.length === 1);
+      return [{ ...c, trace: [...c.trace, { ...call, type: call.type === "ID!" ? "String!" : "ID!" }] }];
+    },
+    expect: (report, [c]) => {
+      const problems = [];
+      if (report.adapterProblems !== 1) problems.push(`adapterProblems is ${report.adapterProblems}, not 1`);
+      if (check(report, "callsOnce").failing !== 1) problems.push(`callsOnce fails on ${check(report, "callsOnce").failing} cases, not 1`);
+      if (fixtureOf(report, c.fixture).status !== "fail") problems.push(`${c.fixture} passes`);
+      return problems.join("; ");
     },
   },
 ];

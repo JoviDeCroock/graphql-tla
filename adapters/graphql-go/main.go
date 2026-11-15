@@ -300,7 +300,7 @@ func main() {
 	if !syncMode {
 		capabilities = append([]string{"deferred-items"}, capabilities...)
 	}
-	send(map[string]any{"type": "hello", "protocol": 1, "name": "graphql-go " + version(), "capabilities": capabilities})
+	send(map[string]any{"type": "hello", "protocol": 1, "name": "graphql-go/graphql " + version(), "capabilities": capabilities})
 
 	in := bufio.NewReader(os.Stdin)
 	for {

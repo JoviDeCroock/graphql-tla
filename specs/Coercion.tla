@@ -186,19 +186,24 @@ AsNumber(n) == [n EXCEPT !.kind = "number"]
 (*                       runtime value coerces to, which the spec doesn't  *)
 (*                       say (see CoerceItems): "null", "error" or "drop"  *)
 (*                                                                         *)
-(* One more switch isn't a choice the spec leaves open but an edition:     *)
+(* Two more switches aren't choices the spec leaves open but editions:     *)
 (*                                                                         *)
 (*   coerceDefaults      the draft coerces a default value (CoerceVariable-*)
 (*                       Values, CoerceArgumentValues, §3.10). October     *)
 (*                       2021 adds "the value defaultValue" as it is, and  *)
 (*                       says an input field's "default value should be    *)
 (*                       used". FALSE gives October 2021's answer.         *)
+(*   nestedListItems     the draft's §3.11 table coerces [1, 2, 3] for     *)
+(*                       [[Int]] to [[1], [2], [3]]. October 2021's table  *)
+(*                       says "Error: Incorrect item value": an item that  *)
+(*                       isn't a list, where the item type is a list, is   *)
+(*                       an error. FALSE gives October 2021's answer.      *)
 (*                                                                         *)
 (* DefaultPolicy follows every SHOULD, takes the MAY, and follows the      *)
 (* draft. A schema without a policy field uses it, and a policy without a  *)
 (* switch takes that switch's default.                                     *)
 
-DefaultPolicy == [enumFromString |-> TRUE, inputFieldDefaults |-> TRUE, missingListItem |-> "null", coerceDefaults |-> TRUE]
+DefaultPolicy == [enumFromString |-> TRUE, inputFieldDefaults |-> TRUE, missingListItem |-> "null", coerceDefaults |-> TRUE, nestedListItems |-> TRUE]
 PolicyOf(S) == IF "policy" \in DOMAIN S THEN S.policy ELSE DefaultPolicy
 WithPolicy(S, policy) == [types |-> S.types, fields |-> S.fields, policy |-> policy]
 Switch(S, name) == IF name \in DOMAIN PolicyOf(S) THEN PolicyOf(S)[name] ELSE DefaultPolicy[name]
@@ -362,6 +367,13 @@ CoerceItems(S, itemType, items, i, source, vars, acc) ==
     LET item ==
           IF IsMissingVariable(items[i], vars)
           THEN IF IsNonNull(itemType) \/ Switch(S, "missingListItem") = "error" THEN Fail ELSE Ok(NullV)
+          \* October 2021's §3.11 table: [1, 2, 3] for [[Int]] is "Error:
+          \* Incorrect item value". A variable item is already coerced, and
+          \* null is the item type's business.
+          ELSE IF /\ ~Switch(S, "nestedListItems")
+                  /\ IsList(IF IsNonNull(itemType) THEN OfType(itemType) ELSE itemType)
+                  /\ items[i].kind \notin {"list", "null", "variable"}
+          THEN Fail
           ELSE CoerceInput(S, itemType, items[i], source, vars)
     IN IF item.ok
        THEN CoerceItems(S, itemType, items, i + 1, source, vars, Append(acc, item.value))
@@ -706,7 +718,17 @@ ListCases == <<
   Case(Lit(ListOf(ListOf(IntT)), ListV(<<ListV(<<I(1)>>), ListV(<<Str("b")>>)>>)), Fail),
   Case(Lit(ListOf(ListOf(IntT)), I(1)), Ok(ListV(<<ListV(<<N(1)>>)>>))),
   Case(Lit(ListOf(ListOf(IntT)), NullV), Ok(NullV)),
-  Case(Lit(ListOf(NonNull(IntT)), ListV(<<I(1), NullV>>)), Fail)
+  Case(Lit(ListOf(NonNull(IntT)), ListV(<<I(1), NullV>>)), Fail),
+  \* October 2021's table: an item that isn't a list, for a list item type,
+  \* is an error. A single value is still wrapped, and a list of lists, or
+  \* null, still coerces.
+  Case(CoerceInput(WithPolicy(ExampleSchema, [DefaultPolicy EXCEPT !.nestedListItems = FALSE]),
+                   ListOf(ListOf(IntT)), ListV(<<I(1), I(2), I(3)>>), "literal", {}), Fail),
+  Case(CoerceInput(WithPolicy(ExampleSchema, [DefaultPolicy EXCEPT !.nestedListItems = FALSE]),
+                   ListOf(ListOf(IntT)), ListV(<<ListV(<<I(1)>>), NullV>>), "literal", {}),
+       Ok(ListV(<<ListV(<<N(1)>>), NullV>>))),
+  Case(CoerceInput(WithPolicy(ExampleSchema, [DefaultPolicy EXCEPT !.nestedListItems = FALSE]),
+                   ListOf(ListOf(IntT)), I(1), "variables", {}), Ok(ListV(<<ListV(<<N(1)>>)>>)))
 >>
 
 \* §3.10's table of examples, run as `example(arg: <literal>)` with the

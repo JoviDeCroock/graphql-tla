@@ -10,11 +10,16 @@
 //                      policy (every SHOULD followed, JSON strings taken as
 //                      enum values): the expected answer. Under the other
 //                      policies, the answers the spec also permits
-//                      (`alternatives`). With default values used as
-//                      October 2021 uses them, uncoerced: where that answer
-//                      differs, the vector relies on the draft (`edition`).
-//                      With the variables read as a binary64 JSON parser
-//                      reads them, the `binary64` answer, where it differs;
+//                      (`alternatives`). Under October 2021's rules
+//                      (default values used as they are, and no list of one
+//                      made for an item whose type is a list): where that
+//                      answer differs, the vector relies on the draft
+//                      (`edition`), and the answer is an `oct2021`
+//                      alternative. With the variables read as a binary64
+//                      JSON parser reads them, the `binary64` answer, where
+//                      it differs. With a lone surrogate in a JSON string
+//                      kept as sent, or replaced with U+FFFD, the
+//                      `loneSurrogate` answers, where they differ;
 //   Coercion!GetOperation    which root field the selected operation runs;
 //   Validation!IsValid whether the document is valid. A document that is
 //                      invalid by Validation.tla is `valid: false`. One that
@@ -364,7 +369,7 @@ const num = (kind, text) => {
   }
   return `Num(${str(kind)}, ${bool(m[1] === "-")}, ${seq([...digits])}, ${exp})`;
 };
-const strV = (s) => `StrW(${str(s)}, ${bool(s.isWellFormed())})`;
+const strV = (s, wellFormed = s.isWellFormed()) => `StrW(${str(s)}, ${bool(wellFormed)})`;
 const entry = (key, value) => `Entry(${str(key)}, ${value})`;
 const typeTla = (t) => `[name |-> ${str(t.name)}, wrappers |-> ${seq(t.wrappers.map(str))}]`;
 
@@ -382,13 +387,18 @@ const literal = (node) => {
     default: throw new Error(`unexpected literal ${node.kind}`);
   }
 };
-const json = (value) => {
+// strings: how a JSON string with a lone surrogate reaches coercion: "as
+// read" (not a valid Unicode string), "kept" (taken as a string anyway) or
+// "replaced" (each lone surrogate replaced with U+FFFD).
+const json = (value, strings = "as read") => {
   if (value === null) return "NullV";
-  if (typeof value === "string") return strV(value);
+  if (typeof value === "string") {
+    return strings === "kept" ? strV(value, true) : strV(strings === "replaced" ? value.toWellFormed() : value);
+  }
   if (typeof value === "boolean") return `Bool(${bool(value)})`;
-  if (Array.isArray(value)) return `ListV(${seq(value.map(json))})`;
+  if (Array.isArray(value)) return `ListV(${seq(value.map((v) => json(v, strings)))})`;
   if (NUMBER in value) return num("number", value[NUMBER]);
-  return `ObjV(${set(Object.entries(value).map(([k, v]) => entry(k, json(v))))})`;
+  return `ObjV(${set(Object.entries(value).map(([k, v]) => entry(k, json(v, strings))))})`;
 };
 // A JSON value as a binary64 parser (JSON.parse) delivers it: a number is
 // the nearest double, written out exactly, or non-finite.
@@ -520,8 +530,9 @@ const documentToTla = (doc) =>
 // The modules tla-ts evaluates
 
 // For each request: the field GetOperation selects; ExecuteRequest's
-// outcome and coerced arguments as JSON text under each policy, and with
-// the variables as a binary64 parser reads them; and whether every Int and
+// outcome and coerced arguments as JSON text under each policy, under
+// October 2021's rules, with the variables as a binary64 parser reads them,
+// and with a lone surrogate kept or replaced; and whether every Int and
 // Float literal coerces (§5.6.1's "coercible").
 const coercionModule = (name, schemaTla, cases) => `---- MODULE ${name} ----
 EXTENDS Coercion
@@ -586,7 +597,11 @@ ASSUME \\A i \\in DOMAIN Cases :
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.missingListItem = "error"]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.missingListItem = "drop"]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.coerceDefaults = FALSE]), c, c.request),
+              Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.nestedListItems = FALSE]), c, c.request),
+              Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.coerceDefaults = FALSE, !.nestedListItems = FALSE]), c, c.request),
               IF c.has64 THEN Answer(Schema, c, c.request64) ELSE <<"", "">>,
+              IF c.hasLone THEN Answer(Schema, c, c.requestKept) ELSE <<"", "">>,
+              IF c.hasLone THEN Answer(Schema, c, c.requestReplaced) ELSE <<"", "">>,
               \\A j \\in DOMAIN c.doc : LiteralsInRange(c.doc[j])>>)
 ASSUME PrintT(<<"done", Len(Cases)>>)
 
@@ -670,13 +685,20 @@ const POLICY_RUNS = [
   ["missingListItemDropped"],
 ];
 const ANSWER = String.raw`<<\s*"(\w*)",\s*"((?:[^"\\]|\\.)*)"\s*>>`;
-// The field, then the answers: the default policy's, POLICY_RUNS', October
-// 2021's defaults and the binary64 one; then whether the literals coerce.
-const ANSWERS = 1 + POLICY_RUNS.length + 2;
+// The field, then the answers: the default policy's, POLICY_RUNS', with
+// each of October 2021's rules and with both, the binary64 one, and with a
+// lone surrogate kept and replaced; then whether the literals coerce.
+const EDITION_RUNS = ["coerceDefaults", "nestedListItems", "both"];
+const ANSWERS = 1 + POLICY_RUNS.length + EDITION_RUNS.length + 3;
 const VECTOR = new RegExp(
   String.raw`<<\s*"vector",\s*(\d+),\s*"(\w*)",\s*${Array(ANSWERS).fill(ANSWER).join(String.raw`,\s*`)},\s*(TRUE|FALSE)\s*>>`,
   "g",
 );
+const EDITION_REASONS = {
+  coerceDefaults: "only the draft coerces a default value; October 2021 uses it as it is",
+  nestedListItems:
+    "only the draft coerces an item that isn't a list as a list of one where the item type is a list; October 2021's §3.11 table says [1, 2, 3] for [[Int]] is \"Error: Incorrect item value\"",
+};
 const OUTCOMES = { requestError: "request-error", fieldError: "field-error", resolved: "value" };
 const answerOf = (kind, text, field) => {
   const outcome = OUTCOMES[kind];
@@ -702,6 +724,15 @@ const idInput = (o) => {
   if (Object.hasOwn(variables, name)) return variables[name];
   return operation.variableDefinitions.find((v) => v.variable.name.value === name)?.defaultValue;
 };
+// Whether a JSON text has a string with a lone surrogate.
+const hasLoneSurrogate = (text) => {
+  let found = false;
+  JSON.parse(text, (_key, value) => {
+    if (typeof value === "string" && !value.isWellFormed()) found = true;
+    return value;
+  });
+  return found;
+};
 const isIntegerInput = (v) => v?.kind === "IntValue" || (v?.[NUMBER] !== undefined && integerOf(v) !== undefined);
 
 const generate = async () => {
@@ -712,9 +743,11 @@ const generate = async () => {
     const has64 = needsExactNumbers(o.variables);
     const request = set(Object.entries(parseExact(o.variables)).map(([k, v]) => entry(k, json(v))));
     const request64 = has64 ? set(Object.entries(JSON.parse(o.variables)).map(([k, v]) => entry(k, json64(v)))) : request;
+    const hasLone = hasLoneSurrogate(o.variables);
+    const requestWith = (strings) => (hasLone ? set(Object.entries(parseExact(o.variables)).map(([k, v]) => entry(k, json(v, strings)))) : request);
     const name = o.operationName === null ? "NoName" : `Name(${str(o.operationName)})`;
     return {
-      coercion: `[doc |-> ${documentOps(document)}, name |-> ${name}, request |-> ${request}, has64 |-> ${bool(has64)}, request64 |-> ${request64}]`,
+      coercion: `[doc |-> ${documentOps(document)}, name |-> ${name}, request |-> ${request}, has64 |-> ${bool(has64)}, request64 |-> ${request64}, hasLone |-> ${bool(hasLone)}, requestKept |-> ${requestWith("kept")}, requestReplaced |-> ${requestWith("replaced")}]`,
       validation: documentToTla(document),
     };
   });
@@ -735,8 +768,11 @@ const generate = async () => {
           r.field = m[2];
           const at = (j) => (m[3 + 2 * j] ? answerOf(m[3 + 2 * j], m[4 + 2 * j], m[2]) : undefined);
           r.answers = Array.from({ length: 1 + POLICY_RUNS.length }, (_, j) => at(j));
-          r.oct2021 = at(ANSWERS - 2);
-          r.binary64 = at(ANSWERS - 1);
+          const editions = 1 + POLICY_RUNS.length;
+          r.oct2021 = Object.fromEntries(EDITION_RUNS.map((e, j) => [e, at(editions + j)]));
+          r.binary64 = at(ANSWERS - 3);
+          r.kept = at(ANSWERS - 2);
+          r.replaced = at(ANSWERS - 1);
           r.inRange = m[3 + 2 * ANSWERS] === "TRUE";
           n++;
         }
@@ -772,22 +808,39 @@ const generate = async () => {
       alternatives.push({ ...a, policy });
     });
     const binary64 = r.binary64 && answerKey(r.binary64) !== answerKey(expected) ? r.binary64 : undefined;
-    // October 2021's CoerceVariableValues and CoerceArgumentValues add a
-    // default value as it is, and its §3.10 uses an input field's default
-    // without coercing it. Where that changes the answer, the vector relies
-    // on the draft.
-    const draftDefault =
-      answerKey(r.oct2021) === answerKey(expected)
-        ? undefined
-        : r.oct2021.outcome === "value"
-          ? `the arguments ${JSON.stringify(r.oct2021.arguments)}`
-          : `a ${r.oct2021.outcome.replace("-", " ")}`;
-    const check = o.check === "id" ? (expected.outcome === "value" ? "idCoerced" : "id") : o.check;
+    // October 2021's answer. Its CoerceVariableValues and
+    // CoerceArgumentValues add a default value as it is, and its §3.10 uses
+    // an input field's default without coercing it. Its §3.11 table says
+    // [1, 2, 3] for [[Int]] is "Error: Incorrect item value". Where that
+    // changes the answer, the vector relies on the draft. A rule is a reason
+    // when following the draft on it alone changes October 2021's answer.
+    const oct2021 = r.oct2021.both;
+    const draftOnly = answerKey(oct2021) !== answerKey(expected);
+    const reasons = !draftOnly
+      ? []
+      : [
+          ...(answerKey(oct2021) !== answerKey(r.oct2021.nestedListItems) ? [EDITION_REASONS.coerceDefaults] : []),
+          ...(answerKey(oct2021) !== answerKey(r.oct2021.coerceDefaults) ? [EDITION_REASONS.nestedListItems] : []),
+        ];
+    if (draftOnly && reasons.length === 0) reasons.push(EDITION_REASONS.coerceDefaults, EDITION_REASONS.nestedListItems);
+    if (draftOnly && !alternatives.some((x) => answerKey(x) === answerKey(oct2021))) alternatives.push({ ...oct2021, policy: ["oct2021"] });
+    const editionNote = draftOnly
+      ? `${reasons.join("; ")}. Under October 2021 the answer is ${oct2021.outcome === "value" ? `the arguments ${JSON.stringify(oct2021.arguments)}` : `a ${oct2021.outcome.replace("-", " ")}`}`
+      : undefined;
+    // A JSON string with a lone surrogate: what String or ID gets is the
+    // JSON parser's doing, and the spec doesn't define a valid Unicode
+    // string. Where keeping it, or replacing it with U+FFFD, changes the
+    // answer, the vector is informational.
+    const different = (a) => a && answerKey(a) !== answerKey(expected);
+    const loneSurrogate = different(r.kept) || different(r.replaced) ? { kept: r.kept, replaced: r.replaced } : undefined;
+    const typeCheck = o.check === "id" ? (expected.outcome === "value" ? "idCoerced" : "id") : o.check;
+    const check = loneSurrogate ? "loneSurrogates" : typeCheck;
     if (!CHECK_IDS.has(check)) throw new Error(`unknown check ${check}`);
-    // Sections: the check's, plus the algorithm that raises the expected
-    // kind of error. A request error before any operation was selected is
-    // GetOperation's, not CoerceVariableValues'.
-    const spec = [CHECKS.find((c) => c.id === check).spec[0]];
+    // Sections: the check's (for loneSurrogates, the type's), plus the
+    // algorithm that raises the expected kind of error. A request error
+    // before any operation was selected is GetOperation's, not
+    // CoerceVariableValues'.
+    const spec = [CHECKS.find((c) => c.id === typeCheck).spec[0]];
     if (expected.outcome === "request-error" && r.field !== "" && check !== "variables") spec.push("6.1.2");
     if (expected.outcome === "field-error" && check !== "arguments") spec.push("6.4.1");
     return {
@@ -805,7 +858,8 @@ const generate = async () => {
       expected,
       alternatives,
       binary64,
-      draftDefault,
+      loneSurrogate,
+      editionNote,
     };
   });
 
@@ -846,9 +900,8 @@ const generate = async () => {
     expected: v.expected,
     ...(v.alternatives.length ? { alternatives: v.alternatives } : {}),
     ...(v.binary64 ? { binary64: v.binary64 } : {}),
-    ...(v.draftDefault
-      ? { edition: "draft", editionNote: `only the draft coerces a default value; October 2021 uses it as it is, which gives ${v.draftDefault}` }
-      : {}),
+    ...(v.loneSurrogate ? { loneSurrogate: v.loneSurrogate } : {}),
+    ...(v.editionNote ? { edition: "draft", editionNote: v.editionNote } : {}),
   }));
 
   // The argument and input field declarations, as type text, so the kit

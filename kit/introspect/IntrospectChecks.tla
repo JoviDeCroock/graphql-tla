@@ -21,7 +21,12 @@
 (*     problems is also compared with Oct2021Builtins, so that the kit can *)
 (*     tell which problems with built-ins match October 2021.              *)
 (*   - Wrapper types (actual.wrappers) must pass WrapperMatches: a         *)
-(*     "wrapper" problem otherwise.                                        *)
+(*     "wrapper" problem otherwise. The answer they come from              *)
+(*     (actual.wrapperFields) must pass SchemaFieldsMatch: a               *)
+(*     "wrapperFields" problem per field of __Schema otherwise.            *)
+(*   - An item a service adds to a built-in list (a field, argument or     *)
+(*     enum value), or a type it adds, is an "added:" problem, set apart   *)
+(*     from one it leaves out.                                             *)
 (*   - B also has any other directive the service provides ("GraphQL       *)
 (*     services and client tooling may provide any additional custom       *)
 (*     directive"), as the service describes it, and the types its         *)
@@ -47,16 +52,22 @@ IsNull(x) == x = None
 DeprecatedNames(seq) == {seq[k].name : k \in {j \in DOMAIN seq : IsDeprecated(seq[j])}}
 
 \* The service returned the same items as expected, by name, each once.
-\* When they differ only by deprecated items, includeDeprecated wasn't
-\* honoured.
+\* Items left out and items added are set apart: an added item is
+\* "added:" \o aspect, so that the kit can tell an extension of a built-in
+\* type from a change to it. When the difference is only deprecated items,
+\* includeDeprecated wasn't honoured.
 MembershipProblems(aspect, where, e, a, dep) ==
   LET en == NameSet(e)
       an == NameSet(a)
-      diff == (en \ an) \cup (an \ en)
+      missing == en \ an
+      added == an \ en
   IN IF Len(a) # Cardinality(an) THEN {P(aspect, where)}
-     ELSE IF diff = {} THEN {}
-     ELSE IF diff \subseteq dep THEN {P("deprecation", where)}
-     ELSE {P(aspect, where)}
+     ELSE (IF missing = {} THEN {}
+           ELSE IF missing \subseteq dep THEN {P("deprecation", where)}
+           ELSE {P(aspect, where)})
+          \cup (IF added = {} THEN {}
+                ELSE IF added \subseteq dep THEN {P("deprecation", where)}
+                ELSE {P("added:" \o aspect, where)})
 
 OrderProblems(where, e, a) == IF NamesOf(e) = NamesOf(a) THEN {} ELSE {P("order", where)}
 
@@ -147,6 +158,14 @@ DirectiveProblems(FS, D, e, a) ==
   \cup InputValuesProblems(FS, ~IsBuiltinDirectiveName(D.name), "arguments", w, "(", ":)", D.args, e.args, a.args)
   \cup DeprecationProblems(w, e, a)
 
+\* The fields of __Schema the wrapper answer must have, each once with its
+\* type (Introspection!SchemaFieldsMatch), one problem per field.
+WrapperFieldsProblems(B, fields) ==
+  {P("wrapperFields", "__Schema." \o f.name) :
+     f \in {g \in Range(TypeNamed(B, "__Schema").fields) :
+              IF Cardinality({i \in DOMAIN fields : fields[i].name = g.name}) # 1 THEN TRUE
+              ELSE ByName(fields, g.name).type # RefResult(B, g.type)}}
+
 \* The built-ins a service may provide: the edition's introspection types
 \* and built-in directives (E), its own directives (`extras`), and the
 \* types their arguments reach that the document doesn't define
@@ -185,7 +204,7 @@ Problems(S0, B, extraTypes, inc, actual) ==
   \cup (IF actual.typename = RootTypeName(S, "query") THEN {} ELSE {P("typename", "")})
   \cup (IF (\A i \in DOMAIN actual.types : Len(actual.types[i].name) = 1) /\ Len(actual.types) = Cardinality(an)
         THEN {} ELSE {P("types", "")})
-  \cup {P(IF x \in BuiltinScalarNames THEN "builtinScalars" ELSE "types", x) : x \in diff}
+  \cup {P(IF x \in BuiltinScalarNames THEN "builtinScalars" ELSE IF x \in an THEN "added:types" ELSE "types", x) : x \in diff}
   \cup UNION {TypeProblems(FS, TypeNamed(FS, x), ByName(expected.types, <<x>>), ByName(actual.types, <<x>>)) :
                 x \in (en \cap an) \ badTypes}
   \cup {P("serviceTypes", x) : x \in badTypes}
@@ -196,6 +215,7 @@ Problems(S0, B, extraTypes, inc, actual) ==
   \cup {P("builtinDirectives", "@" \o d) : d \in RecommendedDirectiveNames(S0) \ (returned \cup required)}
   \cup UNION {DirectiveProblems(FS, DirectiveNamed(FS, d), ByName(ed, d), ByName(ad, d)) : d \in Common(ed, ad)}
   \cup {P("wrapper", w.where) : w \in {x \in Range(actual.wrappers) : ~WrapperMatches(x)}}
+  \cup WrapperFieldsProblems(B, actual.wrapperFields)
 
 \* What is wrong with a sequence of __type(name:) results, each
 \* [name, result] with result an optional __Type. `provided` names the
@@ -233,6 +253,7 @@ CaseResult(S, c) ==
                TypeByNameMatches(AsProvided(S, c.provided), E, c.inc, c.actual[i].name, c.actual[i].result)
         ELSE /\ Matches(S, ServiceBuiltins(E, c.extras, c.extraTypes), c.inc, TRUE, c.actual)
              /\ \A i \in DOMAIN c.actual.wrappers : WrapperMatches(c.actual.wrappers[i])
+             /\ SchemaFieldsMatch(E, c.actual.wrapperFields)
   IN <<problems, matches,
        IF c.profile = "draft" /\ problems # {} THEN CaseProblems(S, c, Oct2021Builtins) ELSE {}>>
 ====

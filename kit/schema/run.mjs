@@ -98,7 +98,7 @@ const selfTest = (vectors) => {
 };
 
 export const buildReport = ({ vectors, answers, strict, implementation, capabilities, selfTestText, total = vectors.length, skipped = {} }) => {
-  const stats = new Map(RULES.map((r) => [r.rule, { cases: 0, failing: 0 }]));
+  const stats = new Map(RULES.map((r) => [r.rule, { cases: 0, failing: 0, failingDraftOnly: 0 }]));
   const findings = new Map();
   let malformed = 0;
   vectors.forEach((v, i) => {
@@ -124,6 +124,7 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
     s.cases++;
     if (verdict === "pass") return;
     s.failing++;
+    if (v.edition === "draft") s.failingDraftOnly++;
     const r = RULE.get(v.rule);
     const kind = verdict === "crash" ? `crash ${v.expected.valid ? "valid" : "invalid"}` : verdict;
     const key = `${v.rule}\u0000${kind}`;
@@ -181,6 +182,7 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
         status: s.failing > 0 ? "fail" : s.cases > 0 ? "pass" : "untested",
         cases: s.cases,
         failing: s.failing,
+        failingDraftOnly: s.failingDraftOnly,
         ...(r.edition ? { edition: r.edition, note: `Draft only: the October 2021 edition doesn't have ${r.draft}.` } : {}),
         ...(UNWRITABLE[r.rule] ? { note: UNWRITABLE[r.rule] } : {}),
       };

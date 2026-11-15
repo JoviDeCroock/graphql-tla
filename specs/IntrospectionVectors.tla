@@ -315,6 +315,24 @@ WrappersHaveOnlyKindAndOfType == ~done =>
   /\ ~WrapperMatches([NullWrapper("LIST") EXCEPT !.enumValues = Some(<<>>)])
   /\ ~WrapperMatches([NullWrapper("LIST") EXCEPT !.inputFields = Some(<<>>)])
 
+\* The answer the wrapper types are read from: __type(name: "__Schema")'s
+\* fields, each with its type as a ref.
+SchemaFieldsOf(B0) ==
+  LET fs == TypeNamed(B0, "__Schema").fields IN
+  [i \in DOMAIN fs |-> [name |-> fs[i].name, type |-> RefResult(B0, fs[i].type)]]
+
+SchemaFieldsAreAnswered == ~done =>
+  /\ SchemaFieldsMatch(B, SchemaFieldsOf(B))
+  /\ SchemaFieldsMatch(Oct2021Builtins, SchemaFieldsOf(Oct2021Builtins))
+  /\ SchemaFieldsMatch(B, Reverse(SchemaFieldsOf(B)))
+  \* A field of the service's own is allowed.
+  /\ SchemaFieldsMatch(B, Append(SchemaFieldsOf(B), [name |-> "extra", type |-> NamedChain("SCALAR", "Int")]))
+  \* An empty or partial answer, a duplicate, or a lost wrapper is not.
+  /\ ~SchemaFieldsMatch(B, <<>>)
+  /\ ~SchemaFieldsMatch(B, Tail(SchemaFieldsOf(B)))
+  /\ ~SchemaFieldsMatch(B, Append(SchemaFieldsOf(B), SchemaFieldsOf(B)[2]))
+  /\ ~SchemaFieldsMatch(B, [SchemaFieldsOf(B) EXCEPT ![2].type = NamedChain("OBJECT", "__Type")])
+
 -----------------------------------------------------------------------------
 (* The October 2021 edition *)
 

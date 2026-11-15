@@ -4,10 +4,11 @@
 // vector's must fail, and each response broken on purpose must fail the
 // check it targets ("only": that check and no other). A few changes the
 // spec allows must pass, so that the checker isn't stricter than the spec
-// either.
+// either. PROFILE_CONTROLS script the probe's answers, and the profile
+// run.mjs's chooseProfile picks from them must be as stated.
 
 import { fullResponse } from "./data.mjs";
-import { PROFILES, TYPE_REF_DEPTH } from "./query.mjs";
+import { DISCOVERY_ALIASES, DISCOVERY_QUERY, PROFILES, TYPE_REF_DEPTH, neededFields, schemaQuery } from "./query.mjs";
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -28,7 +29,22 @@ const scalarType = (name) => ({
   possibleTypes: null,
 });
 const wrapperOf = (d, name) => d.wrappers.fields.find((f) => f.name === name).type;
-const rejected = () => ({ errors: [{ message: "Unknown directive" }] });
+// A change that replaces the whole response.
+const replacing = (f) => Object.assign(f, { replaces: true });
+const rejected = replacing(() => ({ errors: [{ message: "Unknown directive" }] }));
+const executionFailure = replacing(() => ({ data: null, errors: [{ message: "executor bug", path: ["__schema"] }] }));
+// A response from a service without the field `owner`.`name`
+// (__Type.specifiedByURL or __Directive.isRepeatable): the field is gone
+// from the answers and from the introspection type's own fields.
+const lacks = (owner, name) => (s, d) => {
+  const items = owner === "__Type" ? [...s.types, ...d.wrappers.fields.flatMap((f) => levels(f.type))] : s.directives;
+  for (const x of items) delete x[name];
+  const t = type(s, owner);
+  t.fields = t.fields.filter((f) => f.name !== name);
+};
+const levels = (ref) => (ref && ref.ofType !== undefined ? [ref, ...levels(ref.ofType)] : []);
+const extraField = (name) => ({ name, description: null, args: [], type: named("String"), isDeprecated: false, deprecationReason: null });
+const extraValue = (name) => ({ name, description: null, isDeprecated: false, deprecationReason: null });
 const serviceDirective = (args) => ({ name: "extra", description: null, isRepeatable: false, locations: ["FIELD"], args, isDeprecated: false, deprecationReason: null });
 const dropDirectives = (...names) => (s) => (s.directives = s.directives.filter((d) => !names.includes(d.name)));
 
@@ -119,6 +135,8 @@ const BROKEN = [
   ["scalars.inc", "rejects a schema that applies @specifiedBy", "builtinDirectives", rejected, { only: true }],
   ["oneOf.inc", "rejects a schema that applies @oneOf", "builtinDirectives", rejected, { only: true }],
   ["rich.inc", "rejects a schema that needs no optional directive", "executes", rejected],
+  // data: null with errors is an execution failure, not a request error.
+  ["scalars.inc", "fails executing a schema that applies @specifiedBy, with data: null", "executes", executionFailure, { only: true }],
   ["minimal.inc", "doesn't provide @deprecated, @specifiedBy or @oneOf, in a schema with no use for them", "pass", dropDirectives("deprecated", "specifiedBy", "oneOf")],
   ["deprecation.inc", "doesn't provide @specifiedBy or @oneOf, in a schema without custom scalars or OneOf inputs", "pass", dropDirectives("specifiedBy", "oneOf")],
   ["rich.inc", "leaves out the mutation root type", "roots", (s) => (s.mutationType = null)],
@@ -181,6 +199,18 @@ const BROKEN = [
   ["rich.inc", "reorders __TypeKind's enum values", "pass", (s) => type(s, "__TypeKind").enumValues.reverse()],
   ["rich.inc", "reorders __Type's fields", "pass", (s) => type(s, "__Type").fields.reverse()],
   ["rich.inc", "drops one of __TypeKind's enum values", "builtinDefinitions", (s) => type(s, "__TypeKind").enumValues.pop()],
+  // Extending the introspection types is informational; changing them isn't.
+  ["rich.inc", "adds a value to __DirectiveLocation", "builtinAdditions", (s) => type(s, "__DirectiveLocation").enumValues.push(extraValue("FRAGMENT_VARIABLE_DEFINITION")), { only: true }],
+  ["rich.inc", "adds a field to __Type", "builtinAdditions", (s) => type(s, "__Type").fields.push(extraField("extra")), { only: true }],
+  ["rich.inc", "adds an argument to __Type.fields", "builtinAdditions", (s) => field(s, "__Type", "fields").args.push(inputValue("extra", named("Int"))), { only: true }],
+  ["rich.inc", "adds an introspection type", "builtinAdditions", (s) => s.types.push(scalarType("__Extra")), { only: true }],
+  [
+    "rich.inc",
+    "adds a value to __DirectiveLocation, and drops another",
+    ["builtinAdditions", "builtinDefinitions"],
+    (s) => type(s, "__DirectiveLocation").enumValues.splice(0, 1, extraValue("FRAGMENT_VARIABLE_DEFINITION")),
+  ],
+  ["rich.inc", "changes the type of an introspection field, with the same name", "builtinDefinitions", (s) => (field(s, "__Field", "name").type = named("String")), { only: true }],
   // The service's own directives, and the types they reach
   [
     "rich.inc",
@@ -241,6 +271,20 @@ const BROKEN = [
   ["minimal.inc", "gives a List type fields: []", "typeKinds", (s, d) => (wrapperOf(d, "types").ofType.fields = []), { only: true }],
   ["minimal.inc", "gives a Non-Null type isOneOf: false", "typeKinds", (s, d) => (wrapperOf(d, "queryType").isOneOf = false), { only: true }],
   ["minimal.inc", "leaves out a wrapper's selected interfaces", "executes", (s, d) => delete wrapperOf(d, "types").interfaces],
+  // The wrapper types must come from each of __Schema's fields.
+  ["minimal.inc", 'answers no fields for __type(name: "__Schema")', "typeKinds", (s, d) => (d.wrappers.fields = []), { only: true }],
+  ["minimal.inc", 'answers null for __type(name: "__Schema")', "typeKinds", (s, d) => (d.wrappers = null), { only: true }],
+  ["minimal.inc", 'leaves out __Schema.types from __type(name: "__Schema")', "typeKinds", (s, d) => d.wrappers.fields.splice(d.wrappers.fields.findIndex((f) => f.name === "types"), 1), { only: true }],
+  [
+    "minimal.inc",
+    'loses the Non-Null wrapper of __Schema.queryType in __type(name: "__Schema")',
+    "typeKinds",
+    (s, d) => {
+      const f = d.wrappers.fields.find((x) => x.name === "queryType");
+      f.type = f.type.ofType;
+    },
+    { only: true },
+  ],
   // The October 2021 profile
   ...[
     [
@@ -254,10 +298,22 @@ const BROKEN = [
     [
       "minimal.inc",
       "lists the draft's __Type.isOneOf among __Type's fields",
-      "builtinDefinitions",
+      "builtinAdditions",
       (s) => type(s, "__Type").fields.push({ name: "isOneOf", description: null, args: [], type: named("Boolean"), isDeprecated: false, deprecationReason: null }),
+      { only: true },
     ],
-    ["minimal.inc", "has DIRECTIVE_DEFINITION among __DirectiveLocation's values", "builtinDefinitions", (s) => type(s, "__DirectiveLocation").enumValues.push({ name: "DIRECTIVE_DEFINITION", description: null, isDeprecated: false, deprecationReason: null })],
+    ["minimal.inc", "has DIRECTIVE_DEFINITION among __DirectiveLocation's values", "builtinAdditions", (s) => type(s, "__DirectiveLocation").enumValues.push(extraValue("DIRECTIVE_DEFINITION")), { only: true }],
+    // A service that lacks a field (graphql-dotnet lacks both): the rest is
+    // graded, and the field counts against its check.
+    ["rich.inc", "has no __Directive.isRepeatable", ["builtinDefinitions", "directives"], lacks("__Directive", "isRepeatable"), { missing: ["__Directive.isRepeatable"] }],
+    ["minimal.inc", "has no __Type.specifiedByURL", ["builtinDefinitions", "specifiedByURL"], lacks("__Type", "specifiedByURL"), { missing: ["__Type.specifiedByURL"] }],
+    [
+      "minimal.lookup",
+      "has no __Type.specifiedByURL, for __type(name:)",
+      "specifiedByURL",
+      (s, d) => Object.values(d).forEach((t) => t && delete t.specifiedByURL),
+      { only: true, missing: ["__Type.specifiedByURL"] },
+    ],
     ["minimal.inc", "answers isOneOf, which the October 2021 query doesn't select", "executes", (s) => (type(s, "Query").isOneOf = null)],
     ["minimal.inc", "provides @oneOf as a directive of its own", "pass", (s) => s.directives.push({ name: "oneOf", description: null, isRepeatable: false, locations: ["INPUT_OBJECT"], args: [] })],
     ["order.inc", "reorders an object's fields, which October 2021 doesn't grade", "pass", (s) => type(s, "Query").fields.reverse()],
@@ -308,13 +364,13 @@ export const CONTROLS = (vectors, builtins) => {
       if (JSON.stringify(other) !== JSON.stringify(own)) controls.push({ name: "another vector's expected response", vector: v, profile, response: other, check: "any" });
     });
   }
-  for (const [id, name, check, change, { only = false, profile = "draft", provided } = {}] of BROKEN) {
+  for (const [id, name, check, change, { only = false, profile = "draft", provided, missing = [] } = {}] of BROKEN) {
     const v = byId.get(id);
     if (!v) throw new Error(`no vector ${id} for a control`);
     let response = clone(fullResponse(v, builtins, profile));
-    if (change === rejected) response = rejected();
+    if (change.replaces) response = change();
     else change(response.data.__schema, response.data, response);
-    controls.push({ name, vector: v, profile, response, check, only, ...(provided ? { provided: new Set(provided) } : {}) });
+    controls.push({ name, vector: v, profile, response, check, only, missing, ...(provided ? { provided: new Set(provided) } : {}) });
   }
   controls.push({
     name: "answers with errors",
@@ -324,4 +380,53 @@ export const CONTROLS = (vectors, builtins) => {
     check: "executes",
   });
   return controls;
+};
+
+// Scripted answers for the probe (the first vector), and the profile
+// chooseProfile must pick from them: [name, answer(query), profile, the
+// fields left out].
+export const PROFILE_CONTROLS = (vectors, builtins) => {
+  const probe = vectors[0];
+  const failure = { data: null, errors: [{ message: "executor bug", path: ["__schema"] }] };
+  const requestError = { errors: [{ message: "Cannot query field" }] };
+  const answered = fullResponse(probe, builtins, "oct2021");
+  // DISCOVERY_QUERY's answer for a service with October 2021's fields, plus
+  // `extra`, without `lacking`.
+  const fields = (lacking, extra = []) => {
+    const need = neededFields("oct2021");
+    const data = {};
+    for (const [alias, owner] of DISCOVERY_ALIASES) {
+      const names = [...need[owner], ...extra.filter((m) => m.startsWith(`${owner}.`)).map((m) => m.split(".")[1])];
+      data[alias] = { fields: names.filter((n) => !lacking.includes(`${owner}.${n}`)).map((n) => ({ name: n })) };
+    }
+    return { data };
+  };
+  const dotnet = ["__Type.specifiedByURL", "__Directive.isRepeatable"];
+  const dotnetQuery = schemaQuery("oct2021", probe.includeDeprecated, dotnet);
+  return [
+    {
+      name: "an execution failure (data: null) for the draft's query keeps the draft profile",
+      answer: (q) => (q === probe.query ? failure : answered),
+      profile: "draft",
+      missing: [],
+    },
+    {
+      name: "a request error for the draft's query, and an answer for October 2021's, selects October 2021",
+      answer: (q) => (q === probe.query2021 ? answered : requestError),
+      profile: "oct2021",
+      missing: [],
+    },
+    {
+      name: "both queries rejected, and the introspection types lack __Type.specifiedByURL and __Directive.isRepeatable",
+      answer: (q) => (q === DISCOVERY_QUERY ? fields(dotnet, ["__Type.isOneOf"]) : q === dotnetQuery ? answered : requestError),
+      profile: "oct2021",
+      missing: dotnet,
+    },
+    {
+      name: "both queries rejected, and the introspection types lack __Type.kind, without which nothing can be graded",
+      answer: (q) => (q === DISCOVERY_QUERY ? fields(["__Type.kind"]) : requestError),
+      profile: "draft",
+      missing: [],
+    },
+  ];
 };

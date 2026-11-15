@@ -15,6 +15,10 @@
 // true, or leaves the argument out, so that lists take its default.
 // lookupQuery asks __type(name:) for a few names, with the same FullType
 // fragment.
+//
+// `missing` names fields of the introspection types a service lacks
+// ("__Directive.isRepeatable"), found by DISCOVERY_QUERY when it rejects
+// both profiles' queries. The queries then leave them out (selection).
 
 export const PROFILES = ["draft", "oct2021"];
 
@@ -49,17 +53,50 @@ export const SELECTED = {
   },
 };
 
+// Which of SELECTED's lists hold each introspection type's fields.
+export const LISTS_OF = {
+  __Schema: ["schema"],
+  __Type: ["type", "wrapper"],
+  __Field: ["field"],
+  __InputValue: ["inputValue"],
+  __EnumValue: ["enumValue"],
+  __Directive: ["directive"],
+};
+
+// A profile's selection without the `missing` fields.
+export const selection = (profile, missing = []) => {
+  const out = { ...SELECTED[profile] };
+  for (const m of missing) {
+    const [owner, field] = m.split(".");
+    for (const list of LISTS_OF[owner]) out[list] = out[list].filter((f) => f !== field);
+  }
+  return out;
+};
+
+// The fields each introspection type must have for a profile's query: what
+// it selects, and ofType, which the TypeRef and Wrapper fragments select.
+export const neededFields = (profile) => {
+  const S = SELECTED[profile];
+  return Object.fromEntries(Object.entries(LISTS_OF).map(([owner, lists]) => [owner, [...new Set([...lists.flatMap((l) => S[l]), ...(owner === "__Type" ? ["ofType"] : [])])]]));
+};
+
+// The fields of each introspection type, under an alias per type (a, b, ...
+// in LISTS_OF's order).
+export const DISCOVERY_ALIASES = Object.keys(LISTS_OF).map((owner, i) => [String.fromCharCode(97 + i), owner]);
+export const DISCOVERY_QUERY = `query IntrospectionFields {
+${DISCOVERY_ALIASES.map(([alias, owner]) => `  ${alias}: __type(name: "${owner}") { fields { name } }`).join("\n")}
+}
+`;
+
 const INC = "(includeDeprecated: true)";
 
 const typeRef = (depth) => (depth === 0 ? "kind name" : `kind name ofType { ${typeRef(depth - 1)} }`);
 
 const LIST_FIELDS = new Set(["fields", "interfaces", "possibleTypes", "enumValues", "inputFields"]);
-const wrapper = (profile, depth) =>
+const wrapper = (S, depth) =>
   depth === 0
     ? "kind name"
-    : SELECTED[profile].wrapper
-        .map((f) => (f === "ofType" ? `ofType { ${wrapper(profile, depth - 1)} }` : LIST_FIELDS.has(f) ? `${f} { name }` : f))
-        .join(" ");
+    : S.wrapper.map((f) => (f === "ofType" ? `ofType { ${wrapper(S, depth - 1)} }` : LIST_FIELDS.has(f) ? `${f} { name }` : f)).join(" ");
 
 // The arguments each list takes in a profile: includeDeprecated: true where
 // the profile's __Type, __Field and __Directive accept it, when inc is set.
@@ -71,9 +108,8 @@ const argsOf = (profile, inc) => {
 
 const lines = (fields) => fields.map((f) => `  ${f}`).join("\n");
 
-const fragments = (profile, inc) => {
+const fragments = (profile, inc, s) => {
   const a = argsOf(profile, inc);
-  const s = SELECTED[profile];
   const sub = {
     fields: `fields${a.fields} {\n${lines(s.field.map((f) => (f === "args" ? `  args${a.args} { ...InputValue }` : f === "type" ? "  type { ...TypeRef }" : `  ${f}`)))}\n  }`,
     inputFields: `inputFields${a.inputFields} { ...InputValue }`,
@@ -97,14 +133,14 @@ fragment TypeRef on __Type {
 
 // The __schema query for a profile, with includeDeprecated: true on every
 // list that takes it, or with every list's default.
-export const schemaQuery = (profile, inc) => {
+export const schemaQuery = (profile, inc, missing = []) => {
   const a = argsOf(profile, inc);
-  const directive = SELECTED[profile].directive.map((f) => (f === "args" ? `args${a.args} { ...InputValue }` : f));
+  const S = selection(profile, missing);
+  const directive = S.directive.map((f) => (f === "args" ? `args${a.args} { ...InputValue }` : f));
   return `query IntrospectionQuery {
   __typename
   __schema {
-    description
-    queryType { kind name }
+${S.schema.includes("description") ? "    description\n" : ""}    queryType { kind name }
     mutationType { kind name }
     subscriptionType { kind name }
     types { ...FullType }
@@ -115,17 +151,17 @@ ${directive.map((f) => `      ${f}`).join("\n")}
   wrappers: __type(name: "__Schema") {
     fields {
       name
-      type { ${wrapper(profile, WRAPPER_DEPTH)} }
+      type { ${wrapper(S, WRAPPER_DEPTH)} }
     }
   }
 }
 
-${fragments(profile, inc)}`;
+${fragments(profile, inc, S)}`;
 };
 
 // [{ alias, name }] → a query with one aliased __type(name:) per lookup.
-export const lookupQuery = (profile, lookups, inc) => `query TypeLookup {
+export const lookupQuery = (profile, lookups, inc, missing = []) => `query TypeLookup {
 ${lookups.map(({ alias, name }) => `  ${alias}: __type(name: ${JSON.stringify(name)}) { ...FullType }`).join("\n")}
 }
 
-${fragments(profile, inc)}`;
+${fragments(profile, inc, selection(profile, missing))}`;

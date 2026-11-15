@@ -69,11 +69,11 @@ export const CHECKS = [
   { id: "resultCoercion", level: "MUST", spec: ["3.5.2", "3.9", "6.4.3"], title: "A non-finite Float or an unknown enum value raises an execution error" },
   {
     id: "intFraction",
-    level: "MUST",
+    level: "SHOULD",
     spec: ["3.5.1", "6.4.3"],
     title: "A fraction returned for an Int (1.2) raises an execution error instead of being truncated",
     basis:
-      "§3.5.1 states the rule: services \"may coerce non-integer internal values to integers when reasonable without losing information, otherwise they must raise an execution error\". Its example applies it to this case: \"a floating-point number 1.2 should raise an execution error instead of being truncated to 1\". Truncating 1.2 loses information, so the rule's must applies. October 2021 has the same sentences, with \"field error\".",
+      "The level is contested. §3.5.1 states a rule with must: services \"may coerce non-integer internal values to integers when reasonable without losing information, otherwise they must raise an execution error\". Truncating 1.2 loses information, so on that reading the must applies. But the example that applies the rule to this very case says should: \"a floating-point number 1.2 should raise an execution error instead of being truncated to 1\". Where the level is in doubt, the kit takes the weaker one, so this is a SHOULD. October 2021 has the same sentences, with \"field error\".",
   },
   { id: "leafValues", level: "MUST", spec: ["6.4.3"], title: "Leaf values are the resolver's canonical value (Int 1, Float 1.5, Boolean true, an enum's first value, \"v\")" },
   { id: "leafEncoding", level: "SHOULD", spec: ["7.2.1"], title: "Leaf values use the JSON type §7.2.1 gives their GraphQL type (a number for Int 1, not \"1\")" },
@@ -95,14 +95,14 @@ export const CHECKS = [
   },
   { id: "errorEntries", level: "SHOULD", spec: ["7.1.6"], title: "Errors have no entries besides message, locations, path and extensions" },
   { id: "protocol", level: "ADAPTER", spec: [], title: "The adapter follows the kit's protocol (call types, settles)" },
-  // Outside the spec: every failure in a fixture that turns error
-  // propagation off counts here instead of against its own check.
+  // Outside the spec: every failure of the response in a fixture that turns
+  // error propagation off counts here instead of against its own check.
   {
     id: "disabledPropagation",
     level: "INFO",
     spec: [],
     title: "With error propagation off, an error nulls the position where it happened (graphql-js 17's @experimental_disableErrorPropagation)",
     basis:
-      "Not a GraphQL rule: neither edition has execution without error propagation. §6.4.4 says: \"Since Non-Null response positions cannot be null, execution errors are propagated to be handled by the parent response position.\" Every failure in the noPropagation fixture counts here, never against a spec section, and never fails the run. Adapter protocol problems still count as protocol.",
+      "Not a GraphQL rule: neither edition has execution without error propagation. §6.4.4 says: \"Since Non-Null response positions cannot be null, execution errors are propagated to be handled by the parent response position.\" Every failure of the noPropagation fixture's response (its data and errors) counts here, never against a spec section, and never fails the run. Turning propagation off doesn't change which resolvers run, so protocol problems and the checks on calls (callsOnce, callsSelected, callsReachable, calledSerially) keep their own checks.",
   },
 ];

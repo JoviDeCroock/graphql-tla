@@ -33,7 +33,13 @@ export const CHECKS = [
     basis:
       "The sentence says a request error \"must be raised\" for \"a value outside the available precision\", but which values that covers is Coercion.tla's reading (an integral value must be exactly representable), so the check takes the weaker level.",
   },
-  { id: "string", title: "String accepts only valid Unicode string input values", level: "MUST", spec: ["3.5.3"] },
+  {
+    id: "string",
+    title: "String accepts only string input values",
+    level: "MUST",
+    spec: ["3.5.3"],
+    basis: "A JSON string with a lone surrogate is graded under loneSurrogates, not here.",
+  },
   { id: "boolean", title: "Boolean accepts only boolean input values", level: "MUST", spec: ["3.5.4"] },
   {
     id: "idCoerced",
@@ -66,7 +72,7 @@ export const CHECKS = [
     level: "SHOULD",
     spec: ["3.10"],
     basis:
-      "\"If no value is provided for a defined input object field and that field definition provides a default value, the result of coercing the default value ... should be used.\" A result that is right except that it leaves such defaults out fails this check, not inputObject.",
+      "\"If no value is provided for a defined input object field and that field definition provides a default value, the result of coercing the default value ... should be used.\" The SHOULD applies to each field: a result that is right except that it leaves out some or all of such defaults fails this check, not inputObject.",
   },
   {
     id: "oneOf",
@@ -75,7 +81,14 @@ export const CHECKS = [
     spec: ["3.10.1"],
     untested: "Coercion.tla doesn't model OneOf input objects, so there are no vectors for them.",
   },
-  { id: "list", title: "Lists: each item coerced, a single value wrapped in a list", level: "MUST", spec: ["3.11"] },
+  {
+    id: "list",
+    title: "Lists: each item coerced, a single value wrapped in a list",
+    level: "MUST",
+    spec: ["3.11"],
+    basis:
+      "An item that isn't a list, where the item type is a list, is coerced as a list of one, as the draft's table gives [[1], [2], [3]] for [1, 2, 3] as [[Int]]. October 2021's table says \"Error: Incorrect item value\", so those vectors are draft-only.",
+  },
   { id: "nonNull", title: "Non-Null rejects null", level: "MUST", spec: ["3.12"] },
   {
     id: "variables",
@@ -105,6 +118,23 @@ export const CHECKS = [
       "\"If validation errors are known, they should be reported in the list of \\\"errors\\\" in the response and the request must fail without operation execution.\" Graded for adapters without `unvalidated`, on vectors Validation.tla rejects: a request error, no data, no resolver called.",
   },
   {
+    id: "requestErrorNoData",
+    title: "A request error result has no data entry",
+    level: "MUST",
+    oct2021: "SHOULD",
+    spec: ["7.1.3"],
+    basis:
+      "The draft: \"The request error result map must not contain an entry with key {\"data\"}.\" October 2021 (§7.1.1): \"If an error was raised before execution begins, the data entry should not be present in the result.\" A request error with \"data\": null is still a request error for the vector's own check, and fails this one.",
+  },
+  {
+    id: "loneSurrogates",
+    title: "JSON strings with a lone surrogate: kept as sent, replaced with U+FFFD, or refused",
+    level: "INFO",
+    spec: [],
+    basis:
+      "§3.5.3 accepts \"only valid Unicode string input values\" without defining one, and calls a String \"a sequence of Unicode code points\", which a lone surrogate is. §3.5.5 says nothing about Unicode. RFC 8259 §8.2 calls the behaviour of software that receives such a string unpredictable. Coercion.tla refuses it, but the check also passes the value kept as sent and the value with U+FFFD, and records which happened. It never fails the run.",
+  },
+  {
     id: "jsonNumbers",
     title: "JSON numbers a double can't hold: read exactly, read as binary64, or refused",
     level: "INFO",
@@ -126,6 +156,10 @@ export const POLICIES = {
   // others.
   missingListItemError: { level: "unspecified" },
   missingListItemDropped: { level: "unspecified" },
+  // October 2021's answer to a draft-only vector (Coercion.tla's
+  // coerceDefaults and nestedListItems switches): recognised, but it fails
+  // the vector's check, since draft-only vectors are graded like any other.
+  oct2021: { level: "edition" },
 };
 
 export const CHECK_IDS = new Set(CHECKS.map((c) => c.id));

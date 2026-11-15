@@ -177,6 +177,14 @@ const mutants = [
     why: "the differential doesn't select a wrapper type's other fields",
   },
   {
+    name: "the wrapper answer is judged only on the fields of __Schema it returned",
+    find: "    /\\ Cardinality({i \\in DOMAIN fields : fields[i].name = f.name}) = 1\n    /\\ ByName(fields, f.name).type = RefResult(B, f.type)",
+    replace: "    f.name \\in Range(NamesOf(fields)) => ByName(fields, f.name).type = RefResult(B, f.type)",
+    property: "SchemaFieldsAreAnswered",
+    differential: false,
+    why: "the differential doesn't select a wrapper type's other fields",
+  },
+  {
     name: "October 2021's @deprecated has the draft's locations",
     find: '                   <<"FIELD_DEFINITION", "ENUM_VALUE">>),',
     replace:

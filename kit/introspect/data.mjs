@@ -5,7 +5,7 @@
 // (query.mjs): "draft" or "oct2021".
 
 import { parseDefault } from "../schema/tla.mjs";
-import { SELECTED, TYPE_REF_DEPTH, WRAPPER_DEPTH } from "./query.mjs";
+import { SELECTED, TYPE_REF_DEPTH, WRAPPER_DEPTH, selection } from "./query.mjs";
 
 export const BUILTIN_DIRECTIVES = ["skip", "include", "deprecated", "specifiedBy", "oneOf"];
 // The built-in directives of each edition: October 2021 has no @oneOf, so
@@ -38,10 +38,11 @@ export const envelopeProblems = (response) => {
   return out;
 };
 
-// A request error: errors, and no data (§7.1.7). The schema didn't build,
-// or the query was rejected.
-export const isRequestError = (response) =>
-  isMap(response) && Array.isArray(response.errors) && response.errors.length > 0 && (!("data" in response) || response.data === null);
+// A request error: errors, and no data entry (§7.1.7: "the response
+// must not contain an entry with key data"). The schema didn't build, or
+// the query was rejected. {"data": null, "errors": [...]} is an execution
+// failure instead, which fails executes.
+export const isRequestError = (response) => isMap(response) && Array.isArray(response.errors) && response.errors.length > 0 && !("data" in response);
 
 // ---------------------------------------------------------------------------
 // A response as `actual`
@@ -56,6 +57,12 @@ export const isRequestError = (response) =>
 // IntrospectionVectors' Oct2021ProfileIsSound): isOneOf false for an input
 // object and null otherwise, and no input value or directive deprecated.
 // So they compare equal, and only what the profile selects is graded.
+//
+// A field the service lacks (`missing`, query.mjs) isn't selected either.
+// It is filled in with null, or false for isDeprecated and isRepeatable, so
+// that the rest can be graded; the kit counts the missing field against its
+// check (run.mjs), and any result where the filled value is wrong fails that
+// check too.
 
 export class Malformed extends Error {}
 
@@ -97,9 +104,9 @@ const inputValueOf = (v, path, S) => {
   object(v, path, S.inputValue);
   return {
     name: value(v, "name", path, isString),
-    description: opt(value(v, "description", path, isOptString)),
+    description: opt(selected(S, "inputValue", "description", v, path, isOptString, null)),
     type: refOf(v.type, `${path}.type`),
-    defaultValue: value(v, "defaultValue", path, isOptString) === null ? [] : [parseDefault(v.defaultValue)],
+    defaultValue: selected(S, "inputValue", "defaultValue", v, path, isOptString, null) === null ? [] : [parseDefault(v.defaultValue)],
     isDeprecated: selected(S, "inputValue", "isDeprecated", v, path, isBool, false),
     deprecationReason: opt(selected(S, "inputValue", "deprecationReason", v, path, isOptString, null)),
   };
@@ -113,19 +120,19 @@ const typeOf = (t, path, S) => {
   return {
     kind,
     name: opt(value(t, "name", path, isOptString)),
-    description: opt(value(t, "description", path, isOptString)),
-    specifiedByURL: opt(value(t, "specifiedByURL", path, isOptString)),
+    description: opt(selected(S, "type", "description", t, path, isOptString, null)),
+    specifiedByURL: opt(selected(S, "type", "specifiedByURL", t, path, isOptString, null)),
     isOneOf: opt(selected(S, "type", "isOneOf", t, path, isOptBool, kind === "INPUT_OBJECT" ? false : null)),
     fields: optList(value(t, "fields", path, isOptList), (f, j) => {
       const p = `${path}.fields[${j}]`;
       object(f, p, S.field);
       return {
         name: value(f, "name", p, isString),
-        description: opt(value(f, "description", p, isOptString)),
+        description: opt(selected(S, "field", "description", f, p, isOptString, null)),
         args: value(f, "args", p, isList).map((a, k) => inputValueOf(a, `${p}.args[${k}]`, S)),
         type: refOf(f.type, `${p}.type`),
-        isDeprecated: value(f, "isDeprecated", p, isBool),
-        deprecationReason: opt(value(f, "deprecationReason", p, isOptString)),
+        isDeprecated: selected(S, "field", "isDeprecated", f, p, isBool, false),
+        deprecationReason: opt(selected(S, "field", "deprecationReason", f, p, isOptString, null)),
       };
     }),
     inputFields: optList(value(t, "inputFields", path, isOptList), (v, j) => inputValueOf(v, `${path}.inputFields[${j}]`, S)),
@@ -135,9 +142,9 @@ const typeOf = (t, path, S) => {
       object(v, p, S.enumValue);
       return {
         name: value(v, "name", p, isString),
-        description: opt(value(v, "description", p, isOptString)),
-        isDeprecated: value(v, "isDeprecated", p, isBool),
-        deprecationReason: opt(value(v, "deprecationReason", p, isOptString)),
+        description: opt(selected(S, "enumValue", "description", v, p, isOptString, null)),
+        isDeprecated: selected(S, "enumValue", "isDeprecated", v, p, isBool, false),
+        deprecationReason: opt(selected(S, "enumValue", "deprecationReason", v, p, isOptString, null)),
       };
     }),
     possibleTypes: optList(value(t, "possibleTypes", path, isOptList), (r, j) => refOf(r, `${path}.possibleTypes[${j}]`)),
@@ -151,8 +158,8 @@ const directiveOf = (d, i, S) => {
   if (!locations.every(isString)) throw new Malformed(`${path}.locations has a value that isn't a string`);
   return {
     name: value(d, "name", path, isString),
-    description: opt(value(d, "description", path, isOptString)),
-    isRepeatable: value(d, "isRepeatable", path, isBool),
+    description: opt(selected(S, "directive", "description", d, path, isOptString, null)),
+    isRepeatable: selected(S, "directive", "isRepeatable", d, path, isBool, false),
     locations,
     args: value(d, "args", path, isList).map((a, k) => inputValueOf(a, `${path}.args[${k}]`, S)),
     isDeprecated: selected(S, "directive", "isDeprecated", d, path, isBool, false),
@@ -160,9 +167,12 @@ const directiveOf = (d, i, S) => {
   };
 };
 
-// The List and Non-Null types among __type(name: "__Schema")'s field
-// types, each as Introspection!WrapperMatches reads it: where it is, its
-// kind, and its other fields, a list field as the names of its items.
+// __type(name: "__Schema")'s answer: its fields, each with its type as a
+// ref (fields, for Introspection!SchemaFieldsMatch), and the List and
+// Non-Null types among those types (levels), each as
+// Introspection!WrapperMatches reads it: where it is, its kind, and its
+// other fields, a list field as the names of its items. A null answer has
+// no fields.
 const namesOf = (v, path) => {
   if (!isOptList(v)) throw new Malformed(`${path} is ${JSON.stringify(v)?.slice(0, 80)}`);
   if (v === null) return [];
@@ -174,23 +184,30 @@ const namesOf = (v, path) => {
   ];
 };
 const wrappersOf = (w, S) => {
+  const levels = [];
+  const fields = [];
+  if (w === null) return { levels, fields };
   object(w, "wrappers", ["fields"]);
-  const out = [];
-  value(w, "fields", "wrappers", isList).forEach((f, j) => {
+  value(w, "fields", "wrappers", isOptList);
+  (w.fields ?? []).forEach((f, j) => {
     const p = `wrappers.fields[${j}]`;
     object(f, p, ["name", "type"]);
-    const where = `__Schema.${value(f, "name", p, isString)}`;
+    const fieldName = value(f, "name", p, isString);
+    const where = `__Schema.${fieldName}`;
+    const ref = [];
+    fields.push({ name: fieldName, type: ref });
     for (let node = f.type, q = `${p}.type`, d = WRAPPER_DEPTH; ; node = node.ofType, q += ".ofType", d--) {
       object(node, q, d > 0 ? S.wrapper : ["kind", "name"]);
       const kind = value(node, "kind", q, isString);
       const name = opt(value(node, "name", q, isOptString));
+      ref.push({ kind, name });
       if (d === 0) break;
       const level = {
         where,
         kind,
         name,
-        description: opt(value(node, "description", q, isOptString)),
-        specifiedByURL: opt(value(node, "specifiedByURL", q, isOptString)),
+        description: opt(selected(S, "wrapper", "description", node, q, isOptString, null)),
+        specifiedByURL: opt(selected(S, "wrapper", "specifiedByURL", node, q, isOptString, null)),
         isOneOf: opt(selected(S, "wrapper", "isOneOf", node, q, isOptBool, null)),
         fields: namesOf(node.fields, `${q}.fields`),
         interfaces: namesOf(node.interfaces, `${q}.interfaces`),
@@ -198,11 +215,11 @@ const wrappersOf = (w, S) => {
         enumValues: namesOf(node.enumValues, `${q}.enumValues`),
         inputFields: namesOf(node.inputFields, `${q}.inputFields`),
       };
-      if (kind === "LIST" || kind === "NON_NULL") out.push(level);
+      if (kind === "LIST" || kind === "NON_NULL") levels.push(level);
       if (value(node, "ofType", q, (v) => v === null || isMap(v)) === null) break;
     }
   });
-  return out;
+  return { levels, fields };
 };
 
 // The service's own directives and the types their arguments reach, as
@@ -258,9 +275,9 @@ const reachedTypes = (extras, types, documentTypes) => {
 // every type and directive, the root's __typename, and the wrapper types
 // of __Schema's fields), the service's own directives (extras) and the
 // types they reach (extraTypes). Throws Malformed if the response isn't
-// the result of the profile's query.
-export const caseOf = (response, documentDirectives, documentTypes, profile = "draft") => {
-  const S = SELECTED[profile];
+// the result of the profile's query, without the `missing` fields.
+export const caseOf = (response, documentDirectives, documentTypes, profile = "draft", missing = []) => {
+  const S = selection(profile, missing);
   const data = dataOf(response);
   object(data, "data", S.data);
   const typename = value(data, "__typename", "data", isOptString);
@@ -278,7 +295,7 @@ export const caseOf = (response, documentDirectives, documentTypes, profile = "d
     extraTypes,
     actual: {
       typename: opt(typename),
-      description: opt(value(s, "description", "__schema", isOptString)),
+      description: opt(selected(S, "schema", "description", s, "__schema", isOptString, null)),
       queryType: ofRoot("queryType"),
       mutationType: ofRoot("mutationType"),
       subscriptionType: ofRoot("subscriptionType"),
@@ -286,15 +303,16 @@ export const caseOf = (response, documentDirectives, documentTypes, profile = "d
       builtinTypeNames: new Set(types.map((t) => t.name[0]).filter((n) => n !== undefined && isBuiltinType(n))),
       directives,
       builtinDirectiveNames: new Set(directives.map((d) => d.name).filter((n) => !doc.has(n))),
-      wrappers,
+      wrappers: wrappers.levels,
+      wrapperFields: wrappers.fields,
     },
   };
 };
 
 // The case for one response to __type(name:) lookups: [name, result] per
 // lookup, the result an optional __Type.
-export const lookupCaseOf = (response, lookups, profile = "draft") => {
-  const S = SELECTED[profile];
+export const lookupCaseOf = (response, lookups, profile = "draft", missing = []) => {
+  const S = selection(profile, missing);
   const data = object(dataOf(response), "data", lookups.map((l) => l.alias));
   return { actual: lookups.map(({ alias, name }) => ({ name, result: data[alias] === null ? [] : [typeOf(data[alias], alias, S)] })) };
 };

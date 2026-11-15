@@ -19,13 +19,15 @@
     },
     {
       "key": "graphql-java",
-      "adapter": "adapters/graphql-java/run.sh",
+      "adapter": "adapters/graphql-java/run.sh --validate",
       "build": "adapters/graphql-java/target/graphql-java-adapter.jar",
       "env": {
         "JAVA_HOME": "~/.cache/graphql-tla-toolchains/jdk/Contents/Home"
       },
       "notes": [
-        "The subscription finding is described in the [adapter's README](../adapters/graphql-java/README.md#known-graphql-java-deviation)."
+        "The sheet runs the adapter with `--validate`: coerce validates each document first, as `GraphQL.execute` always does, so invalid documents are graded under `invalidNotExecuted` (§6.1.1). graphql-java isn't built to execute unvalidated documents.",
+        "Introspection runs with graphql-java's Good Faith Introspection turned off per request (its documented switch); with it on, graphql-java refuses the kit's full introspection queries.",
+        "The subscription finding and every other area's deviations are described, with source locations and standalone reproductions, in the [adapter's README](../adapters/graphql-java/README.md)."
       ]
     },
     {
@@ -87,7 +89,7 @@
       },
       "notes": [
         "The adapter uses graphql-dotnet's schema-first `Schema.For`, its default `DocumentExecuter` and the System.Text.Json serializer. List items are `IDataLoaderResult` values, the only kind of item graphql-dotnet waits for. `idle` holds because everything runs on one thread; the determinism replay passed.",
-        "The `resultCoercion` finding: `FloatGraphType` passes a non-finite double through, and `GraphQLSerializer` then throws, so the client gets no response. The introspect area grades almost nothing because graphql-dotnet rejects the kit's introspection query (it has no `specifiedByURL`, `isRepeatable` or input-value deprecation). Parse, validate, schema and introspect findings are described with source locations in the [adapter's README](../adapters/graphql-dotnet/README.md#known-graphql-dotnet-deviations)."
+        "The `resultCoercion` finding: `FloatGraphType` passes a non-finite double through, and `GraphQLSerializer` then throws, so the client gets no response. graphql-dotnet rejects the kit's full introspection queries: it has no `specifiedByURL`, and `isRepeatable` and input-value deprecation are behind experimental flags that are off by default. The kit then discovers which fields exist and grades the rest under the October 2021 profile. Parse, validate, schema and introspect findings are described with source locations in the [adapter's README](../adapters/graphql-dotnet/README.md#known-graphql-dotnet-deviations)."
       ]
     }
   ]

@@ -2277,6 +2277,64 @@
    }
   },
   {
+   "name": "reports a Float for an Int call, then produces no response after an uncoercible value",
+   "clause": "malformed",
+   "check": "protocol",
+   "base": 13,
+   "case": {
+    "v": 1,
+    "fixture": "leaves",
+    "trace": [
+     {
+      "call": [
+       "count"
+      ],
+      "type": "Float",
+      "after": 0
+     },
+     {
+      "call": [
+       "ratio"
+      ],
+      "type": "Float",
+      "after": 0
+     },
+     {
+      "call": [
+       "color"
+      ],
+      "type": "Color",
+      "after": 0
+     },
+     {
+      "settle": [
+       "count"
+      ],
+      "outcome": {
+       "kind": "uncoercible"
+      }
+     },
+     {
+      "settle": [
+       "ratio"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "color"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "noResponse": "can't serialize the value"
+   }
+  },
+  {
    "name": "produces no response",
    "clause": "malformed",
    "check": "responds",
@@ -2585,6 +2643,304 @@
      }
     }
    }
+  }
+ ],
+ "reportControls": [
+  {
+   "name": "a SHOULD warning in a normal fixture, after the same warning outside the spec",
+   "cases": [
+    {
+     "v": 1,
+     "fixture": "noPropagation",
+     "trace": [
+      {
+       "call": [
+        "version"
+       ],
+       "type": "String!",
+       "after": 0
+      },
+      {
+       "call": [
+        "user"
+       ],
+       "type": "User",
+       "after": 0
+      },
+      {
+       "settle": [
+        "version"
+       ],
+       "outcome": {
+        "kind": "null"
+       }
+      },
+      {
+       "settle": [
+        "user"
+       ],
+       "outcome": {
+        "kind": "null"
+       }
+      }
+     ],
+     "response": {
+      "errors": [
+       {
+        "message": "Cannot return null for non-nullable field Query.version.",
+        "locations": [
+         {
+          "line": 0,
+          "column": 1
+         }
+        ],
+        "path": [
+         "version"
+        ]
+       }
+      ],
+      "data": {
+       "version": null,
+       "user": null
+      }
+     }
+    },
+    {
+     "v": 1,
+     "fixture": "fragments",
+     "trace": [
+      {
+       "call": [
+        "node"
+       ],
+       "type": "Node",
+       "after": 0
+      },
+      {
+       "settle": [
+        "node"
+       ],
+       "outcome": {
+        "kind": "error"
+       }
+      }
+     ],
+     "response": {
+      "errors": [
+       {
+        "message": "resolver at node failed",
+        "locations": [
+         {
+          "line": 0,
+          "column": 1
+         }
+        ],
+        "path": [
+         "node"
+        ]
+       }
+      ],
+      "data": {
+       "node": null
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "one case breaks the same SHOULD twice",
+   "cases": [
+    {
+     "v": 1,
+     "fixture": "lists",
+     "trace": [
+      {
+       "call": [
+        "posts"
+       ],
+       "type": "[Post!]",
+       "after": 0
+      },
+      {
+       "call": [
+        "tags"
+       ],
+       "type": "[String]!",
+       "after": 0
+      },
+      {
+       "settle": [
+        "posts"
+       ],
+       "outcome": {
+        "kind": "error"
+       }
+      },
+      {
+       "settle": [
+        "tags"
+       ],
+       "outcome": {
+        "kind": "null"
+       }
+      }
+     ],
+     "response": {
+      "errors": [
+       {
+        "message": "resolver at posts failed",
+        "locations": [
+         {
+          "line": 0,
+          "column": 1
+         }
+        ],
+        "path": [
+         "posts"
+        ]
+       },
+       {
+        "message": "Cannot return null for non-nullable field Query.tags.",
+        "locations": [
+         {
+          "line": 0,
+          "column": 1
+         }
+        ],
+        "path": [
+         "tags"
+        ]
+       }
+      ],
+      "data": null
+     }
+    }
+   ]
+  },
+  {
+   "name": "a call with the wrong type, then no response after an uncoercible Int",
+   "cases": [
+    {
+     "v": 1,
+     "fixture": "leaves",
+     "trace": [
+      {
+       "call": [
+        "count"
+       ],
+       "type": "Float",
+       "after": 0
+      },
+      {
+       "call": [
+        "ratio"
+       ],
+       "type": "Float",
+       "after": 0
+      },
+      {
+       "call": [
+        "color"
+       ],
+       "type": "Color",
+       "after": 0
+      },
+      {
+       "settle": [
+        "count"
+       ],
+       "outcome": {
+        "kind": "uncoercible"
+       }
+      },
+      {
+       "settle": [
+        "ratio"
+       ],
+       "outcome": {
+        "kind": "null"
+       }
+      },
+      {
+       "settle": [
+        "color"
+       ],
+       "outcome": {
+        "kind": "null"
+       }
+      }
+     ],
+     "noResponse": "can't serialize the value"
+    }
+   ]
+  },
+  {
+   "name": "a root field called twice with different types, outside the spec",
+   "cases": [
+    {
+     "v": 1,
+     "fixture": "noPropagation",
+     "trace": [
+      {
+       "call": [
+        "version"
+       ],
+       "type": "String!",
+       "after": 0
+      },
+      {
+       "call": [
+        "user"
+       ],
+       "type": "User",
+       "after": 0
+      },
+      {
+       "settle": [
+        "version"
+       ],
+       "outcome": {
+        "kind": "null"
+       }
+      },
+      {
+       "settle": [
+        "user"
+       ],
+       "outcome": {
+        "kind": "null"
+       }
+      },
+      {
+       "call": [
+        "version"
+       ],
+       "type": "ID!",
+       "after": 0
+      }
+     ],
+     "response": {
+      "errors": [
+       {
+        "message": "Cannot return null for non-nullable field Query.version.",
+        "locations": [
+         {
+          "line": 2,
+          "column": 3
+         }
+        ],
+        "path": [
+         "version"
+        ]
+       }
+      ],
+      "data": {
+       "version": null,
+       "user": null
+      }
+     }
+    }
+   ]
   }
  ]
 }

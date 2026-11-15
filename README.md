@@ -9,7 +9,7 @@
   - validation (§5);
   - input coercion and execution (§6);
   - the response format (§7).
-- **A conformance kit**, [`kit/`](kit), that drives a GraphQL server's resolvers through a small adapter and checks every response against the execution reference. There are adapters for graphql-js, graphql-java and async-graphql (Rust).
+- **A conformance kit**, [`kit/`](kit), that drives a GraphQL implementation through a small adapter and checks every answer against the references: execution responses, and in the other areas parsing, validation, coercion, schema validity and introspection. Nine implementations have adapters, and the [conformance sheet](conformance/README.md) records what each one passes and breaks.
 - **Models of behaviour over time:** mutations, subscriptions, `@defer` and `@stream`.
 
 Execution is where an executable reference earns its keep. One query, given what each resolver did, has many correct responses: resolvers settle in any order, siblings may be cancelled, errors under an already-nulled position may be dropped. `Reference.tla` accepts exactly that set, so no golden file has to pick one.
@@ -87,15 +87,15 @@ An adapter is a small program that speaks newline-delimited JSON. It builds the 
 | Adapter | Implementation | Notes |
 | --- | --- | --- |
 | [`graphql-js`](adapters/graphql-js) | graphql-js 16.15 and 17.1 | The reference adapter, about 150 lines. Passes `--strict`. |
-| [`graphql-java`](adapters/graphql-java) | graphql-java 26.2 | Passes everything except one subscription case: when an event's Non-Null root field is null, the response stream errors out instead of sending `{ data: null, errors }`. |
+| [`graphql-java`](adapters/graphql-java) | graphql-java 26.2 | Execution passes except one subscription case: when an event's Non-Null root field is null, the response stream errors out instead of sending `{ data: null, errors }`. In the other areas: `__typename` merge conflicts aren't caught (§5.3.2), ID input accepts any value (§3.5.5), a non-finite Float literal is accepted (§3.5.2), the schema builder crashes on some schemas and accepts some invalid ones, and `@deprecated(reason:)` is declared `String!`. |
 | [`hotchocolate`](adapters/hotchocolate) | Hot Chocolate 15.1.21 (.NET) | Two deviations. When a list item at a Non-Null position is null, the list is nulled but no error is reported (§6.4.3, §6.4.4). A fraction returned for an Int is truncated instead of raising an error (§3.5.1). |
-| [`graphql-dotnet`](adapters/graphql-dotnet) | graphql-dotnet 8.8.5 (.NET) | Execution passes except a non-finite Float, after which the client gets no response (§3.5.2). Validation treats every Non-Null type as equal to every other in §5.8.5, misses `__typename` conflicts (§5.3.2) and has no rule for §5.1.1. The schema builder merges duplicate definitions and has no cycle checks. Introspection lacks `specifiedByURL`, `isRepeatable` and input-value deprecation. |
+| [`graphql-dotnet`](adapters/graphql-dotnet) | graphql-dotnet 8.8.5 (.NET) | Execution passes except a non-finite Float, after which the client gets no response (§3.5.2). Validation treats every Non-Null type as equal to every other in §5.8.5, misses `__typename` conflicts (§5.3.2) and has no rule for §5.1.1. The schema builder merges duplicate definitions and has no cycle checks. Introspection has no `specifiedByURL`, and `isRepeatable` and input-value deprecation are behind experimental flags that are off by default. |
 | [`graphql-core`](adapters/graphql-core) | graphql-core 3.2.14 (Python) | Calls every mutation root field's resolver at once, and only awaits them in order. Resolvers that return a future or task run early (§6.3.4). `async def` resolvers aren't affected. graphql-core 3.3 fixes this. |
 | [`graphql-ruby`](adapters/graphql-ruby) | graphql-ruby 2.6.15 | Truncates a fraction returned for an Int (§3.5.1). Out of the box, results of the wrong shape raise out of `execute` instead of becoming field errors; the documented `type_error` and `rescue_from` hooks fix that. |
-| [`graphql-go`](adapters/graphql-go) | graphql-go 0.8.1 | With thunks, a Non-Null error inside a thunk nulls all of `data` and drops the other errors (§6.4.4), and mutation root fields aren't serial (§6.3.4). In any mode, uncoercible leaves become null with no error, or truncate (§3.5.1); a non-finite Float leaves the client without a response; and keys come out sorted (§7.2.2, a SHOULD). |
+| [`graphql-go`](adapters/graphql-go) | graphql-go/graphql 0.8.1 | With thunks, a Non-Null error inside a thunk nulls all of `data` and drops the other errors (§6.4.4), and mutation root fields aren't serial (§6.3.4). In any mode, uncoercible leaves become null with no error, or truncate (§3.5.1); a non-finite Float leaves the client without a response; and keys come out sorted (§7.2.2, a SHOULD). |
 | [`async-graphql`](adapters/async-graphql) | async-graphql 7.0.17, dynamic schemas | Its dynamic schema API breaks four rules: resolver errors have no `path`; errors don't stop at the nearest nullable field; an explicit null isn't treated as null; merged fields run their resolver twice. |
 
-The kit checks the checker too. Every run evaluates a shipped corpus of 30 negative controls, and each must be caught by the clause or check it names.
+The kit checks the checker too. Every run evaluates a shipped corpus of 35 negative controls, and each must be caught by the clause or check it names.
 
 **[The conformance sheet](conformance/README.md)** shows what each implementation was checked against and what it breaks, by spec section and by check, with the shortest failing case for each failure. Every cell is a count from a kit report (`--report`); `npm run conformance` regenerates it.
 
@@ -212,7 +212,7 @@ Every resolver settles in its own step. Each `@defer` may be honored or inlined,
 
 ## Mutants
 
-A property that no bug can break proves nothing. Each `specs/*.mutants.mjs` lists realistic bugs, 188 in all over 100 properties. For example:
+A property that no bug can break proves nothing. Each `specs/*.mutants.mjs` lists realistic bugs, 191 in all over 101 properties. For example:
 
 - nulling a failing Non-Null field instead of its parent;
 - filtering errors against the final null set, which drops a mutation's earlier errors;
@@ -243,7 +243,7 @@ Reading and running graphql-js 16.15.0 and 17.1.0 while writing these specs turn
 ## Limits
 
 - **Bounded fixtures:** model checking explores small fixtures exhaustively, with lists of at most two items. It proves nothing about all schemas.
-- **Adapters:** the kit checks execution. The language, validation, coercion and type-system references are only checked against graphql-js so far.
+- **Adapters:** every adapter answers execution, but only some answer the other areas (see the sheet). The references themselves were checked differentially against graphql-js only, so a bug they share with graphql-js shows up as a pass everywhere.
 - **Scenario specs:** the `@defer`, `@stream`, mutation and subscription specs each model one fixed operation.
 
 ## Writing specs

@@ -31,7 +31,10 @@ export const sameJson = (a, b) => {
 };
 
 // The outcome a well-formed result shows:
-//   request-error  no "data" entry, at least one error, no resolver called;
+//   request-error  no "data" entry, at least one error, no resolver called.
+//                  With "data": null instead of no entry, it is still a
+//                  request error, flagged dataNull: §7.1.3 says the entry
+//                  must not be there, which requestErrorNoData grades;
 //   field-error    "data" holding only the field, null, exactly one error
 //                  whose path is that field, no resolver called;
 //   value          "data" holding only the field, not null, no errors, and
@@ -39,7 +42,10 @@ export const sameJson = (a, b) => {
 //   other          anything else.
 export const classify = ({ response, calls }) => {
   const errors = response.errors ?? [];
-  if (!Object.hasOwn(response, "data")) return errors.length > 0 && calls.length === 0 ? { outcome: "request-error" } : { outcome: "other" };
+  if (!Object.hasOwn(response, "data") || response.data === null) {
+    if (errors.length === 0 || calls.length > 0) return { outcome: "other" };
+    return Object.hasOwn(response, "data") ? { outcome: "request-error", dataNull: true } : { outcome: "request-error" };
+  }
   const { data } = response;
   if (!isMap(data) || Object.keys(data).length !== 1) return { outcome: "other" };
   const [field] = Object.keys(data);
@@ -114,6 +120,49 @@ const sameMap = (ctx, declared, e, a) => {
   });
 };
 
+// §3.10's SHOULD to use an input field's default applies to each field.
+// `without` is the answer with every input field default left out: it
+// differs from `expected` only by the entries those defaults add. These
+// compare a result with `expected` as sameValue and sameMap do, except that
+// an entry a default adds may also be absent. Every entry that is there
+// must still have the expected value.
+const sameAllowing = (ctx, type, e, d, a) => {
+  if (type.list && Array.isArray(e)) {
+    if (!Array.isArray(d) || d.length !== e.length) return sameValue(ctx, type, e, a);
+    return Array.isArray(a) && a.length === e.length && e.every((x, i) => sameAllowing(ctx, type.list, x, d[i], a[i]));
+  }
+  if (type.list) return sameAllowing(ctx, type.list, e, d, a);
+  const fields = ctx.inputs.inputObjects[type.name];
+  if (fields && isMap(e) && isMap(d)) return sameMapAllowing(ctx, fields, e, d, a);
+  return sameValue(ctx, type, e, a);
+};
+
+const sameMapAllowing = (ctx, declared, e, d, a) => {
+  if (!isMap(a)) return false;
+  if (![...Object.keys(e), ...Object.keys(a)].every((k) => Object.hasOwn(declared, k))) return false;
+  return Object.entries(declared).every(([name, text]) => {
+    const type = parseType(text);
+    const added = Object.hasOwn(e, name) && !Object.hasOwn(d, name);
+    let ev = Object.hasOwn(e, name) ? e[name] : undefined;
+    let av = Object.hasOwn(a, name) ? a[name] : undefined;
+    if (added && (av === undefined || (av === null && !ctx.exact && !type.nonNull))) return true;
+    if (!ctx.exact && !type.nonNull) {
+      ev ??= null;
+      av ??= null;
+    }
+    if (ev === undefined || av === undefined) return ev === av;
+    return added ? sameValue(ctx, type, ev, av) : sameAllowing(ctx, type, ev, d[name], av);
+  });
+};
+
+// Whether `got` is `expected` with some or all of its input field defaults
+// left out (`without` leaves out all of them).
+export const sameWithoutSomeDefaults = (ctx, expected, without, got) => {
+  if (got.outcome !== "value" || got.field !== expected.field) return false;
+  const declared = ctx.inputs.fields[expected.field];
+  return Boolean(declared) && sameMapAllowing(ctx, declared, expected.arguments, without.arguments, got.arguments);
+};
+
 // ctx: { inputs, exact, idFromInteger }
 export const sameAnswer = (ctx, expected, got) => {
   if (expected.outcome !== got.outcome) return false;
@@ -127,34 +176,62 @@ export const sameAnswer = (ctx, expected, got) => {
 // ---------------------------------------------------------------------------
 // How a vector is graded for an adapter's capabilities, or undefined if it
 // is skipped. accept: answers that pass, the first being the reference's;
+// labels: for an informational check, what each accepted answer means;
 // deviations: answers that leave a SHOULD undone, and the check they fail;
-// exercises: the checks the vector counts toward.
+// withoutDefaults: the answer with every input field default left out, to
+// tell a result that leaves out only some of them; editions: October
+// 2021's answer to a draft-only vector, which fails the vector's check but
+// is reported apart; exercises: the checks the vector counts toward. A
+// vector that accepts a request error also exercises requestErrorNoData.
 export const planFor = (vector, capabilities) => {
+  const plan = basePlan(vector, capabilities);
+  if (plan && plan.accept.some((a) => a.outcome === "request-error")) plan.exercises.push("requestErrorNoData");
+  return plan;
+};
+
+const basePlan = (vector, capabilities) => {
+  const only = (check, accept, labels) => ({ check, accept, labels, deviations: [], editions: [], exercises: [check] });
   if (!capabilities.has("unvalidated")) {
     if (vector.requires?.includes("unvalidated")) return undefined;
-    if (vector.valid === false) {
-      return { check: "invalidNotExecuted", accept: [{ outcome: "request-error" }], deviations: [], exercises: ["invalidNotExecuted"] };
-    }
+    if (vector.valid === false) return only("invalidNotExecuted", [{ outcome: "request-error" }]);
   }
   if (vector.requires?.some((c) => c !== "unvalidated" && !capabilities.has(c))) return undefined;
   if (vector.binary64 && !capabilities.has("exact-numbers")) {
-    return {
-      check: "jsonNumbers",
-      accept: [vector.expected, vector.binary64, { outcome: "request-error" }],
-      deviations: [],
-      exercises: ["jsonNumbers"],
-    };
+    return only("jsonNumbers", [vector.expected, vector.binary64, { outcome: "request-error" }]);
+  }
+  if (vector.loneSurrogate) {
+    return only(
+      "loneSurrogates",
+      [vector.expected, vector.loneSurrogate.kept, vector.loneSurrogate.replaced],
+      [
+        vector.expected.outcome === "request-error" ? "refused" : "as the reference",
+        "kept as sent",
+        "replaced with U+FFFD",
+      ],
+    );
   }
   const alternatives = vector.alternatives ?? [];
-  // An answer passes unless it needs a SHOULD left undone.
-  const permitted = (a) => a.policy.every((p) => !POLICIES[p].check);
+  const edition = (a) => a.policy.some((p) => POLICIES[p].level === "edition");
+  // An answer passes if it needs only MAYs and readings of what the spec
+  // doesn't say; one that needs a SHOULD left undone fails that SHOULD.
+  const permitted = (a) => a.policy.every((p) => POLICIES[p].level === "MAY" || POLICIES[p].level === "unspecified");
   const deviations = alternatives
-    .filter((a) => !permitted(a))
+    .filter((a) => !permitted(a) && !edition(a))
     .map((a) => ({ answer: a, check: POLICIES[a.policy.find((p) => POLICIES[p].check)].check }));
+  const withoutDefaults = alternatives.find(
+    (a) =>
+      a.policy.length === 1 &&
+      a.policy[0] === "inputFieldDefaults" &&
+      a.outcome === "value" &&
+      vector.expected.outcome === "value" &&
+      a.field === vector.expected.field,
+  );
   return {
     check: vector.check,
     accept: [vector.expected, ...alternatives.filter(permitted)],
     deviations,
+    withoutDefaults,
+    editions: alternatives.filter(edition),
     exercises: [
       ...new Set([
         vector.check,
@@ -175,12 +252,19 @@ export const contextFor = (vector, inputs, capabilities) => ({
 // How a classified result fails a vector: undefined if it doesn't, or the
 // kind of failure and the check it counts against.
 export const judge = (vector, plan, got, ctx) => {
-  if (plan.accept.some((a) => sameAnswer(ctx, a, got))) return undefined;
+  if (plan.accept.some((a) => sameAnswer(ctx, a, got))) {
+    return got.dataNull ? { kind: "data-with-request-error", check: "requestErrorNoData" } : undefined;
+  }
   const deviation = plan.deviations.find((d) => sameAnswer(ctx, d.answer, got));
   if (deviation) return { kind: "deviates", check: deviation.check };
+  if (plan.withoutDefaults && sameWithoutSomeDefaults(ctx, plan.accept[0], plan.withoutDefaults, got)) {
+    return { kind: "deviates", check: "inputFieldDefaults" };
+  }
   const { check } = plan;
+  if (plan.editions.some((a) => sameAnswer(ctx, a, got))) return { kind: "edition", check };
   if (check === "invalidNotExecuted") return { kind: "executes-invalid", check };
   if (check === "jsonNumbers") return { kind: "json-number", check };
+  if (check === "loneSurrogates") return { kind: "lone-surrogate", check };
   const want = plan.accept[0].outcome;
   if (got.outcome === "other") return { kind: "other", check };
   if (want === got.outcome) return { kind: want !== "request-error" && got.field !== plan.accept[0].field ? "wrong-field" : "wrong-value", check };
@@ -202,6 +286,9 @@ export const summary = ({ kind, check }) => {
     case "request-error-for-field-error": return `raises a request error where ${at} requires a field error`;
     case "deviates": return `${checkById(check).title.replace(/^./, (c) => c.toLowerCase())}: not done, though ${at} says it should be`;
     case "executes-invalid": return `doesn't fail an invalid document without executing it, as ${at} requires`;
+    case "edition": return `gives October 2021's answer where the draft changed it, under ${at}`;
+    case "data-with-request-error": return `answers a request error with a "data" entry, which ${at} says it must not have`;
+    case "lone-surrogate": return "treats a JSON string with a lone surrogate in a way that neither keeping it, replacing it with U+FFFD, nor a refusal explains";
     case "json-number": return "reads a JSON number a double can't hold in a way that neither exact nor binary64 parsing, nor a refusal, explains";
     default: return `answers with none of the three outcomes, under ${at}`;
   }

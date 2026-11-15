@@ -78,21 +78,21 @@ A failing vector counts toward one finding: "RULE not enforced", "RULE over-stri
 - rules: `argNamesUnique` (October 2021's Type Validation lists for objects, interfaces and directives have no argument uniqueness rule), `requiredArgNotDeprecated` and `requiredInputFieldNotDeprecated` (deprecated arguments and input fields), `argDefaultCompatible` and `inputObjectDefaultValueCycle` (default value validation), `implDeprecation`, `oneOfFieldNullable` and `oneOfFieldNoDefault`;
 - syntax: `@oneOf`, `@deprecated` on an argument or input field, and directives on a directive definition.
 
-Their checks carry `"edition": "draft"`, and so do vectors that use one, with the features in `editionNote`, as in the validate area. Findings count their draft-only vectors (`draftOnly`), and mark their example `[draft]`. A finding with nothing else carries `"edition": "draft"` too. The report's `draftOnly` gives how many vectors are draft only and how many of those failed. They are graded like any other vector, but an implementation of the October 2021 edition can fail them and still follow its edition.
+Their checks carry `"edition": "draft"`. A vector carries it, with the features in `editionNote`, when its own verdict or syntax differs under October 2021: an invalid schema that breaks a draft-only rule (October 2021 would accept it), or any schema that uses draft-only syntax. A valid sibling of a draft-only rule is not tagged unless it uses draft syntax itself, because dropping a rule can't make a valid schema invalid. `type Query { f(x: Int, y: Int): Int }`, the sibling of an `argNamesUnique` pair, is valid in both editions, so rejecting it is a failure under either. Findings count their draft-only vectors (`draftOnly`), and mark their example `[draft]`. A finding with nothing else carries `"edition": "draft"` too. Each check gives `failingDraftOnly`, how many of its failing vectors are draft only, so a check whose failures are all draft only can be told apart. The report's `draftOnly` gives how many graded vectors are draft only and how many of those failed. They are graded like any other vector, but an implementation of the October 2021 edition can fail them and still follow its edition.
 
-**Self-test.** Every run also judges deliberately wrong answers, and requires each to be caught: every vector's verdict flipped, the next vector's answer where it differs, an answer without `valid`, and a crash on a valid and on an invalid schema, which must count as crashes even with the right `valid`. That makes 333 negative controls. The expected answers themselves must all pass. The checker also fails if an `unspecified` vector is graded.
+**Self-test.** Every run also judges deliberately wrong answers, and requires each to be caught: every vector's verdict flipped, the next vector's answer where it differs, an answer without `valid`, and a crash on a valid and on an invalid schema, which must count as crashes even with the right `valid`. That makes 330 negative controls. The expected answers themselves must all pass. The checker also fails if an `unspecified` vector is graded.
 
 ## Vectors
 
-[`kit/schema/vectors.json`](../../kit/schema/vectors.json) holds 168 vectors, 84 pairs. 166 are graded; 2 are `unspecified`. [`scripts/generate-vectors-schema.mjs`](../../scripts/generate-vectors-schema.mjs) writes it from the pairs it lists, after evaluating `TypeSystem!Verdict` on each schema with tla-ts. It fails unless every invalid schema breaks exactly its rule and every sibling breaks none, so a pair can't quietly test something else. `--check` regenerates the file and fails if it differs. graphql-js only parses the SDL.
+[`kit/schema/vectors.json`](../../kit/schema/vectors.json) holds 168 vectors, 84 pairs. 165 are graded; 3 are `unspecified`. [`scripts/generate-vectors-schema.mjs`](../../scripts/generate-vectors-schema.mjs) writes it from the pairs it lists, after evaluating `TypeSystem!Verdict` on each schema with tla-ts. It fails unless every invalid schema breaks exactly its rule and every sibling breaks none, so a pair can't quietly test something else. `--check` regenerates the file and fails if it differs. graphql-js only parses the SDL.
 
 Each vector has:
 - **`rule`:** the rule its pair is about;
 - **`verdict`:** the reference's `Verdict`, `[rule]` or `[]`;
 - **`expected`:** `{ "valid": verdict = [] }`;
 - **`pair`:** its sibling's id;
-- **`edition`** and **`editionNote`:** `"draft"` and the draft-only features, for a vector whose rule or syntax the October 2021 edition doesn't have (52 vectors);
-- **`unspecified`:** why the spec doesn't settle the vector's verdict. These vectors aren't sent to the adapter or graded (2 vectors, below);
+- **`edition`** and **`editionNote`:** `"draft"` and the draft-only features, for a vector whose own verdict or syntax differs under the October 2021 edition (37 vectors: 26 invalid, 11 valid);
+- **`unspecified`:** why the spec doesn't settle the vector's verdict. These vectors aren't sent to the adapter or graded (3 vectors, below);
 - **`origin`:** for the 16 pairs taken from the spec's own examples, counter-examples and coercion rules, where they come from. They're the ones `specs/TypeSystemVectors.tla` also checks, such as §3.10's circular input objects, §3.7's `Image` that must also implement `Node`, and §3.13's `@invalidExample`.
 
 The schemas come from [`scripts/differential-type-system.mjs`](../../scripts/differential-type-system.mjs): its hand-written cases and its scenario families, which are the vectors' `family`:
@@ -118,12 +118,20 @@ The schemas come from [`scripts/differential-type-system.mjs`](../../scripts/dif
 
 Their valid siblings are valid under either reading, and are graded. So is `directiveReferencesItselfIndirectly.2.invalid`, where `@d` uses `@e` and `@e` uses `@d`, which breaks the formal rule too.
 
+**Declaring a built-in scalar.** §3.3 says "No provided type may have a name which conflicts with any built in types (including Scalar and Introspection types)." §3.5 adds: "When representing a GraphQL schema using the type system definition language, all built-in scalars must be omitted for brevity." That second sentence binds whoever prints SDL. The spec doesn't say whether a schema that declares a built-in scalar anyway, as `scalar String`, provides a type that conflicts with the built-in, which a consumer must reject, or just names the built-in. `TypeSystem.tla` reads it as a conflict. The generator marks any `typeNameNotBuiltin` vector that declares `scalar Int`, `Float`, `String`, `Boolean` or `ID` as `unspecified`:
+
+| Vector | Schema |
+| --- | --- |
+| `typeNameNotBuiltin.1.invalid` | `scalar String type Query { a: Int }` |
+
+Its valid sibling, `scalar Str`, is graded. So is `typeNameNotBuiltin.2.invalid`, `type Int { a: String } type Query { a: String }`: an object type is not a built-in scalar, so it conflicts under any reading.
+
 ## graphql-js
 
 [`adapters/graphql-js/areas/schema.mjs`](../../adapters/graphql-js/areas/schema.mjs) runs `buildSchema`, which applies the SDL rules, then `validateSchema`. A `GraphQLError`, or the plain `Error` `buildSchema` throws with the SDL rules' messages, is a rejection. Any other exception propagates, and the adapter answers with an `error`: a crash. The findings are the deviations `differential-type-system.mjs` documents in `VALIDATION_DEVIATIONS`. They aren't encoded as expected answers.
 
 Both versions:
-- **`typeNameNotBuiltin`:** accept `scalar String` and `type Int { … }`;
+- **`typeNameNotBuiltin`:** accept `type Int { … }`. They also accept `scalar String`, which is `unspecified` and isn't graded;
 - **`directiveUsesItself`:** accept §3.13's `@invalidExample`;
 - **`directiveReferencesItselfIndirectly`:** accept a directive that reaches itself through another directive. They also accept the two `unspecified` schemas above, which aren't graded.
 

@@ -64,7 +64,7 @@ Field by field:
 - **`after`:** optional but recommended. The number of `settle`s for this execution the adapter had applied when the resolver was called. Increment the count before completing the future. The kit uses it to place each call in the order the engine saw things, which is what makes `calledSerially` conclusive. A stamp can only be late, never early, so it's sound on any threading model.
 - **`response`:** the response the client would get, serialized as JSON.
 - **`stream-error`:** for a subscription whose response stream failed instead of yielding the event's result, so the client got no response at all. The kit counts it against `eventYieldsResult`. Don't make up a response for it.
-- **`no-response`:** the implementation produced no response at all for a query or mutation, for example because serializing its result failed, or execution raised out to the caller. The kit counts it against `resultCoercion` (or `intFraction`, when the only such value was a fraction for an Int) when a resolver had returned an `uncoercible` value, and against `responds` otherwise. Only use it where a client would get nothing; an adapter bug is an `error`.
+- **`no-response`:** the implementation produced no response at all for a query or mutation, for example because serializing its result failed, or execution raised out to the caller. The kit counts it against `resultCoercion` when a resolver had returned a non-finite Float or an unknown enum value, and against `responds` otherwise. When the only such value was a fraction for an Int, it counts against both `intFraction` and `responds`, since `intFraction` is only a SHOULD. Only use it where a client would get nothing; an adapter bug is an `error`.
 - **`error`:** the adapter itself failed. The kit stops.
 - **`end`:** the kit is done with the execution. The adapter can drop it, and anything still pending can be abandoned.
 - **`errorPropagation: false`:** execute without error propagation. graphql-js 17 does this with `@experimental_disableErrorPropagation`. The document doesn't carry the directive, so add it, or use your implementation's own switch. This mode is outside the spec: see [Error propagation off](#error-propagation-off).
@@ -80,7 +80,7 @@ The resolver returns this for each outcome:
 | `{"kind":"list","length":2}` | A list of `length` items. With `deferred-items`, each item is itself pending and is reported with its own `call`. |
 | `{"kind":"null"}` | null |
 | `{"kind":"error"}` | An error, by throwing, rejecting or returning an error value |
-| `{"kind":"uncoercible"}` | A value the leaf type can't represent: `1.2` for an Int, a non-finite number (`Infinity` or `NaN`) for a Float, a name that isn't one of an enum's values. Only sent with `uncoercible-results`. Each must raise an execution error (§3.5.1, §3.5.2, §3.9). The Int fraction is graded as `intFraction`, the others as `resultCoercion`. |
+| `{"kind":"uncoercible"}` | A value the leaf type can't represent: `1.2` for an Int, a non-finite number (`Infinity` or `NaN`) for a Float, a name that isn't one of an enum's values. Only sent with `uncoercible-results`. Each should raise an execution error (§3.5.1, §3.5.2, §3.9). The Int fraction is graded as `intFraction`, a SHOULD, the others as `resultCoercion`, a MUST. |
 
 The kit checks leaf values in the response against the same table, because the reference abstracts them away. Results of the wrong shape are only sent to adapters with `invalid-results`:
 
@@ -123,30 +123,34 @@ For each case, the kit evaluates `Cases!Failures` in [`kit/execution/Cases.tla`]
 
 Before that, the kit rejects malformed cases. It works out each position's type from the fixture, never from the adapter. A case is malformed if:
 
+- a resolver is called twice, called at a position the operation doesn't select (fragments that don't apply, and `@skip` and `@include` with the fixture's variables, are taken into account), or reported with the wrong type;
+- a resolver is called before its parent position settled to an object, or to a list long enough for its index;
+- a call's `after` stamp is negative, or more than the settles the adapter had been sent;
+- a resolver settles twice, or settles without having been called;
+- a subscription's response stream failed instead of yielding the event's result (`stream-error`);
+- the implementation produced no response (`no-response`): `resultCoercion` after an `uncoercible` value, otherwise `responds`, and both `intFraction` and `responds` after a fraction for an Int;
 - the response has entries other than `data`, `errors` and `extensions`, or no `data`;
 - an `extensions` entry isn't a map;
 - an error has no `message` or `path`, or its `extensions` isn't a map;
 - an error path isn't a list, has a string where §7.1.4 wants an integer list index, uses a field name where the response name is an alias (`responsePosition`, a MUST in the draft and a SHOULD in October 2021), or names a position the operation doesn't select (`errorPath`);
 - `errors` is an empty list;
 - a leaf isn't the canonical value for its position's type;
-- a position whose resolver returned an `uncoercible` value holds a value instead of null (`intFraction` for a fraction at an Int, `resultCoercion` otherwise);
-- a resolver is called twice, called at a position the operation doesn't select (fragments that don't apply, and `@skip` and `@include` with the fixture's variables, are taken into account), or reported with the wrong type;
-- a resolver is called before its parent position settled to an object, or to a list long enough for its index;
-- a call's `after` stamp is negative, or more than the settles the adapter had been sent;
-- a resolver settles twice, or settles without having been called;
-- a subscription's response stream failed instead of yielding the event's result (`stream-error`);
-- the implementation produced no response (`no-response`): `resultCoercion` after an `uncoercible` value, otherwise `responds`.
+- a position whose resolver returned an `uncoercible` value holds a value instead of null (`intFraction` for a fraction at an Int, `resultCoercion` otherwise).
+
+The trace comes first, whatever the response, so a call with the wrong type is a `protocol` problem even when the implementation then produced no response.
+
+`intFraction` is a SHOULD and fails only with `--strict`. §3.5.1 states the rule with must ("otherwise they must raise an execution error"), but its example for this very case says "a floating-point number 1.2 should raise an execution error instead of being truncated to 1". Where the level is in doubt, the kit takes the weaker one. A truncating case is still malformed, so the reference never sees it.
 
 These are reported as SHOULDs, and fail only with `--strict`:
 - extra entries in an error (`errorEntries`, §7.1.6);
 - an error's `locations` that isn't a list of maps with positive integer `line` and `column` (`errorLocations`, §7.1.6, where the whole sentence about locations is a should);
 - a leaf with the canonical value but the wrong JSON type, such as `"1"` for Int 1 (`leafEncoding`, §7.2.1: "the following JSON values should be used").
 
-Each problem belongs to one check in [`kit/execution/checks.mjs`](../kit/execution/checks.mjs), which also lists the spec sections each check rests on. In a report, a malformed case counts against its first problem only, in the order above. That is the root cause when one fault shows up several ways.
+Each problem belongs to one check in [`kit/execution/checks.mjs`](../kit/execution/checks.mjs), which also lists the spec sections each check rests on. In a report, a malformed case counts against its first problem, in the order above. That is the root cause when one fault shows up several ways. Two kinds of problem count as well: every `protocol` problem, so `adapterProblems` counts each case where the adapter broke the protocol, and, when the first problem can't fail a run by itself (a SHOULD, or informational), the first problem of each check that can. A problem that fails the run is never hidden behind one that doesn't. A case counts once against each check, however many times it breaks it, and a warning counts under the level of its own case's fixture.
 
 Failures are grouped by fixture and clause, and each group is shown by its shortest case: its trace, the response, and the data the reference expected.
 
-Every run also checks the checker. [`kit/execution/controls.json`](../kit/execution/controls.json) holds known-good cases recorded from graphql-js, and 30 broken variants of them. Some examples:
+Every run also checks the checker. [`kit/execution/controls.json`](../kit/execution/controls.json) holds known-good cases recorded from graphql-js, 31 broken variants of them, and 4 report controls. Some examples:
 - an error dropped;
 - an error reported under a field name instead of its alias;
 - a location with line 0, and an Int written as a string (SHOULDs);
@@ -159,7 +163,9 @@ Every run also checks the checker. [`kit/execution/controls.json`](../kit/execut
 - a field called before its parent had a value;
 - a negative stamp.
 
-Each base must pass, and each control must be caught by the clause it names. A malformed control must be caught by the check it names, and a SHOULD control by the SHOULD check it names. So a green run can't be vacuous. No base comes from the `noPropagation` fixture. The corpus doesn't depend on your cases. `node scripts/generate-controls.mjs` regenerates it.
+Each base must pass, and each control must be caught by the clause it names. A malformed control must be caught by the check it names, and a SHOULD control by the SHOULD check it names. So a green run can't be vacuous. No control base comes from the `noPropagation` fixture.
+
+A report control is a small set of cases, and a fact their report must show. It tests the counting across cases that one case can't: a SHOULD warning in a normal fixture still counts as a SHOULD after the same warning in `noPropagation`; a case that breaks a SHOULD twice counts once; a call with the wrong type before a missing response is a `protocol` problem, not `intFraction`; and a root field called twice with different types in `noPropagation` counts under `callsOnce` and `protocol` and fails the fixture. Every report, the run's included, must also never count more failing cases for a check than the cases it applies to. The corpus doesn't depend on your cases. `node scripts/generate-controls.mjs` regenerates it.
 
 ### How strict `nullsExplained` is
 
@@ -173,7 +179,7 @@ So for a query, a response that drops the error which actually nulled a position
 
 ### Error propagation off
 
-The `noPropagation` fixture runs graphql-js 17's experimental `@experimental_disableErrorPropagation`: an error nulls the position where it happened, even a Non-Null one. Neither edition of the spec has this mode. §6.4.4 says "Since `Non-Null` response positions cannot be {null}, execution errors are propagated". So the fixture cites no spec section, and every failure in it, whichever clause or check it breaks, is reported under `disabledPropagation`. That check is INFO: it cites no section and never fails a run, even with `--strict`. An adapter protocol problem in the fixture still counts as `protocol`. The fixture only runs for adapters that claim `error-propagation-off`.
+The `noPropagation` fixture runs graphql-js 17's experimental `@experimental_disableErrorPropagation`: an error nulls the position where it happened, even a Non-Null one. Neither edition of the spec has this mode. §6.4.4 says "Since `Non-Null` response positions cannot be {null}, execution errors are propagated". So the fixture cites no spec section, and every failure of its response (its data and errors), whichever clause or check it breaks, is reported under `disabledPropagation`. That check is INFO: it cites no section and never fails a run, even with `--strict`. Turning propagation off doesn't change which resolvers run, so protocol problems and the checks on calls (`callsOnce`, `callsSelected`, `callsReachable`, `calledSerially`) keep their own checks and levels in the fixture. The fixture only runs for adapters that claim `error-propagation-off`.
 
 ## Case format
 

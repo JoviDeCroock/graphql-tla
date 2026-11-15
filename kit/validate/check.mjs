@@ -108,20 +108,26 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
 
   // Per rule: the invalid vectors that exercised it, how many of them break
   // it alone, and how many were accepted.
-  const stats = new Map(Object.keys(rules).map((r) => [r, { cases: 0, alone: 0, failing: 0 }]));
-  const accepts = { cases: 0, failing: 0 };
+  const stats = new Map(Object.keys(rules).map((r) => [r, { cases: 0, alone: 0, failing: 0, failingDraftOnly: 0 }]));
+  const accepts = { cases: 0, failing: 0, failingDraftOnly: 0 };
   for (const j of judged) {
     if (j.status === "malformed") continue;
     if (j.vector.expected.valid) {
       accepts.cases++;
-      if (j.status !== "pass") accepts.failing++;
+      if (j.status !== "pass") {
+        accepts.failing++;
+        if (isDraft(j.vector)) accepts.failingDraftOnly++;
+      }
       continue;
     }
     for (const r of j.rules) {
       const s = stats.get(r);
       s.cases++;
       if (j.rules.length === 1) s.alone++;
-      if (j.status !== "pass") s.failing++;
+      if (j.status !== "pass") {
+        s.failing++;
+        if (isDraft(j.vector)) s.failingDraftOnly++;
+      }
     }
   }
 
@@ -213,6 +219,7 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
           status: status(s),
           cases: s.cases,
           failing: s.failing,
+          failingDraftOnly: s.failingDraftOnly,
           ...(notes[rule] ? { note: notes[rule] } : {}),
         };
       }),
@@ -224,6 +231,7 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
         status: accepts.failing > 0 ? "fail" : accepts.cases > 0 ? "pass" : "untested",
         cases: accepts.cases,
         failing: accepts.failing,
+        failingDraftOnly: accepts.failingDraftOnly,
         basis:
           "a document is valid when it satisfies every rule of §5, and only invalid requests are kept from execution (§6.1.1); rejecting a valid document applies a rule the spec doesn't have",
       },
