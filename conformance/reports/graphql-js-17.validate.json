@@ -1,0 +1,617 @@
+{
+  "format": 1,
+  "area": "validate",
+  "implementation": "graphql-js 17.1.0",
+  "capabilities": [
+    "absent-vs-null",
+    "coerce",
+    "deferred-items",
+    "error-propagation-off",
+    "idle",
+    "introspect",
+    "invalid-results",
+    "mutation",
+    "parse",
+    "schema",
+    "subscription",
+    "uncoercible-results",
+    "unvalidated",
+    "validate"
+  ],
+  "provenance": {
+    "kit": "c8d6acb7c6e2",
+    "date": "2026-11-15",
+    "strict": true,
+    "vectors": 3093
+  },
+  "checkerSelfTest": "passed (3 negative controls)",
+  "cases": {
+    "submitted": 3093,
+    "distinct": 3093,
+    "malformed": 0
+  },
+  "adapterProblems": 0,
+  "checks": [
+    {
+      "id": "executableDefinitions",
+      "title": "Executable Definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.1.1",
+          "title": "Executable Definitions",
+          "url": "https://spec.graphql.org/draft/#sec-Executable-Definitions"
+        }
+      ],
+      "status": "pass",
+      "cases": 6,
+      "failing": 0
+    },
+    {
+      "id": "operationTypeExistence",
+      "title": "Operation Type Existence",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.2.1.1",
+          "title": "Operation Type Existence",
+          "url": "https://spec.graphql.org/draft/#sec-Operation-Type-Existence"
+        }
+      ],
+      "status": "pass",
+      "cases": 27,
+      "failing": 0
+    },
+    {
+      "id": "operationNameUniqueness",
+      "title": "Operation Name Uniqueness",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.2.2.1",
+          "title": "Operation Name Uniqueness",
+          "url": "https://spec.graphql.org/draft/#sec-Operation-Name-Uniqueness"
+        }
+      ],
+      "status": "pass",
+      "cases": 10,
+      "failing": 0
+    },
+    {
+      "id": "loneAnonymousOperation",
+      "title": "Lone Anonymous Operation",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.2.3.1",
+          "title": "Lone Anonymous Operation",
+          "url": "https://spec.graphql.org/draft/#sec-Lone-Anonymous-Operation"
+        }
+      ],
+      "status": "pass",
+      "cases": 38,
+      "failing": 0
+    },
+    {
+      "id": "singleRootField",
+      "title": "Single Root Field",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.2.4.1",
+          "title": "Single Root Field",
+          "url": "https://spec.graphql.org/draft/#sec-Single-Root-Field"
+        }
+      ],
+      "status": "pass",
+      "cases": 98,
+      "failing": 0
+    },
+    {
+      "id": "fieldSelections",
+      "title": "Field Selections",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.3.1",
+          "title": "Field Selections",
+          "url": "https://spec.graphql.org/draft/#sec-Field-Selections"
+        }
+      ],
+      "status": "pass",
+      "cases": 42,
+      "failing": 0
+    },
+    {
+      "id": "fieldSelectionMerging",
+      "title": "Field Selection Merging",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.3.2",
+          "title": "Field Selection Merging",
+          "url": "https://spec.graphql.org/draft/#sec-Field-Selection-Merging"
+        }
+      ],
+      "status": "fail",
+      "cases": 1232,
+      "failing": 23
+    },
+    {
+      "id": "leafFieldSelections",
+      "title": "Leaf Field Selections",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.3.3",
+          "title": "Leaf Field Selections",
+          "url": "https://spec.graphql.org/draft/#sec-Leaf-Field-Selections"
+        }
+      ],
+      "status": "pass",
+      "cases": 68,
+      "failing": 0
+    },
+    {
+      "id": "argumentNames",
+      "title": "Argument Names",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.4.1",
+          "title": "Argument Names",
+          "url": "https://spec.graphql.org/draft/#sec-Argument-Names"
+        }
+      ],
+      "status": "pass",
+      "cases": 18,
+      "failing": 0
+    },
+    {
+      "id": "argumentUniqueness",
+      "title": "Argument Uniqueness",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.4.2",
+          "title": "Argument Uniqueness",
+          "url": "https://spec.graphql.org/draft/#sec-Argument-Uniqueness"
+        }
+      ],
+      "status": "pass",
+      "cases": 9,
+      "failing": 0
+    },
+    {
+      "id": "requiredArguments",
+      "title": "Required Arguments",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.4.3",
+          "title": "Required Arguments",
+          "url": "https://spec.graphql.org/draft/#sec-Required-Arguments"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "fragmentNameUniqueness",
+      "title": "Fragment Name Uniqueness",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.5.1.1",
+          "title": "Fragment Name Uniqueness",
+          "url": "https://spec.graphql.org/draft/#sec-Fragment-Name-Uniqueness"
+        }
+      ],
+      "status": "pass",
+      "cases": 14,
+      "failing": 0
+    },
+    {
+      "id": "fragmentSpreadTypeExistence",
+      "title": "Fragment Spread Type Existence",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.5.1.2",
+          "title": "Fragment Spread Type Existence",
+          "url": "https://spec.graphql.org/draft/#sec-Fragment-Spread-Type-Existence"
+        }
+      ],
+      "status": "pass",
+      "cases": 22,
+      "failing": 0
+    },
+    {
+      "id": "fragmentsOnObjectInterfaceOrUnionTypes",
+      "title": "Fragments on Object, Interface or Union Types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.5.1.3",
+          "title": "Fragments on Object, Interface or Union Types",
+          "url": "https://spec.graphql.org/draft/#sec-Fragments-on-Object-Interface-or-Union-Types"
+        }
+      ],
+      "status": "pass",
+      "cases": 30,
+      "failing": 0
+    },
+    {
+      "id": "fragmentsMustBeUsed",
+      "title": "Fragments Must Be Used",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.5.1.4",
+          "title": "Fragments Must Be Used",
+          "url": "https://spec.graphql.org/draft/#sec-Fragments-Must-Be-Used"
+        }
+      ],
+      "status": "pass",
+      "cases": 100,
+      "failing": 0
+    },
+    {
+      "id": "fragmentSpreadTargetDefined",
+      "title": "Fragment Spread Target Defined",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.5.2.1",
+          "title": "Fragment Spread Target Defined",
+          "url": "https://spec.graphql.org/draft/#sec-Fragment-Spread-Target-Defined"
+        }
+      ],
+      "status": "pass",
+      "cases": 14,
+      "failing": 0
+    },
+    {
+      "id": "fragmentSpreadsMustNotFormCycles",
+      "title": "Fragment Spreads Must Not Form Cycles",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.5.2.2",
+          "title": "Fragment Spreads Must Not Form Cycles",
+          "url": "https://spec.graphql.org/draft/#sec-Fragment-Spreads-Must-Not-Form-Cycles"
+        }
+      ],
+      "status": "pass",
+      "cases": 57,
+      "failing": 0
+    },
+    {
+      "id": "fragmentSpreadIsPossible",
+      "title": "Fragment Spread Is Possible",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.5.2.3",
+          "title": "Fragment Spread Is Possible",
+          "url": "https://spec.graphql.org/draft/#sec-Fragment-Spread-Is-Possible"
+        }
+      ],
+      "status": "fail",
+      "cases": 71,
+      "failing": 4
+    },
+    {
+      "id": "valuesOfCorrectType",
+      "title": "Values of Correct Type",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.6.1",
+          "title": "Values of Correct Type",
+          "url": "https://spec.graphql.org/draft/#sec-Values-of-Correct-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 342,
+      "failing": 0
+    },
+    {
+      "id": "inputObjectFieldNames",
+      "title": "Input Object Field Names",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.6.2",
+          "title": "Input Object Field Names",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Object-Field-Names"
+        }
+      ],
+      "status": "pass",
+      "cases": 12,
+      "failing": 0,
+      "note": "every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it"
+    },
+    {
+      "id": "inputObjectFieldUniqueness",
+      "title": "Input Object Field Uniqueness",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.6.3",
+          "title": "Input Object Field Uniqueness",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Object-Field-Uniqueness"
+        }
+      ],
+      "status": "pass",
+      "cases": 10,
+      "failing": 0
+    },
+    {
+      "id": "inputObjectRequiredFields",
+      "title": "Input Object Required Fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.6.4",
+          "title": "Input Object Required Fields",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Object-Required-Fields"
+        }
+      ],
+      "status": "pass",
+      "cases": 9,
+      "failing": 0,
+      "note": "every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it"
+    },
+    {
+      "id": "directivesAreDefined",
+      "title": "Directives Are Defined",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.7.1",
+          "title": "Directives Are Defined",
+          "url": "https://spec.graphql.org/draft/#sec-Directives-Are-Defined"
+        }
+      ],
+      "status": "pass",
+      "cases": 42,
+      "failing": 0
+    },
+    {
+      "id": "directivesAreInValidLocations",
+      "title": "Directives Are in Valid Locations",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.7.2",
+          "title": "Directives Are in Valid Locations",
+          "url": "https://spec.graphql.org/draft/#sec-Directives-Are-in-Valid-Locations"
+        }
+      ],
+      "status": "pass",
+      "cases": 29,
+      "failing": 0
+    },
+    {
+      "id": "directivesAreUniquePerLocation",
+      "title": "Directives Are Unique per Location",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.7.3",
+          "title": "Directives Are Unique per Location",
+          "url": "https://spec.graphql.org/draft/#sec-Directives-Are-Unique-per-Location"
+        }
+      ],
+      "status": "pass",
+      "cases": 13,
+      "failing": 0
+    },
+    {
+      "id": "variableUniqueness",
+      "title": "Variable Uniqueness",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.8.1",
+          "title": "Variable Uniqueness",
+          "url": "https://spec.graphql.org/draft/#sec-Variable-Uniqueness"
+        }
+      ],
+      "status": "pass",
+      "cases": 12,
+      "failing": 0
+    },
+    {
+      "id": "variablesAreInputTypes",
+      "title": "Variables Are Input Types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.8.2",
+          "title": "Variables Are Input Types",
+          "url": "https://spec.graphql.org/draft/#sec-Variables-Are-Input-Types"
+        }
+      ],
+      "status": "pass",
+      "cases": 10,
+      "failing": 0
+    },
+    {
+      "id": "allVariableUsesDefined",
+      "title": "All Variable Uses Defined",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.8.3",
+          "title": "All Variable Uses Defined",
+          "url": "https://spec.graphql.org/draft/#sec-All-Variable-Uses-Defined"
+        }
+      ],
+      "status": "pass",
+      "cases": 27,
+      "failing": 0
+    },
+    {
+      "id": "allVariablesUsed",
+      "title": "All Variables Used",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.8.4",
+          "title": "All Variables Used",
+          "url": "https://spec.graphql.org/draft/#sec-All-Variables-Used"
+        }
+      ],
+      "status": "pass",
+      "cases": 27,
+      "failing": 0
+    },
+    {
+      "id": "allVariableUsagesAreAllowed",
+      "title": "All Variable Usages Are Allowed",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.8.5",
+          "title": "All Variable Usages Are Allowed",
+          "url": "https://spec.graphql.org/draft/#sec-All-Variable-Usages-Are-Allowed"
+        }
+      ],
+      "status": "fail",
+      "cases": 703,
+      "failing": 3
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "fieldSelectionMerging"
+      ],
+      "summary": "§5.3.2 Field Selection Merging isn't enforced: accepts documents that break only this rule",
+      "cases": 22,
+      "fixtures": {
+        "merging": 22
+      },
+      "fixture": "merging",
+      "example": {
+        "input": "FieldSelectionMerging-59: { node(id: \"1\") { ... on User { a: __typename } ... on Post { a: id } } }",
+        "response": {
+          "valid": true,
+          "errors": []
+        },
+        "expected": "invalid: FieldSelectionMerging [\"conflict\"]"
+      }
+    },
+    {
+      "checks": [
+        "fragmentSpreadIsPossible"
+      ],
+      "summary": "§5.5.2.3 Fragment Spread Is Possible isn't enforced: accepts documents that break only this rule",
+      "cases": 4,
+      "fixtures": {
+        "spreads": 3,
+        "random": 1
+      },
+      "fixture": "spreads",
+      "example": {
+        "input": "FragmentSpreadIsPossible-22: { resource { ... on Resource { __typename } } }",
+        "response": {
+          "valid": true,
+          "errors": []
+        },
+        "expected": "invalid: FragmentSpreadIsPossible [\"Resource>Resource\"]"
+      }
+    },
+    {
+      "checks": [
+        "allVariableUsagesAreAllowed"
+      ],
+      "summary": "§5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule",
+      "cases": 2,
+      "fixtures": {
+        "spec": 2
+      },
+      "fixture": "spec",
+      "example": {
+        "input": "AllVariableUsagesAreAllowed-spec-8: mutation addNullableCat($cat: CatInput) { addPet(pet: {cat: $cat}) { name } }",
+        "response": {
+          "valid": true,
+          "errors": []
+        },
+        "expected": "invalid: AllVariableUsagesAreAllowed [\"cat\"]"
+      }
+    },
+    {
+      "checks": [
+        "fieldSelectionMerging"
+      ],
+      "summary": "§5.3.2 Field Selection Merging is over-strict: rejects valid documents one edit away from a document that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "merging": 1
+      },
+      "fixture": "merging",
+      "problem": "Fields \"a\" conflict because they have differing arguments. Use different aliases on the fields to fetch both if this was intentional.",
+      "example": {
+        "input": "FieldSelectionMerging-valid-11: { a: search(term: \"x\") { __typename } a: search(term: \"\"\"x\"\"\") { __typename } }",
+        "response": {
+          "valid": false,
+          "errors": [
+            {
+              "message": "Fields \"a\" conflict because they have differing arguments. Use different aliases on the fields to fetch both if this was intentional.",
+              "locations": [
+                {
+                  "line": 2,
+                  "column": 3
+                },
+                {
+                  "line": 5,
+                  "column": 3
+                }
+              ]
+            }
+          ]
+        },
+        "expected": "valid"
+      }
+    },
+    {
+      "checks": [
+        "allVariableUsagesAreAllowed"
+      ],
+      "summary": "§5.8.5 All Variable Usages Are Allowed is over-strict: rejects valid documents one edit away from a document that breaks only this rule",
+      "cases": 1,
+      "fixtures": {
+        "variables": 1
+      },
+      "fixture": "variables",
+      "problem": "Variable \"$v\" is of type \"ID\" but must be non-nullable to be used for OneOf Input Object \"Pick\".",
+      "example": {
+        "input": "AllVariableUsagesAreAllowed-valid-30: query Q($v: ID = \"1\") { echo(pick: {id: $v}) }",
+        "response": {
+          "valid": false,
+          "errors": [
+            {
+              "message": "Variable \"$v\" is of type \"ID\" but must be non-nullable to be used for OneOf Input Object \"Pick\".",
+              "locations": [
+                {
+                  "line": 1,
+                  "column": 9
+                },
+                {
+                  "line": 2,
+                  "column": 19
+                }
+              ]
+            }
+          ]
+        },
+        "expected": "valid"
+      }
+    }
+  ],
+  "fixtures": []
+}

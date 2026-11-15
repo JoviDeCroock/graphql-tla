@@ -3,20 +3,36 @@
   "area": "execution",
   "implementation": "graphql-js 17.1.0",
   "capabilities": [
+    "absent-vs-null",
+    "coerce",
     "deferred-items",
     "error-propagation-off",
     "idle",
+    "introspect",
     "invalid-results",
     "mutation",
-    "subscription"
+    "parse",
+    "schema",
+    "subscription",
+    "uncoercible-results",
+    "unvalidated",
+    "validate"
   ],
-  "strict": true,
-  "checkerSelfTest": "passed (17 negative controls)",
+  "provenance": {
+    "kit": "c8d6acb7c6e2",
+    "date": "2026-11-15",
+    "strict": true,
+    "random": 1500,
+    "seed": 1,
+    "exhaustive": true
+  },
+  "checkerSelfTest": "passed (23 negative controls)",
   "cases": {
-    "submitted": 11662,
-    "distinct": 1930,
+    "submitted": 13388,
+    "distinct": 2522,
     "malformed": 0
   },
+  "adapterProblems": 0,
   "checks": [
     {
       "id": "complete",
@@ -35,7 +51,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1930,
+      "cases": 2522,
       "failing": 0
     },
     {
@@ -60,7 +76,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1930,
+      "cases": 2522,
       "failing": 0
     },
     {
@@ -75,7 +91,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1930,
+      "cases": 2522,
       "failing": 0
     },
     {
@@ -95,7 +111,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1930,
+      "cases": 2522,
       "failing": 0
     },
     {
@@ -110,7 +126,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1930,
+      "cases": 2522,
       "failing": 0
     },
     {
@@ -125,7 +141,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1930,
+      "cases": 2522,
       "failing": 0
     },
     {
@@ -145,7 +161,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1930,
+      "cases": 2522,
       "failing": 0
     },
     {
@@ -164,6 +180,7 @@
           "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
         }
       ],
+      "basis": "§6.4.4: an execution error \"must be added to the errors list\". §6.3.3 lets an implementation cancel fields that have not yet executed or yielded a value, but §6.3.4 completes each mutation root field before the next starts, so an earlier root field's errors can't have been cancelled.",
       "status": "pass",
       "cases": 45,
       "failing": 0
@@ -205,7 +222,7 @@
         }
       ],
       "status": "pass",
-      "cases": 11662,
+      "cases": 13388,
       "failing": 0
     },
     {
@@ -220,7 +237,42 @@
         }
       ],
       "status": "pass",
-      "cases": 11662,
+      "cases": 13388,
+      "failing": 0
+    },
+    {
+      "id": "callsReachable",
+      "title": "A field executes only once its parent has a value that contains it",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.3.3",
+          "title": "Executing Collected Fields",
+          "url": "https://spec.graphql.org/draft/#sec-Executing-Collected-Fields"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "pass",
+      "cases": 13388,
+      "failing": 0
+    },
+    {
+      "id": "eventYieldsResult",
+      "title": "A subscription event yields an execution result, even when its data is null",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.2.3.2",
+          "title": "Response Stream",
+          "url": "https://spec.graphql.org/draft/#sec-Response-Stream"
+        }
+      ],
+      "status": "pass",
+      "cases": 1518,
       "failing": 0
     },
     {
@@ -235,18 +287,28 @@
         }
       ],
       "status": "pass",
-      "cases": 6397,
+      "cases": 8123,
       "failing": 0
     },
     {
-      "id": "leafValues",
-      "title": "Leaf values are the resolver's value, result-coerced",
+      "id": "resultCoercion",
+      "title": "A leaf value its type can't represent (a fraction for an Int, a non-finite Float, an unknown enum value) raises an execution error",
       "level": "MUST",
       "spec": [
         {
-          "number": "3.5",
-          "title": "Scalars",
-          "url": "https://spec.graphql.org/draft/#sec-Scalars"
+          "number": "3.5.1",
+          "title": "Int",
+          "url": "https://spec.graphql.org/draft/#sec-Int"
+        },
+        {
+          "number": "3.5.2",
+          "title": "Float",
+          "url": "https://spec.graphql.org/draft/#sec-Float"
+        },
+        {
+          "number": "3.9",
+          "title": "Enums",
+          "url": "https://spec.graphql.org/draft/#sec-Enums"
         },
         {
           "number": "6.4.3",
@@ -255,7 +317,22 @@
         }
       ],
       "status": "pass",
-      "cases": 6397,
+      "cases": 13388,
+      "failing": 0
+    },
+    {
+      "id": "leafValues",
+      "title": "Leaf values are the resolver's canonical value (Int 1, Float 1.5, Boolean true, an enum's first value, \"v\")",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "pass",
+      "cases": 8123,
       "failing": 0
     },
     {
@@ -270,7 +347,7 @@
         }
       ],
       "status": "pass",
-      "cases": 11662,
+      "cases": 13388,
       "failing": 0
     },
     {
@@ -285,7 +362,7 @@
         }
       ],
       "status": "pass",
-      "cases": 11662,
+      "cases": 13388,
       "failing": 0
     },
     {
@@ -300,7 +377,7 @@
         }
       ],
       "status": "pass",
-      "cases": 11662,
+      "cases": 13388,
       "failing": 0
     },
     {
@@ -330,7 +407,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10103,
+      "cases": 11682,
       "failing": 0
     },
     {
@@ -345,13 +422,14 @@
         }
       ],
       "status": "pass",
-      "cases": 10103,
+      "cases": 11682,
       "failing": 0
     },
     {
       "id": "responsePosition",
       "title": "Paths use field names and integer list indices",
       "level": "MUST",
+      "oct2021": "SHOULD",
       "spec": [
         {
           "number": "7.1.4",
@@ -360,7 +438,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1433,
+      "cases": 1456,
       "failing": 0
     },
     {
@@ -375,7 +453,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10103,
+      "cases": 11682,
       "failing": 0
     },
     {
@@ -384,10 +462,11 @@
       "level": "ADAPTER",
       "spec": [],
       "status": "pass",
-      "cases": 11662,
+      "cases": 13388,
       "failing": 0
     }
   ],
+  "findings": [],
   "fixtures": [
     {
       "id": "fragments",
@@ -419,7 +498,36 @@
         }
       ],
       "status": "pass",
-      "cases": 1536
+      "cases": 1536,
+      "failing": 0
+    },
+    {
+      "id": "leaves",
+      "spec": [
+        {
+          "number": "3.5.1",
+          "title": "Int",
+          "url": "https://spec.graphql.org/draft/#sec-Int"
+        },
+        {
+          "number": "3.5.2",
+          "title": "Float",
+          "url": "https://spec.graphql.org/draft/#sec-Float"
+        },
+        {
+          "number": "3.9",
+          "title": "Enums",
+          "url": "https://spec.graphql.org/draft/#sec-Enums"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "pass",
+      "cases": 1700,
+      "failing": 0
     },
     {
       "id": "lists",
@@ -446,7 +554,8 @@
         }
       ],
       "status": "pass",
-      "cases": 2002
+      "cases": 2002,
+      "failing": 0
     },
     {
       "id": "mutation",
@@ -468,7 +577,8 @@
         }
       ],
       "status": "pass",
-      "cases": 1590
+      "cases": 1590,
+      "failing": 0
     },
     {
       "id": "noPropagation",
@@ -480,7 +590,8 @@
         }
       ],
       "status": "pass",
-      "cases": 1602
+      "cases": 1602,
+      "failing": 0
     },
     {
       "id": "nullPropagation",
@@ -502,7 +613,8 @@
         }
       ],
       "status": "pass",
-      "cases": 1662
+      "cases": 1662,
+      "failing": 0
     },
     {
       "id": "subscription",
@@ -519,7 +631,8 @@
         }
       ],
       "status": "pass",
-      "cases": 1518
+      "cases": 1518,
+      "failing": 0
     },
     {
       "id": "unions",
@@ -551,7 +664,8 @@
         }
       ],
       "status": "pass",
-      "cases": 1752
+      "cases": 1778,
+      "failing": 0
     }
   ]
 }

@@ -7,15 +7,24 @@
     "idle",
     "invalid-results",
     "mutation",
-    "subscription"
+    "subscription",
+    "uncoercible-results"
   ],
-  "strict": true,
-  "checkerSelfTest": "passed (17 negative controls)",
+  "provenance": {
+    "kit": "c8d6acb7c6e2",
+    "date": "2026-11-15",
+    "strict": true,
+    "random": 1500,
+    "seed": 1,
+    "exhaustive": true
+  },
+  "checkerSelfTest": "passed (23 negative controls)",
   "cases": {
-    "submitted": 11726,
-    "distinct": 1955,
+    "submitted": 13450,
+    "distinct": 2544,
     "malformed": 1338
   },
+  "adapterProblems": 0,
   "checks": [
     {
       "id": "complete",
@@ -34,7 +43,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1955,
+      "cases": 2544,
       "failing": 0
     },
     {
@@ -59,7 +68,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1955,
+      "cases": 2544,
       "failing": 0
     },
     {
@@ -74,7 +83,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1955,
+      "cases": 2544,
       "failing": 0
     },
     {
@@ -94,7 +103,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1955,
+      "cases": 2544,
       "failing": 0
     },
     {
@@ -109,7 +118,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1955,
+      "cases": 2544,
       "failing": 0
     },
     {
@@ -124,7 +133,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1955,
+      "cases": 2544,
       "failing": 0
     },
     {
@@ -144,7 +153,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1955,
+      "cases": 2544,
       "failing": 0
     },
     {
@@ -163,6 +172,7 @@
           "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
         }
       ],
+      "basis": "§6.4.4: an execution error \"must be added to the errors list\". §6.3.3 lets an implementation cancel fields that have not yet executed or yielded a value, but §6.3.4 completes each mutation root field before the next starts, so an earlier root field's errors can't have been cancelled.",
       "status": "pass",
       "cases": 45,
       "failing": 0
@@ -204,7 +214,7 @@
         }
       ],
       "status": "pass",
-      "cases": 11726,
+      "cases": 13450,
       "failing": 0
     },
     {
@@ -219,8 +229,43 @@
         }
       ],
       "status": "pass",
-      "cases": 11726,
+      "cases": 13450,
       "failing": 0
+    },
+    {
+      "id": "callsReachable",
+      "title": "A field executes only once its parent has a value that contains it",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.3.3",
+          "title": "Executing Collected Fields",
+          "url": "https://spec.graphql.org/draft/#sec-Executing-Collected-Fields"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "pass",
+      "cases": 13450,
+      "failing": 0
+    },
+    {
+      "id": "eventYieldsResult",
+      "title": "A subscription event yields an execution result, even when its data is null",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.2.3.2",
+          "title": "Response Stream",
+          "url": "https://spec.graphql.org/draft/#sec-Response-Stream"
+        }
+      ],
+      "status": "fail",
+      "cases": 1522,
+      "failing": 1338
     },
     {
       "id": "dataShape",
@@ -234,18 +279,28 @@
         }
       ],
       "status": "pass",
-      "cases": 6209,
+      "cases": 7933,
       "failing": 0
     },
     {
-      "id": "leafValues",
-      "title": "Leaf values are the resolver's value, result-coerced",
+      "id": "resultCoercion",
+      "title": "A leaf value its type can't represent (a fraction for an Int, a non-finite Float, an unknown enum value) raises an execution error",
       "level": "MUST",
       "spec": [
         {
-          "number": "3.5",
-          "title": "Scalars",
-          "url": "https://spec.graphql.org/draft/#sec-Scalars"
+          "number": "3.5.1",
+          "title": "Int",
+          "url": "https://spec.graphql.org/draft/#sec-Int"
+        },
+        {
+          "number": "3.5.2",
+          "title": "Float",
+          "url": "https://spec.graphql.org/draft/#sec-Float"
+        },
+        {
+          "number": "3.9",
+          "title": "Enums",
+          "url": "https://spec.graphql.org/draft/#sec-Enums"
         },
         {
           "number": "6.4.3",
@@ -254,7 +309,22 @@
         }
       ],
       "status": "pass",
-      "cases": 6209,
+      "cases": 13450,
+      "failing": 0
+    },
+    {
+      "id": "leafValues",
+      "title": "Leaf values are the resolver's canonical value (Int 1, Float 1.5, Boolean true, an enum's first value, \"v\")",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "pass",
+      "cases": 7933,
       "failing": 0
     },
     {
@@ -268,21 +338,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Execution-Result"
         }
       ],
-      "status": "fail",
-      "cases": 11726,
-      "failing": 1338,
-      "example": {
-        "fixture": "subscription",
-        "problem": "the response has no data entry (§7.1.1: execution started, so data must be present)",
-        "trace": "call postLiked; settle postLiked = null",
-        "response": {
-          "errors": [
-            {
-              "message": "response stream error: The field at path '/postLiked' was declared as a non null type, but the code involved in retrieving data has wrongly returned a null value.  The graphql specification requires that the parent field be set to null, or if that is non nullable that it bubble up null to its parent and so on. The non-nullable type is 'Post' within parent type 'Subscription'"
-            }
-          ]
-        }
-      }
+      "status": "pass",
+      "cases": 12112,
+      "failing": 0
     },
     {
       "id": "errorsList",
@@ -296,7 +354,7 @@
         }
       ],
       "status": "pass",
-      "cases": 11726,
+      "cases": 12112,
       "failing": 0
     },
     {
@@ -311,7 +369,7 @@
         }
       ],
       "status": "pass",
-      "cases": 11726,
+      "cases": 12112,
       "failing": 0
     },
     {
@@ -341,7 +399,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10051,
+      "cases": 10295,
       "failing": 0
     },
     {
@@ -355,26 +413,15 @@
           "url": "https://spec.graphql.org/draft/#sec-Errors"
         }
       ],
-      "status": "fail",
-      "cases": 10051,
-      "failing": 1338,
-      "example": {
-        "fixture": "subscription",
-        "problem": "an execution error without a path: {\"message\":\"response stream error: The field at path '/postLiked' was declared as a non null type, but the code involved in retrieving data has wrongly returned a null value.  The graphql specification requires that the parent field be set to null, or if that is non nullable that it bubble up null to its parent and so on. The non-nullable type is 'Post' within parent type 'Subscription'\"}",
-        "trace": "call postLiked; settle postLiked = null",
-        "response": {
-          "errors": [
-            {
-              "message": "response stream error: The field at path '/postLiked' was declared as a non null type, but the code involved in retrieving data has wrongly returned a null value.  The graphql specification requires that the parent field be set to null, or if that is non nullable that it bubble up null to its parent and so on. The non-nullable type is 'Post' within parent type 'Subscription'"
-            }
-          ]
-        }
-      }
+      "status": "pass",
+      "cases": 10295,
+      "failing": 0
     },
     {
       "id": "responsePosition",
       "title": "Paths use field names and integer list indices",
       "level": "MUST",
+      "oct2021": "SHOULD",
       "spec": [
         {
           "number": "7.1.4",
@@ -383,7 +430,7 @@
         }
       ],
       "status": "pass",
-      "cases": 1334,
+      "cases": 1364,
       "failing": 0
     },
     {
@@ -398,7 +445,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10051,
+      "cases": 10295,
       "failing": 0
     },
     {
@@ -407,8 +454,26 @@
       "level": "ADAPTER",
       "spec": [],
       "status": "pass",
-      "cases": 11726,
+      "cases": 13450,
       "failing": 0
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "eventYieldsResult"
+      ],
+      "summary": "the response stream failed instead of yielding the event's result: …",
+      "fixture": "subscription",
+      "problem": "the response stream failed instead of yielding the event's result: \"response stream error: The field at path '/postLiked' was declared as a non null type, but the code involved in retrieving data has wrongly returned a null value.  The graphql specification requires that the parent field be set to null, or if that is non nullable that it bubble up null to its parent and so on. The non-nullable type is 'Post' within parent type 'Subscription'\"",
+      "example": {
+        "trace": "call postLiked; settle postLiked = null",
+        "streamError": "response stream error: The field at path '/postLiked' was declared as a non null type, but the code involved in retrieving data has wrongly returned a null value.  The graphql specification requires that the parent field be set to null, or if that is non nullable that it bubble up null to its parent and so on. The non-nullable type is 'Post' within parent type 'Subscription'"
+      },
+      "cases": 1338,
+      "fixtures": {
+        "subscription": 1338
+      }
     }
   ],
   "fixtures": [
@@ -442,7 +507,36 @@
         }
       ],
       "status": "pass",
-      "cases": 1576
+      "cases": 1576,
+      "failing": 0
+    },
+    {
+      "id": "leaves",
+      "spec": [
+        {
+          "number": "3.5.1",
+          "title": "Int",
+          "url": "https://spec.graphql.org/draft/#sec-Int"
+        },
+        {
+          "number": "3.5.2",
+          "title": "Float",
+          "url": "https://spec.graphql.org/draft/#sec-Float"
+        },
+        {
+          "number": "3.9",
+          "title": "Enums",
+          "url": "https://spec.graphql.org/draft/#sec-Enums"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "pass",
+      "cases": 1700,
+      "failing": 0
     },
     {
       "id": "lists",
@@ -469,7 +563,8 @@
         }
       ],
       "status": "pass",
-      "cases": 1914
+      "cases": 1914,
+      "failing": 0
     },
     {
       "id": "mutation",
@@ -491,7 +586,8 @@
         }
       ],
       "status": "pass",
-      "cases": 1590
+      "cases": 1590,
+      "failing": 0
     },
     {
       "id": "noPropagation",
@@ -503,7 +599,8 @@
         }
       ],
       "status": "pass",
-      "cases": 1602
+      "cases": 1602,
+      "failing": 0
     },
     {
       "id": "nullPropagation",
@@ -525,7 +622,8 @@
         }
       ],
       "status": "pass",
-      "cases": 1782
+      "cases": 1782,
+      "failing": 0
     },
     {
       "id": "subscription",
@@ -542,7 +640,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1522
+      "cases": 1522,
+      "failing": 1338
     },
     {
       "id": "unions",
@@ -574,7 +673,8 @@
         }
       ],
       "status": "pass",
-      "cases": 1740
+      "cases": 1764,
+      "failing": 0
     }
   ]
 }

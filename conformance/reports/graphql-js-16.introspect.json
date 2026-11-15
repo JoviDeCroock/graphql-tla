@@ -1,0 +1,965 @@
+{
+  "format": 1,
+  "area": "introspect",
+  "implementation": "graphql-js 16.15.0",
+  "capabilities": [
+    "absent-vs-null",
+    "coerce",
+    "deferred-items",
+    "idle",
+    "introspect",
+    "invalid-results",
+    "mutation",
+    "parse",
+    "schema",
+    "subscription",
+    "uncoercible-results",
+    "unvalidated",
+    "validate"
+  ],
+  "provenance": {
+    "kit": "c8d6acb7c6e2",
+    "date": "2026-11-15",
+    "strict": true,
+    "vectors": 22
+  },
+  "checkerSelfTest": "passed (46 negative controls)",
+  "cases": {
+    "submitted": 22,
+    "distinct": 22,
+    "malformed": 2
+  },
+  "adapterProblems": 0,
+  "checks": [
+    {
+      "id": "executes",
+      "title": "The introspection query executes, and its result has every field it selects",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "fail",
+      "cases": 22,
+      "failing": 2
+    },
+    {
+      "id": "roots",
+      "title": "queryType, mutationType and subscriptionType are the root operation types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.1",
+          "title": "The \\_\\_Schema Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Schema-Type"
+        },
+        {
+          "number": "3.3.1",
+          "title": "Root Operation Types",
+          "url": "https://spec.graphql.org/draft/#sec-Root-Operation-Types"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "types",
+      "title": "types is the set of all named types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.1",
+          "title": "The \\_\\_Schema Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Schema-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "builtinScalars",
+      "title": "types has the built-in scalars the schema references, and no others",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5",
+          "title": "Scalars",
+          "url": "https://spec.graphql.org/draft/#sec-Scalars"
+        },
+        {
+          "number": "4.2.1",
+          "title": "The \\_\\_Schema Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Schema-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "typeKinds",
+      "title": "Each __Type has its type's kind, and its fields are null exactly where that kind requires",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "fields",
+      "title": "An object's or interface's fields, with their types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        },
+        {
+          "number": "4.2.3",
+          "title": "The \\_\\_Field Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Field-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "arguments",
+      "title": "Field and directive arguments, with their types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.3",
+          "title": "The \\_\\_Field Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Field-Type"
+        },
+        {
+          "number": "4.2.4",
+          "title": "The \\_\\_InputValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+        },
+        {
+          "number": "4.2.6",
+          "title": "The \\_\\_Directive Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Directive-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "defaultValue",
+      "title": "defaultValue encodes the default value, and is null without one",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.4",
+          "title": "The \\_\\_InputValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "inputFields",
+      "title": "An input object's inputFields, with their types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        },
+        {
+          "number": "4.2.4",
+          "title": "The \\_\\_InputValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "enumValues",
+      "title": "An enum's enumValues",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        },
+        {
+          "number": "4.2.5",
+          "title": "The \\_\\_EnumValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-EnumValue-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "interfaces",
+      "title": "interfaces, and possibleTypes for unions and interfaces",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "deprecation",
+      "title": "isDeprecated, deprecationReason and includeDeprecated; @deprecated is provided",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.3",
+          "title": "The \\_\\_Field Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Field-Type"
+        },
+        {
+          "number": "4.2.4",
+          "title": "The \\_\\_InputValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+        },
+        {
+          "number": "4.2.5",
+          "title": "The \\_\\_EnumValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-EnumValue-Type"
+        },
+        {
+          "number": "4.2.6",
+          "title": "The \\_\\_Directive Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Directive-Type"
+        },
+        {
+          "number": "3.13.3",
+          "title": "@deprecated",
+          "url": "https://spec.graphql.org/draft/#sec-deprecated"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "specifiedByURL",
+      "title": "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        },
+        {
+          "number": "3.13.4",
+          "title": "@specifiedBy",
+          "url": "https://spec.graphql.org/draft/#sec-specifiedBy"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "isOneOf",
+      "title": "isOneOf is true exactly for OneOf input objects",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        },
+        {
+          "number": "3.10.1",
+          "title": "OneOf Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "descriptions",
+      "title": "Descriptions are the schema's",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.2",
+          "title": "Type System Descriptions",
+          "url": "https://spec.graphql.org/draft/#sec-Type-System-Descriptions"
+        },
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "directives",
+      "title": "directives describes the schema's own directives: name, locations, isRepeatable",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.1",
+          "title": "The \\_\\_Schema Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Schema-Type"
+        },
+        {
+          "number": "4.2.6",
+          "title": "The \\_\\_Directive Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Directive-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "builtinDirectives",
+      "title": "@skip, @include, @specifiedBy and @oneOf are provided",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "3.13.1",
+          "title": "@skip",
+          "url": "https://spec.graphql.org/draft/#sec-skip"
+        },
+        {
+          "number": "3.13.2",
+          "title": "@include",
+          "url": "https://spec.graphql.org/draft/#sec-include"
+        },
+        {
+          "number": "3.13.4",
+          "title": "@specifiedBy",
+          "url": "https://spec.graphql.org/draft/#sec-specifiedBy"
+        },
+        {
+          "number": "3.13.5",
+          "title": "@oneOf",
+          "url": "https://spec.graphql.org/draft/#sec-oneOf"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "builtinDefinitions",
+      "title": "The introspection types and built-in directives are as the spec defines them",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        }
+      ],
+      "status": "fail",
+      "cases": 20,
+      "failing": 20
+    },
+    {
+      "id": "typename",
+      "title": "__typename names the root type, and no fields list includes it",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.1",
+          "title": "Type Name Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Type-Name-Introspection"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "order",
+      "title": "Fields, arguments, enum values, directives, members and interfaces come in source order",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "other",
+      "title": "Anything else Introspection!Matches requires",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "builtinDefinitions"
+      ],
+      "summary": "the built-in @deprecated(reason:) isn't as the spec defines it (arguments); the built-in __Directive.args(includeDeprecated:) isn't as the spec defines it (arguments); the built-in __Field.args(includeDeprecated:) isn't as the spec defines it (arguments); the built-in __Type.enumValues(includeDeprecated:) isn't as the spec defines it (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the spec defines it (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the spec defines it (arguments)",
+      "cases": 20,
+      "fixtures": {
+        "minimal": 2,
+        "rich": 2,
+        "interfaces": 2,
+        "defaults": 2,
+        "deprecation": 2,
+        "roots": 2,
+        "builtinScalars": 2,
+        "scalars": 2,
+        "oneOf": 2,
+        "order": 2
+      },
+      "fixture": "minimal.inc",
+      "problem": "arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:)",
+      "example": {
+        "input": "type Query { a: Int }  (includeDeprecated: true)",
+        "response": {
+          "kind": "OBJECT",
+          "name": "__Type",
+          "description": "The fundamental unit of any GraphQL Schema is the type. There are many kinds of types in GraphQL as represented by the `__TypeKind` enum.\n\nDepending on the kind of a type, certain fields describe information about that type. Scalar types provide no information beyond a name, description and optional `specifiedByURL`, while Enum types provide their values. Object and Interface types provide the fields they describe. Abstract types, Union and Interface, provide the Object types possible at runtime. List and NonNull types compose other types.",
+          "specifiedByURL": null,
+          "isOneOf": null,
+          "fields": [
+            {
+              "name": "kind",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "__TypeKind",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "description",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "specifiedByURL",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "fields",
+              "description": null,
+              "args": [
+                {
+                  "name": "includeDeprecated",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Boolean",
+                    "ofType": null
+                  },
+                  "defaultValue": "false",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "__Field",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "interfaces",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "__Type",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "possibleTypes",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "__Type",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "enumValues",
+              "description": null,
+              "args": [
+                {
+                  "name": "includeDeprecated",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Boolean",
+                    "ofType": null
+                  },
+                  "defaultValue": "false",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "__EnumValue",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "inputFields",
+              "description": null,
+              "args": [
+                {
+                  "name": "includeDeprecated",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Boolean",
+                    "ofType": null
+                  },
+                  "defaultValue": "false",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "__InputValue",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ofType",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "__Type",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "isOneOf",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        "expected": {
+          "kind": "OBJECT",
+          "name": "__Type",
+          "description": null,
+          "specifiedByURL": null,
+          "isOneOf": null,
+          "fields": [
+            {
+              "name": "kind",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "__TypeKind",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "description",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "specifiedByURL",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "fields",
+              "description": null,
+              "args": [
+                {
+                  "name": "includeDeprecated",
+                  "description": null,
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "Boolean",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": "false",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "__Field",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "interfaces",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "__Type",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "possibleTypes",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "__Type",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "enumValues",
+              "description": null,
+              "args": [
+                {
+                  "name": "includeDeprecated",
+                  "description": null,
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "Boolean",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": "false",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "__EnumValue",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "inputFields",
+              "description": null,
+              "args": [
+                {
+                  "name": "includeDeprecated",
+                  "description": null,
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "Boolean",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": "false",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "__InputValue",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ofType",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "__Type",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "isOneOf",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        }
+      }
+    },
+    {
+      "checks": [
+        "executes"
+      ],
+      "summary": "the schema didn't build, the query failed, or the result is malformed",
+      "cases": 2,
+      "fixtures": {
+        "directiveDeprecation": 2
+      },
+      "fixture": "directiveDeprecation.inc",
+      "problem": "the response has errors: buildSchema: Syntax Error: Expected \"on\", found \"@\".",
+      "example": {
+        "input": "directive @old @deprecated(reason: \"Use @new\") on FIELD directive @new(x: Int) on FIELD type Query { a: Int }  (includeDeprecated: true)",
+        "response": {
+          "response": {
+            "errors": [
+              {
+                "message": "buildSchema: Syntax Error: Expected \"on\", found \"@\"."
+              }
+            ]
+          }
+        },
+        "expected": "a result with data.__schema and no errors"
+      }
+    }
+  ],
+  "fixtures": []
+}

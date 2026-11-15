@@ -1,0 +1,462 @@
+{
+  "format": 1,
+  "area": "coerce",
+  "implementation": "graphql-js 16.15.0",
+  "capabilities": [
+    "absent-vs-null",
+    "coerce",
+    "deferred-items",
+    "idle",
+    "introspect",
+    "invalid-results",
+    "mutation",
+    "parse",
+    "schema",
+    "subscription",
+    "uncoercible-results",
+    "unvalidated",
+    "validate"
+  ],
+  "provenance": {
+    "kit": "c8d6acb7c6e2",
+    "date": "2026-11-15",
+    "strict": true,
+    "vectors": 2014,
+    "run": 2014,
+    "skipped": {},
+    "comparison": "exact"
+  },
+  "checkerSelfTest": "passed (5601 negative controls)",
+  "cases": {
+    "submitted": 2014,
+    "distinct": 2014,
+    "malformed": 0
+  },
+  "adapterProblems": 0,
+  "checks": [
+    {
+      "id": "int",
+      "title": "Int accepts only integer input values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5.1",
+          "title": "Int",
+          "url": "https://spec.graphql.org/draft/#sec-Int"
+        }
+      ],
+      "status": "pass",
+      "cases": 342,
+      "failing": 0
+    },
+    {
+      "id": "intRange",
+      "title": "Int rejects integers outside the signed 32-bit range",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "3.5.1",
+          "title": "Int",
+          "url": "https://spec.graphql.org/draft/#sec-Int"
+        }
+      ],
+      "basis": "\"If the integer input value represents a value less than -2^31 or greater than or equal to 2^31, a request error should be raised.\"",
+      "status": "pass",
+      "cases": 32,
+      "failing": 0
+    },
+    {
+      "id": "float",
+      "title": "Float accepts integer and float input values a finite double holds",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5.2",
+          "title": "Float",
+          "url": "https://spec.graphql.org/draft/#sec-Float"
+        }
+      ],
+      "basis": "Coercion.tla reads \"outside the available precision\" as: an integral value must be exactly representable. A fractional value is kept as its decimal, which the vectors only use with at most 15 significant digits.",
+      "status": "fail",
+      "cases": 94,
+      "failing": 3
+    },
+    {
+      "id": "string",
+      "title": "String accepts only valid Unicode string input values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5.3",
+          "title": "String",
+          "url": "https://spec.graphql.org/draft/#sec-String"
+        }
+      ],
+      "status": "fail",
+      "cases": 94,
+      "failing": 1
+    },
+    {
+      "id": "boolean",
+      "title": "Boolean accepts only boolean input values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5.4",
+          "title": "Boolean",
+          "url": "https://spec.graphql.org/draft/#sec-Boolean"
+        }
+      ],
+      "status": "pass",
+      "cases": 94,
+      "failing": 0
+    },
+    {
+      "id": "idCoerced",
+      "title": "String and integer input values are coerced to ID strings",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "3.5.5",
+          "title": "ID",
+          "url": "https://spec.graphql.org/draft/#sec-ID"
+        }
+      ],
+      "basis": "\"any string (such as \\\"4\\\") or integer (such as 4 or -4) input value should be coerced to ID\"; an integer becomes its decimal string.",
+      "status": "fail",
+      "cases": 29,
+      "failing": 3
+    },
+    {
+      "id": "id",
+      "title": "ID rejects input values other than strings and integers",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5.5",
+          "title": "ID",
+          "url": "https://spec.graphql.org/draft/#sec-ID"
+        }
+      ],
+      "status": "fail",
+      "cases": 65,
+      "failing": 1
+    },
+    {
+      "id": "enum",
+      "title": "Enums accept their own values: enum literals, and strings in variables",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.9",
+          "title": "Enums",
+          "url": "https://spec.graphql.org/draft/#sec-Enums"
+        }
+      ],
+      "basis": "String literals must be rejected. For JSON variables, \"strings may be interpreted as the enum input value with the same name\", which Coercion.tla does.",
+      "status": "pass",
+      "cases": 188,
+      "failing": 0
+    },
+    {
+      "id": "inputObject",
+      "title": "Input objects: an object with only defined fields, field defaults, required fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10",
+          "title": "Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+        }
+      ],
+      "basis": "The section mixes \"must\" (the value's shape, unknown fields) with \"should\" (field defaults, missing required fields). Coercion.tla doesn't report which sentence decided a verdict, so the check takes the stronger level.",
+      "status": "fail",
+      "cases": 413,
+      "failing": 4
+    },
+    {
+      "id": "oneOf",
+      "title": "OneOf input objects take exactly one non-null field",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10.1",
+          "title": "OneOf Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0,
+      "note": "Coercion.tla doesn't model OneOf input objects, so there are no vectors for them."
+    },
+    {
+      "id": "list",
+      "title": "Lists: each item coerced, a single value wrapped in a list",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.11",
+          "title": "List",
+          "url": "https://spec.graphql.org/draft/#sec-List"
+        }
+      ],
+      "status": "fail",
+      "cases": 489,
+      "failing": 1
+    },
+    {
+      "id": "nonNull",
+      "title": "Non-Null rejects null",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.12",
+          "title": "Non-Null",
+          "url": "https://spec.graphql.org/draft/#sec-Non-Null"
+        }
+      ],
+      "status": "pass",
+      "cases": 4,
+      "failing": 0
+    },
+    {
+      "id": "variables",
+      "title": "CoerceVariableValues: defaults, missing and null values, and failures as request errors",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.1.2",
+          "title": "Coercing Variable Values",
+          "url": "https://spec.graphql.org/draft/#sec-Coercing-Variable-Values"
+        }
+      ],
+      "status": "pass",
+      "cases": 897,
+      "failing": 0
+    },
+    {
+      "id": "arguments",
+      "title": "CoerceArgumentValues: defaults, missing variables, and failures as field errors",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.4.1",
+          "title": "Coercing Field Arguments",
+          "url": "https://spec.graphql.org/draft/#sec-Coercing-Field-Arguments"
+        }
+      ],
+      "status": "pass",
+      "cases": 820,
+      "failing": 0
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "inputObject"
+      ],
+      "summary": "accepts what §3.10 (Input Objects) rejects",
+      "cases": 4,
+      "fixtures": {
+        "literal": 3,
+        "spec-example": 1
+      },
+      "fixture": "literal",
+      "example": {
+        "vector": "coerce-1469",
+        "input": "{ point(v: { x: 1, z: 1 }) }  variables: {}",
+        "response": {
+          "outcome": "value",
+          "arguments": {
+            "v": {
+              "x": 1,
+              "y": 0
+            }
+          }
+        },
+        "expected": "a field error"
+      }
+    },
+    {
+      "checks": [
+        "float"
+      ],
+      "summary": "accepts what §3.5.2 (Float) rejects",
+      "cases": 2,
+      "fixtures": {
+        "literal": 2
+      },
+      "fixture": "literal",
+      "example": {
+        "vector": "coerce-0429",
+        "input": "{ float(v: 1e400) }  variables: {}",
+        "response": {
+          "outcome": "value",
+          "arguments": {
+            "v": "Infinity"
+          }
+        },
+        "expected": "a field error"
+      }
+    },
+    {
+      "checks": [
+        "float"
+      ],
+      "summary": "accepts what §3.5.2 (Float) rejects; the variables hold a number a double can't hold, so the JSON parser decides this",
+      "cases": 1,
+      "fixtures": {
+        "variable": 1
+      },
+      "fixture": "variable",
+      "example": {
+        "vector": "coerce-0473",
+        "input": "query($x: Float) { float(v: $x) }  variables: {\"x\": 9007199254740993}",
+        "response": {
+          "outcome": "value",
+          "arguments": {
+            "v": 9007199254740992
+          }
+        },
+        "expected": "a request error"
+      }
+    },
+    {
+      "checks": [
+        "string"
+      ],
+      "summary": "accepts what §3.5.3 (String) rejects",
+      "cases": 1,
+      "fixtures": {
+        "variable": 1
+      },
+      "fixture": "variable",
+      "example": {
+        "vector": "coerce-0584",
+        "input": "query($x: String) { string(v: $x) }  variables: {\"x\": \"\\ud800\"}",
+        "response": {
+          "outcome": "value",
+          "arguments": {
+            "v": "\ud800"
+          }
+        },
+        "expected": "a request error"
+      }
+    },
+    {
+      "checks": [
+        "idCoerced"
+      ],
+      "summary": "coerces to the wrong value under §3.5.5 (ID); the variables hold a number a double can't hold, so the JSON parser decides this",
+      "cases": 1,
+      "fixtures": {
+        "variable": 1
+      },
+      "fixture": "variable",
+      "example": {
+        "vector": "coerce-0776",
+        "input": "query($x: ID) { id(v: $x) }  variables: {\"x\": 9007199254740993}",
+        "response": {
+          "outcome": "value",
+          "arguments": {
+            "v": "9007199254740992"
+          }
+        },
+        "expected": "the resolver gets {\"v\":\"9007199254740993\"}"
+      }
+    },
+    {
+      "checks": [
+        "idCoerced"
+      ],
+      "summary": "coerces to the wrong value under §3.5.5 (ID)",
+      "cases": 1,
+      "fixtures": {
+        "variable": 1
+      },
+      "fixture": "variable",
+      "example": {
+        "vector": "coerce-0777",
+        "input": "query($x: ID) { id(v: $x) }  variables: {\"x\": 1e21}",
+        "response": {
+          "outcome": "value",
+          "arguments": {
+            "v": "1e+21"
+          }
+        },
+        "expected": "the resolver gets {\"v\":\"1000000000000000000000\"}"
+      }
+    },
+    {
+      "checks": [
+        "idCoerced"
+      ],
+      "summary": "rejects what §3.5.5 (ID) accepts; the variables hold a number a double can't hold, so the JSON parser decides this",
+      "cases": 1,
+      "fixtures": {
+        "variable": 1
+      },
+      "fixture": "variable",
+      "example": {
+        "vector": "coerce-0778",
+        "input": "query($x: ID) { id(v: $x) }  variables: {\"x\": 1e400}",
+        "response": {
+          "outcome": "request-error",
+          "message": "Variable \"$x\" got invalid value Infinity; ID cannot represent value: Infinity"
+        },
+        "expected": "the resolver gets {\"v\":\"10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\"}"
+      }
+    },
+    {
+      "checks": [
+        "id"
+      ],
+      "summary": "accepts what §3.5.5 (ID) rejects",
+      "cases": 1,
+      "fixtures": {
+        "variable": 1
+      },
+      "fixture": "variable",
+      "example": {
+        "vector": "coerce-0786",
+        "input": "query($x: ID) { id(v: $x) }  variables: {\"x\": \"\\ud800\"}",
+        "response": {
+          "outcome": "value",
+          "arguments": {
+            "v": "\ud800"
+          }
+        },
+        "expected": "a request error"
+      }
+    },
+    {
+      "checks": [
+        "list"
+      ],
+      "summary": "accepts what §3.11 (List) rejects",
+      "cases": 1,
+      "fixtures": {
+        "literal": 1
+      },
+      "fixture": "literal",
+      "example": {
+        "vector": "coerce-1777",
+        "input": "{ points(v: { x: 1, z: 1 }) }  variables: {}",
+        "response": {
+          "outcome": "value",
+          "arguments": {
+            "v": [
+              {
+                "x": 1,
+                "y": 0
+              }
+            ]
+          }
+        },
+        "expected": "a field error"
+      }
+    }
+  ],
+  "fixtures": []
+}

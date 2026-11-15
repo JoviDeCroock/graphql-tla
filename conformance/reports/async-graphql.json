@@ -8,13 +8,21 @@
     "mutation",
     "subscription"
   ],
-  "strict": true,
-  "checkerSelfTest": "passed (17 negative controls)",
-  "cases": {
-    "submitted": 9674,
-    "distinct": 482,
-    "malformed": 4432
+  "provenance": {
+    "kit": "c8d6acb7c6e2",
+    "date": "2026-11-15",
+    "strict": true,
+    "random": 1500,
+    "seed": 1,
+    "exhaustive": true
   },
+  "checkerSelfTest": "passed (23 negative controls)",
+  "cases": {
+    "submitted": 11213,
+    "distinct": 350,
+    "malformed": 5801
+  },
+  "adapterProblems": 0,
   "checks": [
     {
       "id": "complete",
@@ -33,32 +41,8 @@
         }
       ],
       "status": "fail",
-      "cases": 482,
-      "failing": 32,
-      "example": {
-        "fixture": "lists",
-        "trace": "call posts; call tags; settle posts = list(1); call posts.0; settle posts.0 = object(Post); call posts.0.title; settle posts.0.title = null",
-        "response": {
-          "data": null,
-          "errors": [
-            {
-              "message": "internal: non-null types require a return value",
-              "locations": [
-                {
-                  "line": 3,
-                  "column": 5
-                }
-              ],
-              "path": [
-                "posts",
-                0,
-                "title"
-              ]
-            }
-          ]
-        },
-        "expected": "data (incomplete)"
-      }
+      "cases": 350,
+      "failing": 32
     },
     {
       "id": "dataMatches",
@@ -82,31 +66,8 @@
         }
       ],
       "status": "fail",
-      "cases": 482,
-      "failing": 292,
-      "example": {
-        "fixture": "fragments",
-        "trace": "call node; settle node = object(Bot); call node.id; settle node.id = null",
-        "response": {
-          "data": null,
-          "errors": [
-            {
-              "message": "internal: non-null types require a return value",
-              "locations": [
-                {
-                  "line": 3,
-                  "column": 5
-                }
-              ],
-              "path": [
-                "node",
-                "id"
-              ]
-            }
-          ]
-        },
-        "expected": "data {\"node\": null}"
-      }
+      "cases": 350,
+      "failing": 119
     },
     {
       "id": "keyOrder",
@@ -120,7 +81,7 @@
         }
       ],
       "status": "pass",
-      "cases": 482,
+      "cases": 350,
       "failing": 0
     },
     {
@@ -140,32 +101,8 @@
         }
       ],
       "status": "fail",
-      "cases": 482,
-      "failing": 95,
-      "example": {
-        "fixture": "lists",
-        "trace": "call posts; call tags; settle posts = list(1); call posts.0; settle posts.0 = null; call posts.0.title; settle tags = list(0); settle posts.0.title = null",
-        "response": {
-          "data": null,
-          "errors": [
-            {
-              "message": "internal: non-null types require a return value",
-              "locations": [
-                {
-                  "line": 3,
-                  "column": 5
-                }
-              ],
-              "path": [
-                "posts",
-                0,
-                "title"
-              ]
-            }
-          ]
-        },
-        "expected": "data {\"posts\": null, \"tags\": []}"
-      }
+      "cases": 350,
+      "failing": 5
     },
     {
       "id": "errorPathsUnique",
@@ -179,7 +116,7 @@
         }
       ],
       "status": "pass",
-      "cases": 482,
+      "cases": 350,
       "failing": 0
     },
     {
@@ -194,31 +131,8 @@
         }
       ],
       "status": "fail",
-      "cases": 482,
-      "failing": 5,
-      "example": {
-        "fixture": "unions",
-        "trace": "call search; call matrix; settle search = null; settle matrix = list(1); call matrix.0; settle matrix.0 = null",
-        "response": {
-          "data": null,
-          "errors": [
-            {
-              "message": "internal: expects an array",
-              "locations": [
-                {
-                  "line": 11,
-                  "column": 3
-                }
-              ],
-              "path": [
-                "matrix",
-                0
-              ]
-            }
-          ]
-        },
-        "expected": "data {\"search\": null, \"matrix\": [null]}"
-      }
+      "cases": 350,
+      "failing": 5
     },
     {
       "id": "nullsExplained",
@@ -237,32 +151,8 @@
         }
       ],
       "status": "fail",
-      "cases": 482,
-      "failing": 176,
-      "example": {
-        "fixture": "lists",
-        "trace": "call posts; call tags; settle posts = list(1); call posts.0; settle posts.0 = null; call posts.0.title; settle tags = list(0); settle posts.0.title = null",
-        "response": {
-          "data": null,
-          "errors": [
-            {
-              "message": "internal: non-null types require a return value",
-              "locations": [
-                {
-                  "line": 3,
-                  "column": 5
-                }
-              ],
-              "path": [
-                "posts",
-                0,
-                "title"
-              ]
-            }
-          ]
-        },
-        "expected": "data {\"posts\": null, \"tags\": []}"
-      }
+      "cases": 350,
+      "failing": 15
     },
     {
       "id": "serialErrorsKept",
@@ -280,6 +170,7 @@
           "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
         }
       ],
+      "basis": "§6.4.4: an execution error \"must be added to the errors list\". §6.3.3 lets an implementation cancel fields that have not yet executed or yielded a value, but §6.3.4 completes each mutation root field before the next starts, so an earlier root field's errors can't have been cancelled.",
       "status": "pass",
       "cases": 11,
       "failing": 0
@@ -321,31 +212,8 @@
         }
       ],
       "status": "fail",
-      "cases": 9674,
-      "failing": 101,
-      "example": {
-        "fixture": "fragments",
-        "problem": "the resolver at node.id was called twice (§6.3.3 executes each field once)",
-        "trace": "call node; settle node = object(User); call node.id; settle node.id = leaf; call node.name; settle node.name = null; call node.id; settle node.id = null",
-        "response": {
-          "data": null,
-          "errors": [
-            {
-              "message": "internal: non-null types require a return value",
-              "locations": [
-                {
-                  "line": 19,
-                  "column": 3
-                }
-              ],
-              "path": [
-                "node",
-                "id"
-              ]
-            }
-          ]
-        }
-      }
+      "cases": 11213,
+      "failing": 101
     },
     {
       "id": "callsSelected",
@@ -359,7 +227,42 @@
         }
       ],
       "status": "pass",
-      "cases": 9674,
+      "cases": 11213,
+      "failing": 0
+    },
+    {
+      "id": "callsReachable",
+      "title": "A field executes only once its parent has a value that contains it",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.3.3",
+          "title": "Executing Collected Fields",
+          "url": "https://spec.graphql.org/draft/#sec-Executing-Collected-Fields"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "fail",
+      "cases": 11213,
+      "failing": 1042
+    },
+    {
+      "id": "eventYieldsResult",
+      "title": "A subscription event yields an execution result, even when its data is null",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.2.3.2",
+          "title": "Response Stream",
+          "url": "https://spec.graphql.org/draft/#sec-Response-Stream"
+        }
+      ],
+      "status": "pass",
+      "cases": 1522,
       "failing": 0
     },
     {
@@ -374,18 +277,28 @@
         }
       ],
       "status": "pass",
-      "cases": 1668,
+      "cases": 1924,
       "failing": 0
     },
     {
-      "id": "leafValues",
-      "title": "Leaf values are the resolver's value, result-coerced",
+      "id": "resultCoercion",
+      "title": "A leaf value its type can't represent (a fraction for an Int, a non-finite Float, an unknown enum value) raises an execution error",
       "level": "MUST",
       "spec": [
         {
-          "number": "3.5",
-          "title": "Scalars",
-          "url": "https://spec.graphql.org/draft/#sec-Scalars"
+          "number": "3.5.1",
+          "title": "Int",
+          "url": "https://spec.graphql.org/draft/#sec-Int"
+        },
+        {
+          "number": "3.5.2",
+          "title": "Float",
+          "url": "https://spec.graphql.org/draft/#sec-Float"
+        },
+        {
+          "number": "3.9",
+          "title": "Enums",
+          "url": "https://spec.graphql.org/draft/#sec-Enums"
         },
         {
           "number": "6.4.3",
@@ -394,7 +307,22 @@
         }
       ],
       "status": "pass",
-      "cases": 1668,
+      "cases": 11213,
+      "failing": 0
+    },
+    {
+      "id": "leafValues",
+      "title": "Leaf values are the resolver's canonical value (Int 1, Float 1.5, Boolean true, an enum's first value, \"v\")",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "pass",
+      "cases": 1924,
       "failing": 0
     },
     {
@@ -409,7 +337,7 @@
         }
       ],
       "status": "pass",
-      "cases": 9674,
+      "cases": 11213,
       "failing": 0
     },
     {
@@ -424,7 +352,7 @@
         }
       ],
       "status": "pass",
-      "cases": 9674,
+      "cases": 11213,
       "failing": 0
     },
     {
@@ -439,7 +367,7 @@
         }
       ],
       "status": "pass",
-      "cases": 9674,
+      "cases": 11213,
       "failing": 0
     },
     {
@@ -469,7 +397,7 @@
         }
       ],
       "status": "pass",
-      "cases": 8006,
+      "cases": 9289,
       "failing": 0
     },
     {
@@ -484,32 +412,14 @@
         }
       ],
       "status": "fail",
-      "cases": 8006,
-      "failing": 4376,
-      "example": {
-        "fixture": "fragments",
-        "problem": "an execution error without a path: {\"message\":\"resolver at node failed\",\"locations\":[{\"line\":2,\"column\":3}]}",
-        "trace": "call node; settle node = error",
-        "response": {
-          "data": null,
-          "errors": [
-            {
-              "message": "resolver at node failed",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 3
-                }
-              ]
-            }
-          ]
-        }
-      }
+      "cases": 9289,
+      "failing": 4658
     },
     {
       "id": "responsePosition",
       "title": "Paths use field names and integer list indices",
       "level": "MUST",
+      "oct2021": "SHOULD",
       "spec": [
         {
           "number": "7.1.4",
@@ -533,7 +443,7 @@
         }
       ],
       "status": "pass",
-      "cases": 8006,
+      "cases": 9289,
       "failing": 0
     },
     {
@@ -541,12 +451,126 @@
       "title": "The adapter follows the kit's protocol (call types, settles)",
       "level": "ADAPTER",
       "spec": [],
-      "status": "fail",
-      "cases": 9674,
-      "failing": 101,
+      "status": "pass",
+      "cases": 11213,
+      "failing": 0
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "errorPath"
+      ],
+      "summary": "an execution error without a path",
+      "fixture": "fragments",
+      "problem": "an execution error without a path: {\"message\":\"resolver at node failed\",\"locations\":[{\"line\":2,\"column\":3}]}",
       "example": {
-        "fixture": "fragments",
-        "problem": "node.id settled twice",
+        "trace": "call node; settle node = error",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "resolver at node failed",
+              "locations": [
+                {
+                  "line": 2,
+                  "column": 3
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "cases": 4658,
+      "fixtures": {
+        "fragments": 715,
+        "leaves": 761,
+        "lists": 577,
+        "mutation": 1035,
+        "nullPropagation": 881,
+        "subscription": 236,
+        "unions": 453
+      }
+    },
+    {
+      "checks": [
+        "callsReachable"
+      ],
+      "summary": "a resolver was called at … but its parent settled as null",
+      "fixture": "subscription",
+      "problem": "a resolver was called at postLiked.likes, but its parent settled as null",
+      "example": {
+        "trace": "call postLiked; settle postLiked = null; call postLiked.likes; settle postLiked.likes = null",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "internal: non-null types require a return value",
+              "locations": [
+                {
+                  "line": 3,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "postLiked",
+                "likes"
+              ]
+            }
+          ]
+        }
+      },
+      "cases": 1042,
+      "fixtures": {
+        "lists": 556,
+        "subscription": 486
+      }
+    },
+    {
+      "checks": [
+        "dataMatches"
+      ],
+      "fixture": "fragments",
+      "example": {
+        "trace": "call node; settle node = object(Bot); call node.id; settle node.id = null",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "internal: non-null types require a return value",
+              "locations": [
+                {
+                  "line": 3,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "node",
+                "id"
+              ]
+            }
+          ]
+        },
+        "expected": "data {\"node\": null}"
+      },
+      "cases": 102,
+      "fixtures": {
+        "fragments": 3,
+        "leaves": 16,
+        "lists": 48,
+        "mutation": 2,
+        "nullPropagation": 12,
+        "unions": 21
+      }
+    },
+    {
+      "checks": [
+        "callsOnce"
+      ],
+      "summary": "the resolver at … was called twice",
+      "fixture": "fragments",
+      "problem": "the resolver at node.id was called twice (§6.3.3 executes each field once)",
+      "example": {
         "trace": "call node; settle node = object(User); call node.id; settle node.id = leaf; call node.name; settle node.name = null; call node.id; settle node.id = null",
         "response": {
           "data": null,
@@ -566,6 +590,138 @@
             }
           ]
         }
+      },
+      "cases": 101,
+      "fixtures": {
+        "fragments": 101
+      }
+    },
+    {
+      "checks": [
+        "complete"
+      ],
+      "fixture": "unions",
+      "example": {
+        "trace": "call search; call matrix; settle search = leaf",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "internal: expects an array",
+              "locations": [
+                {
+                  "line": 2,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "search"
+              ]
+            }
+          ]
+        },
+        "expected": "data (incomplete)"
+      },
+      "cases": 29,
+      "fixtures": {
+        "leaves": 10,
+        "lists": 3,
+        "mutation": 1,
+        "nullPropagation": 5,
+        "unions": 10
+      }
+    },
+    {
+      "checks": [
+        "dataMatches",
+        "nullsExplained"
+      ],
+      "fixture": "unions",
+      "example": {
+        "trace": "call search; call matrix; settle search = null; settle matrix = list(1); call matrix.0; settle matrix.0 = list(1); call matrix.0.0; settle matrix.0.0 = null",
+        "response": {
+          "data": {
+            "search": null,
+            "matrix": [
+              [
+                null
+              ]
+            ]
+          }
+        },
+        "expected": "data {\"search\": null, \"matrix\": [null]}"
+      },
+      "cases": 15,
+      "fixtures": {
+        "unions": 15
+      }
+    },
+    {
+      "checks": [
+        "complete",
+        "errorsInsideNulls",
+        "errorsWereRaised"
+      ],
+      "fixture": "unions",
+      "example": {
+        "trace": "call search; call matrix; settle matrix = list(1); call matrix.0; settle matrix.0 = null",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "internal: expects an array",
+              "locations": [
+                {
+                  "line": 11,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "matrix",
+                0
+              ]
+            }
+          ]
+        },
+        "expected": "data (incomplete)"
+      },
+      "cases": 3,
+      "fixtures": {
+        "unions": 3
+      }
+    },
+    {
+      "checks": [
+        "dataMatches",
+        "errorsInsideNulls",
+        "errorsWereRaised"
+      ],
+      "fixture": "unions",
+      "example": {
+        "trace": "call search; call matrix; settle search = null; settle matrix = list(1); call matrix.0; settle matrix.0 = null",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "internal: expects an array",
+              "locations": [
+                {
+                  "line": 11,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "matrix",
+                0
+              ]
+            }
+          ]
+        },
+        "expected": "data {\"search\": null, \"matrix\": [null]}"
+      },
+      "cases": 2,
+      "fixtures": {
+        "unions": 2
       }
     }
   ],
@@ -600,7 +756,36 @@
         }
       ],
       "status": "fail",
-      "cases": 1540
+      "cases": 1540,
+      "failing": 819
+    },
+    {
+      "id": "leaves",
+      "spec": [
+        {
+          "number": "3.5.1",
+          "title": "Int",
+          "url": "https://spec.graphql.org/draft/#sec-Int"
+        },
+        {
+          "number": "3.5.2",
+          "title": "Float",
+          "url": "https://spec.graphql.org/draft/#sec-Float"
+        },
+        {
+          "number": "3.9",
+          "title": "Enums",
+          "url": "https://spec.graphql.org/draft/#sec-Enums"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "fail",
+      "cases": 1539,
+      "failing": 787
     },
     {
       "id": "lists",
@@ -627,7 +812,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1918
+      "cases": 1918,
+      "failing": 1184
     },
     {
       "id": "mutation",
@@ -649,7 +835,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1542
+      "cases": 1542,
+      "failing": 1038
     },
     {
       "id": "noPropagation",
@@ -662,7 +849,8 @@
       ],
       "status": "skipped",
       "reason": "needs error-propagation-off",
-      "cases": 0
+      "cases": 0,
+      "failing": 0
     },
     {
       "id": "nullPropagation",
@@ -684,7 +872,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1538
+      "cases": 1538,
+      "failing": 898
     },
     {
       "id": "subscription",
@@ -701,7 +890,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1522
+      "cases": 1522,
+      "failing": 722
     },
     {
       "id": "unions",
@@ -733,7 +923,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1614
+      "cases": 1614,
+      "failing": 504
     }
   ]
 }
