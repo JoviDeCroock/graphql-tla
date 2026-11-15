@@ -3,6 +3,7 @@
 
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
+import { stringifyLine } from "./ndjson.mjs";
 
 export const PROTOCOL = 1;
 
@@ -39,7 +40,7 @@ export class Adapter {
 
   send(message) {
     if (this.exited) throw new Error(`adapter exited (${JSON.stringify(this.exited)})`);
-    this.child.stdin.write(`${JSON.stringify(message)}\n`);
+    this.child.stdin.write(stringifyLine(message));
   }
 
   // The next message, or null after `timeout` ms without one.

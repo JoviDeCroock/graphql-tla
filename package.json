@@ -9,7 +9,7 @@
     "check": "npm run check:fixtures && npm run check:specs && npm run check:graphql-js && npm run check:vectors && npm run check:differentials",
     "check:fixtures": "node scripts/generate-fixtures.mjs --check",
     "check:specs": "node scripts/check.mjs",
-    "check:graphql-js": "node scripts/check-conformance.mjs",
+    "check:graphql-js": "node --test kit/adapter.test.mjs && node scripts/check-conformance.mjs",
     "check:differentials": "node scripts/differential-lexer.mjs && node scripts/differential-validation.mjs && node scripts/differential-coercion.mjs && node scripts/differential-type-system.mjs",
     "check:mutants": "node scripts/differential-lexer.mjs --mutants && node scripts/differential-validation.mjs --mutants && node scripts/differential-coercion.mjs --mutants && node scripts/differential-type-system.mjs --mutants",
     "typecheck": "tsc && tsc -p website/tsconfig.json",
