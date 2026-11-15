@@ -2,18 +2,26 @@
 // (docs/kit/coerce.md), with every expected answer from the TLA+ reference.
 //
 // The schema and the operations are scripts/differential-coercion.mjs's,
-// copied here, plus the spec's own §3.10 examples. For each operation, tla-ts
-// evaluates:
+// copied here, plus the spec's own §3.10 examples and documents for
+// operation selection. For each request, tla-ts evaluates:
 //
-//   Coercion!Respond   a request error, a field error, or the coerced
-//                      arguments the resolver gets: the expected answer;
-//   Validation!IsValid whether the document is valid, and Coercion's scalar
-//                      coercion on every Int and Float literal (§5.6.1 asks
-//                      for "coercible", which Validation.tla checks by
-//                      literal kind only). A vector whose document is
-//                      invalid needs the `unvalidated` capability, since an
-//                      implementation that validates rightly answers it
-//                      with a request error.
+//   Coercion!ExecuteRequest  a request error, a field error, or the coerced
+//                      arguments the resolver gets, under the default
+//                      policy (every SHOULD followed, JSON strings taken as
+//                      enum values): the expected answer. Under the other
+//                      policies, the answers the spec also permits
+//                      (`alternatives`). With the variables read as a
+//                      binary64 JSON parser reads them, the `binary64`
+//                      answer, where it differs;
+//   Coercion!GetOperation    which root field the selected operation runs;
+//   Validation!IsValid whether the document is valid. A document that is
+//                      invalid by Validation.tla is `valid: false`. One that
+//                      is only invalid because an Int or Float literal
+//                      doesn't coerce (§5.6.1 asks for "coercible", which
+//                      Validation.tla checks by literal kind only) is also
+//                      `valid: false`, and needs `unvalidated`: whether a
+//                      validator must catch it rests on Int's SHOULD and on
+//                      the reference's reading of Float's precision.
 //
 // graphql-js only parses the SDL and the documents here. It never decides
 // an answer.
@@ -59,6 +67,10 @@ input Shape {
 input ExampleInputObject {
   a: String
   b: Int!
+}
+
+type Mutation {
+  mutate(v: Int): String
 }
 
 type Query {
@@ -177,6 +189,19 @@ const SPEC_EXAMPLES = [
   ['{ example(arg: { b: 123, c: "xyz" }) }', "{}"],
 ];
 
+// Operation selection (§6.1 GetOperation): a document with its operation
+// names to try, and variable sets. null leaves operationName out.
+const OPERATIONS = [
+  ["query A { int(v: 1) }", [null, "A", "B"], ["{}"]],
+  ["{ int(v: 1) }", ["A"], ["{}"]],
+  ['query A { int(v: 1) } query B { string(v: "b") }', [null, "A", "B", "C"], ["{}"]],
+  ['{ int(v: 1) } query B { string(v: "b") }', [null, "B"], ["{}"]],
+  ["fragment F on Query { int(v: 1) }", [null, "F"], ["{}"]],
+  ["mutation { mutate(v: 1) }", [null], ["{}"]],
+  ["query Q { int(v: 1) } mutation M { mutate(v: 2) }", [null, "Q", "M"], ["{}"]],
+  ["query A($x: Int) { int(v: $x) } query B($y: Int!) { intNN(v: $y) }", ["A", "B"], ['{"x": 1}', '{"x": 1, "y": 2}', '{"x": 1, "y": "bad"}']],
+];
+
 // ---------------------------------------------------------------------------
 // The schema, from its SDL (as differential-coercion.mjs reads it).
 
@@ -245,7 +270,13 @@ const checkFor = (type, value) => {
     const n = integerOf(value);
     return n !== undefined && (n < -(2n ** 31n) || n >= 2n ** 31n) ? "intRange" : "int";
   }
-  return { Float: "float", String: "string", Boolean: "boolean", ID: "id" }[type.name];
+  if (type.name === "Float") {
+    // An integer a finite double can't hold exactly: "outside the available
+    // precision" as Coercion.tla reads it.
+    const n = integerOf(value);
+    return n !== undefined && Number.isFinite(Number(n)) && BigInt(Number(n)) !== n ? "floatPrecision" : "float";
+  }
+  return { String: "string", Boolean: "boolean", ID: "id" }[type.name];
 };
 
 // A JSON number in the variables that a double can't hold, so the answer
@@ -266,9 +297,10 @@ const needsExactNumbers = (text) => {
 // The operations
 
 const operations = [];
-const add = (family, check, document, variables) => operations.push({ family, check, document, variables });
+const add = (family, check, document, variables, operationName = null) =>
+  operations.push({ family, check, document, variables, operationName });
 for (const [field, args] of model.fields) {
-  if (field === "pair" || field === "example") continue;
+  if (field === "pair" || field === "example" || field === "mutate") continue;
   const [arg] = args;
   const type = arg.typeText;
   add("omitted", "arguments", `{ ${field} }`, "{}");
@@ -298,6 +330,9 @@ for (const [family, check, document, variableSets] of EXTRA) {
   for (const variables of variableSets) add(family, check, document, variables);
 }
 for (const [document, variables] of SPEC_EXAMPLES) add("spec-example", "inputObject", document, variables);
+for (const [document, names, variableSets] of OPERATIONS) {
+  for (const name of names) for (const variables of variableSets) add("operation", "getOperation", document, variables, name);
+}
 
 // ---------------------------------------------------------------------------
 // TLA+ encodings for Coercion.tla (as in differential-coercion.mjs)
@@ -353,6 +388,19 @@ const json = (value) => {
   if (NUMBER in value) return num("number", value[NUMBER]);
   return `ObjV(${set(Object.entries(value).map(([k, v]) => entry(k, json(v))))})`;
 };
+// A JSON value as a binary64 parser (JSON.parse) delivers it: a number is
+// the nearest double, written out exactly, or non-finite.
+const json64 = (value) => {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return `NonFinite(${bool(value < 0)})`;
+    return num("number", Number.isInteger(value) ? BigInt(value).toString() : String(value));
+  }
+  if (value === null) return "NullV";
+  if (typeof value === "string") return strV(value);
+  if (typeof value === "boolean") return `Bool(${bool(value)})`;
+  if (Array.isArray(value)) return `ListV(${seq(value.map(json64))})`;
+  return `ObjV(${set(Object.entries(value).map(([k, v]) => entry(k, json64(v))))})`;
+};
 const defTla = (d) =>
   `Def(${str(d.name)}, ${typeTla(d.type)}, ${bool(d.default !== undefined)}, ${d.default ? literal(d.default) : "NullV"})`;
 const coercionSchema = () => {
@@ -366,15 +414,20 @@ const coercionSchema = () => {
   const fields = [...model.fields].map(([name, args]) => `(${str(name)} :> ${seq(args.map(defTla))})`);
   return `[types |-> ${types.join(" @@ ")},\n  fields |-> ${fields.join(" @@ ")}]`;
 };
-const operationTla = (document) => {
-  const operation = document.definitions[0];
-  const field = operation.selectionSet.selections[0];
-  const variables = (operation.variableDefinitions ?? []).map((v) =>
-    defTla({ name: v.variable.name.value, type: typeRef(v.type), default: v.defaultValue }),
+// A document as Coercion.tla's sequence of operations.
+const documentOps = (document) =>
+  seq(
+    document.definitions
+      .filter((d) => d.kind === "OperationDefinition")
+      .map((operation) => {
+        const field = operation.selectionSet.selections[0];
+        const variables = (operation.variableDefinitions ?? []).map((v) =>
+          defTla({ name: v.variable.name.value, type: typeRef(v.type), default: v.defaultValue }),
+        );
+        const args = (field.arguments ?? []).map((a) => entry(a.name.value, literal(a.value)));
+        return `NamedOp(${str(operation.operation)}, ${str(operation.name?.value ?? "")}, ${seq(variables)}, ${str(field.name.value)}, ${set(args)})`;
+      }),
   );
-  const args = (field.arguments ?? []).map((a) => entry(a.name.value, literal(a.value)));
-  return `Op(${seq(variables)}, ${str(field.name.value)}, ${set(args)})`;
-};
 
 // ---------------------------------------------------------------------------
 // TLA+ encodings for Validation.tla (as in differential-validation.mjs)
@@ -452,6 +505,9 @@ const selectionSetToTla = (selectionSet) => seq((selectionSet?.selections ?? [])
 const documentToTla = (doc) =>
   seq(
     doc.definitions.map((d) => {
+      if (d.kind === "FragmentDefinition") {
+        return `[kind |-> "fragment", operation |-> "", name |-> ${vstr(d.name.value)}, variables |-> <<>>, typeCondition |-> ${vstr(d.typeCondition.name.value)}, directives |-> ${directivesToTla(d.directives)}, selectionSet |-> ${selectionSetToTla(d.selectionSet)}]`;
+      }
       const variables = seq((d.variableDefinitions ?? []).map((v) =>
         `[name |-> ${vstr(v.variable.name.value)}, type |-> ${typeRefToTla(v.type)}, hasDefault |-> ${bool(Boolean(v.defaultValue))}, default |-> ${v.defaultValue ? valueToTla(v.defaultValue) : NO_VALUE}, directives |-> ${directivesToTla(v.directives)}]`));
       return `[kind |-> "operation", operation |-> ${vstr(d.operation)}, name |-> ${vstr(d.name?.value ?? "")}, variables |-> ${variables}, typeCondition |-> "", directives |-> ${directivesToTla(d.directives)}, selectionSet |-> ${selectionSetToTla(d.selectionSet)}]`;
@@ -461,8 +517,10 @@ const documentToTla = (doc) =>
 // ---------------------------------------------------------------------------
 // The modules tla-ts evaluates
 
-// For each operation: Respond's outcome, its coerced arguments as JSON text,
-// and whether every Int and Float literal coerces (§5.6.1's "coercible").
+// For each request: the field GetOperation selects; ExecuteRequest's
+// outcome and coerced arguments as JSON text under each policy, and with
+// the variables as a binary64 parser reads them; and whether every Int and
+// Float literal coerces (§5.6.1's "coercible").
 const coercionModule = (name, schemaTla, cases) => `---- MODULE ${name} ----
 EXTENDS Coercion
 
@@ -510,9 +568,21 @@ LiteralsInRange(op) ==
   /\\ \\A e \\in op.arguments : \\A i \\in DOMAIN args : args[i].name = e.key => InRange(args[i].type, e.value)
   /\\ \\A i \\in DOMAIN op.variables : op.variables[i].hasDefault => InRange(op.variables[i].type, op.variables[i].default)
 
+Policy(enumFromString, inputFieldDefaults) == [enumFromString |-> enumFromString, inputFieldDefaults |-> inputFieldDefaults]
+Answer(S, c, request) ==
+  LET outcome == ExecuteRequest(S, c.doc, c.name, request) IN
+  <<outcome.kind, IF outcome.kind = "resolved" THEN JsonOf(outcome.args) ELSE "">>
+
 ASSUME \\A i \\in DOMAIN Cases :
-  LET outcome == Respond(Schema, Cases[i].op, Cases[i].request) IN
-  PrintT(<<"vector", i, outcome.kind, IF outcome.kind = "resolved" THEN JsonOf(outcome.args) ELSE "", LiteralsInRange(Cases[i].op)>>)
+  LET c == Cases[i]
+      selected == GetOperation(c.doc, c.name)
+  IN PrintT(<<"vector", i, IF selected.ok THEN selected.operation.field ELSE "",
+              Answer(Schema, c, c.request),
+              Answer(WithPolicy(Schema, Policy(FALSE, TRUE)), c, c.request),
+              Answer(WithPolicy(Schema, Policy(TRUE, FALSE)), c, c.request),
+              Answer(WithPolicy(Schema, Policy(FALSE, FALSE)), c, c.request),
+              IF c.has64 THEN Answer(Schema, c, c.request64) ELSE <<"", "">>,
+              \\A j \\in DOMAIN c.doc : LiteralsInRange(c.doc[j])>>)
 ASSUME PrintT(<<"done", Len(Cases)>>)
 
 OneState == section = "scalar"
@@ -581,13 +651,56 @@ const canonical = (v) =>
       ? v.map(canonical)
       : Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonical(v[k])]));
 
+// The policies Coercion.tla is also evaluated under, after the default:
+// the switches each one turns off (specs/Coercion.tla, "What the spec
+// leaves to the implementation"). A MAY-only policy comes first, so an
+// answer it explains is recorded as needing only the MAY.
+const POLICY_RUNS = [["enumFromString"], ["inputFieldDefaults"], ["enumFromString", "inputFieldDefaults"]];
+const ANSWER = String.raw`<<\s*"(\w*)",\s*"((?:[^"\\]|\\.)*)"\s*>>`;
+const VECTOR = new RegExp(
+  String.raw`<<\s*"vector",\s*(\d+),\s*"(\w*)",\s*${ANSWER},\s*${ANSWER},\s*${ANSWER},\s*${ANSWER},\s*${ANSWER},\s*(TRUE|FALSE)\s*>>`,
+  "g",
+);
+const OUTCOMES = { requestError: "request-error", fieldError: "field-error", resolved: "value" };
+const answerOf = (kind, text, field) => {
+  const outcome = OUTCOMES[kind];
+  if (!outcome) throw new Error(`unknown outcome ${kind}`);
+  if (outcome === "request-error") return { outcome };
+  if (outcome === "field-error") return { outcome, field };
+  return { outcome, field, arguments: canonical(JSON.parse(unescape(text))) };
+};
+const answerKey = (a) => JSON.stringify([a.outcome, a.field ?? null, a.arguments ?? null]);
+
+// For a vector on the `id` field: the input value the argument gets (a
+// literal, a JSON value or a variable's default), to tell an ID coerced
+// from an integer, whose format the service picks, from one given as a
+// string.
+const idInput = (o) => {
+  const operation = graphql.parse(o.document).definitions[0];
+  const field = operation.selectionSet?.selections[0];
+  const argument = field?.name.value === "id" ? field.arguments?.[0] : undefined;
+  if (!argument) return undefined;
+  if (argument.value.kind !== "Variable") return argument.value;
+  const name = argument.value.name.value;
+  const variables = parseExact(o.variables);
+  if (Object.hasOwn(variables, name)) return variables[name];
+  return operation.variableDefinitions.find((v) => v.variable.name.value === name)?.defaultValue;
+};
+const isIntegerInput = (v) => v?.kind === "IntValue" || (v?.[NUMBER] !== undefined && integerOf(v) !== undefined);
+
 const generate = async () => {
   const coercionSchemaTla = coercionSchema();
   const validationSchemaTla = validationSchema(graphql.buildSchema(SDL));
   const cases = operations.map((o) => {
     const document = graphql.parse(o.document);
+    const has64 = needsExactNumbers(o.variables);
     const request = set(Object.entries(parseExact(o.variables)).map(([k, v]) => entry(k, json(v))));
-    return { coercion: `[op |-> ${operationTla(document)}, request |-> ${request}]`, validation: documentToTla(document) };
+    const request64 = has64 ? set(Object.entries(JSON.parse(o.variables)).map(([k, v]) => entry(k, json64(v)))) : request;
+    const name = o.operationName === null ? "NoName" : `Name(${str(o.operationName)})`;
+    return {
+      coercion: `[doc |-> ${documentOps(document)}, name |-> ${name}, request |-> ${request}, has64 |-> ${bool(has64)}, request64 |-> ${request64}]`,
+      validation: documentToTla(document),
+    };
   });
 
   const results = operations.map(() => ({}));
@@ -600,13 +713,13 @@ const generate = async () => {
       size: chunk.length,
       module: coercionModule(`Coerce${k}`, coercionSchemaTla, chunk.map((c) => c.coercion)),
       read: (flat) => {
-        const re = /<<\s*"vector",\s*(\d+),\s*"(\w+)",\s*"((?:[^"\\]|\\.)*)",\s*(TRUE|FALSE)\s*>>/g;
         let n = 0;
-        for (const [, i, kind, text, inRange] of flat.matchAll(re)) {
-          const r = results[start + Number(i) - 1];
-          r.kind = kind;
-          if (kind === "resolved") r.arguments = canonical(JSON.parse(unescape(text)));
-          r.inRange = inRange === "TRUE";
+        for (const m of flat.matchAll(VECTOR)) {
+          const r = results[start + Number(m[1]) - 1];
+          r.field = m[2];
+          r.answers = [0, 1, 2, 3].map((j) => answerOf(m[3 + 2 * j], m[4 + 2 * j], m[2]));
+          r.binary64 = m[11] ? answerOf(m[11], m[12], m[2]) : undefined;
+          r.inRange = m[13] === "TRUE";
           n++;
         }
         if (n !== chunk.length) throw new Error(`read ${n} outcomes from Coerce${k}, which has ${chunk.length} cases`);
@@ -628,22 +741,42 @@ const generate = async () => {
   }
   await runJobs(jobs);
 
-  const OUTCOMES = { requestError: "request-error", fieldError: "field-error", resolved: "value" };
   const vectors = operations.map((o, i) => {
     const r = results[i];
-    if (!(r.kind in OUTCOMES) || r.valid === undefined) throw new Error(`no answer for ${o.document} ${o.variables}`);
-    const expected = { outcome: OUTCOMES[r.kind], ...(r.kind === "resolved" ? { arguments: r.arguments } : {}) };
+    if (!r.answers || r.valid === undefined) throw new Error(`no answer for ${o.document} ${o.variables}`);
+    const [expected] = r.answers;
+    // The other answers the spec permits, each with the policy switches
+    // that give it.
+    const alternatives = [];
+    POLICY_RUNS.forEach((policy, k) => {
+      const a = r.answers[k + 1];
+      if (answerKey(a) === answerKey(expected) || alternatives.some((x) => answerKey(x) === answerKey(a))) return;
+      alternatives.push({ ...a, policy });
+    });
+    const binary64 = r.binary64 && answerKey(r.binary64) !== answerKey(expected) ? r.binary64 : undefined;
     const check = o.check === "id" ? (expected.outcome === "value" ? "idCoerced" : "id") : o.check;
     if (!CHECK_IDS.has(check)) throw new Error(`unknown check ${check}`);
+    // Sections: the check's, plus the algorithm that raises the expected
+    // kind of error. A request error before any operation was selected is
+    // GetOperation's, not CoerceVariableValues'.
+    const spec = [CHECKS.find((c) => c.id === check).spec[0]];
+    if (expected.outcome === "request-error" && r.field !== "" && check !== "variables") spec.push("6.1.2");
+    if (expected.outcome === "field-error" && check !== "arguments") spec.push("6.4.1");
     return {
       id: `coerce-${String(i + 1).padStart(4, "0")}`,
+      spec,
       check,
       family: o.family,
       document: o.document,
       variables: o.variables,
+      operationName: o.operationName,
+      // Invalid by Validation.tla, or only because a literal doesn't coerce.
       valid: r.valid && r.inRange,
-      ...(needsExactNumbers(o.variables) ? { exactNumbers: true } : {}),
+      literalOnly: r.valid && !r.inRange,
+      idFromInteger: expected.outcome === "value" && isIntegerInput(idInput(o)),
       expected,
+      alternatives,
+      binary64,
     };
   });
 
@@ -657,31 +790,47 @@ const generate = async () => {
       : Array.isArray(v)
         ? v.map(dropNulls)
         : Object.fromEntries(Object.entries(v).filter(([, x]) => x !== null).map(([k, x]) => [k, dropNulls(x)]));
-  const fieldOf = (document) => /\{ (\w+)/.exec(document)[1];
+  const keyOf = (v) => `${v.expected.field} ${JSON.stringify(dropNulls(v.expected.arguments))}`;
   const answers = new Map();
   for (const v of vectors.filter((x) => x.expected.outcome === "value")) {
-    const key = `${fieldOf(v.document)} ${JSON.stringify(dropNulls(v.expected.arguments))}`;
-    answers.set(key, (answers.get(key) ?? new Set()).add(JSON.stringify(v.expected.arguments)));
+    answers.set(keyOf(v), (answers.get(keyOf(v)) ?? new Set()).add(JSON.stringify(v.expected.arguments)));
   }
-  const onlyNullVersusAbsent = (v) =>
-    v.expected.outcome === "value" && answers.get(`${fieldOf(v.document)} ${JSON.stringify(dropNulls(v.expected.arguments))}`).size > 1;
+  const onlyNullVersusAbsent = (v) => v.expected.outcome === "value" && answers.get(keyOf(v)).size > 1;
   for (const v of vectors) {
     const requires = [];
-    if (!v.valid) requires.push("unvalidated");
+    if (v.literalOnly) requires.push("unvalidated");
     if (onlyNullVersusAbsent(v)) requires.push("absent-vs-null");
-    v.spec = [CHECKS.find((c) => c.id === v.check).spec[0]];
-    if (v.expected.outcome === "request-error" && v.check !== "variables") v.spec.push("6.1.2");
-    if (v.expected.outcome === "field-error" && v.check !== "arguments") v.spec.push("6.4.1");
     if (requires.length) v.requires = requires;
   }
 
-  const ordered = vectors.map(({ id, spec, check, family, document, variables, valid, requires, exactNumbers, expected }) => ({
-    id, spec, check, family, document, variables, valid, ...(requires ? { requires } : {}), ...(exactNumbers ? { exactNumbers } : {}), expected,
+  const ordered = vectors.map((v) => ({
+    id: v.id,
+    spec: v.spec,
+    check: v.check,
+    family: v.family,
+    document: v.document,
+    variables: v.variables,
+    ...(v.operationName !== null ? { operationName: v.operationName } : {}),
+    valid: v.valid,
+    ...(v.requires ? { requires: v.requires } : {}),
+    ...(v.idFromInteger ? { idFromInteger: true } : {}),
+    expected: v.expected,
+    ...(v.alternatives.length ? { alternatives: v.alternatives } : {}),
+    ...(v.binary64 ? { binary64: v.binary64 } : {}),
   }));
+
+  // The argument and input field declarations, as type text, so the kit
+  // can tell a declared optional entry from one that doesn't exist.
+  const declared = (defs) => Object.fromEntries(defs.map((d) => [d.name, d.typeText]));
+  const inputs = {
+    fields: Object.fromEntries([...model.fields].map(([name, args]) => [name, declared(args)])),
+    inputObjects: Object.fromEntries([...model.types].filter(([, t]) => t.kind === "inputObject").map(([name, t]) => [name, declared(t.fields)])),
+  };
   return (
     "{\n" +
-    `  "source": "Expected answers from specs/Coercion.tla (Respond) and document validity from specs/Validation.tla (IsValid), evaluated by tla-ts. Regenerate with node scripts/generate-vectors-coerce.mjs.",\n` +
+    `  "source": "Expected answers from specs/Coercion.tla (ExecuteRequest, GetOperation) and document validity from specs/Validation.tla (IsValid), evaluated by tla-ts. Regenerate with node scripts/generate-vectors-coerce.mjs.",\n` +
     `  "schema": ${JSON.stringify(SDL)},\n` +
+    `  "inputs": ${JSON.stringify(inputs)},\n` +
     `  "vectors": [\n${ordered.map((v) => `    ${JSON.stringify(v)}`).join(",\n")}\n  ]\n}\n`
   );
 };

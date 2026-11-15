@@ -23,9 +23,18 @@
 // neighbour. All pairs from the systematic families are kept, and a few per
 // rule from the random documents.
 //
+// Some vectors carry notes on what their verdict rests on:
+//
+//   requires     ["custom-scalar-literals"]: the document gives a literal to
+//                a custom scalar, which the service defines (§3.5.6)
+//   unspecified  Fragment Spread Is Possible where the formal text and the
+//                prose disagree; not graded
+//   edition      "draft": the vector relies on a rule only the draft has
+//
 // graphql-js is used only to parse and print documents, to turn an SDL
-// schema into TLA+ data, and to check that the generated SDL builds a valid
-// schema. Whether a document is valid is the reference's answer alone.
+// schema into TLA+ data, to check that the generated SDL builds a valid
+// schema, and to find where a document puts values (for the notes above).
+// Whether a document is valid is the reference's answer alone.
 //
 // Usage: node scripts/generate-vectors-validate.mjs [--check]
 //   --check  regenerate and fail if kit/validate/vectors.json differs
@@ -1533,6 +1542,133 @@ for (const rule of ORDER) {
   coverage[rule] = { pairs: chosen.length, invalid: new Set(chosen.map((p) => p.i)).size, spec: k };
 }
 
+// ---------------------------------------------------------------------------
+// What each vector's verdict rests on, beyond the rules of the spec.
+
+const {
+  TypeInfo, visit, visitWithTypeInfo, getNamedType, getNullableType, isListType, isScalarType, isSpecifiedScalarType,
+  isInputObjectType, isInterfaceType, isAbstractType,
+} = graphql16;
+const LITERAL_KINDS = new Set(["IntValue", "FloatValue", "StringValue", "BooleanValue", "EnumValue", "ListValue", "ObjectValue"]);
+
+// Whether a document puts a OneOf Input Object anywhere a value goes, and
+// whether it gives a literal to a custom scalar. TypeInfo has already
+// stepped into a list's item type when it visits the list, so a list's own
+// position is its parent's.
+const inspect = (vector) => {
+  const schema = built[vector.schema];
+  const typeInfo = new TypeInfo(schema);
+  const found = { oneOf: false, scalarLiteral: false, listForScalar: false };
+  visit(
+    parse(vector.document, { noLocation: true }),
+    visitWithTypeInfo(typeInfo, {
+      enter(node) {
+        const type = node.kind === "ListValue" ? typeInfo.getParentInputType() : typeInfo.getInputType();
+        if (!type) return;
+        const named = getNamedType(type);
+        if (isInputObjectType(named) && named.isOneOf) found.oneOf = true;
+        if (LITERAL_KINDS.has(node.kind) && isScalarType(named) && !isSpecifiedScalarType(named)) {
+          found.scalarLiteral = true;
+          if (node.kind === "ListValue" && !isListType(getNullableType(type))) found.listForScalar = true;
+        }
+      },
+    }),
+  );
+  return found;
+};
+
+// Whether a subscription's root selections, as CollectSubscriptionFields
+// visits them, carry @skip or @include: the draft forbids that (§5.2.4.1),
+// the October 2021 edition applies them.
+const skipAtSubscriptionRoot = (vector) => {
+  const schema = built[vector.schema];
+  const root = schema.getSubscriptionType();
+  if (!root) return false;
+  const ast = parse(vector.document, { noLocation: true });
+  const fragments = new Map(ast.definitions.filter((d) => d.kind === "FragmentDefinition").map((d) => [d.name.value, d]));
+  const applies = (condition) => {
+    if (!condition) return true;
+    const t = schema.getType(condition.name.value);
+    return t === root || (t !== undefined && isAbstractType(t) && schema.isSubType(t, root));
+  };
+  const walk = (set, seen) =>
+    set.selections.some((s) => {
+      if ((s.directives ?? []).some((d) => d.name.value === "skip" || d.name.value === "include")) return true;
+      if (s.kind === "InlineFragment") return applies(s.typeCondition) && walk(s.selectionSet, seen);
+      if (s.kind !== "FragmentSpread" || seen.has(s.name.value)) return false;
+      seen.add(s.name.value);
+      const f = fragments.get(s.name.value);
+      return f !== undefined && applies(f.typeCondition) && walk(f.selectionSet, seen);
+    });
+  return ast.definitions.some((d) => d.kind === "OperationDefinition" && d.operation === "subscription" && walk(d.selectionSet, new Set()));
+};
+
+// Custom scalars. How a custom scalar coerces a literal is up to the
+// service (§3.5.6), so a vector that gives one a literal is graded only for
+// adapters whose custom scalars accept every literal. The reference's
+// Coercible rejects a list literal for a non-list custom scalar, which no
+// such scalar would, so no vector may do that.
+const SCALAR_LITERALS = "custom-scalar-literals";
+const inspected = new Map(vectors.map((v) => [v, inspect(v)]));
+for (const v of vectors) {
+  const found = inspected.get(v);
+  if (found.listForScalar) throw new Error(`${v.id} gives a list literal to a custom scalar, which the reference rejects: ${v.document}`);
+  if (found.scalarLiteral) v.requires = [SCALAR_LITERALS];
+}
+
+// Fragment Spread Is Possible where the formal text and the prose disagree.
+// The formal text intersects possible types, so an interface nothing
+// implements fits nowhere. The prose says an interface fragment "can always
+// be spread into an interface scope which it implements", and doesn't say
+// whether an interface may be spread into its own scope. A vector whose
+// every violation is such a spread isn't graded.
+const proseAllows = (schemaName, subject) => {
+  const schema = built[schemaName];
+  const [parent, fragment] = subject.split(">").map((n) => schema.getType(n));
+  if (!isInterfaceType(parent) || !isInterfaceType(fragment)) return false;
+  return parent === fragment || fragment.getInterfaces().includes(parent);
+};
+for (const v of vectors) {
+  const subjects = v.violations?.FragmentSpreadIsPossible;
+  if (!subjects || Object.keys(v.violations).length !== 1) continue;
+  if (subjects.every((s) => proseAllows(v.schema, s))) {
+    v.unspecified =
+      "the formal text rejects this spread because no object type implements the interface; the prose allows an interface fragment in the scope of an interface it implements, and doesn't settle an interface in its own scope";
+  }
+}
+
+// Vectors that rely on the draft: an invalid vector that breaks Operation
+// Type Existence (new in the draft), that breaks Single Root Field with
+// @skip or @include at the root, or that breaks a rule only because an
+// input object is OneOf, and a valid vector that gives a value to a OneOf
+// Input Object. Whether a OneOf input object decides a verdict is the
+// reference's answer again, with every input object's oneOf turned off.
+const oneOfCandidates = vectors.filter((v) => !v.expected.valid && inspected.get(v).oneOf);
+const withoutOneOf = Object.fromEntries(Object.entries(schemaTla).map(([name, tla]) => [name, tla.replaceAll("oneOf |-> TRUE", "oneOf |-> FALSE")]));
+const oneOfGroups = Object.keys(SCHEMAS)
+  .map((schema) => ({ schema, list: oneOfCandidates.filter((v) => v.schema === schema) }))
+  .filter((g) => g.list.length);
+const oneOfVerdicts = await evaluate(
+  oneOfGroups.map((g) => ({ schemaTla: withoutOneOf[g.schema], docs: g.list.map((v) => documentToTla(parse(v.document, { noLocation: true }))) })),
+);
+const restsOnOneOf = new Set();
+oneOfGroups.forEach((g, k) =>
+  g.list.forEach((v, n) => {
+    if (Object.keys(v.violations).some((r) => !(r in oneOfVerdicts[k][n]))) restsOnOneOf.add(v);
+  }),
+);
+for (const v of vectors) {
+  const why = [];
+  if (v.violations?.OperationTypeExistence) why.push("Operation Type Existence is new in the draft");
+  if (v.violations?.SingleRootField && skipAtSubscriptionRoot(v)) why.push("only the draft forbids @skip and @include at a subscription's root");
+  if (restsOnOneOf.has(v)) why.push("OneOf Input Objects are new in the draft");
+  if (v.expected.valid && inspected.get(v).oneOf) why.push("it uses a OneOf Input Object, new in the draft");
+  if (why.length) {
+    v.edition = "draft";
+    v.editionNote = why.join("; ");
+  }
+}
+
 const output = {
   source: "specs/Validation.tla, evaluated with tla-ts by scripts/generate-vectors-validate.mjs",
   schemas: SCHEMAS,
@@ -1546,6 +1682,9 @@ for (const rule of ORDER) {
   log(`  ${rule} §${SECTION[rule]}: ${c.invalid} invalid documents in ${c.pairs} pairs, ${c.spec} spec examples`);
 }
 log(`  ${vectors.length} vectors (${vectors.filter((v) => !v.expected.valid).length} invalid, ${vectors.filter((v) => v.expected.valid).length} valid); ${left.length} spec examples left out`);
+log(
+  `  ${vectors.filter((v) => v.unspecified).length} unspecified, ${vectors.filter((v) => v.requires).length} need ${SCALAR_LITERALS}, ${vectors.filter((v) => v.edition === "draft").length} rely on the draft, ${vectors.filter((v) => Object.keys(v.violations ?? {}).length > 1).length} break two rules`,
+);
 
 const text = `${JSON.stringify(output, null, 1)}\n`;
 if (CHECK) {

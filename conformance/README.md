@@ -98,6 +98,7 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
 - **~:** inconclusive (see the implementation's page).
+- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
 - **n/a:** the adapter doesn't take part in this area.
 
@@ -149,6 +150,7 @@ The sections a fixture lists are the ones it exercises; its verdict is whether a
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
 - **~:** inconclusive (see the implementation's page).
+- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
 - **n/a:** the adapter doesn't take part in this area.
 
@@ -191,6 +193,7 @@ The sections a fixture lists are the ones it exercises; its verdict is whether a
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
 - **~:** inconclusive (see the implementation's page).
+- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
 - **n/a:** the adapter doesn't take part in this area.
 
@@ -232,6 +235,7 @@ The sections a fixture lists are the ones it exercises; its verdict is whether a
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
 - **~:** inconclusive (see the implementation's page).
+- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
 - **n/a:** the adapter doesn't take part in this area.
 
@@ -257,6 +261,7 @@ The sections a fixture lists are the ones it exercises; its verdict is whether a
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
 - **~:** inconclusive (see the implementation's page).
+- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
 - **n/a:** the adapter doesn't take part in this area.
 
@@ -313,6 +318,7 @@ The sections a fixture lists are the ones it exercises; its verdict is whether a
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
 - **~:** inconclusive (see the implementation's page).
+- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
 - **n/a:** the adapter doesn't take part in this area.
 
@@ -460,7 +466,7 @@ Exercised by fixtures, without a check of their own: [§3.12.1](https://spec.gra
 
 ## Not checked by the kit yet
 
-48 sections of 159. The references in [`specs/`](../specs) cover most of them, but are checked against graphql-js only, by the differential scripts (see [What is checked](../README.md#what-is-checked)).
+50 sections of 161. The references in [`specs/`](../specs) cover most of them, but are checked against graphql-js only, by the differential scripts (see [What is checked](../README.md#what-is-checked)).
 
 - [§2.14](https://spec.graphql.org/draft/#sec-Schema-Coordinates) Schema Coordinates
 - [§3.1](https://spec.graphql.org/draft/#sec-Type-System-Extensions) Type System Extensions
@@ -477,6 +483,8 @@ Exercised by fixtures, without a check of their own: [§3.12.1](https://spec.gra
 - [§3.9.1](https://spec.graphql.org/draft/#sec-Enum-Extensions) Enum Extensions
 - [§3.10.2](https://spec.graphql.org/draft/#sec-Input-Object-Extensions) Input Object Extensions
 - [§3.13.6](https://spec.graphql.org/draft/#sec-Directive-Extensions) Directive Extensions
+- [§4](https://spec.graphql.org/draft/#sec-Introspection) Introspection
+- [§5](https://spec.graphql.org/draft/#sec-Validation) Validation
 - [§5.1](https://spec.graphql.org/draft/#sec-Documents) Documents
 - [§5.2](https://spec.graphql.org/draft/#sec-Operations) Operations
 - [§5.2.1](https://spec.graphql.org/draft/#sec-All-Operation-Definitions) All Operation Definitions

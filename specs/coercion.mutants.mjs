@@ -1,7 +1,10 @@
 // Mutants for Coercion.tla. Each plants one plausible coercion bug and names
 // the test vector invariant in Coercion.cfg that must catch it on its own.
 // scripts/differential-coercion.mjs --mutants also checks that graphql-js
-// then disagrees with each mutated reference.
+// then disagrees with each mutated reference, except for mutants marked
+// `differential: false`: the differential runs one operation per document
+// under the default policy, so it never reaches GetOperation or a policy
+// switch.
 export default [
   {
     name: "accepts 2^31 as an Int (an off-by-one upper bound)",
@@ -37,6 +40,14 @@ export default [
     find: 'source = "literal" /\\ v.kind = "enum"',
     replace: 'source = "literal" /\\ v.kind \\in {"enum", "string"}',
     property: "EnumExamples",
+  },
+  {
+    name: "takes JSON strings as enum values even under a policy that declines the MAY",
+    file: "Coercion.tla",
+    find: 'source = "variables" /\\ policy.enumFromString /\\ ',
+    replace: 'source = "variables" /\\ ',
+    property: "EnumExamples",
+    differential: false,
   },
   {
     name: "passes a single value to a list type through without wrapping it",
@@ -107,6 +118,30 @@ export default [
     find: 'ELSE IF IsNonNull(argumentType) /\\ (~hasValue \\/ value.kind = "null")',
     replace: 'ELSE IF IsNonNull(argumentType) /\\ (~hasValue \\/ (~isVariable /\\ value.kind = "null"))',
     property: "ArgumentExamples",
+  },
+  {
+    name: "runs the first operation when the document has several and no operationName is given",
+    file: "Coercion.tla",
+    find: "IF Len(document) = 1 THEN Selected(document[1]) ELSE NotSelected",
+    replace: "IF Len(document) >= 1 THEN Selected(document[1]) ELSE NotSelected",
+    property: "OperationExamples",
+    differential: false,
+  },
+  {
+    name: "ignores operationName when the document has one operation",
+    file: "Coercion.tla",
+    find: "IF ~operationName.given\n  THEN",
+    replace: "IF ~operationName.given \\/ Len(document) = 1\n  THEN",
+    property: "OperationExamples",
+    differential: false,
+  },
+  {
+    name: "coerces the variables of an operation that wasn't selected",
+    file: "Coercion.tla",
+    find: "  ELSE Respond(S, selected.operation, request)",
+    replace: "  ELSE IF \\E i \\in DOMAIN document : ~CoerceVariableValues(S, document[i], request).ok THEN Outcome(\"requestError\", NullV)\n  ELSE Respond(S, selected.operation, request)",
+    property: "OperationExamples",
+    differential: false,
   },
   {
     name: "treats a variable coercion failure as an execution error",

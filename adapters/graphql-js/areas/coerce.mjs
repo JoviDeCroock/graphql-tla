@@ -1,14 +1,21 @@
 // The coerce area for graphql-js (docs/kit/coerce.md): executes the
-// document with a resolver on every field that echoes its arguments, and
-// says which of the three outcomes the response is.
+// document with a resolver on every field that records its path and
+// arguments, and sends back the execution result and those calls. The kit
+// classifies the outcome.
 //
-// It uses `execute` without `validate`, so it answers vectors whose document
-// is invalid (the `unvalidated` capability). graphql-js leaves an argument
-// that wasn't given out of the args object, so absent and null differ
-// (`absent-vs-null`). The variables are parsed with JSON.parse, which reads
-// numbers as doubles.
+// By default it uses `execute` without `validate`, so it answers vectors
+// whose document is invalid (the `unvalidated` capability). Started with
+// --validate (`node adapters/graphql-js/adapter.mjs --graphql 17
+// --validate`), it validates first, as a server does, and doesn't claim
+// `unvalidated`: the kit then checks that invalid documents fail without
+// executing. graphql-js leaves an argument that wasn't given out of the
+// args object, so absent and null differ (`absent-vs-null`). The variables
+// are parsed with JSON.parse, which reads numbers as doubles, so it doesn't
+// claim `exact-numbers`.
 
-export const capabilities = ["absent-vs-null", "unvalidated"];
+const validating = process.argv.includes("--validate");
+
+export const capabilities = ["absent-vs-null", ...(validating ? [] : ["unvalidated"])];
 
 const schemas = new Map();
 
@@ -32,24 +39,20 @@ export default async (graphql, request) => {
     schemas.set(request.schema, schema);
   }
   const document = graphql.parse(request.document);
-  const field = document.definitions[0].selectionSet.selections[0].name.value;
+  if (validating) {
+    const errors = graphql.validate(schema, document);
+    if (errors.length > 0) return { response: { errors: errors.map((e) => e.toJSON()) }, calls: [] };
+  }
   const calls = [];
   const response = await graphql.execute({
     schema,
     document,
+    operationName: request.operationName,
     variableValues: JSON.parse(request.variables),
-    fieldResolver: (_source, args) => {
-      calls.push(toJson(args));
+    fieldResolver: (_source, args, _context, info) => {
+      calls.push({ path: graphql.responsePathAsArray(info.path), arguments: toJson(args) });
       return "ok";
     },
   });
-  const errors = response.errors ?? [];
-  const message = errors[0]?.message;
-  if (!("data" in response) && errors.length > 0 && calls.length === 0) return { outcome: "request-error", message };
-  const fieldValue = response.data?.[field];
-  if (calls.length === 0 && fieldValue === null && errors.length === 1 && JSON.stringify(errors[0].path) === JSON.stringify([field])) {
-    return { outcome: "field-error", message };
-  }
-  if (calls.length === 1 && errors.length === 0 && fieldValue === "ok") return { outcome: "value", arguments: calls[0] };
-  return { outcome: "other", response: JSON.parse(JSON.stringify(response)), calls };
+  return { response: JSON.parse(JSON.stringify(response)), calls };
 };

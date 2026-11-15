@@ -3,30 +3,15 @@
 // every field the draft's introspection types have, plus __typename at the
 // root. QUERY selects every list with includeDeprecated: true;
 // QUERY_DEFAULTS leaves the argument out, so lists take its default.
+// lookupQuery asks __type(name:) for a few names, with the same FullType
+// fragment.
+
+// How many levels of ofType the TypeRef fragment selects.
+export const TYPE_REF_DEPTH = 9;
 
 const typeRef = (depth) => (depth === 0 ? "kind name" : `kind name ofType { ${typeRef(depth - 1)} }`);
 
-const text = (inc) => `query IntrospectionQuery {
-  __typename
-  __schema {
-    description
-    queryType { kind name }
-    mutationType { kind name }
-    subscriptionType { kind name }
-    types { ...FullType }
-    directives${inc} {
-      name
-      description
-      isRepeatable
-      locations
-      args${inc} { ...InputValue }
-      isDeprecated
-      deprecationReason
-    }
-  }
-}
-
-fragment FullType on __Type {
+const fragments = (inc) => `fragment FullType on __Type {
   kind
   name
   description
@@ -61,9 +46,40 @@ fragment InputValue on __InputValue {
 }
 
 fragment TypeRef on __Type {
-  ${typeRef(9)}
+  ${typeRef(TYPE_REF_DEPTH)}
 }
 `;
 
-export const QUERY = text("(includeDeprecated: true)");
+const text = (inc) => `query IntrospectionQuery {
+  __typename
+  __schema {
+    description
+    queryType { kind name }
+    mutationType { kind name }
+    subscriptionType { kind name }
+    types { ...FullType }
+    directives${inc} {
+      name
+      description
+      isRepeatable
+      locations
+      args${inc} { ...InputValue }
+      isDeprecated
+      deprecationReason
+    }
+  }
+}
+
+${fragments(inc)}`;
+
+const INC = "(includeDeprecated: true)";
+
+export const QUERY = text(INC);
 export const QUERY_DEFAULTS = text("");
+
+// [{ alias, name }] → a query with one aliased __type(name:) per lookup.
+export const lookupQuery = (lookups, includeDeprecated) => `query TypeLookup {
+${lookups.map(({ alias, name }) => `  ${alias}: __type(name: ${JSON.stringify(name)}) { ...FullType }`).join("\n")}
+}
+
+${fragments(includeDeprecated ? INC : "")}`;

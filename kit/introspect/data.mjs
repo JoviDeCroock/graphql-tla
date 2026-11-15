@@ -4,21 +4,54 @@
 // give, which the self-test and findings use.
 
 import { parseDefault } from "../schema/tla.mjs";
+import { TYPE_REF_DEPTH } from "./query.mjs";
 
 export const BUILTIN_DIRECTIVES = ["skip", "include", "deprecated", "specifiedBy", "oneOf"];
 export const BUILTIN_SCALARS = ["Int", "Float", "String", "Boolean", "ID"];
 export const isBuiltinType = (name) => name.startsWith("__") || BUILTIN_SCALARS.includes(name);
 
 // ---------------------------------------------------------------------------
+// The response envelope (§7.1.1, §7.1.7, §7.1.8)
+
+const isMap = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+
+// What is wrong with the response as an execution result or a request
+// error result, apart from its data: a list of problems in words.
+export const envelopeProblems = (response) => {
+  if (!isMap(response)) return ["the response isn't a map"];
+  const out = [];
+  for (const key of Object.keys(response)) {
+    if (!["data", "errors", "extensions"].includes(key)) out.push(`it has an entry "${key}", which §7.1.8 doesn't allow`);
+  }
+  if ("errors" in response) {
+    const errors = response.errors;
+    if (!Array.isArray(errors) || errors.length === 0) out.push(`errors is ${JSON.stringify(errors)?.slice(0, 40)}: when present, it must be a non-empty list`);
+    else if (!errors.every((e) => isMap(e) && typeof e.message === "string")) out.push("an error isn't a map with a message");
+  }
+  if ("extensions" in response && !isMap(response.extensions)) out.push("extensions isn't a map");
+  if (!("data" in response) && !("errors" in response)) out.push("it has neither data nor errors");
+  return out;
+};
+
+// ---------------------------------------------------------------------------
 // A response as `actual`
+//
+// The response must have exactly the fields the query selects: each one,
+// with an explicit null where the value is null, and no others. Anything
+// else is Malformed, and fails the executes check.
 
 export class Malformed extends Error {}
 
-const at = (obj, key, path, check) => {
-  if (obj === null || typeof obj !== "object" || Array.isArray(obj)) throw new Malformed(`${path} isn't an object`);
-  if (!(key in obj)) throw new Malformed(`${path} has no ${key}`);
+// An object with exactly `keys`.
+const object = (obj, path, keys) => {
+  if (!isMap(obj)) throw new Malformed(`${path} isn't an object`);
+  for (const key of keys) if (!(key in obj)) throw new Malformed(`${path} has no ${key}`);
+  for (const key of Object.keys(obj)) if (!keys.includes(key)) throw new Malformed(`${path} has ${key}, which the query doesn't select`);
+  return obj;
+};
+const value = (obj, key, path, check) => {
   const v = obj[key];
-  if (check && !check(v)) throw new Malformed(`${path}.${key} is ${JSON.stringify(v)?.slice(0, 80)}`);
+  if (!check(v)) throw new Malformed(`${path}.${key} is ${JSON.stringify(v)?.slice(0, 80)}`);
   return v;
 };
 const isString = (v) => typeof v === "string";
@@ -29,123 +62,163 @@ const isList = (v) => Array.isArray(v);
 const isOptList = (v) => v === null || Array.isArray(v);
 const opt = (v) => (v === null ? [] : [v]);
 
-const refOf = (t, path) => {
-  const out = [];
-  for (let node = t, p = path; node !== null && node !== undefined; node = node.ofType ?? null, p += ".ofType") {
-    out.push({ kind: at(node, "kind", p, isString), name: opt(at(node, "name", p, isOptString)) });
-  }
-  return out;
+const SELECTED = {
+  data: ["__typename", "__schema"],
+  schema: ["description", "queryType", "mutationType", "subscriptionType", "types", "directives"],
+  type: ["kind", "name", "description", "specifiedByURL", "isOneOf", "fields", "inputFields", "interfaces", "enumValues", "possibleTypes"],
+  field: ["name", "description", "args", "type", "isDeprecated", "deprecationReason"],
+  inputValue: ["name", "description", "type", "defaultValue", "isDeprecated", "deprecationReason"],
+  enumValue: ["name", "description", "isDeprecated", "deprecationReason"],
+  directive: ["name", "description", "isRepeatable", "locations", "args", "isDeprecated", "deprecationReason"],
 };
 
-const inputValueOf = (v, path) => ({
-  name: at(v, "name", path, isString),
-  description: opt(at(v, "description", path, isOptString)),
-  type: refOf(at(v, "type", path), `${path}.type`),
-  defaultValue: at(v, "defaultValue", path, isOptString) === null ? [] : [parseDefault(v.defaultValue)],
-  isDeprecated: at(v, "isDeprecated", path, isBool),
-  deprecationReason: opt(at(v, "deprecationReason", path, isOptString)),
-});
+// A type ref, `depth` levels of ofType deep as the query selects it (the
+// TypeRef fragment, or { kind name } for the roots).
+const refOf = (t, path, depth = TYPE_REF_DEPTH) => {
+  const out = [];
+  for (let node = t, p = path, d = depth; ; node = node.ofType, p += ".ofType", d--) {
+    object(node, p, d > 0 ? ["kind", "name", "ofType"] : ["kind", "name"]);
+    out.push({ kind: value(node, "kind", p, isString), name: opt(value(node, "name", p, isOptString)) });
+    if (d === 0 || node.ofType === null) return out;
+  }
+};
+
+const inputValueOf = (v, path) => {
+  object(v, path, SELECTED.inputValue);
+  return {
+    name: value(v, "name", path, isString),
+    description: opt(value(v, "description", path, isOptString)),
+    type: refOf(v.type, `${path}.type`),
+    defaultValue: value(v, "defaultValue", path, isOptString) === null ? [] : [parseDefault(v.defaultValue)],
+    isDeprecated: value(v, "isDeprecated", path, isBool),
+    deprecationReason: opt(value(v, "deprecationReason", path, isOptString)),
+  };
+};
 
 const optList = (v, f) => (v === null ? [] : [v.map(f)]);
 
-const typeOf = (t, i) => {
-  const path = `types[${i}]`;
+const typeOf = (t, path) => {
+  object(t, path, SELECTED.type);
   return {
-    kind: at(t, "kind", path, isString),
-    name: opt(at(t, "name", path, isOptString)),
-    description: opt(at(t, "description", path, isOptString)),
-    specifiedByURL: opt(at(t, "specifiedByURL", path, isOptString)),
-    isOneOf: opt(at(t, "isOneOf", path, isOptBool)),
-    fields: optList(at(t, "fields", path, isOptList), (f, j) => {
+    kind: value(t, "kind", path, isString),
+    name: opt(value(t, "name", path, isOptString)),
+    description: opt(value(t, "description", path, isOptString)),
+    specifiedByURL: opt(value(t, "specifiedByURL", path, isOptString)),
+    isOneOf: opt(value(t, "isOneOf", path, isOptBool)),
+    fields: optList(value(t, "fields", path, isOptList), (f, j) => {
       const p = `${path}.fields[${j}]`;
+      object(f, p, SELECTED.field);
       return {
-        name: at(f, "name", p, isString),
-        description: opt(at(f, "description", p, isOptString)),
-        args: at(f, "args", p, isList).map((a, k) => inputValueOf(a, `${p}.args[${k}]`)),
-        type: refOf(at(f, "type", p), `${p}.type`),
-        isDeprecated: at(f, "isDeprecated", p, isBool),
-        deprecationReason: opt(at(f, "deprecationReason", p, isOptString)),
+        name: value(f, "name", p, isString),
+        description: opt(value(f, "description", p, isOptString)),
+        args: value(f, "args", p, isList).map((a, k) => inputValueOf(a, `${p}.args[${k}]`)),
+        type: refOf(f.type, `${p}.type`),
+        isDeprecated: value(f, "isDeprecated", p, isBool),
+        deprecationReason: opt(value(f, "deprecationReason", p, isOptString)),
       };
     }),
-    inputFields: optList(at(t, "inputFields", path, isOptList), (v, j) => inputValueOf(v, `${path}.inputFields[${j}]`)),
-    interfaces: optList(at(t, "interfaces", path, isOptList), (r, j) => refOf(r, `${path}.interfaces[${j}]`)),
-    enumValues: optList(at(t, "enumValues", path, isOptList), (v, j) => {
+    inputFields: optList(value(t, "inputFields", path, isOptList), (v, j) => inputValueOf(v, `${path}.inputFields[${j}]`)),
+    interfaces: optList(value(t, "interfaces", path, isOptList), (r, j) => refOf(r, `${path}.interfaces[${j}]`)),
+    enumValues: optList(value(t, "enumValues", path, isOptList), (v, j) => {
       const p = `${path}.enumValues[${j}]`;
+      object(v, p, SELECTED.enumValue);
       return {
-        name: at(v, "name", p, isString),
-        description: opt(at(v, "description", p, isOptString)),
-        isDeprecated: at(v, "isDeprecated", p, isBool),
-        deprecationReason: opt(at(v, "deprecationReason", p, isOptString)),
+        name: value(v, "name", p, isString),
+        description: opt(value(v, "description", p, isOptString)),
+        isDeprecated: value(v, "isDeprecated", p, isBool),
+        deprecationReason: opt(value(v, "deprecationReason", p, isOptString)),
       };
     }),
-    possibleTypes: optList(at(t, "possibleTypes", path, isOptList), (r, j) => refOf(r, `${path}.possibleTypes[${j}]`)),
+    possibleTypes: optList(value(t, "possibleTypes", path, isOptList), (r, j) => refOf(r, `${path}.possibleTypes[${j}]`)),
   };
 };
 
 const directiveOf = (d, i) => {
   const path = `directives[${i}]`;
-  const locations = at(d, "locations", path, isList);
+  object(d, path, SELECTED.directive);
+  const locations = value(d, "locations", path, isList);
   if (!locations.every(isString)) throw new Malformed(`${path}.locations has a value that isn't a string`);
   return {
-    name: at(d, "name", path, isString),
-    description: opt(at(d, "description", path, isOptString)),
-    isRepeatable: at(d, "isRepeatable", path, isBool),
+    name: value(d, "name", path, isString),
+    description: opt(value(d, "description", path, isOptString)),
+    isRepeatable: value(d, "isRepeatable", path, isBool),
     locations,
-    args: at(d, "args", path, isList).map((a, k) => inputValueOf(a, `${path}.args[${k}]`)),
-    isDeprecated: at(d, "isDeprecated", path, isBool),
-    deprecationReason: opt(at(d, "deprecationReason", path, isOptString)),
+    args: value(d, "args", path, isList).map((a, k) => inputValueOf(a, `${path}.args[${k}]`)),
+    isDeprecated: value(d, "isDeprecated", path, isBool),
+    deprecationReason: opt(value(d, "deprecationReason", path, isOptString)),
   };
 };
 
-// A directive the service provides beyond the spec's, as TypeSystem.tla
-// directive data, so that it can be one of the built-ins B.
+// The service's own directives and the types their arguments reach, as
+// TypeSystem.tla data, so that they can be part of the built-ins B.
 const typeRefOf = (ref) => ({
   name: ref.at(-1).name[0] ?? "",
   wrappers: ref.slice(0, -1).map((r) => (r.kind === "NON_NULL" ? "nonNull" : "list")),
 });
+const deprecatedOf = (x) => (x.isDeprecated ? [x.deprecationReason[0] ?? ""] : []);
+const extraInputValue = (a) => ({ name: a.name, description: a.description, type: typeRefOf(a.type), default: a.defaultValue, deprecated: deprecatedOf(a) });
 const extraDirective = (d) => ({
   name: d.name,
   description: d.description,
-  args: d.args.map((a) => ({
-    name: a.name,
-    description: a.description,
-    type: typeRefOf(a.type),
-    default: a.defaultValue,
-    deprecated: a.isDeprecated ? [a.deprecationReason[0] ?? ""] : [],
-  })),
+  args: d.args.map(extraInputValue),
   repeatable: d.isRepeatable,
   locations: d.locations,
-  deprecated: d.isDeprecated ? [d.deprecationReason[0] ?? ""] : [],
+  deprecated: deprecatedOf(d),
+  directives: new Set(),
+});
+// Only input types are valid here; IntrospectChecks reports any other kind
+// (serviceTypes) without comparing its fields.
+const extraType = (t) => ({
+  kind: t.kind,
+  name: t.name[0],
+  description: t.description,
+  fields: [],
+  interfaces: [],
+  members: [],
+  values: (t.enumValues[0] ?? []).map((v) => ({ name: v.name, description: v.description, deprecated: deprecatedOf(v) })),
+  inputFields: (t.inputFields[0] ?? []).map(extraInputValue),
+  oneOf: t.isOneOf[0] === true,
+  specifiedBy: t.specifiedByURL,
   directives: new Set(),
 });
 
-// The case for one response: `actual` (with every type and directive, and
-// the root's __typename), the spec's built-in directives it returned, and
-// its own extra directives. Throws Malformed if the response isn't the
-// result of the query.
-export const caseOf = (response, documentDirectives) => {
-  if (response === null || typeof response !== "object") throw new Malformed("the response isn't an object");
-  if (Array.isArray(response.errors) && response.errors.length > 0) {
-    throw new Malformed(`the response has errors: ${response.errors.map((e) => e?.message ?? JSON.stringify(e)).join("; ").slice(0, 300)}`);
-  }
-  const data = at(response, "data", "response");
-  const typename = at(data, "__typename", "data", isOptString);
-  const s = at(data, "__schema", "data");
-  const types = at(s, "types", "__schema", isList).map(typeOf);
-  const directives = at(s, "directives", "__schema", isList).map(directiveOf);
-  const ofRoot = (key) => {
-    const v = at(s, key, "__schema");
-    return v === null ? [] : [refOf(v, key)];
+// The types the service's own directives reach through their arguments and
+// input fields, that neither the document nor the spec defines.
+const reachedTypes = (extras, types, documentTypes) => {
+  const byName = new Map(types.filter((t) => t.name.length === 1).map((t) => [t.name[0], t]));
+  const known = (n) => documentTypes.has(n) || isBuiltinType(n);
+  const out = new Map();
+  const visit = (name) => {
+    if (known(name) || out.has(name) || !byName.has(name)) return;
+    const t = byName.get(name);
+    out.set(name, t);
+    for (const f of t.inputFields[0] ?? []) visit(typeRefOf(f.type).name);
   };
+  for (const d of extras) for (const a of d.args) visit(typeRefOf(a.type).name);
+  return [...out.values()];
+};
+
+// The case for one __schema response: `actual` (with every type and
+// directive, and the root's __typename), the service's own directives
+// (extras) and the types they reach (extraTypes). Throws Malformed if the
+// response isn't the result of the query.
+export const caseOf = (response, documentDirectives, documentTypes) => {
+  const data = dataOf(response);
+  object(data, "data", SELECTED.data);
+  const typename = value(data, "__typename", "data", isOptString);
+  const s = object(data.__schema, "__schema", SELECTED.schema);
+  const types = value(s, "types", "__schema", isList).map((t, i) => typeOf(t, `types[${i}]`));
+  const directives = value(s, "directives", "__schema", isList).map(directiveOf);
+  const ofRoot = (key) => (s[key] === null ? [] : [refOf(s[key], key, 0)]);
   const doc = new Set(documentDirectives);
-  const provided = new Set(directives.map((d) => d.name).filter((n) => BUILTIN_DIRECTIVES.includes(n)));
-  const extras = directives.filter((d) => !doc.has(d.name) && !BUILTIN_DIRECTIVES.includes(d.name)).map(extraDirective);
+  const own = directives.filter((d) => !doc.has(d.name) && !BUILTIN_DIRECTIVES.includes(d.name));
+  const extraTypes = reachedTypes(own, types, new Set(documentTypes)).map(extraType);
   return {
-    provided,
-    extras,
+    extras: own.map(extraDirective),
+    extraTypes,
     actual: {
       typename: opt(typename),
-      description: opt(at(s, "description", "__schema", isOptString)),
+      description: opt(value(s, "description", "__schema", isOptString)),
       queryType: ofRoot("queryType"),
       mutationType: ofRoot("mutationType"),
       subscriptionType: ofRoot("subscriptionType"),
@@ -155,6 +228,23 @@ export const caseOf = (response, documentDirectives) => {
       builtinDirectiveNames: new Set(directives.map((d) => d.name).filter((n) => !doc.has(n))),
     },
   };
+};
+
+// The case for one response to __type(name:) lookups: [name, result] per
+// lookup, the result an optional __Type.
+export const lookupCaseOf = (response, lookups) => {
+  const data = object(dataOf(response), "data", lookups.map((l) => l.alias));
+  return { actual: lookups.map(({ alias, name }) => ({ name, result: data[alias] === null ? [] : [typeOf(data[alias], alias)] })) };
+};
+
+// A response's data, if it has no errors.
+const dataOf = (response) => {
+  if (!isMap(response)) throw new Malformed("the response isn't an object");
+  if (Array.isArray(response.errors) && response.errors.length > 0) {
+    throw new Malformed(`the response has errors: ${response.errors.map((e) => e?.message ?? JSON.stringify(e)).join("; ").slice(0, 300)}`);
+  }
+  if (!("data" in response)) throw new Malformed("the response has no data");
+  return response.data;
 };
 
 // ---------------------------------------------------------------------------

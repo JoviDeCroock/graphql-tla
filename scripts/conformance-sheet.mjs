@@ -50,19 +50,25 @@ const fixtureList = (f) =>
     .join(", ");
 
 // A check's cell: ✓ N (passed in all N cases), ✗ n/N (broke a MUST in n of
-// N), ! n/N (a SHOULD), ~ inconclusive, – not exercised.
+// N), ! n/N (a SHOULD), ~ inconclusive, ⊂ subsumed by another check, –
+// not exercised.
 const cell = (check) => {
   if (!check) return "n/a";
   if (check.status === "fail") return `${check.level === "MUST" || check.level === "ADAPTER" ? "✗" : "!"} ${check.failing}/${check.cases}`;
   if (check.status === "pass") return `✓ ${check.cases}`;
   if (check.status === "inconclusive") return `~ ${check.cases}`;
+  if (check.status === "subsumed") return "⊂";
   return "–";
 };
+
+// A check's level, with how the October 2021 edition differs.
+const levelText = (c) => (c.oct2021 ? `${c.level} (Oct 2021: ${c.oct2021})` : c.edition === "draft" ? `${c.level} (draft only)` : c.level);
 
 const legend = [
   "- **✓ N:** every one of the N cases it applied to satisfied it.",
   "- **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.",
   "- **~:** inconclusive (see the implementation's page).",
+  "- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).",
   "- **–:** never exercised: the adapter lacks the capability, or no case reached it.",
   "- **n/a:** the adapter doesn't take part in this area.",
 ].join("\n");
@@ -130,7 +136,7 @@ const matrix = () => {
     const first = reports.find((r) => r.area === area);
     lines.push(`## ${cap(area)}: each check`, "", legend, "", ...header(["Check", "Level", "Spec", ...keys.map(nameOf)]));
     for (const check of first.checks) {
-      const level = check.oct2021 ? `${check.level} (Oct 2021: ${check.oct2021})` : check.level;
+      const level = levelText(check);
       lines.push(
         `| ${check.title} (\`${check.id}\`) | ${level} | ${check.spec.map(link).join(" ") || "—"} | ${keys.map((k) => cell(reportFor(k, area)?.checks.find((c) => c.id === check.id))).join(" | ")} |`,
       );
@@ -204,9 +210,10 @@ const page = (key) => {
         "",
         `#### ${i + 1}. ${checks.map((c) => `\`${c.id}\``).join(", ") || "malformed result"}${f.summary ? `: ${f.summary}` : ""}`,
         "",
-        `${plural(f.cases, "case")}, in ${Object.entries(f.fixtures).sort((a, b) => b[1] - a[1]).map(([id, n]) => `\`${id}\` (${n})`).join(", ")}.`,
+        `${plural(f.cases, "case")}, in ${Object.entries(f.fixtures).sort((a, b) => b[1] - a[1]).map(([id, n]) => `\`${id}\` (${n})`).join(", ")}.${f.draftOnly ? ` ${f.draftOnly === f.cases ? "All" : `${f.draftOnly} of them`} rely on grammar or rules that are only in the draft, not in October 2021.` : ""}`,
         "",
       );
+      if (f.hint?.length) lines.push(`Each rejected document is one edit from a document that breaks only ${f.hint.map((id) => `\`${id}\``).join(" or ")}${f.likelyOverStrict ? ", so that rule is likely over-strict" : "; which rule the implementation applied is a guess"}.`, "");
       for (const c of checks) lines.push(`- ${c.title} (${c.level}${c.spec.length ? `, ${c.spec.map(link).join(" ")}` : ""})`);
       lines.push("", `The shortest case, from \`${f.fixture}\`:`, "");
       const e = f.example;
@@ -231,7 +238,7 @@ const page = (key) => {
     });
     lines.push("### Every check", "", legend, "", ...header(["Check", "Level", "Spec", "Result"]));
     for (const c of r.checks) {
-      const level = c.oct2021 ? `${c.level} (Oct 2021: ${c.oct2021})` : c.level;
+      const level = levelText(c);
       lines.push(`| ${c.title} (\`${c.id}\`)${c.note ? `. ${c.note}` : ""} | ${level} | ${c.spec.map(link).join(" ") || "—"} | ${cell(c)} |`);
     }
     const based = r.checks.filter((c) => c.basis);

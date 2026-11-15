@@ -329,7 +329,9 @@
     "OperationTypeExistence-valid-9",
     "OperationTypeExistence-valid-10",
     "OperationTypeExistence-valid-11"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "Operation Type Existence is new in the draft"
   },
   {
    "id": "OperationTypeExistence-valid-1",
@@ -363,7 +365,9 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-2"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "Operation Type Existence is new in the draft"
   },
   {
    "id": "OperationTypeExistence-valid-2",
@@ -397,7 +401,9 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-3"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "Operation Type Existence is new in the draft"
   },
   {
    "id": "OperationTypeExistence-valid-3",
@@ -431,7 +437,9 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-4"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "Operation Type Existence is new in the draft"
   },
   {
    "id": "OperationTypeExistence-valid-4",
@@ -465,7 +473,9 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-5"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "Operation Type Existence is new in the draft"
   },
   {
    "id": "OperationTypeExistence-valid-5",
@@ -499,7 +509,9 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-6"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "Operation Type Existence is new in the draft"
   },
   {
    "id": "OperationTypeExistence-valid-6",
@@ -533,7 +545,9 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-7"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "Operation Type Existence is new in the draft"
   },
   {
    "id": "OperationTypeExistence-valid-7",
@@ -619,7 +633,9 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-12"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "Operation Type Existence is new in the draft"
   },
   {
    "id": "OperationTypeExistence-valid-12",
@@ -653,7 +669,9 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-13"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "Operation Type Existence is new in the draft"
   },
   {
    "id": "OperationTypeExistence-valid-13",
@@ -687,7 +705,9 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-14"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "Operation Type Existence is new in the draft"
   },
   {
    "id": "OperationTypeExistence-valid-14",
@@ -721,7 +741,9 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-14"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "Operation Type Existence is new in the draft"
   },
   {
    "id": "OperationTypeExistence-spec-1",
@@ -754,7 +776,9 @@
      "mutation"
     ]
    },
-   "example": "goodbyeMutation"
+   "example": "goodbyeMutation",
+   "edition": "draft",
+   "editionNote": "Operation Type Existence is new in the draft"
   },
   {
    "id": "OperationNameUniqueness-1",
@@ -2579,7 +2603,9 @@
    },
    "siblings": [
     "SingleRootField-valid-26"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-valid-26",
@@ -2613,7 +2639,9 @@
    },
    "siblings": [
     "SingleRootField-valid-27"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-valid-27",
@@ -2647,7 +2675,9 @@
    },
    "siblings": [
     "SingleRootField-valid-28"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-valid-28",
@@ -2681,7 +2711,9 @@
    },
    "siblings": [
     "SingleRootField-valid-29"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-valid-29",
@@ -2715,7 +2747,9 @@
    },
    "siblings": [
     "SingleRootField-valid-30"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-valid-30",
@@ -2749,7 +2783,9 @@
    },
    "siblings": [
     "SingleRootField-valid-31"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-valid-31",
@@ -2783,7 +2819,9 @@
    },
    "siblings": [
     "SingleRootField-valid-32"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-valid-32",
@@ -2817,7 +2855,9 @@
    },
    "siblings": [
     "SingleRootField-valid-33"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-valid-33",
@@ -2851,7 +2891,9 @@
    },
    "siblings": [
     "SingleRootField-valid-34"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-valid-34",
@@ -2885,7 +2927,9 @@
    },
    "siblings": [
     "SingleRootField-valid-35"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-valid-35",
@@ -2919,7 +2963,9 @@
    },
    "siblings": [
     "SingleRootField-valid-36"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-valid-36",
@@ -2953,7 +2999,9 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-8"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-43",
@@ -2974,7 +3022,9 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-1"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-44",
@@ -2995,7 +3045,9 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-9"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-45",
@@ -3016,7 +3068,9 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-10"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-46",
@@ -3037,7 +3091,9 @@
    },
    "siblings": [
     "SingleRootField-valid-22"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-47",
@@ -3058,7 +3114,9 @@
    },
    "siblings": [
     "SingleRootField-valid-23"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-48",
@@ -3079,7 +3137,9 @@
    },
    "siblings": [
     "SingleRootField-valid-24"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-49",
@@ -3100,7 +3160,9 @@
    },
    "siblings": [
     "SingleRootField-valid-37"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-valid-37",
@@ -3134,7 +3196,9 @@
    },
    "siblings": [
     "SingleRootField-valid-25"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-51",
@@ -3155,7 +3219,9 @@
    },
    "siblings": [
     "SingleRootField-valid-38"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-valid-38",
@@ -3287,7 +3353,9 @@
      "requiredRuntimeValidation"
     ]
    },
-   "example": "requiredRuntimeValidation"
+   "example": "requiredRuntimeValidation",
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "SingleRootField-spec-6",
@@ -3325,7 +3393,9 @@
      "sub"
     ]
    },
-   "example": "sub"
+   "example": "sub",
+   "edition": "draft",
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
   },
   {
    "id": "FieldSelections-1",
@@ -32664,7 +32734,8 @@
    },
    "siblings": [
     "FragmentSpreadTypeExistence-valid-7"
-   ]
+   ],
+   "unspecified": "the formal text rejects this spread because no object type implements the interface; the prose allows an interface fragment in the scope of an interface it implements, and doesn't settle an interface in its own scope"
   },
   {
    "id": "FragmentSpreadIsPossible-20",
@@ -32687,7 +32758,8 @@
     "FragmentSpreadIsPossible-valid-9",
     "FragmentSpreadIsPossible-valid-10",
     "FragmentSpreadIsPossible-valid-11"
-   ]
+   ],
+   "unspecified": "the formal text rejects this spread because no object type implements the interface; the prose allows an interface fragment in the scope of an interface it implements, and doesn't settle an interface in its own scope"
   },
   {
    "id": "FragmentSpreadIsPossible-valid-9",
@@ -32747,7 +32819,8 @@
    },
    "siblings": [
     "FragmentSpreadTypeExistence-valid-8"
-   ]
+   ],
+   "unspecified": "the formal text rejects this spread because no object type implements the interface; the prose allows an interface fragment in the scope of an interface it implements, and doesn't settle an interface in its own scope"
   },
   {
    "id": "FragmentSpreadIsPossible-22",
@@ -32768,7 +32841,8 @@
    },
    "siblings": [
     "FragmentSpreadTypeExistence-valid-1"
-   ]
+   ],
+   "unspecified": "the formal text rejects this spread because no object type implements the interface; the prose allows an interface fragment in the scope of an interface it implements, and doesn't settle an interface in its own scope"
   },
   {
    "id": "FragmentSpreadIsPossible-23",
@@ -32789,7 +32863,8 @@
    },
    "siblings": [
     "FragmentSpreadTypeExistence-valid-4"
-   ]
+   ],
+   "unspecified": "the formal text rejects this spread because no object type implements the interface; the prose allows an interface fragment in the scope of an interface it implements, and doesn't settle an interface in its own scope"
   },
   {
    "id": "FragmentSpreadIsPossible-24",
@@ -33193,7 +33268,8 @@
    },
    "siblings": [
     "FragmentSpreadIsPossible-valid-22"
-   ]
+   ],
+   "unspecified": "the formal text rejects this spread because no object type implements the interface; the prose allows an interface fragment in the scope of an interface it implements, and doesn't settle an interface in its own scope"
   },
   {
    "id": "FragmentSpreadIsPossible-valid-22",
@@ -33651,7 +33727,9 @@
    "document": "query Q($v: ID! = \"1\") {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-7",
@@ -34048,7 +34126,9 @@
    "document": "{\n  echo(pick: null)\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-17",
@@ -35123,7 +35203,9 @@
    "document": "{\n  echo(pick: {id: 1})\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-61",
@@ -35381,7 +35463,9 @@
    "document": "{\n  echo(pick: {id: \"1\"})\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-72",
@@ -35575,7 +35659,9 @@
    "document": "{\n  echo(pick: {name: \"x\"})\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-80",
@@ -35638,7 +35724,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-31"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "OneOf Input Objects are new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-83",
@@ -36585,7 +36673,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-20"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "OneOf Input Objects are new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-123",
@@ -37934,7 +38024,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-33"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "OneOf Input Objects are new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-186",
@@ -39338,7 +39430,9 @@
    "document": "query Q0($v2: Int!) {\n  echo(int: 1, opt: $v2, list: 1, pick: {id: \"1\"})\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-251",
@@ -39710,7 +39804,9 @@
    "expected": {
     "valid": true
    },
-   "example": "addPet"
+   "example": "addPet",
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "ValuesOfCorrectType-spec-4",
@@ -39770,7 +39866,9 @@
      "value"
     ]
    },
-   "example": "oneOfWithNoFields"
+   "example": "oneOfWithNoFields",
+   "edition": "draft",
+   "editionNote": "OneOf Input Objects are new in the draft"
   },
   {
    "id": "InputObjectFieldNames-1",
@@ -40386,7 +40484,9 @@
    "expected": {
     "valid": true
    },
-   "example": "addCat"
+   "example": "addCat",
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "InputObjectRequiredFields-spec-2",
@@ -42235,6 +42335,9 @@
    "siblings": [
     "VariablesAreInputTypes-valid-1",
     "VariablesAreInputTypes-valid-2"
+   ],
+   "requires": [
+    "custom-scalar-literals"
    ]
   },
   {
@@ -42248,7 +42351,10 @@
    "document": "query Q($v: DogInput) {\n  json(value: {a: $v})\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-scalar-literals"
+   ]
   },
   {
    "id": "VariablesAreInputTypes-valid-2",
@@ -42261,7 +42367,10 @@
    "document": "query Q($v: Int) {\n  json(value: {a: $v})\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-scalar-literals"
+   ]
   },
   {
    "id": "VariablesAreInputTypes-2",
@@ -42282,6 +42391,9 @@
    },
    "siblings": [
     "VariablesAreInputTypes-valid-3"
+   ],
+   "requires": [
+    "custom-scalar-literals"
    ]
   },
   {
@@ -42295,7 +42407,10 @@
    "document": "query Q($v: [String]) {\n  json(value: {a: $v})\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-scalar-literals"
+   ]
   },
   {
    "id": "VariablesAreInputTypes-3",
@@ -42316,6 +42431,9 @@
    },
    "siblings": [
     "VariablesAreInputTypes-valid-4"
+   ],
+   "requires": [
+    "custom-scalar-literals"
    ]
   },
   {
@@ -42329,7 +42447,10 @@
    "document": "query Q($v: DogInput!) {\n  json(value: {a: {b: $v}})\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-scalar-literals"
+   ]
   },
   {
    "id": "VariablesAreInputTypes-4",
@@ -42350,6 +42471,9 @@
    },
    "siblings": [
     "VariablesAreInputTypes-valid-5"
+   ],
+   "requires": [
+    "custom-scalar-literals"
    ]
   },
   {
@@ -42363,7 +42487,10 @@
    "document": "query Q($v: String) {\n  ...F\n}\n\nfragment F on Query {\n  json(value: {a: $v})\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-scalar-literals"
+   ]
   },
   {
    "id": "VariablesAreInputTypes-spec-1",
@@ -43264,7 +43391,9 @@
    "document": "query Q0 {\n  echo(opt: 1, pick: {id: \"1\"}, role: ADMIN)\n}\n\nquery Q1($v2: Float) {\n  a: echo(int: 1, float: $v2, opt: 1, nums: 1)\n  b: __typename\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariablesUsed-spec-1",
@@ -43492,7 +43621,9 @@
    "document": "query Q($v: Pick) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-6",
@@ -44562,7 +44693,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-16"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "OneOf Input Objects are new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-valid-16",
@@ -44575,7 +44708,9 @@
    "document": "query Q($v: ID!) {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-50",
@@ -44791,7 +44926,9 @@
    "document": "query Q($v: Pick = null) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-59",
@@ -46029,7 +46166,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-30"
-   ]
+   ],
+   "edition": "draft",
+   "editionNote": "OneOf Input Objects are new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-valid-30",
@@ -46042,7 +46181,9 @@
    "document": "query Q($v: ID = \"1\") {\n  echo(pick: {id: $v})\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-111",
@@ -46199,7 +46340,9 @@
    "document": "query Q($v: Pick = {id: \"1\"}) {\n  echo(pick: $v)\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-116",
@@ -57490,7 +57633,9 @@
    "expected": {
     "valid": true
    },
-   "example": "addCat"
+   "example": "addCat",
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-spec-7",
@@ -57504,7 +57649,9 @@
    "expected": {
     "valid": true
    },
-   "example": "addCatWithDefault"
+   "example": "addCatWithDefault",
+   "edition": "draft",
+   "editionNote": "it uses a OneOf Input Object, new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-spec-8",
@@ -57523,7 +57670,9 @@
      "cat"
     ]
    },
-   "example": "addNullableCat"
+   "example": "addNullableCat",
+   "edition": "draft",
+   "editionNote": "OneOf Input Objects are new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-spec-9",
@@ -57542,7 +57691,9 @@
      "dog"
     ]
    },
-   "example": "listOfOneOfWithNullableVariable"
+   "example": "listOfOneOfWithNullableVariable",
+   "edition": "draft",
+   "editionNote": "OneOf Input Objects are new in the draft"
   },
   {
    "id": "AllVariableUsagesAreAllowed-spec-10",

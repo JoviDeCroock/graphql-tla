@@ -6,7 +6,7 @@ Execution (docs/conformance.md) needs a driven adapter, because the spec allows 
 | --- | --- | --- | --- |
 | `parse` | `specs/Lexer.tla`, `specs/Parser.tla` | whether a source text is a syntactically valid executable document | `{"ok": bool}` |
 | `validate` | `specs/Validation.tla` | whether a document is valid against a schema | `{"valid": bool}`, optionally with error `locations` |
-| `coerce` | `specs/Coercion.tla` | to execute a document with variables, with a resolver that echoes its arguments | a request error, a field error, or the coerced arguments |
+| `coerce` | `specs/Coercion.tla` | to execute a request (document, variables, operation name), with a resolver that records its arguments | the execution result and the resolver calls; the kit classifies them |
 | `schema` | `specs/TypeSystem.tla` | whether an SDL schema is valid | `{"valid": bool}` |
 | `introspect` | `specs/Introspection.tla` | to execute an introspection query against an SDL schema | the response |
 
@@ -19,18 +19,21 @@ The same NDJSON channel as execution. An adapter claims each area it answers in 
 {"type":"result","id":12,"ok":true}
 ```
 
-If the adapter itself fails, it answers `{"type":"error","id":12,"message":"…"}`, and the kit stops. An area may define capabilities of its own: `coerce` has `absent-vs-null` (the result can tell an argument that wasn't given from an explicit null) and `unvalidated` (the adapter executes documents without validating them). Vectors that need one are skipped for adapters without it. If the adapter doesn't claim the area at all, `graphql-tla run <area>` exits with code 3. A request the implementation rejects is an answer, not an adapter error. Each area's page in [`docs/kit/`](kit) gives its request and result fields.
+If the adapter itself fails, it answers `{"type":"error","id":12,"message":"…"}`, and the kit stops. The exception is `schema`, where an `error` answer to a vector means the implementation crashed on that schema; the kit reports it as a crash finding and goes on. An area may define capabilities of its own: `coerce` has `absent-vs-null` (the result can tell an argument that wasn't given from an explicit null), `unvalidated` (the adapter executes documents without validating them; without it, invalid documents are graded as requests that must fail without execution) and `exact-numbers` (the adapter's JSON parser reads big numbers exactly). Vectors that need a capability are skipped, or graded differently, for adapters without it. If the adapter doesn't claim the area at all, `graphql-tla run <area>` exits with code 3. A request the implementation rejects is an answer, not an adapter error. Each area's page in [`docs/kit/`](kit) gives its request and result fields.
 
 ## Vectors
 
 - **Where they live.** `kit/<area>/vectors.json` holds `{ "source": "...", "vectors": [...] }`. Each vector is `{ "id", "spec": ["5.5.2.3"], "family", ...request fields, "expected": ... }`. Areas whose vectors share schemas keep them once at the top level: `coerce` has one `schema`, and `validate` has a `schemas` map that each vector names.
 - **Who decides `expected`.** Only the TLA+ reference, evaluated by tla-ts, never graphql-js. `scripts/generate-vectors-<area>.mjs` writes the file, and `--check` regenerates it and fails if it differs. `npm run check:vectors` runs every `--check`.
+- **Editions.** A vector that relies on grammar or rules only in the draft, not in the October 2021 edition (OneOf input objects, for example), carries `"edition": "draft"`. It is still graded, and findings say how many of their vectors are draft-only, so an implementation of October 2021 can tell those apart.
+- **Unspecified inputs.** Where the spec's formal algorithm and its prose disagree, the vector is marked `unspecified` and isn't graded.
 - **What they're built from.** The documents and schemas come from the differential scripts' families and the spec's own examples.
-- **Minimal pairs.** Where a reference reports which rule or production a verdict rests on, vectors come in pairs. An invalid input breaks exactly one rule, and a valid sibling differs from it by one small edit. That gives a per-rule verdict without asking the adapter which rule it applied:
-  - a rule is **not enforced** when an implementation accepts an input that breaks only that rule;
-  - it is **over-strict** when it rejects that input's valid sibling.
+- **Minimal pairs.** Where a reference reports which rule or production a verdict rests on, vectors come in pairs. An invalid input breaks one rule (in `validate`, two in 19 documented cases, which count against both), and a valid sibling differs from it by one small edit. That gives a per-rule verdict without asking the adapter which rule it applied:
+  - a rule is **not enforced** when an implementation accepts an input that breaks it. That is conclusive, and it is what fails the rule's check.
+  - a rejected valid sibling fails a separate check, such as `validate`'s `acceptsValid`. The paired rule is only a hint, since the kit doesn't read error messages; a finding calls it likely over-strict only when several independent siblings point at it.
+  - a rule that can't be broken alone (every input that breaks it breaks a broader rule too) is reported as `subsumed`, never `pass`.
 
-  `coerce` has no pairs: `Coercion.tla` gives an outcome, not the rule that decided it. Its findings are "accepts what §X rejects", "rejects what §X accepts" and "coerces to the wrong value".
+  `coerce` has no pairs: `Coercion.tla` gives an outcome, not the rule that decided it. Its findings are "accepts what §X rejects", "rejects what §X accepts" and "coerces to the wrong value". Where the spec permits more than one answer (a MAY, or a SHOULD left undone), a vector lists the alternatives the reference gives under other policies.
 
 ## Checks and reports
 
@@ -51,8 +54,8 @@ Each area exports `run({ adapter, strict, option, flag, log })` from `kit/<area>
 }
 ```
 
-- **Checks.** One per rule or grammar section, at the level the spec text gives it. `status` is `"fail"` if any vector broke it, `"pass"` if some vector exercised it and none broke it, and `"untested"` otherwise. `cases` is the number of vectors that exercised it.
-- **Findings.** Group failures by root cause, such as "rule R not enforced" or "rule R over-strict". A vector counts toward one finding only.
+- **Checks.** One per rule or grammar section, at the level the spec text gives it. `status` is `"fail"` if any vector broke it, `"pass"` if some vector exercised it and none broke it, `"subsumed"` for a rule that can't be told apart from a broader one, and `"untested"` otherwise. `cases` is the number of vectors that exercised it.
+- **Findings.** Group failures by root cause, such as "rule R not enforced" or "rejects valid documents". A vector counts toward one finding only.
 - **Self-test.** Every run also checks deliberately wrong answers against the same checker: every verdict flipped, and answers taken from a different vector. The checker must flag each of them, so a green run can't be vacuous.
 - **Exit code.** Non-zero if any MUST check fails, or a SHOULD check fails with `--strict`, or the self-test fails.
 

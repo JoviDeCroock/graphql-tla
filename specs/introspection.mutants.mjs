@@ -96,6 +96,46 @@ const mutants = [
     differential: false,
     why: "graphql-js returns locations in source order, so the stricter comparison isn't observable",
   },
+  {
+    name: "a built-in type's lists are compared in order, though they have no source order",
+    find: "  LET ordered == ~IsBuiltinTypeName(e.name[1]) IN",
+    replace: "  LET ordered == TRUE IN",
+    property: "ResultsAreJudged",
+    differential: false,
+    why: "graphql-js returns built-in lists in the spec's order, so the stricter comparison isn't observable",
+  },
+  {
+    name: "every built-in directive is required",
+    find: 'RequiredDirectiveNames(S) == IF Deprecates(S) THEN {"deprecated"} ELSE {}',
+    replace: "RequiredDirectiveNames(S) == BuiltinDirectiveNames(SpecBuiltins)",
+    property: "ResultsAreJudged",
+    differential: false,
+    why: "graphql-js provides all five built-in directives",
+  },
+  {
+    name: "@deprecated isn't required, even for a schema that deprecates something",
+    find: 'RequiredDirectiveNames(S) == IF Deprecates(S) THEN {"deprecated"} ELSE {}',
+    replace: "RequiredDirectiveNames(S) == {}",
+    property: "ResultsAreJudged",
+    differential: false,
+    why: "graphql-js provides all five built-in directives",
+  },
+  {
+    name: "@specifiedBy is recommended for a schema without custom scalars",
+    find: '  \\cup (IF \\E T \\in Range(S.types) : T.kind = "SCALAR" THEN {"specifiedBy"} ELSE {})',
+    replace: '  \\cup {"specifiedBy"}',
+    property: "BuiltinsFollowTheSpec",
+    differential: false,
+    why: "the differential doesn't grade SHOULDs",
+  },
+  {
+    name: "__type(name:) finds a built-in scalar nothing references",
+    find: "  IF name \\in TypeNames(S, B)\n  THEN Some(TypeResult(",
+    replace: "  IF name \\in TypeNames(S, B) \\cup BuiltinScalarNames\n  THEN Some(TypeResult(",
+    property: "TypeLookupFindsTheNamedType",
+    differential: false,
+    why: "the differential doesn't ask __type(name:)",
+  },
 ];
 
 export default mutants.map((m) => ({ file, module, ...m }));

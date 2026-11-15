@@ -5,6 +5,11 @@
 // there is the adapter's, and throws. graphql-js 16 can throw from inside
 // validate() itself (a subscription with @skip(if: $v) at its root); the
 // request would fail, so that counts as rejecting the document.
+//
+// A custom scalar that buildSchema makes from SDL has no parser of its own
+// and accepts every literal: the custom-scalar-literals capability.
+
+export const capabilities = ["custom-scalar-literals"];
 
 // Built schemas, by graphql-js module and SDL text: the vectors share a few.
 const built = new WeakMap();

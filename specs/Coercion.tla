@@ -8,6 +8,7 @@
 (*   §3.10  input object input coercion                                    *)
 (*   §3.11  list input coercion                                            *)
 (*   §3.12  non-null input coercion                                        *)
+(*   §6.1   GetOperation                                                   *)
 (*   §6.1.2 CoerceVariableValues                                           *)
 (*   §6.4.1 CoerceArgumentValues                                           *)
 (*   §7.1.3 request error result, as opposed to an execution error         *)
@@ -48,8 +49,13 @@
 (*   schema     [types, fields]: types[name] is [kind, values, fields] for *)
 (*              kind "scalar", "enum" (values) or "inputObject" (fields);  *)
 (*              fields[fieldName] is the root field's argument definitions *)
-(*   operation  [variables, field, arguments]: the variable definitions,   *)
-(*              and one root field with its arguments as entries           *)
+(*              (root field names are unique across Query and Mutation).   *)
+(*              It may also have a policy (see Policy below).              *)
+(*   operation  [type, name, variables, field, arguments]: "query" or      *)
+(*              "mutation", the name ("" when anonymous), the variable     *)
+(*              definitions, and one root field with its arguments as      *)
+(*              entries                                                    *)
+(*   document   a sequence of operations (fragments aren't part of it)     *)
 (*   result     [ok, value]: a coerced value, or a failure                 *)
 (***************************************************************************)
 EXTENDS Integers, Sequences, FiniteSets, TLC
@@ -166,6 +172,25 @@ IntegerString(n) ==
 AsNumber(n) == [n EXCEPT !.kind = "number"]
 
 -----------------------------------------------------------------------------
+(* What the spec leaves to the implementation                              *)
+(*                                                                         *)
+(* A policy picks one answer where the spec permits several:               *)
+(*                                                                         *)
+(*   enumFromString      §3.9: in variables, "strings may be interpreted   *)
+(*                       as the enum input value with the same name" (a    *)
+(*                       MAY; without it, such a string is an error)       *)
+(*   inputFieldDefaults  §3.10: an omitted input field's default value     *)
+(*                       "should be used" (a SHOULD; without it, the field *)
+(*                       has no entry, or is an error if Non-Null)         *)
+(*                                                                         *)
+(* DefaultPolicy follows every SHOULD and takes the MAY. A schema without  *)
+(* a policy field uses it.                                                 *)
+
+DefaultPolicy == [enumFromString |-> TRUE, inputFieldDefaults |-> TRUE]
+PolicyOf(S) == IF "policy" \in DOMAIN S THEN S.policy ELSE DefaultPolicy
+WithPolicy(S, policy) == [types |-> S.types, fields |-> S.fields, policy |-> policy]
+
+-----------------------------------------------------------------------------
 (* Results *)
 
 Ok(value) == [ok |-> TRUE, value |-> value]
@@ -231,10 +256,10 @@ CoerceScalar(name, v) ==
 \* "GraphQL string literals must not be accepted as an enum input and
 \* instead raise a request error." For variables, "for most transport
 \* serializations ... strings may be interpreted as the enum input value
-\* with the same name."
-CoerceEnum(def, v, source) ==
+\* with the same name." That is a MAY, so policy.enumFromString decides.
+CoerceEnum(policy, def, v, source) ==
   IF \/ source = "literal" /\ v.kind = "enum" /\ v.str \in def.values
-     \/ source = "variables" /\ IsStringInput(v) /\ v.str \in def.values
+     \/ source = "variables" /\ policy.enumFromString /\ IsStringInput(v) /\ v.str \in def.values
   THEN Ok(EnumV(v.str)) ELSE Fail
 
 -----------------------------------------------------------------------------
@@ -287,7 +312,7 @@ CoerceInput(S, type, v, source, vars) ==
   ELSE
     LET def == S.types[type.name] IN
     CASE def.kind = "scalar" -> CoerceScalar(type.name, v)
-      [] def.kind = "enum" -> CoerceEnum(def, v, source)
+      [] def.kind = "enum" -> CoerceEnum(PolicyOf(S), def, v, source)
       [] OTHER ->
            \* §3.10: "The value for an input object should be an input
            \* object literal or an unordered map supplied by a variable,
@@ -340,8 +365,9 @@ CoerceFields(S, fields, entries, i, source, vars, acc) ==
             \* provided and the input object field's type is non-null, an
             \* error should be raised. Otherwise, if the field is not
             \* required, then no entry is added to the coerced unordered
-            \* map."
-            IF field.hasDefault
+            \* map." Using the default is a SHOULD, so
+            \* policy.inputFieldDefaults decides.
+            IF field.hasDefault /\ PolicyOf(S).inputFieldDefaults
             THEN AddTo(acc, field.name, CoerceInput(S, field.type, field.default, "literal", {}))
             ELSE IF IsNonNull(field.type) THEN Fail
             ELSE Ok(ObjV(acc))
@@ -468,6 +494,33 @@ CoerceArgumentValues(S, fieldName, argumentValues, vars) ==
 
 Outcome(kind, args) == [kind |-> kind, args |-> args]
 
+NamedOp(type, name, variables, field, arguments) ==
+  [type |-> type, name |-> name, variables |-> variables, field |-> field, arguments |-> arguments]
+\* An anonymous query.
+Op(variables, field, arguments) == NamedOp("query", "", variables, field, arguments)
+
+\* operationName is NoName (null, or not given) or Name(n).
+NoName == [given |-> FALSE, name |-> ""]
+Name(n) == [given |-> TRUE, name |-> n]
+Selected(operation) == [ok |-> TRUE, operation |-> operation]
+NotSelected == [ok |-> FALSE, operation |-> Op(<<>>, "", {})]
+
+\* GetOperation(document, operationName)
+GetOperation(document, operationName) ==
+  IF ~operationName.given
+  THEN
+    \* "If operationName is null: If document contains exactly one
+    \* operation. Return the Operation contained in the document. Otherwise
+    \* raise a request error requiring operationName."
+    IF Len(document) = 1 THEN Selected(document[1]) ELSE NotSelected
+  ELSE
+    \* "Let operation be the Operation named operationName in document. If
+    \* operation was not found, raise a request error." An anonymous
+    \* operation has no name. Operation Name Uniqueness (§5.2.1.1) makes the
+    \* match unique in a valid document.
+    LET named == {i \in DOMAIN document : document[i].name # "" /\ document[i].name = operationName.name}
+    IN IF named = {} THEN NotSelected ELSE Selected(document[CHOOSE i \in named : TRUE])
+
 \* §6.1.2: "If a request error is encountered during input coercion of
 \* variable values, then the request fails without operation execution."
 \* Otherwise the root field executes, and ExecuteField calls
@@ -479,6 +532,15 @@ Respond(S, operation, request) ==
     LET args == CoerceArgumentValues(S, operation.field, operation.arguments,
                                      coercedVariableValues.value.entries)
     IN IF args.ok THEN Outcome("resolved", args.value) ELSE Outcome("fieldError", NullV)
+
+\* ExecuteRequest: GetOperation, then the selected operation. A mutation
+\* runs on the mutation root type; root field names are unique, so the
+\* field's name says which root type ran. Only the selected operation's
+\* variables are coerced.
+ExecuteRequest(S, document, operationName, request) ==
+  LET selected == GetOperation(document, operationName) IN
+  IF ~selected.ok THEN Outcome("requestError", NullV)
+  ELSE Respond(S, selected.operation, request)
 
 -----------------------------------------------------------------------------
 (* §7.1 Response                                                           *)
@@ -546,7 +608,6 @@ J(n) == FromInt("number", n)     \* a JSON number
 N(n) == FromInt("number", n)     \* a coerced Int or Float
 Lit(type, v) == CoerceInput(ExampleSchema, type, v, "literal", {})
 Json(type, v) == CoerceInput(ExampleSchema, type, v, "variables", {})
-Op(variables, field, arguments) == [variables |-> variables, field |-> field, arguments |-> arguments]
 Resolved(entries) == Outcome("resolved", ObjV(entries))
 RequestError == Outcome("requestError", NullV)
 FieldError == Outcome("fieldError", NullV)
@@ -593,7 +654,10 @@ EnumCases == <<
   Case(Lit(Named("Color"), Str("RED")), Fail),
   Case(Json(Named("Color"), Str("RED")), Ok(EnumV("RED"))),
   Case(Json(Named("Color"), Str("BLUE")), Fail),
-  Case(Lit(Named("Color"), EnumV("BLUE")), Fail)
+  Case(Lit(Named("Color"), EnumV("BLUE")), Fail),
+  \* Taking strings as enum values is a MAY: a policy may decline it.
+  Case(CoerceInput(WithPolicy(ExampleSchema, [DefaultPolicy EXCEPT !.enumFromString = FALSE]),
+                   Named("Color"), Str("RED"), "variables", {}), Fail)
 >>
 
 \* §3.11's table of examples
@@ -691,6 +755,30 @@ ArgumentCases == <<
   Case(Respond(ExampleSchema, Op(<<>>, "int", {Entry("v", Str("1"))}), {}), FieldError)
 >>
 
+\* §6.1 GetOperation, and ExecuteRequest's use of it.
+QueryA == NamedOp("query", "A", <<>>, "int", {Entry("v", I(1))})
+QueryB == NamedOp("query", "B", X(NonNull(IntT), FALSE, NullV), "ints", {Entry("v", VarV("x"))})
+Anonymous == Op(<<>>, "int", {Entry("v", I(3))})
+OperationCases == <<
+  Case(GetOperation(<<QueryA>>, NoName), Selected(QueryA)),
+  Case(GetOperation(<<QueryA>>, Name("A")), Selected(QueryA)),
+  Case(GetOperation(<<QueryA>>, Name("B")), NotSelected),
+  Case(GetOperation(<<Anonymous>>, NoName), Selected(Anonymous)),
+  Case(GetOperation(<<Anonymous>>, Name("A")), NotSelected),
+  \* No operation at all, for example a document of fragments only.
+  Case(GetOperation(<<>>, NoName), NotSelected),
+  Case(GetOperation(<<QueryA, QueryB>>, NoName), NotSelected),
+  Case(GetOperation(<<QueryA, QueryB>>, Name("B")), Selected(QueryB)),
+  Case(GetOperation(<<QueryA, QueryB>>, Name("C")), NotSelected),
+  Case(GetOperation(<<Anonymous, QueryB>>, Name("B")), Selected(QueryB)),
+  Case(GetOperation(<<Anonymous, QueryB>>, NoName), NotSelected),
+  \* Only the selected operation's variables are coerced: B's Non-Null $x
+  \* is missing, which doesn't matter when A runs.
+  Case(ExecuteRequest(ExampleSchema, <<QueryA, QueryB>>, Name("A"), {}), Resolved({Entry("v", N(1))})),
+  Case(ExecuteRequest(ExampleSchema, <<QueryA, QueryB>>, Name("B"), {}), RequestError),
+  Case(ExecuteRequest(ExampleSchema, <<QueryA, QueryB>>, NoName, {}), RequestError)
+>>
+
 \* §7.1.3: what responses Valid accepts.
 Response(hasData, fieldIsNull, errors, called, args) ==
   [hasData |-> hasData, fieldIsNull |-> fieldIsNull, errors |-> errors, called |-> called, args |-> args]
@@ -712,7 +800,7 @@ ResponseCases == <<
 
 \* Each initial state checks one section of examples.
 VARIABLE section
-Sections == {"scalar", "enum", "list", "inputObject", "variables", "arguments", "response"}
+Sections == {"scalar", "enum", "list", "inputObject", "variables", "arguments", "operation", "response"}
 Init == section \in Sections
 Next == UNCHANGED section
 
@@ -722,5 +810,6 @@ ListExamples == section = "list" => Failing(ListCases) = {}
 InputObjectExamples == section = "inputObject" => Failing(InputObjectCases) = {}
 VariableExamples == section = "variables" => Failing(VariableCases) = {}
 ArgumentExamples == section = "arguments" => Failing(ArgumentCases) = {}
+OperationExamples == section = "operation" => Failing(OperationCases) = {}
 ResponseExamples == section = "response" => Failing(ResponseCases) = {}
 ====

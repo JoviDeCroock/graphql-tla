@@ -79,6 +79,9 @@ S == [description |-> <<"The schema">>, types |-> Doc,
                        [operation |-> "mutation", type |-> "M"]>>]
 
 B == SpecBuiltins
+\* A schema with nothing to deprecate, no custom scalar and no OneOf input.
+Plain == [S EXCEPT !.types = <<Ty("OBJECT", "Query", <<Fd("a", <<>>, T("Int", <<>>))>>, <<>>)>>,
+                   !.directives = <<>>]
 FS == Full(S, B)
 
 Result(inc) == SchemaResult(S, B, inc)
@@ -168,6 +171,19 @@ DeprecatedAreFiltered == ~done =>
   /\ Names(ByName(Result(FALSE).directives, "d").args) = <<"r">>
   /\ Names(ByName(Result(TRUE).directives, "d").args) = <<"r", "s">>
 
+\* §4.2's __type(name:): the named type's entry in types, or null for a name
+\* no type in the schema has.
+TypeLookupFindsTheNamedType == ~done =>
+  /\ \A inc \in BOOLEAN : \A n \in {"Query", "E", "In", "Node", "Float", "__TypeKind"} :
+       TypeByName(S, B, inc, n) = Some(ByName(Result(inc).types, Some(n)))
+  /\ TypeByName(S, B, FALSE, "Nope") = None
+  \* Without g, nothing refers to Float, so the schema has no Float.
+  /\ TypeByName([S EXCEPT !.types[1].fields = SubSeq(@, 1, 3)], B, FALSE, "Float") = None
+  /\ TypeByNameMatches(S, B, TRUE, "E", TypeByName(S, B, TRUE, "E"))
+  /\ ~TypeByNameMatches(S, B, TRUE, "E", TypeByName(S, B, FALSE, "E"))
+  /\ ~TypeByNameMatches(S, B, TRUE, "Nope", TypeByName(S, B, TRUE, "E"))
+  /\ ~TypeByNameMatches(S, B, TRUE, "E", None)
+
 -----------------------------------------------------------------------------
 (* §4.2's introspection schema and §3.13's built-in directives *)
 
@@ -192,6 +208,13 @@ BuiltinsFollowTheSpec == ~done =>
   \* __typename is a meta-field, not a field of any type.
   /\ \A t \in Range(Result(TRUE).types) :
        t.fields # None => "__typename" \notin Range(Names(t.fields[1]))
+  \* §3.13: @deprecated is a MUST for a schema that deprecates something.
+  \* @skip and @include are SHOULDs, and @specifiedBy and @oneOf SHOULDs for
+  \* a schema with a custom scalar or a OneOf input object.
+  /\ RequiredDirectiveNames(S) = {"deprecated"}
+  /\ RecommendedDirectiveNames(S) = {"skip", "include", "specifiedBy", "oneOf"}
+  /\ RequiredDirectiveNames(Plain) = {}
+  /\ RecommendedDirectiveNames(Plain) = {"skip", "include"}
 
 -----------------------------------------------------------------------------
 (* Comparing a service's result *)
@@ -211,6 +234,11 @@ WithG(e, default) ==
   EditType(e, "Query", LAMBDA t :
     [t EXCEPT !.fields[1][3].args[1].defaultValue = <<default>>])
 Judge(e) == Mismatches(S, B, FALSE, TRUE, Actual(e))
+\* A service's result without one of the built-in directives.
+JudgeWithout(name) ==
+  Mismatches(S, B, FALSE, TRUE,
+             [Actual(Result(FALSE)) EXCEPT !.directives = Without(@, {name}, 1, <<>>),
+                                           !.builtinDirectiveNames = @ \ {name}])
 
 ResultsAreJudged == ~done =>
   /\ Judge(Result(FALSE)) = {}
@@ -235,4 +263,13 @@ ResultsAreJudged == ~done =>
   /\ Judge([Result(FALSE) EXCEPT !.directives[1].isRepeatable = FALSE]) = {"directive d"}
   /\ Judge([Result(FALSE) EXCEPT !.mutationType = None]) = {"mutationType"}
   /\ "type names" \in Judge([Result(FALSE) EXCEPT !.types = Tail(@)])
+  \* A built-in type's lists have no source order.
+  /\ Judge(EditType(Result(FALSE), "__TypeKind", LAMBDA t : [t EXCEPT !.enumValues[1] = Reverse(@)])) = {}
+  /\ Judge(EditType(Result(FALSE), "__Type", LAMBDA t : [t EXCEPT !.fields[1] = Reverse(@)])) = {}
+  /\ Judge(EditType(Result(FALSE), "__TypeKind", LAMBDA t : [t EXCEPT !.enumValues[1] = Tail(@)])) = {"type __TypeKind"}
+  \* A service may leave out a built-in directive, but not @deprecated when
+  \* the schema deprecates something.
+  /\ JudgeWithout("skip") = {}
+  /\ JudgeWithout("oneOf") = {}
+  /\ JudgeWithout("deprecated") = {"required directives"}
 ====

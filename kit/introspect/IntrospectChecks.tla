@@ -9,17 +9,24 @@
 (* Ordering" is a SHOULD.                                                  *)
 (*                                                                         *)
 (* Where the spec lets a service differ from the reference's assumptions:  *)
-(*   - B, the built-ins, keeps only the built-in directives the service    *)
-(*     returned: the spec says a service "should provide" @skip, @include, *)
-(*     @specifiedBy and @oneOf, and "must provide" @deprecated when it     *)
-(*     represents deprecation. A missing one is a builtinDirectives        *)
-(*     problem, which Matches doesn't see.                                 *)
+(*   - Built-in directives: Introspection!Mismatches compares the result   *)
+(*     with SchemaResult for the built-in directives the service returned, *)
+(*     and requires only RequiredDirectiveNames (@deprecated, for a schema *)
+(*     that deprecates something). A missing directive of                  *)
+(*     RecommendedDirectiveNames is a builtinDirectives problem, a SHOULD, *)
+(*     which Matches doesn't see.                                          *)
 (*   - B also has any other directive the service provides ("GraphQL       *)
-(*     services and tools may also provide any additional custom           *)
-(*     directive"), as the service describes it, so that the types its     *)
-(*     arguments reference count as referenced.                            *)
+(*     services and client tooling may provide any additional custom       *)
+(*     directive"), as the service describes it, and the types its         *)
+(*     arguments reach that the document doesn't define (extraTypes), so   *)
+(*     that they count as the schema's types. They must be input types: a  *)
+(*     serviceTypes problem otherwise, which Matches doesn't see either.   *)
+(*   - Built-in types and directives have no source order, so their lists  *)
+(*     have no order problems.                                             *)
 (*   - __typename isn't in Matches: the root's __typename must name the    *)
 (*     query root type, and no fields list may contain __typename (§4.1).  *)
+(*   - __type(name:) results (lookup cases) are judged by                  *)
+(*     Introspection!TypeByNameMatches, item by item as for types.         *)
 (***************************************************************************)
 EXTENDS Introspection
 
@@ -46,9 +53,10 @@ MembershipProblems(aspect, where, e, a, dep) ==
 
 OrderProblems(where, e, a) == IF NamesOf(e) = NamesOf(a) THEN {} ELSE {P("order", where)}
 
-ListProblems(aspect, where, e, a, dep) ==
+\* `ordered`: whether the list has a source order.
+ListProblems(aspect, where, e, a, dep, ordered) ==
   LET m == MembershipProblems(aspect, where, e, a, dep) IN
-  IF m # {} THEN m ELSE OrderProblems(where, e, a)
+  IF m # {} \/ ~ordered THEN m ELSE OrderProblems(where, e, a)
 
 DescriptionProblems(where, e, a) ==
   IF DescriptionMatches(e.description, a.description) THEN {} ELSE {P("description", where)}
@@ -65,16 +73,16 @@ InputValueProblems(FS, aspect, where, e, a) ==
   \cup DeprecationProblems(where, e, a)
 
 \* A list of arguments (open "(", close ":)") or input fields (".", "").
-InputValuesProblems(FS, aspect, where, open, close, defs, e, a) ==
-  ListProblems(aspect, where, e, a, DeprecatedNames(defs))
+InputValuesProblems(FS, ordered, aspect, where, open, close, defs, e, a) ==
+  ListProblems(aspect, where, e, a, DeprecatedNames(defs), ordered)
   \cup UNION {InputValueProblems(FS, aspect, where \o open \o n \o close, ByName(e, n), ByName(a, n)) :
                 n \in Common(e, a)}
 
-FieldProblems(FS, where, def, e, a) ==
+FieldProblems(FS, ordered, where, def, e, a) ==
   (IF e.type = a.type THEN {} ELSE {P("fields", where)})
   \cup DescriptionProblems(where, e, a)
   \cup DeprecationProblems(where, e, a)
-  \cup InputValuesProblems(FS, "arguments", where, "(", ":)", def.args, e.args, a.args)
+  \cup InputValuesProblems(FS, ordered, "arguments", where, "(", ":)", def.args, e.args, a.args)
 
 \* interfaces and possibleTypes: refs, in order when there is a source order.
 RefsProblems(aspect, where, e, a, ordered) ==
@@ -94,7 +102,9 @@ KindMismatch(e, a) ==
   \/ e.kind # "SCALAR" /\ ~IsNull(a.specifiedByURL)
 
 TypeProblems(FS, T, e, a) ==
-  LET n == T.name IN
+  LET n == T.name
+      ordered == ~IsBuiltinTypeName(n)
+  IN
   IF KindMismatch(e, a) THEN {P("kind", n)}
   ELSE
     DescriptionProblems(n, e, a)
@@ -104,20 +114,20 @@ TypeProblems(FS, T, e, a) ==
           ELSE LET ef == e.fields[1]
                    af == Without(a.fields[1], {"__typename"}, 1, <<>>)
                IN (IF Len(af) = Len(a.fields[1]) THEN {} ELSE {P("typename", n)})
-                  \cup ListProblems("fields", n, ef, af, DeprecatedNames(T.fields))
-                  \cup UNION {FieldProblems(FS, n \o "." \o f, FieldNamed(T, f), ByName(ef, f), ByName(af, f)) :
+                  \cup ListProblems("fields", n, ef, af, DeprecatedNames(T.fields), ordered)
+                  \cup UNION {FieldProblems(FS, ordered, n \o "." \o f, FieldNamed(T, f), ByName(ef, f), ByName(af, f)) :
                                 f \in Common(ef, af)})
     \cup (IF IsNull(e.inputFields) THEN {}
-          ELSE InputValuesProblems(FS, "inputFields", n, ".", "", T.inputFields, e.inputFields[1], a.inputFields[1]))
+          ELSE InputValuesProblems(FS, ordered, "inputFields", n, ".", "", T.inputFields, e.inputFields[1], a.inputFields[1]))
     \cup (IF IsNull(e.enumValues) THEN {}
           ELSE LET ev == e.enumValues[1]
                    av == a.enumValues[1]
-               IN ListProblems("enumValues", n, ev, av, DeprecatedNames(T.values))
+               IN ListProblems("enumValues", n, ev, av, DeprecatedNames(T.values), ordered)
                   \cup UNION {DescriptionProblems(n \o "." \o v, ByName(ev, v), ByName(av, v))
                               \cup DeprecationProblems(n \o "." \o v, ByName(ev, v), ByName(av, v)) :
                                 v \in Common(ev, av)})
     \cup (IF IsNull(e.interfaces) THEN {}
-          ELSE RefsProblems("interfaces", n, e.interfaces[1], a.interfaces[1], TRUE))
+          ELSE RefsProblems("interfaces", n, e.interfaces[1], a.interfaces[1], ordered))
     \cup (IF IsNull(e.possibleTypes) THEN {}
           ELSE RefsProblems("interfaces", n, e.possibleTypes[1], a.possibleTypes[1], T.kind = "UNION"))
 
@@ -127,29 +137,36 @@ DirectiveProblems(FS, D, e, a) ==
   \cup (IF e.isRepeatable = a.isRepeatable
            /\ Len(e.locations) = Len(a.locations) /\ Range(e.locations) = Range(a.locations)
         THEN {} ELSE {P("directives", w)})
-  \cup InputValuesProblems(FS, "arguments", w, "(", ":)", D.args, e.args, a.args)
+  \cup InputValuesProblems(FS, ~IsBuiltinDirectiveName(D.name), "arguments", w, "(", ":)", D.args, e.args, a.args)
   \cup DeprecationProblems(w, e, a)
 
-\* The built-ins a service provides: the spec's introspection types, the
-\* spec's built-in directives it returned (`provided`), and its own
-\* directives (`extras`).
-ServiceBuiltins(provided, extras) ==
-  [types |-> IntrospectionTypes,
-   directives |-> Without(BuiltinDirectives, BuiltinDirectiveNames(SpecBuiltins) \ provided, 1, <<>>) \o extras]
+\* The built-ins a service may provide: the spec's introspection types and
+\* built-in directives, its own directives (`extras`), and the types their
+\* arguments reach that the document doesn't define (`extraTypes`).
+\* Introspection!Providing keeps the built-in directives it returned.
+ServiceBuiltins(extras, extraTypes) ==
+  [types |-> IntrospectionTypes \o extraTypes,
+   directives |-> BuiltinDirectives \o extras]
+
+InputKinds == {"SCALAR", "ENUM", "INPUT_OBJECT"}
 
 \* What is wrong with `actual`, a full __schema result (built-ins included)
-\* plus `typename`, the root's __typename.
-Problems(S, B, inc, actual) ==
-  LET FS == Full(S, B)
-      expected == SchemaResult(S, B, inc)
-      en == TypeNames(S, B)
+\* plus `typename`, the root's __typename. extraTypes are the service's
+\* types that B also has.
+Problems(S, B, extraTypes, inc, actual) ==
+  LET P0 == Providing(B, actual.builtinDirectiveNames)
+      FS == Full(S, P0)
+      expected == SchemaResult(S, P0, inc)
+      en == TypeNames(S, P0)
       an == {u.name[1] : u \in {t \in Range(actual.types) : Len(t.name) = 1}}
       diff == (en \ an) \cup (an \ en)
       ed == expected.directives
       ad == actual.directives
       builtinNames == BuiltinDirectiveNames(B)
       membership == MembershipProblems("directives", "", ed, ad, DeprecatedNames(FS.directives))
-      missing == {d.name : d \in Range(VisibleOf(inc, BuiltinDirectives))} \ NameSet(ad)
+      returned == NameSet(ad)
+      required == RequiredDirectiveNames(S)
+      badTypes == {T.name : T \in {U \in Range(extraTypes) : U.kind \notin InputKinds}}
   IN
   (IF DescriptionMatches(expected.description, actual.description) THEN {} ELSE {P("description", "schema")})
   \cup (IF /\ expected.queryType = actual.queryType
@@ -161,15 +178,32 @@ Problems(S, B, inc, actual) ==
         THEN {} ELSE {P("types", "")})
   \cup {P(IF x \in BuiltinScalarNames THEN "builtinScalars" ELSE "types", x) : x \in diff}
   \cup UNION {TypeProblems(FS, TypeNamed(FS, x), ByName(expected.types, <<x>>), ByName(actual.types, <<x>>)) :
-                x \in en \cap an}
+                x \in (en \cap an) \ badTypes}
+  \cup {P("serviceTypes", x) : x \in badTypes}
   \cup membership
   \cup (IF membership # {} THEN {}
         ELSE OrderProblems("directives", Without(ed, builtinNames, 1, <<>>), Without(ad, builtinNames, 1, <<>>)))
-  \cup {P("builtinDirectives", "@" \o d) : d \in missing}
+  \cup {P("requiredDirective", "@" \o d) : d \in required \ returned}
+  \cup {P("builtinDirectives", "@" \o d) : d \in RecommendedDirectiveNames(S) \ (returned \cup required)}
   \cup UNION {DirectiveProblems(FS, DirectiveNamed(FS, d), ByName(ed, d), ByName(ad, d)) : d \in Common(ed, ad)}
+
+\* What is wrong with a sequence of __type(name:) results, each
+\* [name, result] with result an optional __Type.
+LookupProblems(S, B, inc, lookups) ==
+  LET FS == Full(S, B) IN
+  UNION {LET l == lookups[i]
+             e == TypeByName(S, B, inc, l.name)
+         IN IF e = None /\ l.result = None THEN {}
+            ELSE IF e = None \/ l.result = None \/ l.result[1].name # Some(l.name)
+            THEN {P("typeByName", l.name)}
+            ELSE TypeProblems(FS, TypeNamed(FS, l.name), e[1], l.result[1]) :
+         i \in DOMAIN lookups}
 
 \* The reference's verdict on a case, and the problems behind it.
 CaseResult(S, c) ==
-  LET B == ServiceBuiltins(c.provided, c.extras) IN
-  <<Problems(S, B, c.inc, c.actual), Matches(S, B, c.inc, TRUE, c.actual)>>
+  IF c.kind = "lookup"
+  THEN <<LookupProblems(S, SpecBuiltins, c.inc, c.actual),
+         \A i \in DOMAIN c.actual : TypeByNameMatches(S, SpecBuiltins, c.inc, c.actual[i].name, c.actual[i].result)>>
+  ELSE LET B == ServiceBuiltins(c.extras, c.extraTypes) IN
+       <<Problems(S, B, c.extraTypes, c.inc, c.actual), Matches(S, B, c.inc, TRUE, c.actual)>>
 ====

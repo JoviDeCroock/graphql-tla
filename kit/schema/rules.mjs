@@ -1,5 +1,21 @@
-// The schema area's checks: one per rule in TypeSystem!Rules, by the §3
-// section that states it. Every rule is a MUST.
+// The schema area's checks: one per rule in TypeSystem!Rules, by the
+// section that states it. Every rule is a MUST. ENUM_VALUE_NAME_RESERVED
+// rests on §4's Reserved Names paragraph, since §3.9 says nothing about
+// "__".
+//
+// DRAFT names the rules the October 2021 edition doesn't have, and the
+// feature each comes with. Their checks, vectors and findings carry
+// `edition: "draft"`.
+
+export const DRAFT = {
+  REQUIRED_ARG_NOT_DEPRECATED: "deprecated arguments",
+  ARG_DEFAULT_COMPATIBLE: "default value validation",
+  IMPL_DEPRECATION: "deprecation of implementing fields",
+  REQUIRED_INPUT_FIELD_NOT_DEPRECATED: "deprecated input fields",
+  ONEOF_FIELD_NULLABLE: "OneOf input objects",
+  ONEOF_FIELD_NO_DEFAULT: "OneOf input objects",
+  INPUT_OBJECT_DEFAULT_VALUE_CYCLE: "default value validation",
+};
 
 export const RULES = [
   ["TYPE_NAMES_UNIQUE", "typeNamesUnique", "No two types have the same name", ["3.3"]],
@@ -34,7 +50,7 @@ export const RULES = [
   ["UNION_MEMBERS_OBJECTS", "unionMembersObjects", "A union's member types are object types", ["3.8"]],
   ["ENUM_VALUES_DEFINED", "enumValuesDefined", "An enum has one or more values", ["3.9"]],
   ["ENUM_VALUES_UNIQUE", "enumValuesUnique", "An enum's values are unique", ["3.9"]],
-  ["ENUM_VALUE_NAME_RESERVED", "enumValueNameReserved", "No enum value begins with __", ["3.9"]],
+  ["ENUM_VALUE_NAME_RESERVED", "enumValueNameReserved", "No enum value begins with __", ["4"]],
   ["INPUT_FIELDS_DEFINED", "inputFieldsDefined", "An input object has one or more fields", ["3.10"]],
   ["INPUT_FIELD_NAMES_UNIQUE", "inputFieldNamesUnique", "Input field names are unique within an input object", ["3.10"]],
   ["INPUT_FIELD_NAME_RESERVED", "inputFieldNameReserved", "No input field name begins with __", ["3.10"]],
@@ -52,7 +68,7 @@ export const RULES = [
     "A directive definition doesn't reference itself through a type or directive",
     ["3.13"],
   ],
-].map(([rule, id, title, spec]) => ({ rule, id, title, level: "MUST", spec }));
+].map(([rule, id, title, spec]) => ({ rule, id, title, level: "MUST", spec, ...(DRAFT[rule] ? { edition: "draft", draft: DRAFT[rule] } : {}) }));
 
 export const RULE = new Map(RULES.map((r) => [r.rule, r]));
 

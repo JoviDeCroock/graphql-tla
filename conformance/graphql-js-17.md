@@ -4,7 +4,7 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 
 **Notes** (hand-written, from outside the kit):
 
-- The kit doesn't cover parsing, validation, coercion or schema validity yet. graphql-js is checked against those references by the differential scripts, which document where it departs from the draft: [lexer and parser](../scripts/differential-lexer.mjs) (`KNOWN`), [validation](../scripts/differential-validation.mjs) (`DISCREPANCIES`), [coercion](../scripts/differential-coercion.mjs) (`KNOWN`) and [type system](../scripts/differential-type-system.mjs) (`VALIDATION_DEVIATIONS`).
+- The differential scripts check graphql-js against the references more broadly than the kit's vectors, and document where it departs from the draft: [lexer and parser](../scripts/differential-lexer.mjs) (`KNOWN`), [validation](../scripts/differential-validation.mjs) (`DISCREPANCIES`), [coercion](../scripts/differential-coercion.mjs) (`KNOWN`) and [type system](../scripts/differential-type-system.mjs) (`VALIDATION_DEVIATIONS`).
 - Behaviour outside the kit's fixtures is described in the README's [What graphql-js does](../README.md#what-graphql-js-does).
 
 ## Execution
@@ -24,6 +24,7 @@ None.
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
 - **~:** inconclusive (see the implementation's page).
+- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
 - **n/a:** the adapter doesn't take part in this area.
 
@@ -101,6 +102,7 @@ expected: {"ok":true}
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
 - **~:** inconclusive (see the implementation's page).
+- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
 - **n/a:** the adapter doesn't take part in this area.
 
@@ -235,6 +237,7 @@ expected: valid
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
 - **~:** inconclusive (see the implementation's page).
+- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
 - **n/a:** the adapter doesn't take part in this area.
 
@@ -398,6 +401,7 @@ expected: a request error
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
 - **~:** inconclusive (see the implementation's page).
+- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
 - **n/a:** the adapter doesn't take part in this area.
 
@@ -487,6 +491,7 @@ expected: invalid: breaks DIRECTIVE_USES_ITSELF and no other rule
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
 - **~:** inconclusive (see the implementation's page).
+- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
 - **n/a:** the adapter doesn't take part in this area.
 
@@ -570,6 +575,7 @@ expected: [object Object]
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
 - **~:** inconclusive (see the implementation's page).
+- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
 - **n/a:** the adapter doesn't take part in this area.
 

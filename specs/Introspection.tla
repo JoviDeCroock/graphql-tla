@@ -29,12 +29,17 @@
 (* How a result from a service is compared with the expected one           *)
 (* (Matches, at the end):                                                  *)
 (*   - `types` is "the set of all named types": compared as a set, by name. *)
-(*   - "Stable Ordering": "introspection should return items in the same   *)
+(*   - "Stable Ordering": "When a schema is produced from a                *)
+(*     TypeSystemDocument, introspection should return items in the same   *)
 (*     source order for each element list: object fields, input object    *)
 (*     fields, arguments, enum values, directives, union member types, and *)
-(*     implemented interfaces." Those lists are compared in order. For     *)
-(*     directives that is the order of the ones in the document; built-in *)
-(*     directives have no source position, and may come anywhere.         *)
+(*     implemented interfaces." Those lists are compared in order where   *)
+(*     the document gives the order. Built-in types and directives have no *)
+(*     source position: their lists are compared by name, and the built-in *)
+(*     directives may come anywhere among the directives.                  *)
+(*   - Built-in directives: a service may leave out any but the ones       *)
+(*     §3.13 says it must provide (RequiredDirectiveNames). The result is  *)
+(*     compared with SchemaResult for the built-ins it did return.         *)
 (*   - An interface's `possibleTypes` and a directive's `locations` have   *)
 (*     no source order, and are compared as sets.                          *)
 (*   - The spec gives no descriptions for built-in definitions, so their   *)
@@ -143,11 +148,9 @@ BuiltinDirective(name, args, locations) ==
    repeatable |-> FALSE, locations |-> locations, deprecated |-> <<>>,
    directives |-> {}]
 
-\* §3.13's built-in directives. "GraphQL implementations should provide the
-\* @skip and @include directives", "must provide the @deprecated directive
-\* if representing deprecated portions of the schema", and "should provide"
-\* @specifiedBy and @oneOf. This reference assumes a service provides all
-\* five, as graphql-js does.
+\* §3.13's built-in directives. A service needn't provide all five:
+\* RequiredDirectiveNames and RecommendedDirectiveNames below say which it
+\* must and should provide, and Mismatches allows the others to be absent.
 BuiltinDirectives == <<
   BuiltinDirective("skip", <<BuiltinInputValue("if", NN("Boolean"), None)>>,
                    <<"FIELD", "FRAGMENT_SPREAD", "INLINE_FRAGMENT">>),
@@ -169,6 +172,36 @@ SpecBuiltins == [types |-> IntrospectionTypes, directives |-> BuiltinDirectives]
 
 BuiltinDirectiveNames(B) == Range(NamesOf(B.directives))
 IsBuiltinTypeName(name) == name \in BuiltinScalarNames \cup IntrospectionTypeNames
+IsBuiltinDirectiveName(name) == name \in BuiltinDirectiveNames(SpecBuiltins)
+
+\* Whether S deprecates anything: a field, an argument, an input field, an
+\* enum value or a directive.
+Deprecates(S) ==
+  \/ \E T \in Range(S.types) :
+       \/ \E k \in DOMAIN T.fields :
+            \/ IsDeprecated(T.fields[k])
+            \/ \E j \in DOMAIN T.fields[k].args : IsDeprecated(T.fields[k].args[j])
+       \/ \E k \in DOMAIN T.inputFields : IsDeprecated(T.inputFields[k])
+       \/ \E k \in DOMAIN T.values : IsDeprecated(T.values[k])
+  \/ \E D \in Range(S.directives) :
+       IsDeprecated(D) \/ \E j \in DOMAIN D.args : IsDeprecated(D.args[j])
+
+\* §3.13: "GraphQL implementations that support the type system definition
+\* language must provide the @deprecated directive if representing
+\* deprecated portions of the schema." Every schema here comes from the
+\* type system definition language. No other built-in directive is a MUST.
+RequiredDirectiveNames(S) == IF Deprecates(S) THEN {"deprecated"} ELSE {}
+
+\* The built-in directives a service should provide for S: "GraphQL
+\* implementations should provide the @skip and @include directives", and
+\* implementations that support the type system definition language
+\* "should provide the @specifiedBy directive if representing custom scalar
+\* definitions" and "should provide the @oneOf directive if representing
+\* OneOf Input Objects". Matches doesn't require these: it judges MUSTs.
+RecommendedDirectiveNames(S) ==
+  {"skip", "include"}
+  \cup (IF \E T \in Range(S.types) : T.kind = "SCALAR" THEN {"specifiedBy"} ELSE {})
+  \cup (IF \E T \in Range(S.types) : T.kind = "INPUT_OBJECT" /\ T.oneOf THEN {"oneOf"} ELSE {})
 
 -----------------------------------------------------------------------------
 (* The types in the schema *)
@@ -342,6 +375,16 @@ SchemaResult(S, B, inc) ==
    \* directives are also returned."
    directives |-> [i \in DOMAIN directives |-> DirectiveResult(FS, directives[i], inc)]]
 
+\* §4.2: "__type(name: String!): __Type", the other meta-field of the query
+\* root. Its result for a name is that type's entry in SchemaResult's types,
+\* and null for a name no type in the schema has, such as a built-in scalar
+\* nothing references. inc is the includeDeprecated argument the __Type's
+\* lists were selected with.
+TypeByName(S, B, inc, name) ==
+  IF name \in TypeNames(S, B)
+  THEN Some(TypeResult(Full(S, B), TypeNamed(Full(S, B), name), inc))
+  ELSE None
+
 -----------------------------------------------------------------------------
 (* Comparing a service's result with the expected one *)
 
@@ -364,13 +407,24 @@ InputValueMatches(FS, e, a) ==
   /\ e.isDeprecated = a.isDeprecated
   /\ e.deprecationReason = a.deprecationReason
 
-InputValuesMatch(FS, e, a) ==
-  Len(e) = Len(a) /\ \A i \in DOMAIN e : InputValueMatches(FS, e[i], a[i])
+ByName(seq, name) == seq[CHOOSE i \in DOMAIN seq : seq[i].name = name]
 
-FieldMatches(FS, e, a) ==
+\* Two lists whose items match: in order when the list has a source order,
+\* otherwise by name, each once. e's names are unique.
+ListMatches(e, a, ordered, ItemMatches(_, _)) ==
+  /\ Len(e) = Len(a)
+  /\ IF ordered
+     THEN \A i \in DOMAIN e : ItemMatches(e[i], a[i])
+     ELSE /\ Range(NamesOf(e)) = Range(NamesOf(a))
+          /\ \A i \in DOMAIN e : ItemMatches(e[i], ByName(a, e[i].name))
+
+InputValuesMatch(FS, ordered, e, a) ==
+  ListMatches(e, a, ordered, LAMBDA x, y : InputValueMatches(FS, x, y))
+
+FieldMatches(FS, ordered, e, a) ==
   /\ e.name = a.name
   /\ DescriptionMatches(e.description, a.description)
-  /\ InputValuesMatch(FS, e.args, a.args)
+  /\ InputValuesMatch(FS, ordered, e.args, a.args)
   /\ e.type = a.type
   /\ e.isDeprecated = a.isDeprecated
   /\ e.deprecationReason = a.deprecationReason
@@ -381,26 +435,26 @@ EnumValueMatches(e, a) ==
   /\ e.isDeprecated = a.isDeprecated
   /\ e.deprecationReason = a.deprecationReason
 
-\* An optional list: both null, or both lists whose items match in order.
-OptionalListMatches(e, a, ItemMatches(_, _)) ==
+\* An optional list: both null, or both lists whose items match.
+OptionalListMatches(e, a, ordered, ItemMatches(_, _)) ==
   \/ e = None /\ a = None
-  \/ /\ Len(e) = 1 /\ Len(a) = 1
-     /\ Len(e[1]) = Len(a[1])
-     /\ \A i \in DOMAIN e[1] : ItemMatches(e[1][i], a[1][i])
+  \/ Len(e) = 1 /\ Len(a) = 1 /\ ListMatches(e[1], a[1], ordered, ItemMatches)
 
 \* The same refs, in any order, each once.
 SameRefSet(e, a) == Len(e) = Len(a) /\ Range(e) = Range(a)
 
+\* A built-in type's lists have no source order.
 TypeMatches(FS, e, a) ==
+  LET ordered == ~IsBuiltinTypeName(e.name[1]) IN
   /\ e.kind = a.kind
   /\ e.name = a.name
   /\ DescriptionMatches(e.description, a.description)
   /\ e.specifiedByURL = a.specifiedByURL
   /\ e.isOneOf = a.isOneOf
-  /\ OptionalListMatches(e.fields, a.fields, LAMBDA x, y : FieldMatches(FS, x, y))
-  /\ OptionalListMatches(e.inputFields, a.inputFields, LAMBDA x, y : InputValueMatches(FS, x, y))
+  /\ OptionalListMatches(e.fields, a.fields, ordered, LAMBDA x, y : FieldMatches(FS, ordered, x, y))
+  /\ OptionalListMatches(e.inputFields, a.inputFields, ordered, LAMBDA x, y : InputValueMatches(FS, x, y))
   /\ e.interfaces = a.interfaces
-  /\ OptionalListMatches(e.enumValues, a.enumValues, LAMBDA x, y : EnumValueMatches(x, y))
+  /\ OptionalListMatches(e.enumValues, a.enumValues, ordered, LAMBDA x, y : EnumValueMatches(x, y))
   /\ IF e.kind = "INTERFACE"
      THEN Len(e.possibleTypes) = 1 /\ Len(a.possibleTypes) = 1
           /\ SameRefSet(e.possibleTypes[1], a.possibleTypes[1])
@@ -411,9 +465,16 @@ DirectiveMatches(FS, e, a) ==
   /\ DescriptionMatches(e.description, a.description)
   /\ e.isRepeatable = a.isRepeatable
   /\ Len(e.locations) = Len(a.locations) /\ Range(e.locations) = Range(a.locations)
-  /\ InputValuesMatch(FS, e.args, a.args)
+  /\ InputValuesMatch(FS, ~IsBuiltinDirectiveName(e.name), e.args, a.args)
   /\ e.isDeprecated = a.isDeprecated
   /\ e.deprecationReason = a.deprecationReason
+
+\* Whether a service's __type(name:) result `actual` (an optional __Type)
+\* is right.
+TypeByNameMatches(S, B, inc, name, actual) ==
+  LET e == TypeByName(S, B, inc, name) IN
+  \/ e = None /\ actual = None
+  \/ e # None /\ actual # None /\ TypeMatches(Full(S, B), e[1], actual[1])
 
 RECURSIVE Without(_, _, _, _), TypesWithout(_, _, _, _)
 \* The items of seq whose name isn't in names, in order.
@@ -426,21 +487,26 @@ TypesWithout(seq, names, i, acc) ==
   ELSE TypesWithout(seq, names, i + 1,
                     IF seq[i].name # None /\ seq[i].name[1] \in names THEN acc ELSE Append(acc, seq[i]))
 
-ByName(seq, name) == seq[CHOOSE i \in DOMAIN seq : seq[i].name = name]
+\* B without the directives a service left out: those of B not in names.
+Providing(B, names) ==
+  [B EXCEPT !.directives = Without(@, BuiltinDirectiveNames(B) \ names, 1, <<>>)]
 
 \* What is wrong with a service's __schema result `actual` for S, B and
 \* includeDeprecated: the names of the parts that don't match. actual has
 \* the shape of SchemaResult, plus builtinTypeNames and
 \* builtinDirectiveNames: the names of the built-in types and directives it
-\* returned. When full is FALSE, actual.types and actual.directives hold only
-\* the document's own types and directives, so that a differential needn't
-\* repeat the built-ins for every schema; the built-ins are then compared by
-\* name only.
+\* returned. B holds the built-in directives a service may provide; the
+\* result is compared with SchemaResult for those it returned (P), and must
+\* have the ones §3.13 requires. When full is FALSE, actual.types and
+\* actual.directives hold only the document's own types and directives, so
+\* that a differential needn't repeat the built-ins for every schema; the
+\* built-ins are then compared by name only.
 Mismatches(S, B, inc, full, actual) ==
-  LET FS == Full(S, B)
-      expected == SchemaResult(S, B, inc)
-      builtinTypes == {n \in TypeNames(S, B) : IsBuiltinTypeName(n)}
-      builtinDirectives == {d.name : d \in Range(VisibleOf(inc, B.directives))}
+  LET P == Providing(B, actual.builtinDirectiveNames)
+      FS == Full(S, P)
+      expected == SchemaResult(S, P, inc)
+      builtinTypes == {n \in TypeNames(S, P) : IsBuiltinTypeName(n)}
+      builtinDirectives == {d.name : d \in Range(VisibleOf(inc, P.directives))}
       expectedTypes == IF full THEN expected.types
                        ELSE TypesWithout(expected.types, builtinTypes, 1, <<>>)
       typeNames == {t.name[1] : t \in Range(expectedTypes)}
@@ -464,6 +530,7 @@ Mismatches(S, B, inc, full, actual) ==
                  u.name[1] \in actualTypeNames /\ ~TypeMatches(FS, u, ByName(actual.types, u.name))}}
   \* directives: the same set of names, each once; the document's in order
   \cup Check(actual.builtinDirectiveNames = builtinDirectives, "builtin directive names")
+  \cup Check(RequiredDirectiveNames(S) \subseteq actual.builtinDirectiveNames, "required directives")
   \cup Check(/\ Len(actual.directives) = Len(expectedDirectives)
              /\ Range(NamesOf(actual.directives)) = directiveNames, "directive names")
   \cup {"directive " \o d.name :

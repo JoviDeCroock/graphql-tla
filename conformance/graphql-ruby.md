@@ -54,6 +54,7 @@ response: {"data":{"search":null,"matrix":[[1]]}}
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
 - **~:** inconclusive (see the implementation's page).
+- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
 - **n/a:** the adapter doesn't take part in this area.
 

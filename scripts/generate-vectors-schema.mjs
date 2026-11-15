@@ -11,11 +11,17 @@
 // hand-written cases and scenario families) and from the spec's own
 // examples, which specs/TypeSystemVectors.tla also checks.
 //
+// A vector whose rule (kit/schema/rules.mjs DRAFT) or SDL syntax the
+// October 2021 edition doesn't have gets `edition: "draft"`, with the
+// features in `editionNote`: @oneOf, @deprecated on an argument or input
+// field, and directives on a directive definition are draft syntax.
+//
 // Usage: node scripts/generate-vectors-schema.mjs [--check]
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import * as graphql from "graphql17";
 import { RULE, RULES, UNWRITABLE } from "../kit/schema/rules.mjs";
 import { chunked, evaluateModule, moduleFooter, pool, schemaData, tla } from "../kit/schema/tla.mjs";
 
@@ -257,6 +263,27 @@ const PAIRS = [
 
 const SHARD = 60;
 
+// The draft-only syntax an SDL document uses.
+const draftSyntax = (sdl) => {
+  const out = new Set();
+  const deprecated = (node) => (node.directives ?? []).some((d) => d.name.value === "deprecated");
+  for (const def of graphql.parse(sdl).definitions) {
+    if ((def.directives ?? []).some((d) => d.name.value === "oneOf")) out.add("OneOf input objects");
+    if (def.kind === "DirectiveDefinition" && (def.directives ?? []).length > 0) out.add("directives on directive definitions");
+    const args = def.kind === "DirectiveDefinition" ? (def.arguments ?? []) : (def.fields ?? []).flatMap((f) => f.arguments ?? []);
+    if (args.some(deprecated)) out.add("deprecated arguments");
+    if (def.kind === "InputObjectTypeDefinition" && (def.fields ?? []).some(deprecated)) out.add("deprecated input fields");
+  }
+  return out;
+};
+
+// `edition` and `editionNote` for a vector, if anything in it is
+// draft-only.
+const editionOf = (rule, sdl) => {
+  const draft = [...new Set([...(rule.draft ? [rule.draft] : []), ...draftSyntax(sdl)])].sort();
+  return draft.length ? { edition: "draft", editionNote: `new in the draft: ${draft.join(", ")}` } : {};
+};
+
 const generate = async () => {
   const sdls = PAIRS.flatMap(([, , invalid, valid]) => [invalid, valid]);
   const data = sdls.map(schemaData);
@@ -291,8 +318,8 @@ ${moduleFooter}`;
     const base = `${r.id}.${n}`;
     const common = { spec: r.spec, family, rule, ...(origin ? { origin } : {}) };
     vectors.push(
-      { id: `${base}.invalid`, ...common, pair: `${base}.valid`, sdl: invalid, verdict: bad, expected: { valid: false } },
-      { id: `${base}.valid`, ...common, pair: `${base}.invalid`, sdl: valid, verdict: good, expected: { valid: true } },
+      { id: `${base}.invalid`, ...common, ...editionOf(r, invalid), pair: `${base}.valid`, sdl: invalid, verdict: bad, expected: { valid: false } },
+      { id: `${base}.valid`, ...common, ...editionOf(r, valid), pair: `${base}.invalid`, sdl: valid, verdict: good, expected: { valid: true } },
     );
   });
   if (problems.length > 0) throw new Error(problems.join("\n"));

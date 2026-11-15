@@ -31,7 +31,9 @@
 //
 //   --mutants  also applies each mutant in specs/coercion.mutants.mjs to a
 //              copy of Coercion.tla, and checks that the differential then
-//              fails.
+//              fails. Mutants marked `differential: false` are skipped: they
+//              break GetOperation or a policy switch, which one operation
+//              per document under the default policy never reaches.
 
 import { spawn } from "node:child_process";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -579,8 +581,10 @@ if (failures.length === 0) {
 console.log(`  (${((Date.now() - started) / 1000).toFixed(1)}s)`);
 
 if (process.argv.includes("--mutants")) {
-  const mutants = (await import(pathToFileURL(join(root, "specs/coercion.mutants.mjs")).href)).default;
+  const all = (await import(pathToFileURL(join(root, "specs/coercion.mutants.mjs")).href)).default;
+  const mutants = all.filter((m) => m.differential !== false);
   console.log("\nMutants of Coercion.tla");
+  for (const m of all.filter((x) => x.differential === false)) console.log(`- ${m.name}: not reachable from the differential`);
   const results = new Array(mutants.length);
   let next = 0;
   await Promise.all(

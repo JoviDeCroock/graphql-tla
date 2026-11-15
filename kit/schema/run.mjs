@@ -3,11 +3,18 @@
 // TypeSystem!Verdict (scripts/generate-vectors-schema.mjs), so a wrong
 // answer names the rule: an accepted invalid schema means the rule isn't
 // enforced, a rejected valid sibling means it's over-strict.
+//
+// A crash is a third kind of failure. The kit can only see one when the
+// adapter answers a vector with an `error` message instead of a result:
+// an implementation that throws inside schema building, and whose adapter
+// reports that as an error, crashes. An adapter that turns every exception
+// into `valid: false` hides its crashes as rejections, which pass on
+// invalid schemas and look over-strict on valid ones.
 
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ask } from "../areas.mjs";
+import { AdapterError, ask } from "../areas.mjs";
 import { REPORT_FORMAT, provenance, section } from "../report.mjs";
 import { RULE, RULES, UNWRITABLE } from "./rules.mjs";
 
@@ -17,9 +24,29 @@ export const loadVectors = () => JSON.parse(readFileSync(join(root, "kit/schema/
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-// What one answer says about one vector: "pass", "malformed", or the way
-// it fails its rule.
+// An adapter's `error` answer to a vector: its message's first line, so
+// that a stack trace with local paths doesn't reach the report.
+export class Crash {
+  constructor(message) {
+    this.message = String(message).split("\n")[0].trim().slice(0, 200);
+  }
+}
+
+// The adapter's answer to one vector, or a Crash. Any other failure, such
+// as a silent adapter, still stops the run.
+const answer = async (adapter, sdl) => {
+  try {
+    return await ask(adapter, "schema", { sdl });
+  } catch (error) {
+    if (!(error instanceof AdapterError)) throw error;
+    return new Crash(error.adapterMessage);
+  }
+};
+
+// What one answer says about one vector: "pass", "malformed", "crash", or
+// the way it fails its rule.
 export const judge = (vector, answer) => {
+  if (answer instanceof Crash) return "crash";
   if (answer === null || typeof answer !== "object" || typeof answer.valid !== "boolean") return "malformed";
   if (answer.valid === vector.expected.valid) return "pass";
   return vector.expected.valid ? "over-strict" : "not enforced";
@@ -28,6 +55,8 @@ export const judge = (vector, answer) => {
 const SUMMARY = {
   "not enforced": (r) => `${r.rule} not enforced: accepts a schema that breaks only this rule`,
   "over-strict": (r) => `${r.rule} over-strict: rejects a valid schema one small edit away from one that breaks it`,
+  "crash valid": (r) => `${r.rule}: crashes on a valid schema one small edit away from one that breaks it, instead of accepting it`,
+  "crash invalid": (r) => `${r.rule}: crashes on a schema that breaks only this rule, instead of rejecting it`,
 };
 
 // The checker's self-test: deliberately wrong answers it must flag, and
@@ -47,6 +76,13 @@ const selfTest = (vectors) => {
   });
   controls++;
   if (judge(vectors[0], { valid: "yes" }) !== "malformed") problems.push("an answer without a boolean `valid` wasn't flagged");
+  // A crash fails a valid and an invalid schema alike, whatever else the
+  // answer says.
+  for (const v of [vectors.find((x) => x.expected.valid), vectors.find((x) => !x.expected.valid)]) {
+    controls++;
+    const crash = Object.assign(new Crash("RangeError: Maximum call stack size exceeded"), { valid: v.expected.valid });
+    if (judge(v, crash) !== "crash") problems.push(`a crash on ${v.id} wasn't flagged as a crash`);
+  }
   return { problems, controls };
 };
 
@@ -61,6 +97,7 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
       const key = "malformed";
       const f = findings.get(key) ?? {
         checks: [],
+        kind: "malformed",
         summary: "the adapter's answer has no boolean `valid`",
         cases: 0,
         fixtures: {},
@@ -77,18 +114,39 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
     if (verdict === "pass") return;
     s.failing++;
     const r = RULE.get(v.rule);
-    const key = `${v.rule}\u0000${verdict}`;
+    const kind = verdict === "crash" ? `crash ${v.expected.valid ? "valid" : "invalid"}` : verdict;
+    const key = `${v.rule}\u0000${kind}`;
+    const crash = answers[i] instanceof Crash;
     const example = {
-      input: v.sdl,
-      response: answers[i],
+      input: `${v.edition === "draft" ? "[draft] " : ""}${v.sdl}`,
+      response: crash ? `the adapter answered with an error: ${answers[i].message}` : answers[i],
       expected: v.expected.valid ? "valid (TypeSystem!Verdict is empty)" : `invalid: breaks ${v.rule} and no other rule`,
     };
-    const f = findings.get(key) ?? { checks: [r.id], summary: SUMMARY[verdict](r), cases: 0, fixtures: {}, fixture: v.id, example };
+    const f = findings.get(key) ?? {
+      checks: [r.id],
+      kind: verdict,
+      summary: SUMMARY[kind](r),
+      cases: 0,
+      fixtures: {},
+      fixture: v.id,
+      ...(crash ? { problem: answers[i].message } : {}),
+      example,
+      draftOnly: 0,
+      length: v.sdl.length,
+    };
     f.cases++;
     f.fixtures[v.family] = (f.fixtures[v.family] ?? 0) + 1;
-    if (v.sdl.length < f.example.input.length) Object.assign(f, { fixture: v.id, example });
+    if (v.edition === "draft") f.draftOnly++;
+    if (v.sdl.length < f.length) Object.assign(f, { fixture: v.id, example, length: v.sdl.length, ...(crash ? { problem: answers[i].message } : {}) });
     findings.set(key, f);
   });
+  // How many of a finding's vectors rest on draft-only rules or syntax. A
+  // finding with nothing else is tagged as draft only.
+  for (const f of findings.values()) {
+    delete f.length;
+    if (f.draftOnly === f.cases) f.edition = "draft";
+    if (f.draftOnly === 0) delete f.draftOnly;
+  }
   return {
     format: REPORT_FORMAT,
     area: "schema",
@@ -98,6 +156,10 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
     checkerSelfTest: selfTestText,
     cases: { submitted: vectors.length, distinct: vectors.length, malformed },
     adapterProblems: malformed,
+    draftOnly: {
+      vectors: vectors.filter((v) => v.edition === "draft").length,
+      failing: vectors.filter((v, i) => v.edition === "draft" && !["pass", "malformed"].includes(judge(v, answers[i]))).length,
+    },
     checks: RULES.map((r) => {
       const s = stats.get(r.rule);
       return {
@@ -108,6 +170,7 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
         status: s.failing > 0 ? "fail" : s.cases > 0 ? "pass" : "untested",
         cases: s.cases,
         failing: s.failing,
+        ...(r.edition ? { edition: r.edition, note: `Draft only: the October 2021 edition doesn't have ${r.draft}.` } : {}),
         ...(UNWRITABLE[r.rule] ? { note: UNWRITABLE[r.rule] } : {}),
       };
     }),
@@ -119,7 +182,7 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
 export const run = async ({ adapter, strict, log = console.log }) => {
   const vectors = loadVectors();
   const answers = [];
-  for (const v of vectors) answers.push(await ask(adapter, "schema", { sdl: v.sdl }));
+  for (const v of vectors) answers.push(await answer(adapter, v.sdl));
 
   const test = selfTest(vectors);
   for (const p of test.problems) log(`✗ self-test: ${p}`);
@@ -135,8 +198,10 @@ export const run = async ({ adapter, strict, log = console.log }) => {
 
   const failingChecks = report.checks.filter((c) => c.status === "fail");
   const passed = vectors.length - report.findings.reduce((n, f) => n + f.cases, 0);
-  log(`${passed === vectors.length ? "✓" : "✗"} ${passed} of ${vectors.length} schemas judged as TypeSystem.tla judges them`);
-  for (const f of report.findings) log(`  ✗ ${f.summary} (${plural(f.cases, "schema")}, e.g. ${f.fixture}: ${f.example.input})`);
+  const crashes = answers.filter((a) => a instanceof Crash).length;
+  log(`${passed === vectors.length ? "✓" : "✗"} ${passed} of ${vectors.length} schemas judged as TypeSystem.tla judges them${crashes ? ` (${crashes} crashed)` : ""}`);
+  const draft = (f) => (f.draftOnly ? `, ${f.draftOnly === f.cases ? "all" : f.draftOnly} draft only` : "");
+  for (const f of report.findings) log(`  ✗ ${f.summary} (${plural(f.cases, "schema")}${draft(f)}, e.g. ${f.fixture}: ${f.example.input})`);
   const tested = report.checks.filter((c) => c.status !== "untested").length;
   log(`  ${tested - failingChecks.length} of ${tested} rules pass; ${report.checks.length - tested} untested`);
   if (test.problems.length === 0) log(`✓ the checker catches all ${test.controls} negative controls`);
