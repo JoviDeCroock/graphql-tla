@@ -10,7 +10,7 @@ How the references in [`specs/`](../specs) compare with the [GraphQL spec](https
 | §2 Language, type system documents | none | | |
 | §2.14 Schema Coordinates | none | | |
 | §3 Type System, validation rules | `TypeSystem.tla` | One operator per rule, named after it (`INPUT_OBJECT_UNBREAKABLE_CYCLE`, …), over schema data | `TypeSystemVectors.tla`, `differential-type-system.mjs`, kit `schema` |
-| §3.5, §3.9 to §3.12 input coercion | `Coercion.tla` | Input coercion of every built-in scalar, enums, input objects (including OneOf), lists and Non-Null, with numbers stored as decimal digits | vectors, `differential-coercion.mjs`, kit `coerce` |
+| §3.5, §3.9 to §3.12 input coercion | `Coercion.tla` | Input coercion of every built-in scalar, enums, input objects, lists and Non-Null, with numbers stored as decimal digits. Input objects are coerced generically (`CoerceInput`, `CoerceFields`): there are no OneOf rules, so the kit's `oneOf` check is untested (see [Not modelled](#not-modelled)) | vectors, `differential-coercion.mjs`, kit `coerce` |
 | §3 result coercion | `Reference.tla` (shape only) and kit checks | Leaf values are abstract in the reference. The kit checks their serialized values directly (`resultCoercion`, `intFraction`) | kit `execution` |
 | §3.1 and the `…Extensions` sections | none | | |
 | §4 Introspection | `Introspection.tla` | The `__schema` result a schema must have (`Matches`), under the draft or the October 2021 built-ins | `IntrospectionVectors.tla`, `differential-type-system.mjs`, kit `introspect` |
@@ -68,6 +68,7 @@ What the spec specifies and no reference states:
 - **Schema Coordinates (§2.14).** No grammar and no resolution.
 - **Value resolution (§6.4.2) and custom scalars.** These are inputs to the reference. How a custom scalar coerces is up to the service. The kit's `custom-scalar-literals` capability only says an adapter's custom scalars accept every literal, so the validate vectors that use one can be graded.
 - **Error contents (§7.1.6).** The reference checks which paths have errors. The kit checks that each error has a `message` (`errorFormat`) but not what it says, and checks `locations` only for shape (a SHOULD).
+- **OneOf input coercion at run time (§3.10.1).** `TypeSystem.tla` states the OneOf type validation rules (`OneOfFieldsAreNullable`, `OneOfFieldsHaveNoDefault`) and rejects a OneOf default value literal that doesn't have exactly one non-null entry, and `Validation.tla` checks OneOf variable usage (§5.8.5). But `Coercion.tla` coerces input objects generically (`CoerceInput`, `CoerceFields`) with no OneOf rule, so arguments and variable values that give a OneOf input object zero entries, several entries or a null entry aren't rejected by any reference. The kit's `oneOf` check in `kit/coerce/checks.mjs` is marked untested for that reason, and `kit/coerce/vectors.json` has no OneOf vectors.
 - **Coercion beyond one field.** `Coercion.tla` coerces one root field's arguments per operation, with no fragments. Arguments of nested fields go through the same `CoerceArgumentValues`, so the reference applies to them, but the coerce area only asks about root fields.
 - **Subscriptions in general.** `subscription.ts` models one operation. `CreateSourceEventStream` errors and `Unsubscribe` (§6.2.3.1, §6.2.3.3) are only checked there, not against implementations.
 
@@ -86,7 +87,7 @@ A few comments cite section numbers from before the October 2021 edition was ren
 The spec changes the references already follow, from graphql-spec's history up to bfcc722:
 
 - empty selection sets (#1227), in `Parser.tla`;
-- OneOf input objects (#825) and OneOf inhabitability (#1211), in `TypeSystem.tla`, `Validation.tla` and `Coercion.tla`;
+- OneOf input objects (#825) and OneOf inhabitability (#1211), in `TypeSystem.tla` (the §3.10.1 type validation rules, and the OneOf check when a default value literal is coerced) and `Validation.tla` (§5.8.5). `Coercion.tla` doesn't follow them yet: runtime OneOf coercion is under [Not modelled](#not-modelled);
 - directives on directive definitions (#1206), with `DIRECTIVE_DEFINITION` in `Introspection.tla` and directive cycles in `TypeSystem.tla`;
 - descriptions on executable definitions, in `Parser.tla`;
 - "unwrapped type" (#1253), quoted in `TypeSystem.tla`;
