@@ -1,40 +1,70 @@
-// graphql-js 17.1.0: when a streamed list's parent is nulled while the first
-// next() on the list's async iterator is still pending, return() is never
-// called on that iterator. Found by specs/stream.ts. Run:
+// graphql-js 17.1.0: an async-iterable list field whose parent is nulled
+// while the first next() on its iterator is still pending. The iterator's
+// return() isn't called until that next() settles, so a next() that never
+// settles means return() is never called. Items past `initialCount` of a
+// @stream with enableEarlyExecution are handled differently: their iterator
+// is returned at once. Found by specs/stream.ts. Run:
 //
 //   node scripts/repro/stream-return.mjs
-//
-// Expected: return() called: true. Actual on 17.1.0: return() called: false.
 
-const g = await import("graphql17");
+import * as g from "graphql17";
+
 const schema = g.buildSchema(`
   directive @stream(initialCount: Int! = 0, label: String, if: Boolean! = true) on FIELD
   type Query { feed: Feed }
   type Feed { title: String! items: [Item] }
   type Item { id: ID! }
 `);
-const run = async (label, titleDelay) => {
+
+const tick = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const run = async (label, query, { settleLater = false, early = false } = {}) => {
   let returned = false;
+  let settleNext;
   let rejectTitle;
   const iterator = {
-    [Symbol.asyncIterator]() { return this; },
-    next: () => new Promise(() => {}),            // first next() never settles
-    return: () => { returned = true; return Promise.resolve({ done: true }); },
+    [Symbol.asyncIterator]() {
+      return this;
+    },
+    next: () =>
+      new Promise((resolve) => {
+        settleNext = () => resolve({ value: { id: "1" }, done: false });
+      }),
+    return: () => {
+      returned = true;
+      return Promise.resolve({ done: true });
+    },
   };
   const rootValue = {
     feed: {
-      title: () => new Promise((_, reject) => { rejectTitle = reject; }),
+      title: () => new Promise((_, reject) => (rejectTitle = reject)),
       items: () => iterator,
     },
   };
   const result = g.experimentalExecuteIncrementally({
-    schema, rootValue,
-    document: g.parse(`{ feed { title items @stream(initialCount: 1) { id } } }`),
+    schema,
+    rootValue,
+    document: g.parse(query),
+    enableEarlyExecution: early,
   });
-  await new Promise((r) => setTimeout(r, 10));
-  rejectTitle(new Error("title failed"));       // nulls feed while next() is pending
-  const r = await Promise.race([result, new Promise((r) => setTimeout(() => r("pending"), 100))]);
-  await new Promise((r) => setTimeout(r, 100));
-  console.log(label, JSON.stringify(r === "pending" ? r : (r.initialResult ?? r)), "return() called:", returned);
+  await tick(10);
+  rejectTitle(new Error("title failed")); // nulls feed while next() is pending
+  const response = await result;
+  await tick(50);
+  const before = returned;
+  if (settleLater) {
+    settleNext();
+    await tick(50);
+  }
+  const data = JSON.stringify((response.initialResult ?? response).data);
+  console.log(
+    `${label}\n  data: ${data}\n  return() called while next() pending: ${before}` +
+      (settleLater ? `\n  return() called after next() settles: ${returned}` : ""),
+  );
 };
-await run("parent nulled while first next() pending:");
+
+await run("plain list", "{ feed { title items { id } } }");
+await run("plain list, next() settles later", "{ feed { title items { id } } }", { settleLater: true });
+await run("@stream(initialCount: 1)", "{ feed { title items @stream(initialCount: 1) { id } } }");
+await run("@stream(initialCount: 1), early execution", "{ feed { title items @stream(initialCount: 1) { id } } }", { early: true });
+await run("@stream(initialCount: 0), early execution", "{ feed { title items @stream(initialCount: 0) { id } } }", { early: true });

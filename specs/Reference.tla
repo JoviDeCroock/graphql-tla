@@ -264,7 +264,8 @@ IsPrefix(prefix, path) ==
 \*
 \* Errors raised inside a subtree that was already nulled may or may not be
 \* reported. §6.3.3 lets an executor cancel those resolvers outright, and
-\* graphql-js 16.15 and 17 drop their errors (_hasNulledPosition).
+\* graphql-js 16.13 and later, and 17, drop their errors (graphql-js#4458,
+\* implementing graphql-spec#1184).
 Valid(fx, O, data, errors) ==
   LET result == ExecuteQuery(fx, O) IN
   /\ result.kind # "pending"

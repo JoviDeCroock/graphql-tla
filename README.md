@@ -1,8 +1,8 @@
 # graphql-tla
 
-GraphQL execution semantics as TLA+ specifications, model checked with [tla-ts](https://github.com/aidenybai/tla-ts) and checked against [graphql-js](https://github.com/graphql/graphql-js) 16.15.0 and 17.1.0.
+TLA+ models of GraphQL's execution semantics. That means field collection, value completion and error propagation, plus scenario models of mutations, subscriptions, `@defer` and `@stream`. They are model checked exhaustively on small fixtures with [tla-ts](https://github.com/aidenybai/tla-ts) and compared against [graphql-js](https://github.com/graphql/graphql-js) 16.15 and 17.1. They don't cover the language, type-system validation, introspection or input coercion.
 
-It covers how a GraphQL request executes: field collection, value completion, error propagation, mutations, subscriptions, `@defer` and `@stream`. It doesn't cover the language (§2), introspection (§4), validation (§5) or input coercion. Those are pure functions with no concurrency for a model checker to explore, and tests against graphql-js serve them better.
+Those parts are deterministic functions of static input. A model checker adds nothing there, and differential tests against graphql-js serve them better.
 
 ## How it fits together
 
@@ -19,7 +19,7 @@ fixtures/*.graphql ──generate──▶ specs/lib/fixtures.ts ──▶ specs
 | --- | --- | --- |
 | Reference | [`Reference.tla`](specs/Reference.tla) | Hand-written TLA+ that follows the spec's algorithms: `CollectFields`, `DoesFragmentTypeApply`, `CollectSubfields`, `CompleteValue` with lists and abstract types, and error propagation. `Valid(fixture, outcomes, data, errors)` states when a response is correct for the resolver outcomes it was built from. |
 | Contract | [`GraphQLResponse.tla`](specs/GraphQLResponse.tla) | What an observer sees: resolvers settle, one response is sent, and it is valid, final, and eventually sent. |
-| Executor | [`execution.ts`](specs/execution.ts) | A step-by-step executor that works for any schema and query. Each resolver settles on its own, in any order, to any outcome its type allows, and the response is sent as soon as the root completes. It has three variants: `reportAll`, `filterNulled` (graphql-js 16.15 and 17), and `cancelNulled`. It shares no code with the reference. |
+| Executor | [`execution.ts`](specs/execution.ts) | A step-by-step executor that works for any schema and query. Each resolver settles on its own, in any order, to any outcome its type allows, and the response is sent as soon as the root completes. It has three variants: `reportAll`, `filterNulled` (graphql-js 16.13 and later, and 17), and `cancelNulled`. It shares no code with the reference. |
 | Refinement | [`ExecutionConformance.tla`](specs/ExecutionConformance.tla) | Proves that the executor refines the contract on every fixture, in every variant, under every schedule. |
 | graphql-js | [`scripts/graphql-js.mjs`](scripts/graphql-js.mjs) | Runs the real graphql-js with resolvers whose promises the script settles itself. It checks every response against `Reference!Valid` with tla-ts. |
 | Scenarios | [`mutation.ts`](specs/mutation.ts), [`subscription.ts`](specs/subscription.ts), [`defer.ts`](specs/defer.ts), [`stream.ts`](specs/stream.ts) | Step-by-step models of the behaviour that happens over time. Each one uses a fixed operation. |
@@ -57,7 +57,7 @@ Across the three fixtures, the three variants, every schedule and every combinat
 - `EventuallyResponds`: a response is always sent.
 - `Refines`: all of the above, as refinement of `GraphQLResponse.tla`.
 
-Errors inside a subtree that was already nulled may or may not be reported. §6.3.3 lets an executor cancel those resolvers, and graphql-js 16.15 and 17 drop their errors. All three variants satisfy the reference.
+Errors inside a subtree that was already nulled may or may not be reported. §6.3.3 lets an executor cancel those resolvers, and graphql-js 16.13 and later, and 17, drop their errors. All three variants satisfy the reference.
 
 ### graphql-js
 
@@ -142,12 +142,12 @@ Each mutant names the one property that must catch it, and `npm run check:specs`
 
 Reading and running graphql-js 16.15.0 and 17.1.0 while writing these specs turned up the following:
 
-- **Errors under nulled positions:** 16.15 and 17 both drop errors from positions under one already nulled by error propagation (`_hasNulledPosition`). 16.15 got this as a backport, so "16 reports everything" is no longer true.
+- **Errors under nulled positions:** since 16.13.0, and in 17, graphql-js drops errors raised under a position that error propagation has already nulled (`_hasNulledPosition`, graphql-js#4458). This implements graphql-spec#1184, which is still open. It is an intended behaviour change: errors raised before the nulling are still reported.
 - **Mutations:** both versions stop running root fields once a Non-Null root field fails (`promiseReduce`). The spec allows that, but doesn't require it.
 - **Subscriptions:**
   - 17's `mapAsyncIterable` never overlaps event executions, and it still delivers an in-flight event after `return()`.
   - 16's `mapAsyncIterator` overlaps executions when a client calls `next()` concurrently, so responses can settle out of order.
-- **`@stream`:** in 17.1.0, if a stream's parent is nulled while the first `next()` call on its iterator is still pending, `return()` is never called on the iterator. To reproduce, run [`scripts/repro/stream-return.mjs`](scripts/repro/stream-return.mjs).
+- **Async iterable lists:** in 17.1.0, if a list's parent is nulled while the first `next()` on the list's async iterator is pending, `return()` is only called once that `next()` settles, so a `next()` that never settles means `return()` is never called. This happens for plain lists and for the initial items of `@stream`. The resolver's abort signal (`info.getAbortSignal()`) does fire, so resolvers can clean up. Past `initialCount` with early execution on, the stream path calls `return()` straight away, even while a `next()` is pending. To reproduce, run [`scripts/repro/stream-return.mjs`](scripts/repro/stream-return.mjs).
 
 - **`@defer` with a null `data`:** when nothing is left pending, for example because `data` is null, 17.1.0 sends a plain `{ data, errors }` result instead of an incremental one.
 - **`@defer` failures:** a deferred fragment that fails reports only the error that reached its boundary. Errors it had already collected at nullable fields inside it are discarded, along with the fragment's data.

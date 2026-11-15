@@ -13,8 +13,9 @@
  * Three variants cover what the spec allows for errors in subtrees that a
  * field error already nulled:
  *
- *   reportAll     report them anyway (graphql-js before 16.15)
- *   filterNulled  drop them (graphql-js 16.15 and 17: _hasNulledPosition)
+ *   reportAll     report them anyway (graphql-js 16.12 and earlier)
+ *   filterNulled  drop them (graphql-js 16.13 and later, and 17:
+ *                 _hasNulledPosition, graphql-js#4458)
  *   cancelNulled  drop them and cancel those resolvers (§6.3.3: siblings
  *                 "which have not yet executed or have not yet yielded a
  *                 value" may be cancelled)
