@@ -14,6 +14,7 @@
 
 import { existsSync } from "node:fs";
 import { createInterface } from "node:readline";
+import { stringifyLine } from "../../kit/ndjson.mjs";
 
 const version = process.argv[process.argv.indexOf("--graphql") + 1];
 const graphql = version === "16" ? await import("graphql16") : await import("graphql17");
@@ -49,7 +50,7 @@ const breakResponse = (r) =>
       : fault === "wrong-leaf"
         ? JSON.parse(JSON.stringify(r).replace(/"v"/, '"w"'))
         : r;
-const send = (message) => process.stdout.write(`${JSON.stringify(message)}\n`);
+const send = (message) => process.stdout.write(stringifyLine(message));
 const flush = () => new Promise((done) => setImmediate(done));
 
 send({

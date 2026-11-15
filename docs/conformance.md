@@ -23,7 +23,7 @@ Both take `--report FILE`, which writes what the run found as JSON: every check 
 
 ## What your adapter does
 
-The adapter is a process that reads and writes newline-delimited JSON on stdin and stdout. Anything on stderr is passed through. For each `execute`, it builds the schema, parses the document, and executes it with **one resolver installed on every field**. That resolver:
+The adapter is a process that reads and writes newline-delimited JSON on stdin and stdout. Escape U+2028 and U+2029 inside JSON strings as `\u2028` and `\u2029`: some line readers treat the raw characters as line endings. The kit does this for requests; adapters should do the same for replies. Anything on stderr is passed through. For each `execute`, it builds the schema, parses the document, and executes it with **one resolver installed on every field**. That resolver:
 
 1. tells the kit it was called (`call`);
 2. returns something that completes later (a promise, future, task or channel);
