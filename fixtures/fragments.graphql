@@ -2,6 +2,7 @@
 # @skip and @include, aliases, and merging fields that share a response key.
 # variables: { "withName": false }
 # maxListLength: 0
+# spec: 6.3.2, 3.7, 3.13.1, 3.13.2, 6.4.3
 
 interface Node {
   id: ID!

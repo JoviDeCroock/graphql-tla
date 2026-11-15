@@ -17,6 +17,8 @@
 //   --out FILE      also write the cases as JSONL
 //   --grace MS      without `idle`, how long a quiet adapter counts as idle
 //   --strict        fail on SHOULDs too (response key order)
+//   --report FILE   write the facts behind a conformance sheet as JSON
+//                   (also for check); scripts/conformance-sheet.mjs reads it
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -46,6 +48,10 @@ const only = option("--fixtures", "")?.split(",").filter(Boolean);
 const allFixtures = loadFixtures(join(root, "fixtures"));
 const fixtures = allFixtures.filter((f) => !only?.length || only.includes(f.id));
 const strict = flag("--strict");
+const writeReport = (report) => {
+  const path = option("--report");
+  if (path) writeFileSync(path, JSON.stringify(report, null, 2) + "\n");
+};
 
 if (command === "check") {
   if (!file) usage();
@@ -58,7 +64,9 @@ if (command === "check") {
     console.error(`case format ${wrong.v} isn't supported; this kit reads format ${CASE_FORMAT}`);
     process.exit(2);
   }
-  process.exit((await check(allFixtures, cases, { strict })) ? 0 : 1);
+  const { ok, report } = await check(allFixtures, cases, { strict });
+  writeReport(report);
+  process.exit(ok ? 0 : 1);
 }
 
 const adapterCommand = option("--adapter");
@@ -84,10 +92,12 @@ try {
     }
   }
   const cases = [];
+  const skipped = [];
   for (const fixture of fixtures) {
     const missing = fixture.requires.filter((c) => !adapter.capabilities.has(c));
     if (missing.length > 0) {
       console.log(`  ${fixture.id}: skipped, needs ${missing.join(", ")}`);
+      skipped.push({ fixture: fixture.id, needs: missing });
       continue;
     }
     const runs = [
@@ -106,7 +116,14 @@ try {
   const out = option("--out");
   if (out) writeFileSync(out, cases.map((c) => JSON.stringify(c)).join("\n") + "\n");
   if (cases.length === 0) console.log("✗ no fixture ran");
-  ok = (await check(allFixtures, cases, { strict })) && cases.length > 0;
+  const result = await check(allFixtures, cases, {
+    strict,
+    implementation: adapter.name,
+    capabilities: [...adapter.capabilities],
+    skipped,
+  });
+  writeReport(result.report);
+  ok = result.ok && cases.length > 0;
 } catch (error) {
   console.error(`✗ ${error.message}`);
   adapter.close();

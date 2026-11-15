@@ -43,6 +43,8 @@ export const loadFixtures = (dir) =>
         maxListLength: Number(header("maxListLength") ?? 2),
         errorPropagation,
         invalidResults,
+        // The spec sections the fixture exercises, for the conformance sheet.
+        spec: (header("spec") ?? "").split(",").map((s) => s.trim()).filter(Boolean),
         // Capabilities an adapter must have to run the fixture at all.
         // invalidResults isn't one: without the capability, the kit just
         // never asks for a result of the wrong shape.

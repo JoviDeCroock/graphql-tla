@@ -1,5 +1,6 @@
 # Errors and nulls propagate to the nearest nullable position (§6.4.4).
 # maxListLength: 0
+# spec: 3.12, 6.4.4, 6.3.3
 
 type Query {
   version: String!

@@ -1,0 +1,800 @@
+{
+ "source": "graphql/graphql-spec@bfcc722b32f4 (spec/Section 2\u20137)",
+ "sections": [
+  {
+   "number": "2.1",
+   "title": "Source Text",
+   "url": "https://spec.graphql.org/draft/#sec-Source-Text"
+  },
+  {
+   "number": "2.1.1",
+   "title": "White Space",
+   "url": "https://spec.graphql.org/draft/#sec-White-Space"
+  },
+  {
+   "number": "2.1.2",
+   "title": "Line Terminators",
+   "url": "https://spec.graphql.org/draft/#sec-Line-Terminators"
+  },
+  {
+   "number": "2.1.3",
+   "title": "Comments",
+   "url": "https://spec.graphql.org/draft/#sec-Comments"
+  },
+  {
+   "number": "2.1.4",
+   "title": "Insignificant Commas",
+   "url": "https://spec.graphql.org/draft/#sec-Insignificant-Commas"
+  },
+  {
+   "number": "2.1.5",
+   "title": "Lexical Tokens",
+   "url": "https://spec.graphql.org/draft/#sec-Lexical-Tokens"
+  },
+  {
+   "number": "2.1.6",
+   "title": "Ignored Tokens",
+   "url": "https://spec.graphql.org/draft/#sec-Ignored-Tokens"
+  },
+  {
+   "number": "2.1.7",
+   "title": "Punctuators",
+   "url": "https://spec.graphql.org/draft/#sec-Punctuators"
+  },
+  {
+   "number": "2.1.8",
+   "title": "Names",
+   "url": "https://spec.graphql.org/draft/#sec-Names"
+  },
+  {
+   "number": "2.2",
+   "title": "Descriptions",
+   "url": "https://spec.graphql.org/draft/#sec-Descriptions"
+  },
+  {
+   "number": "2.3",
+   "title": "Document",
+   "url": "https://spec.graphql.org/draft/#sec-Document"
+  },
+  {
+   "number": "2.4",
+   "title": "Operations",
+   "url": "https://spec.graphql.org/draft/#sec-Operations"
+  },
+  {
+   "number": "2.5",
+   "title": "Selection Sets",
+   "url": "https://spec.graphql.org/draft/#sec-Selection-Sets"
+  },
+  {
+   "number": "2.6",
+   "title": "Fields",
+   "url": "https://spec.graphql.org/draft/#sec-Fields"
+  },
+  {
+   "number": "2.7",
+   "title": "Arguments",
+   "url": "https://spec.graphql.org/draft/#sec-Arguments"
+  },
+  {
+   "number": "2.8",
+   "title": "Field Alias",
+   "url": "https://spec.graphql.org/draft/#sec-Field-Alias"
+  },
+  {
+   "number": "2.9",
+   "title": "Fragments",
+   "url": "https://spec.graphql.org/draft/#sec-Fragments"
+  },
+  {
+   "number": "2.9.1",
+   "title": "Type Conditions",
+   "url": "https://spec.graphql.org/draft/#sec-Type-Conditions"
+  },
+  {
+   "number": "2.9.2",
+   "title": "Inline Fragments",
+   "url": "https://spec.graphql.org/draft/#sec-Inline-Fragments"
+  },
+  {
+   "number": "2.10",
+   "title": "Input Values",
+   "url": "https://spec.graphql.org/draft/#sec-Input-Values"
+  },
+  {
+   "number": "2.10.1",
+   "title": "Int Value",
+   "url": "https://spec.graphql.org/draft/#sec-Int-Value"
+  },
+  {
+   "number": "2.10.2",
+   "title": "Float Value",
+   "url": "https://spec.graphql.org/draft/#sec-Float-Value"
+  },
+  {
+   "number": "2.10.3",
+   "title": "Boolean Value",
+   "url": "https://spec.graphql.org/draft/#sec-Boolean-Value"
+  },
+  {
+   "number": "2.10.4",
+   "title": "String Value",
+   "url": "https://spec.graphql.org/draft/#sec-String-Value"
+  },
+  {
+   "number": "2.10.5",
+   "title": "Null Value",
+   "url": "https://spec.graphql.org/draft/#sec-Null-Value"
+  },
+  {
+   "number": "2.10.6",
+   "title": "Enum Value",
+   "url": "https://spec.graphql.org/draft/#sec-Enum-Value"
+  },
+  {
+   "number": "2.10.7",
+   "title": "List Value",
+   "url": "https://spec.graphql.org/draft/#sec-List-Value"
+  },
+  {
+   "number": "2.10.8",
+   "title": "Input Object Values",
+   "url": "https://spec.graphql.org/draft/#sec-Input-Object-Values"
+  },
+  {
+   "number": "2.11",
+   "title": "Variables",
+   "url": "https://spec.graphql.org/draft/#sec-Variables"
+  },
+  {
+   "number": "2.12",
+   "title": "Type References",
+   "url": "https://spec.graphql.org/draft/#sec-Type-References"
+  },
+  {
+   "number": "2.13",
+   "title": "Directives",
+   "url": "https://spec.graphql.org/draft/#sec-Directives"
+  },
+  {
+   "number": "2.14",
+   "title": "Schema Coordinates",
+   "url": "https://spec.graphql.org/draft/#sec-Schema-Coordinates"
+  },
+  {
+   "number": "3.1",
+   "title": "Type System Extensions",
+   "url": "https://spec.graphql.org/draft/#sec-Type-System-Extensions"
+  },
+  {
+   "number": "3.2",
+   "title": "Type System Descriptions",
+   "url": "https://spec.graphql.org/draft/#sec-Type-System-Descriptions"
+  },
+  {
+   "number": "3.3",
+   "title": "Schema",
+   "url": "https://spec.graphql.org/draft/#sec-Schema"
+  },
+  {
+   "number": "3.3.1",
+   "title": "Root Operation Types",
+   "url": "https://spec.graphql.org/draft/#sec-Root-Operation-Types"
+  },
+  {
+   "number": "3.3.2",
+   "title": "Schema Extension",
+   "url": "https://spec.graphql.org/draft/#sec-Schema-Extension"
+  },
+  {
+   "number": "3.4",
+   "title": "Types",
+   "url": "https://spec.graphql.org/draft/#sec-Types"
+  },
+  {
+   "number": "3.4.1",
+   "title": "Wrapping Types",
+   "url": "https://spec.graphql.org/draft/#sec-Wrapping-Types"
+  },
+  {
+   "number": "3.4.2",
+   "title": "Input and Output Types",
+   "url": "https://spec.graphql.org/draft/#sec-Input-and-Output-Types"
+  },
+  {
+   "number": "3.4.3",
+   "title": "Type Extensions",
+   "url": "https://spec.graphql.org/draft/#sec-Type-Extensions"
+  },
+  {
+   "number": "3.5",
+   "title": "Scalars",
+   "url": "https://spec.graphql.org/draft/#sec-Scalars"
+  },
+  {
+   "number": "3.5.1",
+   "title": "Int",
+   "url": "https://spec.graphql.org/draft/#sec-Int"
+  },
+  {
+   "number": "3.5.2",
+   "title": "Float",
+   "url": "https://spec.graphql.org/draft/#sec-Float"
+  },
+  {
+   "number": "3.5.3",
+   "title": "String",
+   "url": "https://spec.graphql.org/draft/#sec-String"
+  },
+  {
+   "number": "3.5.4",
+   "title": "Boolean",
+   "url": "https://spec.graphql.org/draft/#sec-Boolean"
+  },
+  {
+   "number": "3.5.5",
+   "title": "ID",
+   "url": "https://spec.graphql.org/draft/#sec-ID"
+  },
+  {
+   "number": "3.5.6",
+   "title": "Scalar Extensions",
+   "url": "https://spec.graphql.org/draft/#sec-Scalar-Extensions"
+  },
+  {
+   "number": "3.6",
+   "title": "Objects",
+   "url": "https://spec.graphql.org/draft/#sec-Objects"
+  },
+  {
+   "number": "3.6.1",
+   "title": "Field Arguments",
+   "url": "https://spec.graphql.org/draft/#sec-Field-Arguments"
+  },
+  {
+   "number": "3.6.2",
+   "title": "Field Deprecation",
+   "url": "https://spec.graphql.org/draft/#sec-Field-Deprecation"
+  },
+  {
+   "number": "3.6.3",
+   "title": "Object Extensions",
+   "url": "https://spec.graphql.org/draft/#sec-Object-Extensions"
+  },
+  {
+   "number": "3.7",
+   "title": "Interfaces",
+   "url": "https://spec.graphql.org/draft/#sec-Interfaces"
+  },
+  {
+   "number": "3.7.1",
+   "title": "Interface Extensions",
+   "url": "https://spec.graphql.org/draft/#sec-Interface-Extensions"
+  },
+  {
+   "number": "3.8",
+   "title": "Unions",
+   "url": "https://spec.graphql.org/draft/#sec-Unions"
+  },
+  {
+   "number": "3.8.1",
+   "title": "Union Extensions",
+   "url": "https://spec.graphql.org/draft/#sec-Union-Extensions"
+  },
+  {
+   "number": "3.9",
+   "title": "Enums",
+   "url": "https://spec.graphql.org/draft/#sec-Enums"
+  },
+  {
+   "number": "3.9.1",
+   "title": "Enum Extensions",
+   "url": "https://spec.graphql.org/draft/#sec-Enum-Extensions"
+  },
+  {
+   "number": "3.10",
+   "title": "Input Objects",
+   "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+  },
+  {
+   "number": "3.10.1",
+   "title": "OneOf Input Objects",
+   "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
+  },
+  {
+   "number": "3.10.2",
+   "title": "Input Object Extensions",
+   "url": "https://spec.graphql.org/draft/#sec-Input-Object-Extensions"
+  },
+  {
+   "number": "3.11",
+   "title": "List",
+   "url": "https://spec.graphql.org/draft/#sec-List"
+  },
+  {
+   "number": "3.12",
+   "title": "Non-Null",
+   "url": "https://spec.graphql.org/draft/#sec-Non-Null"
+  },
+  {
+   "number": "3.12.1",
+   "title": "Combining List and Non-Null",
+   "url": "https://spec.graphql.org/draft/#sec-Combining-List-and-Non-Null"
+  },
+  {
+   "number": "3.13",
+   "title": "Directives",
+   "url": "https://spec.graphql.org/draft/#sec-Directives"
+  },
+  {
+   "number": "3.13.1",
+   "title": "@skip",
+   "url": "https://spec.graphql.org/draft/#sec-skip"
+  },
+  {
+   "number": "3.13.2",
+   "title": "@include",
+   "url": "https://spec.graphql.org/draft/#sec-include"
+  },
+  {
+   "number": "3.13.3",
+   "title": "@deprecated",
+   "url": "https://spec.graphql.org/draft/#sec-deprecated"
+  },
+  {
+   "number": "3.13.4",
+   "title": "@specifiedBy",
+   "url": "https://spec.graphql.org/draft/#sec-specifiedBy"
+  },
+  {
+   "number": "3.13.5",
+   "title": "@oneOf",
+   "url": "https://spec.graphql.org/draft/#sec-oneOf"
+  },
+  {
+   "number": "3.13.6",
+   "title": "Directive Extensions",
+   "url": "https://spec.graphql.org/draft/#sec-Directive-Extensions"
+  },
+  {
+   "number": "4.1",
+   "title": "Type Name Introspection",
+   "url": "https://spec.graphql.org/draft/#sec-Type-Name-Introspection"
+  },
+  {
+   "number": "4.2",
+   "title": "Schema Introspection",
+   "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+  },
+  {
+   "number": "4.2.1",
+   "title": "The \\_\\_Schema Type",
+   "url": "https://spec.graphql.org/draft/#sec-The-Schema-Type"
+  },
+  {
+   "number": "4.2.2",
+   "title": "The \\_\\_Type Type",
+   "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+  },
+  {
+   "number": "4.2.3",
+   "title": "The \\_\\_Field Type",
+   "url": "https://spec.graphql.org/draft/#sec-The-Field-Type"
+  },
+  {
+   "number": "4.2.4",
+   "title": "The \\_\\_InputValue Type",
+   "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+  },
+  {
+   "number": "4.2.5",
+   "title": "The \\_\\_EnumValue Type",
+   "url": "https://spec.graphql.org/draft/#sec-The-EnumValue-Type"
+  },
+  {
+   "number": "4.2.6",
+   "title": "The \\_\\_Directive Type",
+   "url": "https://spec.graphql.org/draft/#sec-The-Directive-Type"
+  },
+  {
+   "number": "5.1",
+   "title": "Documents",
+   "url": "https://spec.graphql.org/draft/#sec-Documents"
+  },
+  {
+   "number": "5.1.1",
+   "title": "Executable Definitions",
+   "url": "https://spec.graphql.org/draft/#sec-Executable-Definitions"
+  },
+  {
+   "number": "5.2",
+   "title": "Operations",
+   "url": "https://spec.graphql.org/draft/#sec-Operations"
+  },
+  {
+   "number": "5.2.1",
+   "title": "All Operation Definitions",
+   "url": "https://spec.graphql.org/draft/#sec-All-Operation-Definitions"
+  },
+  {
+   "number": "5.2.1.1",
+   "title": "Operation Type Existence",
+   "url": "https://spec.graphql.org/draft/#sec-Operation-Type-Existence"
+  },
+  {
+   "number": "5.2.2",
+   "title": "Named Operation Definitions",
+   "url": "https://spec.graphql.org/draft/#sec-Named-Operation-Definitions"
+  },
+  {
+   "number": "5.2.2.1",
+   "title": "Operation Name Uniqueness",
+   "url": "https://spec.graphql.org/draft/#sec-Operation-Name-Uniqueness"
+  },
+  {
+   "number": "5.2.3",
+   "title": "Anonymous Operation Definitions",
+   "url": "https://spec.graphql.org/draft/#sec-Anonymous-Operation-Definitions"
+  },
+  {
+   "number": "5.2.3.1",
+   "title": "Lone Anonymous Operation",
+   "url": "https://spec.graphql.org/draft/#sec-Lone-Anonymous-Operation"
+  },
+  {
+   "number": "5.2.4",
+   "title": "Subscription Operation Definitions",
+   "url": "https://spec.graphql.org/draft/#sec-Subscription-Operation-Definitions"
+  },
+  {
+   "number": "5.2.4.1",
+   "title": "Single Root Field",
+   "url": "https://spec.graphql.org/draft/#sec-Single-Root-Field"
+  },
+  {
+   "number": "5.3",
+   "title": "Fields",
+   "url": "https://spec.graphql.org/draft/#sec-Fields"
+  },
+  {
+   "number": "5.3.1",
+   "title": "Field Selections",
+   "url": "https://spec.graphql.org/draft/#sec-Field-Selections"
+  },
+  {
+   "number": "5.3.2",
+   "title": "Field Selection Merging",
+   "url": "https://spec.graphql.org/draft/#sec-Field-Selection-Merging"
+  },
+  {
+   "number": "5.3.3",
+   "title": "Leaf Field Selections",
+   "url": "https://spec.graphql.org/draft/#sec-Leaf-Field-Selections"
+  },
+  {
+   "number": "5.4",
+   "title": "Arguments",
+   "url": "https://spec.graphql.org/draft/#sec-Arguments"
+  },
+  {
+   "number": "5.4.1",
+   "title": "Argument Names",
+   "url": "https://spec.graphql.org/draft/#sec-Argument-Names"
+  },
+  {
+   "number": "5.4.2",
+   "title": "Argument Uniqueness",
+   "url": "https://spec.graphql.org/draft/#sec-Argument-Uniqueness"
+  },
+  {
+   "number": "5.4.3",
+   "title": "Required Arguments",
+   "url": "https://spec.graphql.org/draft/#sec-Required-Arguments"
+  },
+  {
+   "number": "5.5",
+   "title": "Fragments",
+   "url": "https://spec.graphql.org/draft/#sec-Fragments"
+  },
+  {
+   "number": "5.5.1",
+   "title": "Fragment Declarations",
+   "url": "https://spec.graphql.org/draft/#sec-Fragment-Declarations"
+  },
+  {
+   "number": "5.5.1.1",
+   "title": "Fragment Name Uniqueness",
+   "url": "https://spec.graphql.org/draft/#sec-Fragment-Name-Uniqueness"
+  },
+  {
+   "number": "5.5.1.2",
+   "title": "Fragment Spread Type Existence",
+   "url": "https://spec.graphql.org/draft/#sec-Fragment-Spread-Type-Existence"
+  },
+  {
+   "number": "5.5.1.3",
+   "title": "Fragments on Object, Interface or Union Types",
+   "url": "https://spec.graphql.org/draft/#sec-Fragments-on-Object-Interface-or-Union-Types"
+  },
+  {
+   "number": "5.5.1.4",
+   "title": "Fragments Must Be Used",
+   "url": "https://spec.graphql.org/draft/#sec-Fragments-Must-Be-Used"
+  },
+  {
+   "number": "5.5.2",
+   "title": "Fragment Spreads",
+   "url": "https://spec.graphql.org/draft/#sec-Fragment-Spreads"
+  },
+  {
+   "number": "5.5.2.1",
+   "title": "Fragment Spread Target Defined",
+   "url": "https://spec.graphql.org/draft/#sec-Fragment-Spread-Target-Defined"
+  },
+  {
+   "number": "5.5.2.2",
+   "title": "Fragment Spreads Must Not Form Cycles",
+   "url": "https://spec.graphql.org/draft/#sec-Fragment-Spreads-Must-Not-Form-Cycles"
+  },
+  {
+   "number": "5.5.2.3",
+   "title": "Fragment Spread Is Possible",
+   "url": "https://spec.graphql.org/draft/#sec-Fragment-Spread-Is-Possible"
+  },
+  {
+   "number": "5.5.2.3.1",
+   "title": "Object Spreads in Object Scope",
+   "url": "https://spec.graphql.org/draft/#sec-Object-Spreads-in-Object-Scope"
+  },
+  {
+   "number": "5.5.2.3.2",
+   "title": "Abstract Spreads in Object Scope",
+   "url": "https://spec.graphql.org/draft/#sec-Abstract-Spreads-in-Object-Scope"
+  },
+  {
+   "number": "5.5.2.3.3",
+   "title": "Object Spreads in Abstract Scope",
+   "url": "https://spec.graphql.org/draft/#sec-Object-Spreads-in-Abstract-Scope"
+  },
+  {
+   "number": "5.5.2.3.4",
+   "title": "Abstract Spreads in Abstract Scope",
+   "url": "https://spec.graphql.org/draft/#sec-Abstract-Spreads-in-Abstract-Scope"
+  },
+  {
+   "number": "5.6",
+   "title": "Values",
+   "url": "https://spec.graphql.org/draft/#sec-Values"
+  },
+  {
+   "number": "5.6.1",
+   "title": "Values of Correct Type",
+   "url": "https://spec.graphql.org/draft/#sec-Values-of-Correct-Type"
+  },
+  {
+   "number": "5.6.2",
+   "title": "Input Object Field Names",
+   "url": "https://spec.graphql.org/draft/#sec-Input-Object-Field-Names"
+  },
+  {
+   "number": "5.6.3",
+   "title": "Input Object Field Uniqueness",
+   "url": "https://spec.graphql.org/draft/#sec-Input-Object-Field-Uniqueness"
+  },
+  {
+   "number": "5.6.4",
+   "title": "Input Object Required Fields",
+   "url": "https://spec.graphql.org/draft/#sec-Input-Object-Required-Fields"
+  },
+  {
+   "number": "5.7",
+   "title": "Directives",
+   "url": "https://spec.graphql.org/draft/#sec-Directives"
+  },
+  {
+   "number": "5.7.1",
+   "title": "Directives Are Defined",
+   "url": "https://spec.graphql.org/draft/#sec-Directives-Are-Defined"
+  },
+  {
+   "number": "5.7.2",
+   "title": "Directives Are in Valid Locations",
+   "url": "https://spec.graphql.org/draft/#sec-Directives-Are-in-Valid-Locations"
+  },
+  {
+   "number": "5.7.3",
+   "title": "Directives Are Unique per Location",
+   "url": "https://spec.graphql.org/draft/#sec-Directives-Are-Unique-per-Location"
+  },
+  {
+   "number": "5.8",
+   "title": "Variables",
+   "url": "https://spec.graphql.org/draft/#sec-Variables"
+  },
+  {
+   "number": "5.8.1",
+   "title": "Variable Uniqueness",
+   "url": "https://spec.graphql.org/draft/#sec-Variable-Uniqueness"
+  },
+  {
+   "number": "5.8.2",
+   "title": "Variables Are Input Types",
+   "url": "https://spec.graphql.org/draft/#sec-Variables-Are-Input-Types"
+  },
+  {
+   "number": "5.8.3",
+   "title": "All Variable Uses Defined",
+   "url": "https://spec.graphql.org/draft/#sec-All-Variable-Uses-Defined"
+  },
+  {
+   "number": "5.8.4",
+   "title": "All Variables Used",
+   "url": "https://spec.graphql.org/draft/#sec-All-Variables-Used"
+  },
+  {
+   "number": "5.8.5",
+   "title": "All Variable Usages Are Allowed",
+   "url": "https://spec.graphql.org/draft/#sec-All-Variable-Usages-Are-Allowed"
+  },
+  {
+   "number": "6.1",
+   "title": "Executing Requests",
+   "url": "https://spec.graphql.org/draft/#sec-Executing-Requests"
+  },
+  {
+   "number": "6.1.1",
+   "title": "Validating Requests",
+   "url": "https://spec.graphql.org/draft/#sec-Validating-Requests"
+  },
+  {
+   "number": "6.1.2",
+   "title": "Coercing Variable Values",
+   "url": "https://spec.graphql.org/draft/#sec-Coercing-Variable-Values"
+  },
+  {
+   "number": "6.2",
+   "title": "Executing Operations",
+   "url": "https://spec.graphql.org/draft/#sec-Executing-Operations"
+  },
+  {
+   "number": "6.2.1",
+   "title": "Query",
+   "url": "https://spec.graphql.org/draft/#sec-Query"
+  },
+  {
+   "number": "6.2.2",
+   "title": "Mutation",
+   "url": "https://spec.graphql.org/draft/#sec-Mutation"
+  },
+  {
+   "number": "6.2.3",
+   "title": "Subscription",
+   "url": "https://spec.graphql.org/draft/#sec-Subscription"
+  },
+  {
+   "number": "6.2.3.1",
+   "title": "Source Stream",
+   "url": "https://spec.graphql.org/draft/#sec-Source-Stream"
+  },
+  {
+   "number": "6.2.3.2",
+   "title": "Response Stream",
+   "url": "https://spec.graphql.org/draft/#sec-Response-Stream"
+  },
+  {
+   "number": "6.2.3.3",
+   "title": "Unsubscribe",
+   "url": "https://spec.graphql.org/draft/#sec-Unsubscribe"
+  },
+  {
+   "number": "6.3",
+   "title": "Executing Selection Sets",
+   "url": "https://spec.graphql.org/draft/#sec-Executing-Selection-Sets"
+  },
+  {
+   "number": "6.3.1",
+   "title": "Executing the Root Selection Set",
+   "url": "https://spec.graphql.org/draft/#sec-Executing-the-Root-Selection-Set"
+  },
+  {
+   "number": "6.3.2",
+   "title": "Field Collection",
+   "url": "https://spec.graphql.org/draft/#sec-Field-Collection"
+  },
+  {
+   "number": "6.3.3",
+   "title": "Executing Collected Fields",
+   "url": "https://spec.graphql.org/draft/#sec-Executing-Collected-Fields"
+  },
+  {
+   "number": "6.3.4",
+   "title": "Normal and Serial Execution",
+   "url": "https://spec.graphql.org/draft/#sec-Normal-and-Serial-Execution"
+  },
+  {
+   "number": "6.4",
+   "title": "Executing Fields",
+   "url": "https://spec.graphql.org/draft/#sec-Executing-Fields"
+  },
+  {
+   "number": "6.4.1",
+   "title": "Coercing Field Arguments",
+   "url": "https://spec.graphql.org/draft/#sec-Coercing-Field-Arguments"
+  },
+  {
+   "number": "6.4.2",
+   "title": "Value Resolution",
+   "url": "https://spec.graphql.org/draft/#sec-Value-Resolution"
+  },
+  {
+   "number": "6.4.3",
+   "title": "Value Completion",
+   "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+  },
+  {
+   "number": "6.4.4",
+   "title": "Handling Execution Errors",
+   "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
+  },
+  {
+   "number": "7.1",
+   "title": "Response Format",
+   "url": "https://spec.graphql.org/draft/#sec-Response-Format"
+  },
+  {
+   "number": "7.1.1",
+   "title": "Execution Result",
+   "url": "https://spec.graphql.org/draft/#sec-Execution-Result"
+  },
+  {
+   "number": "7.1.2",
+   "title": "Response Stream",
+   "url": "https://spec.graphql.org/draft/#sec-Response-Stream"
+  },
+  {
+   "number": "7.1.3",
+   "title": "Request Error Result",
+   "url": "https://spec.graphql.org/draft/#sec-Request-Error-Result"
+  },
+  {
+   "number": "7.1.4",
+   "title": "Response Position",
+   "url": "https://spec.graphql.org/draft/#sec-Response-Position"
+  },
+  {
+   "number": "7.1.5",
+   "title": "Data",
+   "url": "https://spec.graphql.org/draft/#sec-Data"
+  },
+  {
+   "number": "7.1.6",
+   "title": "Errors",
+   "url": "https://spec.graphql.org/draft/#sec-Errors"
+  },
+  {
+   "number": "7.1.7",
+   "title": "Extensions",
+   "url": "https://spec.graphql.org/draft/#sec-Extensions"
+  },
+  {
+   "number": "7.1.8",
+   "title": "Additional Entries",
+   "url": "https://spec.graphql.org/draft/#sec-Additional-Entries"
+  },
+  {
+   "number": "7.2",
+   "title": "Serialization Format",
+   "url": "https://spec.graphql.org/draft/#sec-Serialization-Format"
+  },
+  {
+   "number": "7.2.1",
+   "title": "JSON Serialization",
+   "url": "https://spec.graphql.org/draft/#sec-JSON-Serialization"
+  },
+  {
+   "number": "7.2.2",
+   "title": "Serialized Map Ordering",
+   "url": "https://spec.graphql.org/draft/#sec-Serialized-Map-Ordering"
+  }
+ ]
+}

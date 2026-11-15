@@ -19,6 +19,8 @@ npx graphql-tla check execution cases.jsonl
 
 `run` drives the adapter, then checks. `check` reads cases you recorded yourself, in the [case format](#case-format), for implementations where a driven adapter is awkward.
 
+Both take `--report FILE`, which writes what the run found as JSON: every check in [`kit/execution/checks.mjs`](../kit/execution/checks.mjs) with the spec sections it rests on, how many cases it applied to, how many broke it and the shortest one that did, plus which fixtures ran or were skipped and why. [`scripts/conformance-sheet.mjs`](../scripts/conformance-sheet.mjs) turns the reports in [`conformance/reports/`](../conformance/reports) into the [conformance sheet](../conformance/README.md). To add an implementation to the sheet, add its adapter to [`conformance/implementations.json`](../conformance/implementations.json) and run `npm run conformance`.
+
 ## What your adapter does
 
 The adapter is a process that reads and writes newline-delimited JSON on stdin and stdout. Anything on stderr is passed through. For each `execute`, it builds the schema, parses the document, and executes it with **one resolver installed on every field**. That resolver:
@@ -123,7 +125,7 @@ Before that, the kit rejects malformed cases. It works out each position's type 
 - a resolver is called twice, called at a position the operation doesn't select, or reported with the wrong type;
 - a resolver settles twice, or settles without having been called.
 
-Extra entries in an error are reported as a SHOULD (§7.1.2).
+Extra entries in an error are reported as a SHOULD (§7.1.6).
 
 Failures are grouped by fixture and clause, and each group is shown by its shortest case: its trace, the response, and the data the reference expected.
 

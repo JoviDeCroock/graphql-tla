@@ -2,6 +2,7 @@
 # error nulls the position where it happened, even a Non-Null one, and
 # nothing propagates (the onError / semantic nullability proposal).
 # maxListLength: 0
+# spec: 6.4.4
 
 type Query {
   version: String!

@@ -10,6 +10,8 @@
 // A fixture's header comments may set:
 //   # variables: { "name": true }   values for the operation's variables
 //   # maxListLength: 2              the longest list a resolver may return
+// and the kit reads `# invalidResults: true` and `# spec: 6.3.2, 3.8` (the
+// sections a fixture exercises, for the conformance sheet).
 //
 // Usage: node scripts/generate-fixtures.mjs [--check]
 

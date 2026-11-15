@@ -1,0 +1,10 @@
+{
+  "comment": "How scripts/conformance-reports.mjs runs each implementation. Build the adapter first (see its README). Each env value may use ~ for the home directory.",
+  "implementations": [
+    { "key": "graphql-js-16", "adapter": "node adapters/graphql-js/adapter.mjs --graphql 16" },
+    { "key": "graphql-js-17", "adapter": "node adapters/graphql-js/adapter.mjs --graphql 17" },
+    { "key": "graphql-java", "adapter": "adapters/graphql-java/run.sh", "build": "adapters/graphql-java/target/graphql-java-adapter.jar", "env": { "JAVA_HOME": "~/.cache/graphql-tla-toolchains/jdk/Contents/Home" } },
+    { "key": "async-graphql", "adapter": "adapters/async-graphql/target/release/graphql-tla-async-graphql", "build": "adapters/async-graphql/target/release/graphql-tla-async-graphql" },
+    { "key": "hotchocolate", "adapter": "adapters/hotchocolate/run.sh", "build": "adapters/hotchocolate/bin" }
+  ]
+}

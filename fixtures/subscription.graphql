@@ -1,6 +1,7 @@
 # One subscription event (§6.2.3.2 ExecuteSubscriptionEvent): the root
 # field resolves against the event, then completes like a query.
 # maxListLength: 0
+# spec: 6.2.3, 6.2.3.2
 
 type Query {
   ok: Boolean

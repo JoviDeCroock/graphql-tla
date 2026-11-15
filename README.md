@@ -78,6 +78,8 @@ An adapter is a small program that speaks newline-delimited JSON. It builds the 
 
 The kit checks the checker too. Every run evaluates a shipped corpus of 17 negative controls, and each must be caught by the clause it names.
 
+**[The conformance sheet](conformance/README.md)** shows what each implementation was checked against and what it breaks, by spec section and by check, with the shortest failing case for each failure. Every cell is a count from a kit report (`--report`); `npm run conformance` regenerates it.
+
 ## What is checked
 
 ### Execution

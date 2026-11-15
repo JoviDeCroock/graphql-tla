@@ -9,10 +9,12 @@
     "check": "npm run check:fixtures && npm run check:specs && npm run check:graphql-js && npm run check:differentials",
     "check:fixtures": "node scripts/generate-fixtures.mjs --check",
     "check:specs": "node scripts/check.mjs",
-    "check:graphql-js": "node kit/cli.mjs run execution --strict --adapter \"node adapters/graphql-js/adapter.mjs --graphql 16\" && node kit/cli.mjs run execution --strict --adapter \"node adapters/graphql-js/adapter.mjs --graphql 17\"",
+    "check:graphql-js": "node kit/cli.mjs run execution --strict --adapter \"node adapters/graphql-js/adapter.mjs --graphql 16\" && node kit/cli.mjs run execution --strict --adapter \"node adapters/graphql-js/adapter.mjs --graphql 17\" && npm run check:conformance-sheet",
     "check:differentials": "node scripts/differential-lexer.mjs && node scripts/differential-validation.mjs && node scripts/differential-coercion.mjs && node scripts/differential-type-system.mjs",
     "check:mutants": "node scripts/differential-lexer.mjs --mutants && node scripts/differential-validation.mjs --mutants && node scripts/differential-coercion.mjs --mutants && node scripts/differential-type-system.mjs --mutants",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "conformance": "node scripts/conformance-reports.mjs",
+    "check:conformance-sheet": "node scripts/conformance-sheet.mjs --check"
   },
   "devDependencies": {
     "graphql16": "npm:graphql@16.15.0",

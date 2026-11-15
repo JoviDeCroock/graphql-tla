@@ -4,9 +4,10 @@
 // trace of resolver calls and settles up to the response, and the response.
 // The kit normalizes each case, turns it into TLA+, and has tla-ts evaluate
 // Cases!Failures (Reference!Clauses plus Reference!CalledSerially) for it,
-// in shards that run in parallel. Negative controls, made by breaking the
-// implementation's own cases, must each fail the clause they target, so the
-// check can't pass vacuously.
+// in shards that run in parallel. A shipped corpus of negative controls
+// (controls.json) is evaluated alongside, and each must fail the clause it
+// targets, so the check can't pass vacuously. check() also returns a report:
+// the facts a conformance sheet is built from.
 
 import { spawn } from "node:child_process";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -14,12 +15,15 @@ import { availableParallelism, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as graphql from "graphql17";
+import { CHECKS, problemId } from "./checks.mjs";
 import { positions } from "./positions.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
 const cli = join(root, "node_modules/tla-ts/dist/cli.js");
 
 export const CASE_FORMAT = 1;
+// The clauses Cases!Failures reports.
+const REFERENCE_CLAUSES = new Set(["complete", "dataMatches", "keyOrder", "errorsWereRaised", "errorPathsUnique", "errorsInsideNulls", "nullsExplained", "serialErrorsKept", "calledSerially"]);
 const SHARD_SIZE = 300;
 
 // Clauses that are SHOULDs in the spec: reported, but only fail with --strict.
@@ -79,14 +83,14 @@ export const normalize = (fixture, c) => {
   // §7.1: the response is a map of data, errors and extensions only.
   for (const k of Object.keys(response)) {
     if (!["data", "errors", "extensions"].includes(k)) {
-      problems.push(`the response has an entry ${JSON.stringify(k)} (§7.1: only data, errors and extensions)`);
+      problems.push(`the response has an entry ${JSON.stringify(k)} (§7.1.8: only data, errors and extensions)`);
     }
   }
   if ("extensions" in response && !isMap(response.extensions)) problems.push("extensions isn't a map (§7.1.7)");
-  if (!("data" in response)) problems.push("the response has no data entry (§7.1.4: execution started, so data must be present)");
+  if (!("data" in response)) problems.push("the response has no data entry (§7.1.1: execution started, so data must be present)");
   const errors = response.errors ?? [];
   if (!Array.isArray(errors)) return { problems: [...problems, "errors isn't a list"] };
-  if ("errors" in response && errors.length === 0) problems.push("errors is present but empty (§7.1.3)");
+  if ("errors" in response && errors.length === 0) problems.push("errors is present but empty (§7.1.1)");
 
   const at = positions(fixture, c.trace);
   for (const error of errors) {
@@ -106,7 +110,7 @@ export const normalize = (fixture, c) => {
       problems.push(`an error with malformed locations: ${JSON.stringify(error)}`);
     }
     const extra = Object.keys(error).filter((k) => !["message", "locations", "path", "extensions"].includes(k));
-    if (extra.length > 0) warnings.push(`errors have entries ${extra.join(", ")} (§7.1.2: services should not add entries)`);
+    if (extra.length > 0) warnings.push(`errors have entries ${extra.join(", ")} (§7.1.6: services should not add entries)`);
     if (!Array.isArray(error.path)) {
       problems.push(`an execution error without a path: ${JSON.stringify(error)}`);
       continue;
@@ -339,7 +343,7 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 // Checks cases against the reference, alongside the control corpus.
 // `fixtures` must be every fixture the cases and the corpus use. Returns
 // true if every case passes and the checker catches every control.
-export const check = async (fixtures, rawCases, { strict = false, log = console.log } = {}) => {
+export const check = async (fixtures, rawCases, { strict = false, log = console.log, implementation, capabilities = [], skipped = [] } = {}) => {
   const byId = new Map(fixtures.map((f) => [f.id, f]));
   const prepare = (raw) => {
     const fixture = byId.get(raw.fixture);
@@ -462,5 +466,119 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
     log(`! ${plural(unstamped.length, "mutation case")} without \`after\` stamps: calledSerially used the order messages arrived in, so it can catch a non-serial engine but can't prove a serial one`);
   }
   if (selfTest) log(`✓ the checker catches all ${controls.length} negative controls`);
-  return ok;
+
+  const report = buildReport({
+    byId,
+    rawCases,
+    cases,
+    results,
+    malformed,
+    warned,
+    strict,
+    selfTest,
+    controls: controls.length,
+    implementation: implementation ?? rawCases[0]?.implementation ?? "unknown",
+    capabilities,
+    skipped,
+  });
+  return { ok, report };
+};
+
+// The facts behind a conformance sheet: for each check, how many cases it
+// applied to and how many broke it, and for each fixture, whether it ran.
+const sectionsByNumber = new Map(
+  JSON.parse(readFileSync(join(root, "kit/spec-sections.json"), "utf8")).sections.map((s) => [s.number, s]),
+);
+export const REPORT_FORMAT = 1;
+const section = (number) => {
+  const s = sectionsByNumber.get(number);
+  if (!s) throw new Error(`no spec section ${number} in kit/spec-sections.json`);
+  return s;
+};
+
+const buildReport = ({ byId, rawCases, cases, results, malformed, warned, strict, selfTest, controls, implementation, capabilities, skipped }) => {
+  const hasErrors = (r) => Array.isArray(r?.errors) && r.errors.length > 0;
+  const indexed = (r) => hasErrors(r) && r.errors.some((e) => Array.isArray(e?.path) && e.path.some((x) => typeof x === "number" || /^\d+$/.test(x)));
+  // Which raw cases a JS-side check applies to.
+  const appliesTo = {
+    dataShape: (r) => r?.data != null,
+    leafValues: (r) => r?.data != null,
+    extensions: (r) => r && "extensions" in r,
+    errorFormat: hasErrors,
+    errorPath: hasErrors,
+    errorEntries: hasErrors,
+    responsePosition: indexed,
+  };
+  const stats = new Map(CHECKS.map((c) => [c.id, { cases: 0, failing: 0, example: null }]));
+  const fail = (id, example) => {
+    const s = stats.get(id);
+    s.failing++;
+    if (!s.example) s.example = example;
+  };
+  // JS-side checks, over every case submitted.
+  const problemsOf = new Map(malformed.map((m) => [m.raw, m.problems]));
+  for (const raw of rawCases) {
+    const ids = new Set((problemsOf.get(raw) ?? []).map(problemId));
+    for (const check of CHECKS) {
+      if (check.id in appliesTo ? !appliesTo[check.id](raw.response) : !["callsOnce", "callsSelected", "dataPresent", "errorsList", "additionalEntries", "protocol"].includes(check.id)) continue;
+      stats.get(check.id).cases++;
+      if (ids.has(check.id)) fail(check.id, { fixture: raw.fixture, problem: problemsOf.get(raw).find((p) => problemId(p) === check.id), trace: describeTrace(raw.trace ?? []), response: raw.response });
+    }
+  }
+  for (const [warning, count] of warned) {
+    const s = stats.get(problemId(warning));
+    s.failing += count;
+    s.example ??= { problem: warning };
+  }
+  // Clauses, over the distinct well-formed cases.
+  cases.forEach((c, i) => {
+    const mutation = byId.get(c.case.fixture).operationType === "mutation";
+    for (const check of CHECKS) {
+      if (!REFERENCE_CLAUSES.has(check.id) || (check.mutationOnly && !mutation)) continue;
+      stats.get(check.id).cases++;
+      if (results[i].failures.includes(check.id)) {
+        fail(check.id, { fixture: c.case.fixture, trace: describeTrace(c.case.trace), response: c.raw.response, expected: `data ${results[i].expected}` });
+      }
+    }
+  });
+  const ran = new Set(rawCases.map((c) => c.fixture));
+  const unstamped = cases.some((c) => byId.get(c.case.fixture).operationType === "mutation" && !isStamped(c.case.trace));
+  return {
+    format: REPORT_FORMAT,
+    area: "execution",
+    implementation,
+    capabilities: [...capabilities].sort(),
+    strict,
+    checkerSelfTest: selfTest ? `passed (${controls} negative controls)` : "failed",
+    cases: { submitted: rawCases.length, distinct: cases.length, malformed: malformed.length },
+    checks: CHECKS.map((check) => {
+      const s = stats.get(check.id);
+      const note = check.id === "calledSerially" && unstamped ? "without `after` stamps: can catch a non-serial engine, can't prove a serial one" : undefined;
+      return {
+        id: check.id,
+        title: check.title,
+        level: check.level,
+        spec: check.spec.map(section),
+        status: s.failing > 0 ? "fail" : s.cases > 0 ? (note ? "inconclusive" : "pass") : "untested",
+        cases: s.cases,
+        failing: s.failing,
+        ...(note ? { note } : {}),
+        ...(s.example ? { example: s.example } : {}),
+      };
+    }),
+    fixtures: [...byId.values()]
+      .filter((f) => ran.has(f.id) || skipped.some((x) => x.fixture === f.id))
+      .map((f) => {
+        const skip = skipped.find((x) => x.fixture === f.id);
+        const own = cases.map((c, i) => [c, results[i]]).filter(([c]) => c.case.fixture === f.id);
+        return {
+          id: f.id,
+          spec: f.spec.map(section),
+          status: skip ? "skipped" : own.some(([, r]) => r.failures.some((x) => strict || !SHOULD.has(x))) || malformed.some((m) => m.raw.fixture === f.id) ? "fail" : "pass",
+          ...(skip ? { reason: `needs ${skip.needs.join(", ")}` } : {}),
+          cases: rawCases.filter((c) => c.fixture === f.id).length,
+          ...(f.invalidResults && !capabilities.includes("invalid-results") ? { note: "without results of the wrong shape (no invalid-results capability)" } : {}),
+        };
+      }),
+  };
 };
