@@ -1,0 +1,694 @@
+{
+  "format": 1,
+  "area": "introspect",
+  "implementation": "graphql-dotnet 8.8.5",
+  "capabilities": [
+    "custom-scalar-literals",
+    "deferred-items",
+    "idle",
+    "introspect",
+    "invalid-results",
+    "mutation",
+    "parse",
+    "schema",
+    "subscription",
+    "uncoercible-results",
+    "validate"
+  ],
+  "provenance": {
+    "kit": "f0039322bf59",
+    "date": "2026-11-15",
+    "strict": true,
+    "vectors": 34
+  },
+  "checkerSelfTest": "passed (83 negative controls)",
+  "cases": {
+    "submitted": 34,
+    "distinct": 34,
+    "malformed": 34
+  },
+  "adapterProblems": 0,
+  "checks": [
+    {
+      "id": "envelope",
+      "title": "The response is a well-formed execution result: data, errors only as a non-empty list, extensions a map, nothing else",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.1",
+          "title": "Execution Result",
+          "url": "https://spec.graphql.org/draft/#sec-Execution-Result"
+        },
+        {
+          "number": "7.1.7",
+          "title": "Extensions",
+          "url": "https://spec.graphql.org/draft/#sec-Extensions"
+        },
+        {
+          "number": "7.1.8",
+          "title": "Additional Entries",
+          "url": "https://spec.graphql.org/draft/#sec-Additional-Entries"
+        }
+      ],
+      "status": "pass",
+      "cases": 34,
+      "failing": 0
+    },
+    {
+      "id": "executes",
+      "title": "The query executes, and its result has exactly the fields it selects, nulls included",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "fail",
+      "cases": 34,
+      "failing": 34
+    },
+    {
+      "id": "roots",
+      "title": "queryType, mutationType and subscriptionType are the root operation types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.1",
+          "title": "The \\_\\_Schema Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Schema-Type"
+        },
+        {
+          "number": "3.3.1",
+          "title": "Root Operation Types",
+          "url": "https://spec.graphql.org/draft/#sec-Root-Operation-Types"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "types",
+      "title": "types is the set of all named types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.1",
+          "title": "The \\_\\_Schema Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Schema-Type"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "builtinScalars",
+      "title": "types has the built-in scalars the schema references, and no others",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5",
+          "title": "Scalars",
+          "url": "https://spec.graphql.org/draft/#sec-Scalars"
+        },
+        {
+          "number": "4.2.1",
+          "title": "The \\_\\_Schema Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Schema-Type"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "typeByName",
+      "title": "__type(name:) returns the named type, and null for a name the schema doesn't have",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "typeKinds",
+      "title": "Each __Type has its type's kind, and its fields are null exactly where that kind requires",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "fields",
+      "title": "An object's or interface's fields, with their types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        },
+        {
+          "number": "4.2.3",
+          "title": "The \\_\\_Field Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Field-Type"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "arguments",
+      "title": "Field and directive arguments, with their types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.3",
+          "title": "The \\_\\_Field Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Field-Type"
+        },
+        {
+          "number": "4.2.4",
+          "title": "The \\_\\_InputValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+        },
+        {
+          "number": "4.2.6",
+          "title": "The \\_\\_Directive Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Directive-Type"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "defaultValue",
+      "title": "defaultValue encodes the default value, and is null without one",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.4",
+          "title": "The \\_\\_InputValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "inputFields",
+      "title": "An input object's inputFields, with their types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        },
+        {
+          "number": "4.2.4",
+          "title": "The \\_\\_InputValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "enumValues",
+      "title": "An enum's enumValues",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        },
+        {
+          "number": "4.2.5",
+          "title": "The \\_\\_EnumValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-EnumValue-Type"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "interfaces",
+      "title": "interfaces, and possibleTypes for unions and interfaces",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "deprecation",
+      "title": "isDeprecated, deprecationReason and includeDeprecated; @deprecated is provided when the schema deprecates something",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.3",
+          "title": "The \\_\\_Field Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Field-Type"
+        },
+        {
+          "number": "4.2.4",
+          "title": "The \\_\\_InputValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-InputValue-Type"
+        },
+        {
+          "number": "4.2.5",
+          "title": "The \\_\\_EnumValue Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-EnumValue-Type"
+        },
+        {
+          "number": "4.2.6",
+          "title": "The \\_\\_Directive Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Directive-Type"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        },
+        {
+          "number": "3.13.3",
+          "title": "@deprecated",
+          "url": "https://spec.graphql.org/draft/#sec-deprecated"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "specifiedByURL",
+      "title": "specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        },
+        {
+          "number": "3.13.4",
+          "title": "@specifiedBy",
+          "url": "https://spec.graphql.org/draft/#sec-specifiedBy"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "isOneOf",
+      "title": "isOneOf is true exactly for OneOf input objects",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.2",
+          "title": "The \\_\\_Type Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Type-Type"
+        },
+        {
+          "number": "3.10.1",
+          "title": "OneOf Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-OneOf-Input-Objects"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "descriptions",
+      "title": "Descriptions are the schema's",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.2",
+          "title": "Type System Descriptions",
+          "url": "https://spec.graphql.org/draft/#sec-Type-System-Descriptions"
+        },
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "directives",
+      "title": "directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2.1",
+          "title": "The \\_\\_Schema Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Schema-Type"
+        },
+        {
+          "number": "4.2.6",
+          "title": "The \\_\\_Directive Type",
+          "url": "https://spec.graphql.org/draft/#sec-The-Directive-Type"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "builtinDirectives",
+      "title": "@skip and @include are provided, @specifiedBy when the schema has a custom scalar, @oneOf when it has a OneOf input object",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        },
+        {
+          "number": "3.13.1",
+          "title": "@skip",
+          "url": "https://spec.graphql.org/draft/#sec-skip"
+        },
+        {
+          "number": "3.13.2",
+          "title": "@include",
+          "url": "https://spec.graphql.org/draft/#sec-include"
+        },
+        {
+          "number": "3.13.4",
+          "title": "@specifiedBy",
+          "url": "https://spec.graphql.org/draft/#sec-specifiedBy"
+        },
+        {
+          "number": "3.13.5",
+          "title": "@oneOf",
+          "url": "https://spec.graphql.org/draft/#sec-oneOf"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "builtinDefinitions",
+      "title": "The introspection types and built-in directives are as the spec defines them",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "typename",
+      "title": "__typename names the root type, and no fields list includes it",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.1",
+          "title": "Type Name Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Type-Name-Introspection"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "order",
+      "title": "Fields, arguments, enum values, directives, members and interfaces come in source order",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "other",
+      "title": "Anything else Introspection!Matches requires",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "executes"
+      ],
+      "summary": "the schema didn't build, the query failed, or the result doesn't have the fields the query selects",
+      "cases": 34,
+      "fixtures": {
+        "minimal": 3,
+        "rich": 3,
+        "interfaces": 3,
+        "defaults": 3,
+        "deprecation": 4,
+        "directiveDeprecation": 3,
+        "roots": 3,
+        "builtinScalars": 3,
+        "scalars": 3,
+        "oneOf": 3,
+        "order": 3
+      },
+      "fixture": "minimal.inc",
+      "problem": "the response has errors: Unknown argument 'includeDeprecated' on field 'directives' of type '__Schema'.; Cannot query field 'isRepeatable' on type '__Directive'.; Unknown argument 'includeDeprecated' on field 'args' of type '[__Directive!]!'.; Cannot query field 'isDeprecated' on type '__Directive'.; Cannot query field 'dep",
+      "example": {
+        "input": "type Query { a: Int }  (the introspection query; includeDeprecated: true)",
+        "response": {
+          "response": {
+            "errors": [
+              {
+                "message": "Unknown argument 'includeDeprecated' on field 'directives' of type '__Schema'.",
+                "locations": [
+                  {
+                    "line": 9,
+                    "column": 16
+                  }
+                ],
+                "extensions": {
+                  "code": "KNOWN_ARGUMENT_NAMES",
+                  "codes": [
+                    "KNOWN_ARGUMENT_NAMES"
+                  ],
+                  "number": "5.4.1"
+                }
+              },
+              {
+                "message": "Cannot query field 'isRepeatable' on type '__Directive'.",
+                "locations": [
+                  {
+                    "line": 12,
+                    "column": 7
+                  }
+                ],
+                "extensions": {
+                  "code": "FIELDS_ON_CORRECT_TYPE",
+                  "codes": [
+                    "FIELDS_ON_CORRECT_TYPE"
+                  ],
+                  "number": "5.3.1"
+                }
+              },
+              {
+                "message": "Unknown argument 'includeDeprecated' on field 'args' of type '[__Directive!]!'.",
+                "locations": [
+                  {
+                    "line": 14,
+                    "column": 12
+                  }
+                ],
+                "extensions": {
+                  "code": "KNOWN_ARGUMENT_NAMES",
+                  "codes": [
+                    "KNOWN_ARGUMENT_NAMES"
+                  ],
+                  "number": "5.4.1"
+                }
+              },
+              {
+                "message": "Cannot query field 'isDeprecated' on type '__Directive'.",
+                "locations": [
+                  {
+                    "line": 15,
+                    "column": 7
+                  }
+                ],
+                "extensions": {
+                  "code": "FIELDS_ON_CORRECT_TYPE",
+                  "codes": [
+                    "FIELDS_ON_CORRECT_TYPE"
+                  ],
+                  "number": "5.3.1"
+                }
+              },
+              {
+                "message": "Cannot query field 'deprecationReason' on type '__Directive'.",
+                "locations": [
+                  {
+                    "line": 16,
+                    "column": 7
+                  }
+                ],
+                "extensions": {
+                  "code": "FIELDS_ON_CORRECT_TYPE",
+                  "codes": [
+                    "FIELDS_ON_CORRECT_TYPE"
+                  ],
+                  "number": "5.3.1"
+                }
+              },
+              {
+                "message": "Cannot query field 'specifiedByURL' on type '__Type'.",
+                "locations": [
+                  {
+                    "line": 25,
+                    "column": 3
+                  }
+                ],
+                "extensions": {
+                  "code": "FIELDS_ON_CORRECT_TYPE",
+                  "codes": [
+                    "FIELDS_ON_CORRECT_TYPE"
+                  ],
+                  "number": "5.3.1"
+                }
+              },
+              {
+                "message": "Unknown argument 'includeDeprecated' on field 'args' of type '[__Field!]'.",
+                "locations": [
+                  {
+                    "line": 30,
+                    "column": 10
+                  }
+                ],
+                "extensions": {
+                  "code": "KNOWN_ARGUMENT_NAMES",
+                  "codes": [
+                    "KNOWN_ARGUMENT_NAMES"
+                  ],
+                  "number": "5.4.1"
+                }
+              },
+              {
+                "message": "Unknown argument 'includeDeprecated' on field 'inputFields' of type '__Type'.",
+                "locations": [
+                  {
+                    "line": 35,
+                    "column": 15
+                  }
+                ],
+                "extensions": {
+                  "code": "KNOWN_ARGUMENT_NAMES",
+                  "codes": [
+                    "KNOWN_ARGUMENT_NAMES"
+                  ],
+                  "number": "5.4.1"
+                }
+              },
+              {
+                "message": "Cannot query field 'isDeprecated' on type '__InputValue'.",
+                "locations": [
+                  {
+                    "line": 51,
+                    "column": 3
+                  }
+                ],
+                "extensions": {
+                  "code": "FIELDS_ON_CORRECT_TYPE",
+                  "codes": [
+                    "FIELDS_ON_CORRECT_TYPE"
+                  ],
+                  "number": "5.3.1"
+                }
+              },
+              {
+                "message": "Cannot query field 'deprecationReason' on type '__InputValue'.",
+                "locations": [
+                  {
+                    "line": 52,
+                    "column": 3
+                  }
+                ],
+                "extensions": {
+                  "code": "FIELDS_ON_CORRECT_TYPE",
+                  "codes": [
+                    "FIELDS_ON_CORRECT_TYPE"
+                  ],
+                  "number": "5.3.1"
+                }
+              }
+            ]
+          }
+        },
+        "expected": "a well-formed execution result with exactly the fields the query selects, and no errors"
+      }
+    }
+  ],
+  "fixtures": [],
+  "ok": false
+}

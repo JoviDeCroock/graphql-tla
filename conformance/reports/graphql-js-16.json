@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-scalar-literals",
     "deferred-items",
     "idle",
     "introspect",
@@ -18,14 +19,14 @@
     "validate"
   ],
   "provenance": {
-    "kit": "c8d6acb7c6e2",
+    "kit": "f0039322bf59",
     "date": "2026-11-15",
     "strict": true,
     "random": 1500,
     "seed": 1,
     "exhaustive": true
   },
-  "checkerSelfTest": "passed (23 negative controls)",
+  "checkerSelfTest": "passed (25 negative controls)",
   "cases": {
     "submitted": 11786,
     "distinct": 2239,
@@ -260,6 +261,21 @@
       "failing": 0
     },
     {
+      "id": "responds",
+      "title": "A request gets a response",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1",
+          "title": "Response Format",
+          "url": "https://spec.graphql.org/draft/#sec-Response-Format"
+        }
+      ],
+      "status": "pass",
+      "cases": 11786,
+      "failing": 0
+    },
+    {
       "id": "eventYieldsResult",
       "title": "A subscription event yields an execution result, even when its data is null",
       "level": "MUST",
@@ -316,7 +332,7 @@
         }
       ],
       "status": "pass",
-      "cases": 11786,
+      "cases": 920,
       "failing": 0
     },
     {
@@ -667,5 +683,6 @@
       "cases": 1778,
       "failing": 0
     }
-  ]
+  ],
+  "ok": true
 }

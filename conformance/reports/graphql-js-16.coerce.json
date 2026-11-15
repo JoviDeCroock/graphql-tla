@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-scalar-literals",
     "deferred-items",
     "idle",
     "introspect",
@@ -18,18 +19,22 @@
     "validate"
   ],
   "provenance": {
-    "kit": "c8d6acb7c6e2",
+    "kit": "f0039322bf59",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 2014,
-    "run": 2014,
-    "skipped": {},
-    "comparison": "exact"
+    "vectors": 2036,
+    "run": 2036,
+    "skipped": 0,
+    "modes": [
+      "unvalidated",
+      "absent-vs-null",
+      "big JSON numbers graded under jsonNumbers"
+    ]
   },
-  "checkerSelfTest": "passed (5601 negative controls)",
+  "checkerSelfTest": "passed (11675 negative controls)",
   "cases": {
-    "submitted": 2014,
-    "distinct": 2014,
+    "submitted": 2036,
+    "distinct": 2036,
     "malformed": 0
   },
   "adapterProblems": 0,
@@ -67,7 +72,7 @@
     },
     {
       "id": "float",
-      "title": "Float accepts integer and float input values a finite double holds",
+      "title": "Float accepts integer and float input values, and rejects non-finite values",
       "level": "MUST",
       "spec": [
         {
@@ -76,10 +81,26 @@
           "url": "https://spec.graphql.org/draft/#sec-Float"
         }
       ],
-      "basis": "Coercion.tla reads \"outside the available precision\" as: an integral value must be exactly representable. A fractional value is kept as its decimal, which the vectors only use with at most 15 significant digits.",
+      "basis": "A fractional value is kept as its decimal, which the vectors only use with at most 15 significant digits. Integers a double can't hold exactly are floatPrecision's.",
       "status": "fail",
-      "cases": 94,
-      "failing": 3
+      "cases": 92,
+      "failing": 1
+    },
+    {
+      "id": "floatPrecision",
+      "title": "Float rejects an integer a double can't hold exactly",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "3.5.2",
+          "title": "Float",
+          "url": "https://spec.graphql.org/draft/#sec-Float"
+        }
+      ],
+      "basis": "The sentence says a request error \"must be raised\" for \"a value outside the available precision\", but which values that covers is Coercion.tla's reading (an integral value must be exactly representable), so the check takes the weaker level.",
+      "status": "fail",
+      "cases": 1,
+      "failing": 1
     },
     {
       "id": "string",
@@ -122,10 +143,10 @@
           "url": "https://spec.graphql.org/draft/#sec-ID"
         }
       ],
-      "basis": "\"any string (such as \\\"4\\\") or integer (such as 4 or -4) input value should be coerced to ID\"; an integer becomes its decimal string.",
-      "status": "fail",
-      "cases": 29,
-      "failing": 3
+      "basis": "\"any string (such as \\\"4\\\") or integer (such as 4 or -4) input value should be coerced to ID\". The format of an ID made from an integer is the service's: any string that writes the integer's exact value passes, such as \"1e+21\" for 10^21.",
+      "status": "pass",
+      "cases": 27,
+      "failing": 0
     },
     {
       "id": "id",
@@ -144,7 +165,7 @@
     },
     {
       "id": "enum",
-      "title": "Enums accept their own values: enum literals, and strings in variables",
+      "title": "Enums accept their own values, and reject string literals and unknown values",
       "level": "MUST",
       "spec": [
         {
@@ -153,14 +174,14 @@
           "url": "https://spec.graphql.org/draft/#sec-Enums"
         }
       ],
-      "basis": "String literals must be rejected. For JSON variables, \"strings may be interpreted as the enum input value with the same name\", which Coercion.tla does.",
+      "basis": "String literals must be rejected. For JSON variables, \"strings may be interpreted as the enum input value with the same name\": a MAY, so taking the string and rejecting it both pass.",
       "status": "pass",
       "cases": 188,
       "failing": 0
     },
     {
       "id": "inputObject",
-      "title": "Input objects: an object with only defined fields, field defaults, required fields",
+      "title": "Input objects: an object of defined fields, required fields, variables in fields",
       "level": "MUST",
       "spec": [
         {
@@ -169,10 +190,26 @@
           "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
         }
       ],
-      "basis": "The section mixes \"must\" (the value's shape, unknown fields) with \"should\" (field defaults, missing required fields). Coercion.tla doesn't report which sentence decided a verdict, so the check takes the stronger level.",
+      "basis": "The \"must\" sentences: the value must be an object without undefined fields, a variable's runtime value must be used, and §3.12 makes a missing Non-Null field an error that must be raised. Field defaults are a \"should\", graded by inputFieldDefaults.",
       "status": "fail",
       "cases": 413,
       "failing": 4
+    },
+    {
+      "id": "inputFieldDefaults",
+      "title": "An omitted input field gets its default value",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "3.10",
+          "title": "Input Objects",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Objects"
+        }
+      ],
+      "basis": "\"If no value is provided for a defined input object field and that field definition provides a default value, the result of coercing the default value ... should be used.\" A result that is right except that it leaves such defaults out fails this check, not inputObject.",
+      "status": "pass",
+      "cases": 59,
+      "failing": 0
     },
     {
       "id": "oneOf",
@@ -232,7 +269,7 @@
         }
       ],
       "status": "pass",
-      "cases": 897,
+      "cases": 898,
       "failing": 0
     },
     {
@@ -248,6 +285,48 @@
       ],
       "status": "pass",
       "cases": 820,
+      "failing": 0
+    },
+    {
+      "id": "getOperation",
+      "title": "GetOperation: the operation operationName names, or the only one, else a request error",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.1",
+          "title": "Executing Requests",
+          "url": "https://spec.graphql.org/draft/#sec-Executing-Requests"
+        }
+      ],
+      "basis": "Includes a mutation running on the mutation root type, and only the selected operation's variables being coerced.",
+      "status": "pass",
+      "cases": 22,
+      "failing": 0
+    },
+    {
+      "id": "invalidNotExecuted",
+      "title": "An invalid document fails as a request error, without executing",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.1.1",
+          "title": "Validating Requests",
+          "url": "https://spec.graphql.org/draft/#sec-Validating-Requests"
+        }
+      ],
+      "basis": "\"If validation errors are known, they should be reported in the list of \\\"errors\\\" in the response and the request must fail without operation execution.\" Graded for adapters without `unvalidated`, on vectors Validation.tla rejects: a request error, no data, no resolver called.",
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "jsonNumbers",
+      "title": "JSON numbers a double can't hold: read exactly, read as binary64, or refused",
+      "level": "INFO",
+      "spec": [],
+      "basis": "Not a GraphQL rule: RFC 8259 §6 lets a JSON parser limit the range and precision of numbers. Vectors whose answer depends on that count here, never against Float or ID, unless the adapter claims exact-numbers.",
+      "status": "pass",
+      "cases": 3,
       "failing": 0
     }
   ],
@@ -267,7 +346,28 @@
         "vector": "coerce-1469",
         "input": "{ point(v: { x: 1, z: 1 }) }  variables: {}",
         "response": {
+          "response": {
+            "data": {
+              "point": "ok"
+            }
+          },
+          "calls": [
+            {
+              "path": [
+                "point"
+              ],
+              "arguments": {
+                "v": {
+                  "x": 1,
+                  "y": 0
+                }
+              }
+            }
+          ]
+        },
+        "outcome": {
           "outcome": "value",
+          "field": "point",
           "arguments": {
             "v": {
               "x": 1,
@@ -275,7 +375,47 @@
             }
           }
         },
-        "expected": "a field error"
+        "expected": "a field error at point"
+      }
+    },
+    {
+      "checks": [
+        "floatPrecision"
+      ],
+      "summary": "accepts what §3.5.2 (Float) rejects",
+      "cases": 1,
+      "fixtures": {
+        "literal": 1
+      },
+      "fixture": "literal",
+      "example": {
+        "vector": "coerce-0424",
+        "input": "{ float(v: 99999999999999999999) }  variables: {}",
+        "response": {
+          "response": {
+            "data": {
+              "float": "ok"
+            }
+          },
+          "calls": [
+            {
+              "path": [
+                "float"
+              ],
+              "arguments": {
+                "v": 100000000000000000000
+              }
+            }
+          ]
+        },
+        "outcome": {
+          "outcome": "value",
+          "field": "float",
+          "arguments": {
+            "v": 100000000000000000000
+          }
+        },
+        "expected": "a field error at float"
       }
     },
     {
@@ -283,43 +423,39 @@
         "float"
       ],
       "summary": "accepts what §3.5.2 (Float) rejects",
-      "cases": 2,
+      "cases": 1,
       "fixtures": {
-        "literal": 2
+        "literal": 1
       },
       "fixture": "literal",
       "example": {
         "vector": "coerce-0429",
         "input": "{ float(v: 1e400) }  variables: {}",
         "response": {
+          "response": {
+            "data": {
+              "float": "ok"
+            }
+          },
+          "calls": [
+            {
+              "path": [
+                "float"
+              ],
+              "arguments": {
+                "v": "Infinity"
+              }
+            }
+          ]
+        },
+        "outcome": {
           "outcome": "value",
+          "field": "float",
           "arguments": {
             "v": "Infinity"
           }
         },
-        "expected": "a field error"
-      }
-    },
-    {
-      "checks": [
-        "float"
-      ],
-      "summary": "accepts what §3.5.2 (Float) rejects; the variables hold a number a double can't hold, so the JSON parser decides this",
-      "cases": 1,
-      "fixtures": {
-        "variable": 1
-      },
-      "fixture": "variable",
-      "example": {
-        "vector": "coerce-0473",
-        "input": "query($x: Float) { float(v: $x) }  variables: {\"x\": 9007199254740993}",
-        "response": {
-          "outcome": "value",
-          "arguments": {
-            "v": 9007199254740992
-          }
-        },
-        "expected": "a request error"
+        "expected": "a field error at float"
       }
     },
     {
@@ -336,76 +472,30 @@
         "vector": "coerce-0584",
         "input": "query($x: String) { string(v: $x) }  variables: {\"x\": \"\\ud800\"}",
         "response": {
+          "response": {
+            "data": {
+              "string": "ok"
+            }
+          },
+          "calls": [
+            {
+              "path": [
+                "string"
+              ],
+              "arguments": {
+                "v": "\ud800"
+              }
+            }
+          ]
+        },
+        "outcome": {
           "outcome": "value",
+          "field": "string",
           "arguments": {
             "v": "\ud800"
           }
         },
         "expected": "a request error"
-      }
-    },
-    {
-      "checks": [
-        "idCoerced"
-      ],
-      "summary": "coerces to the wrong value under §3.5.5 (ID); the variables hold a number a double can't hold, so the JSON parser decides this",
-      "cases": 1,
-      "fixtures": {
-        "variable": 1
-      },
-      "fixture": "variable",
-      "example": {
-        "vector": "coerce-0776",
-        "input": "query($x: ID) { id(v: $x) }  variables: {\"x\": 9007199254740993}",
-        "response": {
-          "outcome": "value",
-          "arguments": {
-            "v": "9007199254740992"
-          }
-        },
-        "expected": "the resolver gets {\"v\":\"9007199254740993\"}"
-      }
-    },
-    {
-      "checks": [
-        "idCoerced"
-      ],
-      "summary": "coerces to the wrong value under §3.5.5 (ID)",
-      "cases": 1,
-      "fixtures": {
-        "variable": 1
-      },
-      "fixture": "variable",
-      "example": {
-        "vector": "coerce-0777",
-        "input": "query($x: ID) { id(v: $x) }  variables: {\"x\": 1e21}",
-        "response": {
-          "outcome": "value",
-          "arguments": {
-            "v": "1e+21"
-          }
-        },
-        "expected": "the resolver gets {\"v\":\"1000000000000000000000\"}"
-      }
-    },
-    {
-      "checks": [
-        "idCoerced"
-      ],
-      "summary": "rejects what §3.5.5 (ID) accepts; the variables hold a number a double can't hold, so the JSON parser decides this",
-      "cases": 1,
-      "fixtures": {
-        "variable": 1
-      },
-      "fixture": "variable",
-      "example": {
-        "vector": "coerce-0778",
-        "input": "query($x: ID) { id(v: $x) }  variables: {\"x\": 1e400}",
-        "response": {
-          "outcome": "request-error",
-          "message": "Variable \"$x\" got invalid value Infinity; ID cannot represent value: Infinity"
-        },
-        "expected": "the resolver gets {\"v\":\"10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\"}"
       }
     },
     {
@@ -422,7 +512,25 @@
         "vector": "coerce-0786",
         "input": "query($x: ID) { id(v: $x) }  variables: {\"x\": \"\\ud800\"}",
         "response": {
+          "response": {
+            "data": {
+              "id": "ok"
+            }
+          },
+          "calls": [
+            {
+              "path": [
+                "id"
+              ],
+              "arguments": {
+                "v": "\ud800"
+              }
+            }
+          ]
+        },
+        "outcome": {
           "outcome": "value",
+          "field": "id",
           "arguments": {
             "v": "\ud800"
           }
@@ -444,7 +552,30 @@
         "vector": "coerce-1777",
         "input": "{ points(v: { x: 1, z: 1 }) }  variables: {}",
         "response": {
+          "response": {
+            "data": {
+              "points": "ok"
+            }
+          },
+          "calls": [
+            {
+              "path": [
+                "points"
+              ],
+              "arguments": {
+                "v": [
+                  {
+                    "x": 1,
+                    "y": 0
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "outcome": {
           "outcome": "value",
+          "field": "points",
           "arguments": {
             "v": [
               {
@@ -454,9 +585,10 @@
             ]
           }
         },
-        "expected": "a field error"
+        "expected": "a field error at points"
       }
     }
   ],
-  "fixtures": []
+  "fixtures": [],
+  "ok": false
 }

@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-scalar-literals",
     "deferred-items",
     "error-propagation-off",
     "idle",
@@ -19,18 +20,22 @@
     "validate"
   ],
   "provenance": {
-    "kit": "c8d6acb7c6e2",
+    "kit": "f0039322bf59",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 166
   },
-  "checkerSelfTest": "passed (333 negative controls)",
+  "checkerSelfTest": "passed (335 negative controls)",
   "cases": {
     "submitted": 166,
     "distinct": 166,
     "malformed": 0
   },
   "adapterProblems": 0,
+  "draftOnly": {
+    "vectors": 46,
+    "failing": 0
+  },
   "checks": [
     {
       "id": "typeNamesUnique",
@@ -310,7 +315,9 @@
       ],
       "status": "pass",
       "cases": 8,
-      "failing": 0
+      "failing": 0,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have deprecated arguments."
     },
     {
       "id": "argDefaultCompatible",
@@ -325,7 +332,9 @@
       ],
       "status": "pass",
       "cases": 18,
-      "failing": 0
+      "failing": 0,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have default value validation."
     },
     {
       "id": "implementsUnique",
@@ -485,7 +494,9 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have deprecation of implementing fields."
     },
     {
       "id": "unionMembersDefined",
@@ -568,9 +579,9 @@
       "level": "MUST",
       "spec": [
         {
-          "number": "3.9",
-          "title": "Enums",
-          "url": "https://spec.graphql.org/draft/#sec-Enums"
+          "number": "4",
+          "title": "Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Introspection"
         }
       ],
       "status": "pass",
@@ -660,7 +671,9 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have deprecated input fields."
     },
     {
       "id": "oneOfFieldNullable",
@@ -680,7 +693,9 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have OneOf input objects."
     },
     {
       "id": "oneOfFieldNoDefault",
@@ -700,7 +715,9 @@
       ],
       "status": "pass",
       "cases": 2,
-      "failing": 0
+      "failing": 0,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have OneOf input objects."
     },
     {
       "id": "inputObjectUnbreakableCycle",
@@ -730,7 +747,9 @@
       ],
       "status": "pass",
       "cases": 8,
-      "failing": 0
+      "failing": 0,
+      "edition": "draft",
+      "note": "Draft only: the October 2021 edition doesn't have default value validation."
     },
     {
       "id": "directiveLocationsDefined",
@@ -784,6 +803,7 @@
       "checks": [
         "directiveReferencesItselfIndirectly"
       ],
+      "kind": "not enforced",
       "summary": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule",
       "cases": 3,
       "fixtures": {
@@ -802,6 +822,7 @@
       "checks": [
         "typeNameNotBuiltin"
       ],
+      "kind": "not enforced",
       "summary": "TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule",
       "cases": 2,
       "fixtures": {
@@ -820,6 +841,7 @@
       "checks": [
         "directiveUsesItself"
       ],
+      "kind": "not enforced",
       "summary": "DIRECTIVE_USES_ITSELF not enforced: accepts a schema that breaks only this rule",
       "cases": 1,
       "fixtures": {
@@ -835,5 +857,6 @@
       }
     }
   ],
-  "fixtures": []
+  "fixtures": [],
+  "ok": false
 }

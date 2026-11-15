@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-scalar-literals",
     "deferred-items",
     "idle",
     "introspect",
@@ -18,22 +19,47 @@
     "validate"
   ],
   "provenance": {
-    "kit": "c8d6acb7c6e2",
+    "kit": "f0039322bf59",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 22
+    "vectors": 34
   },
-  "checkerSelfTest": "passed (46 negative controls)",
+  "checkerSelfTest": "passed (83 negative controls)",
   "cases": {
-    "submitted": 22,
-    "distinct": 22,
-    "malformed": 2
+    "submitted": 34,
+    "distinct": 34,
+    "malformed": 3
   },
   "adapterProblems": 0,
   "checks": [
     {
+      "id": "envelope",
+      "title": "The response is a well-formed execution result: data, errors only as a non-empty list, extensions a map, nothing else",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.1",
+          "title": "Execution Result",
+          "url": "https://spec.graphql.org/draft/#sec-Execution-Result"
+        },
+        {
+          "number": "7.1.7",
+          "title": "Extensions",
+          "url": "https://spec.graphql.org/draft/#sec-Extensions"
+        },
+        {
+          "number": "7.1.8",
+          "title": "Additional Entries",
+          "url": "https://spec.graphql.org/draft/#sec-Additional-Entries"
+        }
+      ],
+      "status": "pass",
+      "cases": 34,
+      "failing": 0
+    },
+    {
       "id": "executes",
-      "title": "The introspection query executes, and its result has every field it selects",
+      "title": "The query executes, and its result has exactly the fields it selects, nulls included",
       "level": "MUST",
       "spec": [
         {
@@ -43,8 +69,8 @@
         }
       ],
       "status": "fail",
-      "cases": 22,
-      "failing": 2
+      "cases": 34,
+      "failing": 3
     },
     {
       "id": "roots",
@@ -102,6 +128,21 @@
       "failing": 0
     },
     {
+      "id": "typeByName",
+      "title": "__type(name:) returns the named type, and null for a name the schema doesn't have",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "4.2",
+          "title": "Schema Introspection",
+          "url": "https://spec.graphql.org/draft/#sec-Schema-Introspection"
+        }
+      ],
+      "status": "pass",
+      "cases": 11,
+      "failing": 0
+    },
+    {
       "id": "typeKinds",
       "title": "Each __Type has its type's kind, and its fields are null exactly where that kind requires",
       "level": "MUST",
@@ -113,7 +154,7 @@
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 31,
       "failing": 0
     },
     {
@@ -133,7 +174,7 @@
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 31,
       "failing": 0
     },
     {
@@ -158,7 +199,7 @@
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 31,
       "failing": 0
     },
     {
@@ -173,7 +214,7 @@
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 31,
       "failing": 0
     },
     {
@@ -193,7 +234,7 @@
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 31,
       "failing": 0
     },
     {
@@ -213,7 +254,7 @@
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 31,
       "failing": 0
     },
     {
@@ -228,12 +269,12 @@
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 31,
       "failing": 0
     },
     {
       "id": "deprecation",
-      "title": "isDeprecated, deprecationReason and includeDeprecated; @deprecated is provided",
+      "title": "isDeprecated, deprecationReason and includeDeprecated; @deprecated is provided when the schema deprecates something",
       "level": "MUST",
       "spec": [
         {
@@ -257,13 +298,18 @@
           "url": "https://spec.graphql.org/draft/#sec-The-Directive-Type"
         },
         {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        },
+        {
           "number": "3.13.3",
           "title": "@deprecated",
           "url": "https://spec.graphql.org/draft/#sec-deprecated"
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 31,
       "failing": 0
     },
     {
@@ -283,7 +329,7 @@
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 31,
       "failing": 0
     },
     {
@@ -303,7 +349,7 @@
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 31,
       "failing": 0
     },
     {
@@ -323,12 +369,12 @@
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 31,
       "failing": 0
     },
     {
       "id": "directives",
-      "title": "directives describes the schema's own directives: name, locations, isRepeatable",
+      "title": "directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types",
       "level": "MUST",
       "spec": [
         {
@@ -340,6 +386,11 @@
           "number": "4.2.6",
           "title": "The \\_\\_Directive Type",
           "url": "https://spec.graphql.org/draft/#sec-The-Directive-Type"
+        },
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
         }
       ],
       "status": "pass",
@@ -348,9 +399,14 @@
     },
     {
       "id": "builtinDirectives",
-      "title": "@skip, @include, @specifiedBy and @oneOf are provided",
+      "title": "@skip and @include are provided, @specifiedBy when the schema has a custom scalar, @oneOf when it has a OneOf input object",
       "level": "SHOULD",
       "spec": [
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/draft/#sec-Directives"
+        },
         {
           "number": "3.13.1",
           "title": "@skip",
@@ -393,7 +449,7 @@
         }
       ],
       "status": "fail",
-      "cases": 20,
+      "cases": 31,
       "failing": 20
     },
     {
@@ -408,7 +464,7 @@
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 31,
       "failing": 0
     },
     {
@@ -423,7 +479,7 @@
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 31,
       "failing": 0
     },
     {
@@ -438,7 +494,7 @@
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 31,
       "failing": 0
     }
   ],
@@ -464,7 +520,7 @@
       "fixture": "minimal.inc",
       "problem": "arguments at @deprecated(reason:), arguments at __Directive.args(includeDeprecated:), arguments at __Field.args(includeDeprecated:), arguments at __Type.enumValues(includeDeprecated:), arguments at __Type.fields(includeDeprecated:), arguments at __Type.inputFields(includeDeprecated:)",
       "example": {
-        "input": "type Query { a: Int }  (includeDeprecated: true)",
+        "input": "type Query { a: Int }  (the introspection query; includeDeprecated: true)",
         "response": {
           "kind": "OBJECT",
           "name": "__Type",
@@ -939,15 +995,15 @@
       "checks": [
         "executes"
       ],
-      "summary": "the schema didn't build, the query failed, or the result is malformed",
-      "cases": 2,
+      "summary": "the schema didn't build, the query failed, or the result doesn't have the fields the query selects",
+      "cases": 3,
       "fixtures": {
-        "directiveDeprecation": 2
+        "directiveDeprecation": 3
       },
       "fixture": "directiveDeprecation.inc",
       "problem": "the response has errors: buildSchema: Syntax Error: Expected \"on\", found \"@\".",
       "example": {
-        "input": "directive @old @deprecated(reason: \"Use @new\") on FIELD directive @new(x: Int) on FIELD type Query { a: Int }  (includeDeprecated: true)",
+        "input": "directive @old @deprecated(reason: \"Use @new\") on FIELD directive @new(x: Int) on FIELD type Query { a: Int }  (the introspection query; includeDeprecated: true)",
         "response": {
           "response": {
             "errors": [
@@ -957,9 +1013,10 @@
             ]
           }
         },
-        "expected": "a result with data.__schema and no errors"
+        "expected": "a well-formed execution result with exactly the fields the query selects, and no errors"
       }
     }
   ],
-  "fixtures": []
+  "fixtures": [],
+  "ok": false
 }

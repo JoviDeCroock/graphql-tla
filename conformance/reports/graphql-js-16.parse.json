@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-scalar-literals",
     "deferred-items",
     "idle",
     "introspect",
@@ -18,7 +19,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "c8d6acb7c6e2",
+    "kit": "f0039322bf59",
     "date": "2026-11-15",
     "strict": true,
     "vectors": 1983
@@ -538,5 +539,6 @@
       }
     }
   ],
-  "fixtures": []
+  "fixtures": [],
+  "ok": false
 }

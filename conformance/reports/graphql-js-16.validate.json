@@ -5,6 +5,7 @@
   "capabilities": [
     "absent-vs-null",
     "coerce",
+    "custom-scalar-literals",
     "deferred-items",
     "idle",
     "introspect",
@@ -18,18 +19,26 @@
     "validate"
   ],
   "provenance": {
-    "kit": "c8d6acb7c6e2",
+    "kit": "f0039322bf59",
     "date": "2026-11-15",
     "strict": true,
-    "vectors": 3093
+    "vectors": 3093,
+    "graded": 3087,
+    "skipped": {
+      "unspecified": 6
+    }
   },
-  "checkerSelfTest": "passed (3 negative controls)",
+  "checkerSelfTest": "passed (7 negative controls)",
   "cases": {
-    "submitted": 3093,
-    "distinct": 3093,
+    "submitted": 3087,
+    "distinct": 3087,
     "malformed": 0
   },
   "adapterProblems": 0,
+  "draftOnly": {
+    "vectors": 59,
+    "failing": 27
+  },
   "checks": [
     {
       "id": "executableDefinitions",
@@ -43,7 +52,7 @@
         }
       ],
       "status": "pass",
-      "cases": 6,
+      "cases": 4,
       "failing": 0
     },
     {
@@ -58,7 +67,7 @@
         }
       ],
       "status": "fail",
-      "cases": 27,
+      "cases": 12,
       "failing": 12
     },
     {
@@ -73,7 +82,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10,
+      "cases": 6,
       "failing": 0
     },
     {
@@ -88,7 +97,7 @@
         }
       ],
       "status": "pass",
-      "cases": 38,
+      "cases": 21,
       "failing": 0
     },
     {
@@ -103,7 +112,7 @@
         }
       ],
       "status": "fail",
-      "cases": 98,
+      "cases": 57,
       "failing": 12
     },
     {
@@ -118,7 +127,7 @@
         }
       ],
       "status": "pass",
-      "cases": 42,
+      "cases": 22,
       "failing": 0
     },
     {
@@ -133,8 +142,8 @@
         }
       ],
       "status": "fail",
-      "cases": 1232,
-      "failing": 23
+      "cases": 678,
+      "failing": 22
     },
     {
       "id": "leafFieldSelections",
@@ -148,7 +157,7 @@
         }
       ],
       "status": "pass",
-      "cases": 68,
+      "cases": 39,
       "failing": 0
     },
     {
@@ -163,7 +172,7 @@
         }
       ],
       "status": "pass",
-      "cases": 18,
+      "cases": 8,
       "failing": 0
     },
     {
@@ -178,7 +187,7 @@
         }
       ],
       "status": "pass",
-      "cases": 9,
+      "cases": 6,
       "failing": 0
     },
     {
@@ -193,7 +202,7 @@
         }
       ],
       "status": "pass",
-      "cases": 20,
+      "cases": 10,
       "failing": 0
     },
     {
@@ -208,7 +217,7 @@
         }
       ],
       "status": "pass",
-      "cases": 14,
+      "cases": 10,
       "failing": 0
     },
     {
@@ -223,7 +232,7 @@
         }
       ],
       "status": "pass",
-      "cases": 22,
+      "cases": 12,
       "failing": 0
     },
     {
@@ -238,7 +247,7 @@
         }
       ],
       "status": "pass",
-      "cases": 30,
+      "cases": 14,
       "failing": 0
     },
     {
@@ -253,7 +262,7 @@
         }
       ],
       "status": "pass",
-      "cases": 100,
+      "cases": 78,
       "failing": 0
     },
     {
@@ -268,7 +277,7 @@
         }
       ],
       "status": "pass",
-      "cases": 14,
+      "cases": 9,
       "failing": 0
     },
     {
@@ -283,7 +292,7 @@
         }
       ],
       "status": "pass",
-      "cases": 57,
+      "cases": 54,
       "failing": 0
     },
     {
@@ -297,9 +306,9 @@
           "url": "https://spec.graphql.org/draft/#sec-Fragment-Spread-Is-Possible"
         }
       ],
-      "status": "fail",
-      "cases": 71,
-      "failing": 4
+      "status": "pass",
+      "cases": 36,
+      "failing": 0
     },
     {
       "id": "valuesOfCorrectType",
@@ -313,7 +322,7 @@
         }
       ],
       "status": "pass",
-      "cases": 342,
+      "cases": 282,
       "failing": 0
     },
     {
@@ -327,10 +336,10 @@
           "url": "https://spec.graphql.org/draft/#sec-Input-Object-Field-Names"
         }
       ],
-      "status": "pass",
-      "cases": 12,
+      "status": "subsumed",
+      "cases": 11,
       "failing": 0,
-      "note": "every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it"
+      "note": "every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it, so a rejection can't be credited to this rule; accepting one fails both"
     },
     {
       "id": "inputObjectFieldUniqueness",
@@ -344,7 +353,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10,
+      "cases": 6,
       "failing": 0
     },
     {
@@ -358,10 +367,10 @@
           "url": "https://spec.graphql.org/draft/#sec-Input-Object-Required-Fields"
         }
       ],
-      "status": "pass",
-      "cases": 9,
+      "status": "subsumed",
+      "cases": 8,
       "failing": 0,
-      "note": "every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it"
+      "note": "every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it, so a rejection can't be credited to this rule; accepting one fails both"
     },
     {
       "id": "directivesAreDefined",
@@ -375,7 +384,7 @@
         }
       ],
       "status": "pass",
-      "cases": 42,
+      "cases": 24,
       "failing": 0
     },
     {
@@ -390,7 +399,7 @@
         }
       ],
       "status": "pass",
-      "cases": 29,
+      "cases": 27,
       "failing": 0
     },
     {
@@ -405,7 +414,7 @@
         }
       ],
       "status": "pass",
-      "cases": 13,
+      "cases": 10,
       "failing": 0
     },
     {
@@ -420,7 +429,7 @@
         }
       ],
       "status": "pass",
-      "cases": 12,
+      "cases": 6,
       "failing": 0
     },
     {
@@ -435,7 +444,7 @@
         }
       ],
       "status": "pass",
-      "cases": 10,
+      "cases": 4,
       "failing": 0
     },
     {
@@ -450,7 +459,7 @@
         }
       ],
       "status": "pass",
-      "cases": 27,
+      "cases": 15,
       "failing": 0
     },
     {
@@ -465,7 +474,7 @@
         }
       ],
       "status": "pass",
-      "cases": 27,
+      "cases": 18,
       "failing": 0
     },
     {
@@ -480,8 +489,24 @@
         }
       ],
       "status": "fail",
-      "cases": 703,
-      "failing": 3
+      "cases": 636,
+      "failing": 2
+    },
+    {
+      "id": "acceptsValid",
+      "title": "Valid documents are accepted",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5",
+          "title": "Validation",
+          "url": "https://spec.graphql.org/draft/#sec-Validation"
+        }
+      ],
+      "status": "fail",
+      "cases": 983,
+      "failing": 2,
+      "basis": "a document is valid when it satisfies every rule of §5, and only invalid requests are kept from execution (§6.1.1); rejecting a valid document applies a rule the spec doesn't have"
     }
   ],
   "findings": [
@@ -491,6 +516,7 @@
       ],
       "summary": "§5.3.2 Field Selection Merging isn't enforced: accepts documents that break only this rule",
       "cases": 22,
+      "draftOnly": 0,
       "fixtures": {
         "merging": 22
       },
@@ -508,15 +534,16 @@
       "checks": [
         "operationTypeExistence"
       ],
-      "summary": "§5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule",
+      "summary": "§5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule; all rely on the draft",
       "cases": 12,
+      "draftOnly": 12,
       "fixtures": {
         "operations": 11,
         "spec": 1
       },
       "fixture": "spec",
       "example": {
-        "input": "OperationTypeExistence-spec-2: mutation goodbyeMutation { goodbye }",
+        "input": "[draft] OperationTypeExistence-spec-2: mutation goodbyeMutation { goodbye }",
         "response": {
           "valid": true,
           "errors": []
@@ -528,15 +555,16 @@
       "checks": [
         "singleRootField"
       ],
-      "summary": "§5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule",
+      "summary": "§5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft",
       "cases": 12,
+      "draftOnly": 12,
       "fixtures": {
         "operations": 11,
         "random": 1
       },
       "fixture": "operations",
       "example": {
-        "input": "SingleRootField-31: subscription S5 { postAdded @skip(if: true) { id } }",
+        "input": "[draft] SingleRootField-31: subscription S5 { postAdded @skip(if: true) { id } }",
         "response": {
           "valid": true,
           "errors": []
@@ -546,36 +574,17 @@
     },
     {
       "checks": [
-        "fragmentSpreadIsPossible"
-      ],
-      "summary": "§5.5.2.3 Fragment Spread Is Possible isn't enforced: accepts documents that break only this rule",
-      "cases": 4,
-      "fixtures": {
-        "spreads": 3,
-        "random": 1
-      },
-      "fixture": "spreads",
-      "example": {
-        "input": "FragmentSpreadIsPossible-22: { resource { ... on Resource { __typename } } }",
-        "response": {
-          "valid": true,
-          "errors": []
-        },
-        "expected": "invalid: FragmentSpreadIsPossible [\"Resource>Resource\"]"
-      }
-    },
-    {
-      "checks": [
         "allVariableUsagesAreAllowed"
       ],
-      "summary": "§5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule",
+      "summary": "§5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; all rely on the draft",
       "cases": 2,
+      "draftOnly": 2,
       "fixtures": {
         "spec": 2
       },
       "fixture": "spec",
       "example": {
-        "input": "AllVariableUsagesAreAllowed-spec-8: mutation addNullableCat($cat: CatInput) { addPet(pet: {cat: $cat}) { name } }",
+        "input": "[draft] AllVariableUsagesAreAllowed-spec-8: mutation addNullableCat($cat: CatInput) { addPet(pet: {cat: $cat}) { name } }",
         "response": {
           "valid": true,
           "errors": []
@@ -585,10 +594,15 @@
     },
     {
       "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
         "fieldSelectionMerging"
       ],
-      "summary": "§5.3.2 Field Selection Merging is over-strict: rejects valid documents one edit away from a document that breaks only this rule",
+      "likelyOverStrict": false,
+      "summary": "rejects valid documents, each one edit from a document that breaks only §5.3.2 Field Selection Merging; the rule it applied is a guess, since the kit doesn't read error messages",
       "cases": 1,
+      "draftOnly": 0,
       "fixtures": {
         "merging": 1
       },
@@ -619,17 +633,22 @@
     },
     {
       "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
         "allVariableUsagesAreAllowed"
       ],
-      "summary": "§5.8.5 All Variable Usages Are Allowed is over-strict: rejects valid documents one edit away from a document that breaks only this rule",
+      "likelyOverStrict": false,
+      "summary": "rejects valid documents, each one edit from a document that breaks only §5.8.5 All Variable Usages Are Allowed; the rule it applied is a guess, since the kit doesn't read error messages; all rely on the draft",
       "cases": 1,
+      "draftOnly": 1,
       "fixtures": {
         "variables": 1
       },
       "fixture": "variables",
       "problem": "Variable \"$v\" is of type \"ID\" but must be non-nullable to be used for OneOf Input Object \"Pick\".",
       "example": {
-        "input": "AllVariableUsagesAreAllowed-valid-30: query Q($v: ID = \"1\") { echo(pick: {id: $v}) }",
+        "input": "[draft] AllVariableUsagesAreAllowed-valid-30: query Q($v: ID = \"1\") { echo(pick: {id: $v}) }",
         "response": {
           "valid": false,
           "errors": [
@@ -652,5 +671,6 @@
       }
     }
   ],
-  "fixtures": []
+  "fixtures": [],
+  "ok": false
 }

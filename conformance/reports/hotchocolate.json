@@ -10,14 +10,14 @@
     "uncoercible-results"
   ],
   "provenance": {
-    "kit": "c8d6acb7c6e2",
+    "kit": "f0039322bf59",
     "date": "2026-11-15",
     "strict": true,
     "random": 1500,
     "seed": 1,
     "exhaustive": true
   },
-  "checkerSelfTest": "passed (23 negative controls)",
+  "checkerSelfTest": "passed (25 negative controls)",
   "cases": {
     "submitted": 11972,
     "distinct": 2189,
@@ -252,6 +252,21 @@
       "failing": 0
     },
     {
+      "id": "responds",
+      "title": "A request gets a response",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1",
+          "title": "Response Format",
+          "url": "https://spec.graphql.org/draft/#sec-Response-Format"
+        }
+      ],
+      "status": "pass",
+      "cases": 11972,
+      "failing": 0
+    },
+    {
       "id": "eventYieldsResult",
       "title": "A subscription event yields an execution result, even when its data is null",
       "level": "MUST",
@@ -308,7 +323,7 @@
         }
       ],
       "status": "fail",
-      "cases": 11972,
+      "cases": 926,
       "failing": 384
     },
     {
@@ -728,5 +743,6 @@
       "cases": 1764,
       "failing": 77
     }
-  ]
+  ],
+  "ok": false
 }

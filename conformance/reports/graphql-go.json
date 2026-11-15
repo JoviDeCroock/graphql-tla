@@ -1,0 +1,1284 @@
+{
+  "format": 1,
+  "area": "execution",
+  "implementation": "graphql-go 0.8.1",
+  "capabilities": [
+    "deferred-items",
+    "invalid-results",
+    "mutation",
+    "subscription",
+    "uncoercible-results"
+  ],
+  "provenance": {
+    "kit": "f0039322bf59",
+    "date": "2026-11-15",
+    "strict": true,
+    "random": 1500,
+    "seed": 1,
+    "exhaustive": false
+  },
+  "checkerSelfTest": "passed (25 negative controls)",
+  "cases": {
+    "submitted": 10500,
+    "distinct": 1849,
+    "malformed": 563
+  },
+  "adapterProblems": 0,
+  "checks": [
+    {
+      "id": "complete",
+      "title": "The response is sent only once execution is complete",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.3.3",
+          "title": "Executing Collected Fields",
+          "url": "https://spec.graphql.org/draft/#sec-Executing-Collected-Fields"
+        },
+        {
+          "number": "7.1.1",
+          "title": "Execution Result",
+          "url": "https://spec.graphql.org/draft/#sec-Execution-Result"
+        }
+      ],
+      "status": "fail",
+      "cases": 1849,
+      "failing": 147
+    },
+    {
+      "id": "dataMatches",
+      "title": "data is the completed value: field collection, value completion and null propagation",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.3.2",
+          "title": "Field Collection",
+          "url": "https://spec.graphql.org/draft/#sec-Field-Collection"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        },
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
+        }
+      ],
+      "status": "fail",
+      "cases": 1849,
+      "failing": 504
+    },
+    {
+      "id": "keyOrder",
+      "title": "Response keys are in collected field order",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "7.2.2",
+          "title": "Serialized Map Ordering",
+          "url": "https://spec.graphql.org/draft/#sec-Serialized-Map-Ordering"
+        }
+      ],
+      "status": "fail",
+      "cases": 1849,
+      "failing": 463
+    },
+    {
+      "id": "errorsWereRaised",
+      "title": "Every error was raised, at the path where it was raised",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
+        },
+        {
+          "number": "7.1.6",
+          "title": "Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Errors"
+        }
+      ],
+      "status": "pass",
+      "cases": 1849,
+      "failing": 0
+    },
+    {
+      "id": "errorPathsUnique",
+      "title": "No two errors share a response path",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
+        }
+      ],
+      "status": "pass",
+      "cases": 1849,
+      "failing": 0
+    },
+    {
+      "id": "errorsInsideNulls",
+      "title": "Every error is inside a null in data",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
+        }
+      ],
+      "status": "pass",
+      "cases": 1849,
+      "failing": 0
+    },
+    {
+      "id": "nullsExplained",
+      "title": "Every null an error caused comes with an error from its cause",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
+        },
+        {
+          "number": "7.1.1",
+          "title": "Execution Result",
+          "url": "https://spec.graphql.org/draft/#sec-Execution-Result"
+        }
+      ],
+      "status": "fail",
+      "cases": 1849,
+      "failing": 421
+    },
+    {
+      "id": "serialErrorsKept",
+      "title": "A mutation reports every error its earlier root fields raised",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.3.4",
+          "title": "Normal and Serial Execution",
+          "url": "https://spec.graphql.org/draft/#sec-Normal-and-Serial-Execution"
+        },
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
+        }
+      ],
+      "basis": "§6.4.4: an execution error \"must be added to the errors list\". §6.3.3 lets an implementation cancel fields that have not yet executed or yielded a value, but §6.3.4 completes each mutation root field before the next starts, so an earlier root field's errors can't have been cancelled.",
+      "status": "fail",
+      "cases": 506,
+      "failing": 184
+    },
+    {
+      "id": "calledSerially",
+      "title": "A mutation's root fields execute one after another",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.2.2",
+          "title": "Mutation",
+          "url": "https://spec.graphql.org/draft/#sec-Mutation"
+        },
+        {
+          "number": "6.3.4",
+          "title": "Normal and Serial Execution",
+          "url": "https://spec.graphql.org/draft/#sec-Normal-and-Serial-Execution"
+        }
+      ],
+      "status": "fail",
+      "cases": 506,
+      "failing": 506
+    },
+    {
+      "id": "callsOnce",
+      "title": "Each field is executed once, merged selections included",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.3.2",
+          "title": "Field Collection",
+          "url": "https://spec.graphql.org/draft/#sec-Field-Collection"
+        },
+        {
+          "number": "6.3.3",
+          "title": "Executing Collected Fields",
+          "url": "https://spec.graphql.org/draft/#sec-Executing-Collected-Fields"
+        }
+      ],
+      "status": "pass",
+      "cases": 10500,
+      "failing": 0
+    },
+    {
+      "id": "callsSelected",
+      "title": "Only fields the operation selects are executed",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.3.2",
+          "title": "Field Collection",
+          "url": "https://spec.graphql.org/draft/#sec-Field-Collection"
+        }
+      ],
+      "status": "pass",
+      "cases": 10500,
+      "failing": 0
+    },
+    {
+      "id": "callsReachable",
+      "title": "A field executes only once its parent has a value that contains it",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.3.3",
+          "title": "Executing Collected Fields",
+          "url": "https://spec.graphql.org/draft/#sec-Executing-Collected-Fields"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "pass",
+      "cases": 10500,
+      "failing": 0
+    },
+    {
+      "id": "responds",
+      "title": "A request gets a response",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1",
+          "title": "Response Format",
+          "url": "https://spec.graphql.org/draft/#sec-Response-Format"
+        }
+      ],
+      "status": "pass",
+      "cases": 10500,
+      "failing": 0
+    },
+    {
+      "id": "eventYieldsResult",
+      "title": "A subscription event yields an execution result, even when its data is null",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.2.3.2",
+          "title": "Response Stream",
+          "url": "https://spec.graphql.org/draft/#sec-Response-Stream"
+        }
+      ],
+      "status": "pass",
+      "cases": 1500,
+      "failing": 0
+    },
+    {
+      "id": "dataShape",
+      "title": "data holds only positions the operation selects",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.5",
+          "title": "Data",
+          "url": "https://spec.graphql.org/draft/#sec-Data"
+        }
+      ],
+      "status": "pass",
+      "cases": 3629,
+      "failing": 0
+    },
+    {
+      "id": "resultCoercion",
+      "title": "A leaf value its type can't represent (a fraction for an Int, a non-finite Float, an unknown enum value) raises an execution error",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5.1",
+          "title": "Int",
+          "url": "https://spec.graphql.org/draft/#sec-Int"
+        },
+        {
+          "number": "3.5.2",
+          "title": "Float",
+          "url": "https://spec.graphql.org/draft/#sec-Float"
+        },
+        {
+          "number": "3.9",
+          "title": "Enums",
+          "url": "https://spec.graphql.org/draft/#sec-Enums"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "fail",
+      "cases": 792,
+      "failing": 563
+    },
+    {
+      "id": "leafValues",
+      "title": "Leaf values are the resolver's canonical value (Int 1, Float 1.5, Boolean true, an enum's first value, \"v\")",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "pass",
+      "cases": 3629,
+      "failing": 0
+    },
+    {
+      "id": "dataPresent",
+      "title": "An execution result has a data entry",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.1",
+          "title": "Execution Result",
+          "url": "https://spec.graphql.org/draft/#sec-Execution-Result"
+        }
+      ],
+      "status": "pass",
+      "cases": 10191,
+      "failing": 0
+    },
+    {
+      "id": "errorsList",
+      "title": "errors, when present, is a non-empty list",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.1",
+          "title": "Execution Result",
+          "url": "https://spec.graphql.org/draft/#sec-Execution-Result"
+        }
+      ],
+      "status": "pass",
+      "cases": 10191,
+      "failing": 0
+    },
+    {
+      "id": "additionalEntries",
+      "title": "The response has no entries besides data, errors and extensions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.8",
+          "title": "Additional Entries",
+          "url": "https://spec.graphql.org/draft/#sec-Additional-Entries"
+        }
+      ],
+      "status": "pass",
+      "cases": 10191,
+      "failing": 0
+    },
+    {
+      "id": "extensions",
+      "title": "extensions is a map",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.7",
+          "title": "Extensions",
+          "url": "https://spec.graphql.org/draft/#sec-Extensions"
+        }
+      ],
+      "status": "untested",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "errorFormat",
+      "title": "Errors are maps with a message, and well-formed locations and extensions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.6",
+          "title": "Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Errors"
+        }
+      ],
+      "status": "pass",
+      "cases": 8435,
+      "failing": 0
+    },
+    {
+      "id": "errorPath",
+      "title": "Execution errors have a path to a position the operation selects",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1.6",
+          "title": "Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Errors"
+        }
+      ],
+      "status": "pass",
+      "cases": 8435,
+      "failing": 0
+    },
+    {
+      "id": "responsePosition",
+      "title": "Paths use field names and integer list indices",
+      "level": "MUST",
+      "oct2021": "SHOULD",
+      "spec": [
+        {
+          "number": "7.1.4",
+          "title": "Response Position",
+          "url": "https://spec.graphql.org/draft/#sec-Response-Position"
+        }
+      ],
+      "status": "pass",
+      "cases": 744,
+      "failing": 0
+    },
+    {
+      "id": "errorEntries",
+      "title": "Errors have no entries besides message, locations, path and extensions",
+      "level": "SHOULD",
+      "spec": [
+        {
+          "number": "7.1.6",
+          "title": "Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Errors"
+        }
+      ],
+      "status": "pass",
+      "cases": 8435,
+      "failing": 0
+    },
+    {
+      "id": "protocol",
+      "title": "The adapter follows the kit's protocol (call types, settles)",
+      "level": "ADAPTER",
+      "spec": [],
+      "status": "pass",
+      "cases": 10500,
+      "failing": 0
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "dataMatches"
+      ],
+      "fixture": "fragments",
+      "example": {
+        "trace": "call node; settle node = object(Bot); call node.id; call node.nodeId; settle node.id = null",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "Cannot return null for non-nullable field Bot.id.",
+              "locations": [
+                {
+                  "line": 3,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "node",
+                "id"
+              ]
+            }
+          ]
+        },
+        "expected": "data {\"node\": null}"
+      },
+      "cases": 403,
+      "fixtures": {
+        "fragments": 153,
+        "lists": 104,
+        "nullPropagation": 113,
+        "unions": 33
+      }
+    },
+    {
+      "checks": [
+        "resultCoercion"
+      ],
+      "summary": "the implementation produced no response, after a resolver returned a value its type can't represent: …",
+      "fixture": "leaves",
+      "problem": "the implementation produced no response, after a resolver returned a value its type can't represent: \"can't serialize the result: json: unsupported value: +Inf\"",
+      "example": {
+        "trace": "call ratio; call color; call count; settle count = null; settle color = error; settle ratio = uncoercible",
+        "noResponse": "can't serialize the result: json: unsupported value: +Inf"
+      },
+      "cases": 309,
+      "fixtures": {
+        "leaves": 309
+      }
+    },
+    {
+      "checks": [
+        "keyOrder"
+      ],
+      "fixture": "nullPropagation",
+      "example": {
+        "trace": "call version; call user; settle user = null; settle version = leaf",
+        "response": {
+          "data": {
+            "user": null,
+            "version": "v"
+          }
+        },
+        "expected": "data {\"version\": <leaf>, \"user\": null}"
+      },
+      "cases": 250,
+      "fixtures": {
+        "leaves": 165,
+        "nullPropagation": 11,
+        "unions": 74
+      }
+    },
+    {
+      "checks": [
+        "resultCoercion"
+      ],
+      "summary": "count is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
+      "fixture": "leaves",
+      "problem": "count is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
+      "example": {
+        "trace": "call ratio; call color; call count; settle color = null; settle count = uncoercible; settle ratio = error",
+        "response": {
+          "data": {
+            "color": null,
+            "count": 1,
+            "ratio": null
+          },
+          "errors": [
+            {
+              "message": "resolver at ratio failed",
+              "locations": [
+                {
+                  "line": 3,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "ratio"
+              ]
+            }
+          ]
+        }
+      },
+      "cases": 246,
+      "fixtures": {
+        "leaves": 246
+      }
+    },
+    {
+      "checks": [
+        "calledSerially"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; call second; call third; settle second = error",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "resolver at second failed",
+              "locations": [
+                {
+                  "line": 5,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "second"
+              ]
+            }
+          ]
+        },
+        "expected": "data null"
+      },
+      "cases": 238,
+      "fixtures": {
+        "mutation": 238
+      }
+    },
+    {
+      "checks": [
+        "keyOrder",
+        "nullsExplained"
+      ],
+      "fixture": "leaves",
+      "example": {
+        "trace": "call count; call ratio; call color; settle ratio = object(); settle count = null; settle color = error",
+        "response": {
+          "data": {
+            "color": null,
+            "count": null,
+            "ratio": null
+          },
+          "errors": [
+            {
+              "message": "resolver at color failed",
+              "locations": [
+                {
+                  "line": 4,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "color"
+              ]
+            }
+          ]
+        },
+        "expected": "data {\"count\": null, \"ratio\": null, \"color\": null}"
+      },
+      "cases": 213,
+      "fixtures": {
+        "leaves": 213
+      }
+    },
+    {
+      "checks": [
+        "calledSerially",
+        "serialErrorsKept"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; call second; call third; settle first = error; settle second = error",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "resolver at second failed",
+              "locations": [
+                {
+                  "line": 5,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "second"
+              ]
+            }
+          ]
+        },
+        "expected": "data null"
+      },
+      "cases": 87,
+      "fixtures": {
+        "mutation": 87
+      }
+    },
+    {
+      "checks": [
+        "calledSerially",
+        "nullsExplained",
+        "serialErrorsKept"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; call second; call third; settle third = object(Payload); call third.likes; settle second = null; settle third.likes = null",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "Cannot return null for non-nullable field Payload.likes.",
+              "locations": [
+                {
+                  "line": 9,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "third",
+                "likes"
+              ]
+            }
+          ]
+        },
+        "expected": "data null"
+      },
+      "cases": 80,
+      "fixtures": {
+        "mutation": 80
+      }
+    },
+    {
+      "checks": [
+        "dataMatches",
+        "nullsExplained"
+      ],
+      "fixture": "lists",
+      "example": {
+        "trace": "call posts; call tags; settle tags = list(1); settle posts = list(1); call posts.0; call tags.0; settle tags.0 = error; settle posts.0 = error",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "resolver at posts.0 failed",
+              "locations": [
+                {
+                  "line": 2,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "posts",
+                0
+              ]
+            }
+          ]
+        },
+        "expected": "data {\"posts\": null, \"tags\": [null]}"
+      },
+      "cases": 76,
+      "fixtures": {
+        "lists": 57,
+        "unions": 19
+      }
+    },
+    {
+      "checks": [
+        "complete"
+      ],
+      "fixture": "lists",
+      "example": {
+        "trace": "call posts; call tags; settle posts = list(1); call posts.0; settle tags = list(1); call tags.0; settle posts.0 = error",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "resolver at posts.0 failed",
+              "locations": [
+                {
+                  "line": 2,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "posts",
+                0
+              ]
+            }
+          ]
+        },
+        "expected": "data (incomplete)"
+      },
+      "cases": 70,
+      "fixtures": {
+        "lists": 57,
+        "unions": 13
+      }
+    },
+    {
+      "checks": [
+        "calledSerially",
+        "complete"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; call second; call third; settle first = object(Payload); call first.likes; settle first.likes = error",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "resolver at first.likes failed",
+              "locations": [
+                {
+                  "line": 3,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "first",
+                "likes"
+              ]
+            }
+          ]
+        },
+        "expected": "data (incomplete)"
+      },
+      "cases": 46,
+      "fixtures": {
+        "mutation": 46
+      }
+    },
+    {
+      "checks": [
+        "calledSerially",
+        "complete",
+        "nullsExplained"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; call second; call third; settle third = error; settle first = object(Payload); call first.likes; settle first.likes = null",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "Cannot return null for non-nullable field Payload.likes.",
+              "locations": [
+                {
+                  "line": 3,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "first",
+                "likes"
+              ]
+            }
+          ]
+        },
+        "expected": "data (incomplete)"
+      },
+      "cases": 16,
+      "fixtures": {
+        "mutation": 16
+      }
+    },
+    {
+      "checks": [
+        "calledSerially",
+        "dataMatches"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; call second; call third; settle second = object(Payload); settle first = null; call second.likes; settle third = object(Payload); settle second.likes = leaf; call third.likes; settle third.likes = null",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "Cannot return null for non-nullable field Payload.likes.",
+              "locations": [
+                {
+                  "line": 9,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "third",
+                "likes"
+              ]
+            }
+          ]
+        },
+        "expected": "data {\"first\": null, \"second\": {\"likes\": <leaf>}, \"third\": null}"
+      },
+      "cases": 12,
+      "fixtures": {
+        "mutation": 12
+      }
+    },
+    {
+      "checks": [
+        "calledSerially",
+        "dataMatches",
+        "nullsExplained",
+        "serialErrorsKept"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; call second; call third; settle second = object(Payload); settle first = error; call second.likes; settle third = object(Payload); settle second.likes = leaf; call third.likes; settle third.likes = null",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "Cannot return null for non-nullable field Payload.likes.",
+              "locations": [
+                {
+                  "line": 9,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "third",
+                "likes"
+              ]
+            }
+          ]
+        },
+        "expected": "data {\"first\": null, \"second\": {\"likes\": <leaf>}, \"third\": null}"
+      },
+      "cases": 11,
+      "fixtures": {
+        "mutation": 11
+      }
+    },
+    {
+      "checks": [
+        "complete",
+        "nullsExplained"
+      ],
+      "fixture": "lists",
+      "example": {
+        "trace": "call posts; call tags; settle tags = list(2); settle posts = list(1); call posts.0; call tags.0; call tags.1; settle tags.0 = error; settle posts.0 = error",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "resolver at posts.0 failed",
+              "locations": [
+                {
+                  "line": 2,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "posts",
+                0
+              ]
+            }
+          ]
+        },
+        "expected": "data (incomplete)"
+      },
+      "cases": 9,
+      "fixtures": {
+        "lists": 9
+      }
+    },
+    {
+      "checks": [
+        "resultCoercion"
+      ],
+      "summary": "… is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
+      "fixture": "unions",
+      "problem": "matrix.0.0 is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
+      "example": {
+        "trace": "call search; call matrix; settle search = list(0); settle matrix = list(1); call matrix.0; settle matrix.0 = list(1); call matrix.0.0; settle matrix.0.0 = uncoercible",
+        "response": {
+          "data": {
+            "matrix": [
+              [
+                1
+              ]
+            ],
+            "search": []
+          }
+        }
+      },
+      "cases": 8,
+      "fixtures": {
+        "unions": 8
+      }
+    },
+    {
+      "checks": [
+        "calledSerially",
+        "nullsExplained"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; call second; call third; settle second = error; settle first = object(Payload); call first.likes; settle first.likes = error",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "resolver at first.likes failed",
+              "locations": [
+                {
+                  "line": 3,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "first",
+                "likes"
+              ]
+            }
+          ]
+        },
+        "expected": "data null"
+      },
+      "cases": 8,
+      "fixtures": {
+        "mutation": 8
+      }
+    },
+    {
+      "checks": [
+        "calledSerially",
+        "complete",
+        "nullsExplained",
+        "serialErrorsKept"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; call second; call third; settle first = error; settle third = object(Payload); call third.likes; settle third.likes = error",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "resolver at third.likes failed",
+              "locations": [
+                {
+                  "line": 9,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "third",
+                "likes"
+              ]
+            }
+          ]
+        },
+        "expected": "data (incomplete)"
+      },
+      "cases": 6,
+      "fixtures": {
+        "mutation": 6
+      }
+    },
+    {
+      "checks": [
+        "calledSerially",
+        "dataMatches",
+        "nullsExplained"
+      ],
+      "fixture": "mutation",
+      "example": {
+        "trace": "call first; call second; call third; settle third = error; settle first = object(Payload); settle second = object(Payload); call second.likes; settle second.likes = leaf; call first.likes; settle first.likes = null",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "Cannot return null for non-nullable field Payload.likes.",
+              "locations": [
+                {
+                  "line": 3,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "first",
+                "likes"
+              ]
+            }
+          ]
+        },
+        "expected": "data {\"first\": null, \"second\": {\"likes\": <leaf>}, \"third\": null}"
+      },
+      "cases": 2,
+      "fixtures": {
+        "mutation": 2
+      }
+    }
+  ],
+  "fixtures": [
+    {
+      "id": "fragments",
+      "spec": [
+        {
+          "number": "6.3.2",
+          "title": "Field Collection",
+          "url": "https://spec.graphql.org/draft/#sec-Field-Collection"
+        },
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/draft/#sec-Interfaces"
+        },
+        {
+          "number": "3.13.1",
+          "title": "@skip",
+          "url": "https://spec.graphql.org/draft/#sec-skip"
+        },
+        {
+          "number": "3.13.2",
+          "title": "@include",
+          "url": "https://spec.graphql.org/draft/#sec-include"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "fail",
+      "cases": 1500,
+      "failing": 153
+    },
+    {
+      "id": "leaves",
+      "spec": [
+        {
+          "number": "3.5.1",
+          "title": "Int",
+          "url": "https://spec.graphql.org/draft/#sec-Int"
+        },
+        {
+          "number": "3.5.2",
+          "title": "Float",
+          "url": "https://spec.graphql.org/draft/#sec-Float"
+        },
+        {
+          "number": "3.9",
+          "title": "Enums",
+          "url": "https://spec.graphql.org/draft/#sec-Enums"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        }
+      ],
+      "status": "fail",
+      "cases": 1500,
+      "failing": 933
+    },
+    {
+      "id": "lists",
+      "spec": [
+        {
+          "number": "3.11",
+          "title": "List",
+          "url": "https://spec.graphql.org/draft/#sec-List"
+        },
+        {
+          "number": "3.12.1",
+          "title": "Combining List and Non-Null",
+          "url": "https://spec.graphql.org/draft/#sec-Combining-List-and-Non-Null"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        },
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
+        }
+      ],
+      "status": "fail",
+      "cases": 1500,
+      "failing": 227
+    },
+    {
+      "id": "mutation",
+      "spec": [
+        {
+          "number": "6.2.2",
+          "title": "Mutation",
+          "url": "https://spec.graphql.org/draft/#sec-Mutation"
+        },
+        {
+          "number": "6.3.4",
+          "title": "Normal and Serial Execution",
+          "url": "https://spec.graphql.org/draft/#sec-Normal-and-Serial-Execution"
+        },
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
+        }
+      ],
+      "status": "fail",
+      "cases": 1500,
+      "failing": 506
+    },
+    {
+      "id": "noPropagation",
+      "spec": [
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
+        }
+      ],
+      "status": "skipped",
+      "reason": "needs error-propagation-off",
+      "cases": 0,
+      "failing": 0
+    },
+    {
+      "id": "nullPropagation",
+      "spec": [
+        {
+          "number": "3.12",
+          "title": "Non-Null",
+          "url": "https://spec.graphql.org/draft/#sec-Non-Null"
+        },
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
+        },
+        {
+          "number": "6.3.3",
+          "title": "Executing Collected Fields",
+          "url": "https://spec.graphql.org/draft/#sec-Executing-Collected-Fields"
+        }
+      ],
+      "status": "fail",
+      "cases": 1500,
+      "failing": 124
+    },
+    {
+      "id": "subscription",
+      "spec": [
+        {
+          "number": "6.2.3",
+          "title": "Subscription",
+          "url": "https://spec.graphql.org/draft/#sec-Subscription"
+        },
+        {
+          "number": "6.2.3.2",
+          "title": "Response Stream",
+          "url": "https://spec.graphql.org/draft/#sec-Response-Stream"
+        }
+      ],
+      "status": "pass",
+      "cases": 1500,
+      "failing": 0
+    },
+    {
+      "id": "unions",
+      "spec": [
+        {
+          "number": "3.8",
+          "title": "Unions",
+          "url": "https://spec.graphql.org/draft/#sec-Unions"
+        },
+        {
+          "number": "3.11",
+          "title": "List",
+          "url": "https://spec.graphql.org/draft/#sec-List"
+        },
+        {
+          "number": "3.5",
+          "title": "Scalars",
+          "url": "https://spec.graphql.org/draft/#sec-Scalars"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
+        },
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
+        }
+      ],
+      "status": "fail",
+      "cases": 1500,
+      "failing": 147
+    }
+  ],
+  "ok": false
+}

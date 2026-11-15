@@ -77,6 +77,18 @@
         "graphql-go doesn't make runs deterministic (it resolves fields in Go map order), so the adapter doesn't claim `idle` and the kit waits 10 ms after each settle instead; the sheet's cases are random runs only.",
         "The resolver returns a thunk, graphql-go's way to keep several resolvers pending. The Non-Null propagation and mutation ordering findings come from thunks; with `--sync` only the key order, leaf coercion and mutation error findings remain. See the [adapter's README](../adapters/graphql-go/README.md#known-graphql-go-deviations)."
       ]
+    },
+    {
+      "key": "graphql-dotnet",
+      "adapter": "adapters/graphql-dotnet/run.sh",
+      "build": "adapters/graphql-dotnet/bin/Release",
+      "env": {
+        "DOTNET_ROOT": "~/.cache/graphql-tla-toolchains/dotnet"
+      },
+      "notes": [
+        "The adapter uses graphql-dotnet's schema-first `Schema.For`, its default `DocumentExecuter` and the System.Text.Json serializer. List items are `IDataLoaderResult` values, the only kind of item graphql-dotnet waits for. `idle` holds because everything runs on one thread; the determinism replay passed.",
+        "The `resultCoercion` finding: `FloatGraphType` passes a non-finite double through, and `GraphQLSerializer` then throws, so the client gets no response. The introspect area grades almost nothing because graphql-dotnet rejects the kit's introspection query (it has no `specifiedByURL`, `isRepeatable` or input-value deprecation). Parse, validate, schema and introspect findings are described with source locations in the [adapter's README](../adapters/graphql-dotnet/README.md#known-graphql-dotnet-deviations)."
+      ]
     }
   ]
 }

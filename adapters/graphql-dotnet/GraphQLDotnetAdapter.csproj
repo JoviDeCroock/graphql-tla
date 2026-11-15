@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>GraphQLDotnetAdapter</AssemblyName>
+    <RootNamespace>GraphQLTla.GraphQLDotnet</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GraphQL" Version="8.8.5" />
+    <PackageReference Include="GraphQL.SystemTextJson" Version="8.8.5" />
+  </ItemGroup>
+
+</Project>

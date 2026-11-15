@@ -1,0 +1,914 @@
+{
+  "format": 1,
+  "area": "validate",
+  "implementation": "graphql-dotnet 8.8.5",
+  "capabilities": [
+    "custom-scalar-literals",
+    "deferred-items",
+    "idle",
+    "introspect",
+    "invalid-results",
+    "mutation",
+    "parse",
+    "schema",
+    "subscription",
+    "uncoercible-results",
+    "validate"
+  ],
+  "provenance": {
+    "kit": "f0039322bf59",
+    "date": "2026-11-15",
+    "strict": true,
+    "vectors": 3093,
+    "graded": 3087,
+    "skipped": {
+      "unspecified": 6
+    }
+  },
+  "checkerSelfTest": "passed (7 negative controls)",
+  "cases": {
+    "submitted": 3087,
+    "distinct": 3087,
+    "malformed": 0
+  },
+  "adapterProblems": 0,
+  "draftOnly": {
+    "vectors": 59,
+    "failing": 24
+  },
+  "checks": [
+    {
+      "id": "executableDefinitions",
+      "title": "Executable Definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.1.1",
+          "title": "Executable Definitions",
+          "url": "https://spec.graphql.org/draft/#sec-Executable-Definitions"
+        }
+      ],
+      "status": "fail",
+      "cases": 4,
+      "failing": 4
+    },
+    {
+      "id": "operationTypeExistence",
+      "title": "Operation Type Existence",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.2.1.1",
+          "title": "Operation Type Existence",
+          "url": "https://spec.graphql.org/draft/#sec-Operation-Type-Existence"
+        }
+      ],
+      "status": "fail",
+      "cases": 12,
+      "failing": 9
+    },
+    {
+      "id": "operationNameUniqueness",
+      "title": "Operation Name Uniqueness",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.2.2.1",
+          "title": "Operation Name Uniqueness",
+          "url": "https://spec.graphql.org/draft/#sec-Operation-Name-Uniqueness"
+        }
+      ],
+      "status": "pass",
+      "cases": 6,
+      "failing": 0
+    },
+    {
+      "id": "loneAnonymousOperation",
+      "title": "Lone Anonymous Operation",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.2.3.1",
+          "title": "Lone Anonymous Operation",
+          "url": "https://spec.graphql.org/draft/#sec-Lone-Anonymous-Operation"
+        }
+      ],
+      "status": "pass",
+      "cases": 21,
+      "failing": 0
+    },
+    {
+      "id": "singleRootField",
+      "title": "Single Root Field",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.2.4.1",
+          "title": "Single Root Field",
+          "url": "https://spec.graphql.org/draft/#sec-Single-Root-Field"
+        }
+      ],
+      "status": "fail",
+      "cases": 57,
+      "failing": 15
+    },
+    {
+      "id": "fieldSelections",
+      "title": "Field Selections",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.3.1",
+          "title": "Field Selections",
+          "url": "https://spec.graphql.org/draft/#sec-Field-Selections"
+        }
+      ],
+      "status": "pass",
+      "cases": 22,
+      "failing": 0
+    },
+    {
+      "id": "fieldSelectionMerging",
+      "title": "Field Selection Merging",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.3.2",
+          "title": "Field Selection Merging",
+          "url": "https://spec.graphql.org/draft/#sec-Field-Selection-Merging"
+        }
+      ],
+      "status": "fail",
+      "cases": 678,
+      "failing": 22
+    },
+    {
+      "id": "leafFieldSelections",
+      "title": "Leaf Field Selections",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.3.3",
+          "title": "Leaf Field Selections",
+          "url": "https://spec.graphql.org/draft/#sec-Leaf-Field-Selections"
+        }
+      ],
+      "status": "pass",
+      "cases": 39,
+      "failing": 0
+    },
+    {
+      "id": "argumentNames",
+      "title": "Argument Names",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.4.1",
+          "title": "Argument Names",
+          "url": "https://spec.graphql.org/draft/#sec-Argument-Names"
+        }
+      ],
+      "status": "pass",
+      "cases": 8,
+      "failing": 0
+    },
+    {
+      "id": "argumentUniqueness",
+      "title": "Argument Uniqueness",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.4.2",
+          "title": "Argument Uniqueness",
+          "url": "https://spec.graphql.org/draft/#sec-Argument-Uniqueness"
+        }
+      ],
+      "status": "pass",
+      "cases": 6,
+      "failing": 0
+    },
+    {
+      "id": "requiredArguments",
+      "title": "Required Arguments",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.4.3",
+          "title": "Required Arguments",
+          "url": "https://spec.graphql.org/draft/#sec-Required-Arguments"
+        }
+      ],
+      "status": "pass",
+      "cases": 10,
+      "failing": 0
+    },
+    {
+      "id": "fragmentNameUniqueness",
+      "title": "Fragment Name Uniqueness",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.5.1.1",
+          "title": "Fragment Name Uniqueness",
+          "url": "https://spec.graphql.org/draft/#sec-Fragment-Name-Uniqueness"
+        }
+      ],
+      "status": "pass",
+      "cases": 10,
+      "failing": 0
+    },
+    {
+      "id": "fragmentSpreadTypeExistence",
+      "title": "Fragment Spread Type Existence",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.5.1.2",
+          "title": "Fragment Spread Type Existence",
+          "url": "https://spec.graphql.org/draft/#sec-Fragment-Spread-Type-Existence"
+        }
+      ],
+      "status": "pass",
+      "cases": 12,
+      "failing": 0
+    },
+    {
+      "id": "fragmentsOnObjectInterfaceOrUnionTypes",
+      "title": "Fragments on Object, Interface or Union Types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.5.1.3",
+          "title": "Fragments on Object, Interface or Union Types",
+          "url": "https://spec.graphql.org/draft/#sec-Fragments-on-Object-Interface-or-Union-Types"
+        }
+      ],
+      "status": "pass",
+      "cases": 14,
+      "failing": 0
+    },
+    {
+      "id": "fragmentsMustBeUsed",
+      "title": "Fragments Must Be Used",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.5.1.4",
+          "title": "Fragments Must Be Used",
+          "url": "https://spec.graphql.org/draft/#sec-Fragments-Must-Be-Used"
+        }
+      ],
+      "status": "pass",
+      "cases": 78,
+      "failing": 0
+    },
+    {
+      "id": "fragmentSpreadTargetDefined",
+      "title": "Fragment Spread Target Defined",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.5.2.1",
+          "title": "Fragment Spread Target Defined",
+          "url": "https://spec.graphql.org/draft/#sec-Fragment-Spread-Target-Defined"
+        }
+      ],
+      "status": "pass",
+      "cases": 9,
+      "failing": 0
+    },
+    {
+      "id": "fragmentSpreadsMustNotFormCycles",
+      "title": "Fragment Spreads Must Not Form Cycles",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.5.2.2",
+          "title": "Fragment Spreads Must Not Form Cycles",
+          "url": "https://spec.graphql.org/draft/#sec-Fragment-Spreads-Must-Not-Form-Cycles"
+        }
+      ],
+      "status": "pass",
+      "cases": 54,
+      "failing": 0
+    },
+    {
+      "id": "fragmentSpreadIsPossible",
+      "title": "Fragment Spread Is Possible",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.5.2.3",
+          "title": "Fragment Spread Is Possible",
+          "url": "https://spec.graphql.org/draft/#sec-Fragment-Spread-Is-Possible"
+        }
+      ],
+      "status": "pass",
+      "cases": 36,
+      "failing": 0
+    },
+    {
+      "id": "valuesOfCorrectType",
+      "title": "Values of Correct Type",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.6.1",
+          "title": "Values of Correct Type",
+          "url": "https://spec.graphql.org/draft/#sec-Values-of-Correct-Type"
+        }
+      ],
+      "status": "pass",
+      "cases": 282,
+      "failing": 0
+    },
+    {
+      "id": "inputObjectFieldNames",
+      "title": "Input Object Field Names",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.6.2",
+          "title": "Input Object Field Names",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Object-Field-Names"
+        }
+      ],
+      "status": "subsumed",
+      "cases": 11,
+      "failing": 0,
+      "note": "every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it, so a rejection can't be credited to this rule; accepting one fails both"
+    },
+    {
+      "id": "inputObjectFieldUniqueness",
+      "title": "Input Object Field Uniqueness",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.6.3",
+          "title": "Input Object Field Uniqueness",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Object-Field-Uniqueness"
+        }
+      ],
+      "status": "pass",
+      "cases": 6,
+      "failing": 0
+    },
+    {
+      "id": "inputObjectRequiredFields",
+      "title": "Input Object Required Fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.6.4",
+          "title": "Input Object Required Fields",
+          "url": "https://spec.graphql.org/draft/#sec-Input-Object-Required-Fields"
+        }
+      ],
+      "status": "subsumed",
+      "cases": 8,
+      "failing": 0,
+      "note": "every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it, so a rejection can't be credited to this rule; accepting one fails both"
+    },
+    {
+      "id": "directivesAreDefined",
+      "title": "Directives Are Defined",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.7.1",
+          "title": "Directives Are Defined",
+          "url": "https://spec.graphql.org/draft/#sec-Directives-Are-Defined"
+        }
+      ],
+      "status": "pass",
+      "cases": 24,
+      "failing": 0
+    },
+    {
+      "id": "directivesAreInValidLocations",
+      "title": "Directives Are in Valid Locations",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.7.2",
+          "title": "Directives Are in Valid Locations",
+          "url": "https://spec.graphql.org/draft/#sec-Directives-Are-in-Valid-Locations"
+        }
+      ],
+      "status": "pass",
+      "cases": 27,
+      "failing": 0
+    },
+    {
+      "id": "directivesAreUniquePerLocation",
+      "title": "Directives Are Unique per Location",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.7.3",
+          "title": "Directives Are Unique per Location",
+          "url": "https://spec.graphql.org/draft/#sec-Directives-Are-Unique-per-Location"
+        }
+      ],
+      "status": "pass",
+      "cases": 10,
+      "failing": 0
+    },
+    {
+      "id": "variableUniqueness",
+      "title": "Variable Uniqueness",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.8.1",
+          "title": "Variable Uniqueness",
+          "url": "https://spec.graphql.org/draft/#sec-Variable-Uniqueness"
+        }
+      ],
+      "status": "pass",
+      "cases": 6,
+      "failing": 0
+    },
+    {
+      "id": "variablesAreInputTypes",
+      "title": "Variables Are Input Types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.8.2",
+          "title": "Variables Are Input Types",
+          "url": "https://spec.graphql.org/draft/#sec-Variables-Are-Input-Types"
+        }
+      ],
+      "status": "pass",
+      "cases": 4,
+      "failing": 0
+    },
+    {
+      "id": "allVariableUsesDefined",
+      "title": "All Variable Uses Defined",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.8.3",
+          "title": "All Variable Uses Defined",
+          "url": "https://spec.graphql.org/draft/#sec-All-Variable-Uses-Defined"
+        }
+      ],
+      "status": "pass",
+      "cases": 15,
+      "failing": 0
+    },
+    {
+      "id": "allVariablesUsed",
+      "title": "All Variables Used",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.8.4",
+          "title": "All Variables Used",
+          "url": "https://spec.graphql.org/draft/#sec-All-Variables-Used"
+        }
+      ],
+      "status": "pass",
+      "cases": 18,
+      "failing": 0
+    },
+    {
+      "id": "allVariableUsagesAreAllowed",
+      "title": "All Variable Usages Are Allowed",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5.8.5",
+          "title": "All Variable Usages Are Allowed",
+          "url": "https://spec.graphql.org/draft/#sec-All-Variable-Usages-Are-Allowed"
+        }
+      ],
+      "status": "fail",
+      "cases": 636,
+      "failing": 71
+    },
+    {
+      "id": "acceptsValid",
+      "title": "Valid documents are accepted",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "5",
+          "title": "Validation",
+          "url": "https://spec.graphql.org/draft/#sec-Validation"
+        }
+      ],
+      "status": "fail",
+      "cases": 983,
+      "failing": 40,
+      "basis": "a document is valid when it satisfies every rule of §5, and only invalid requests are kept from execution (§6.1.1); rejecting a valid document applies a rule the spec doesn't have"
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "allVariableUsagesAreAllowed"
+      ],
+      "summary": "§5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule",
+      "cases": 71,
+      "draftOnly": 0,
+      "fixtures": {
+        "variables": 71
+      },
+      "fixture": "variables",
+      "example": {
+        "input": "AllVariableUsagesAreAllowed-4: query Q($v: ID!) { echo(opt: $v) }",
+        "response": {
+          "valid": true,
+          "errors": []
+        },
+        "expected": "invalid: AllVariableUsagesAreAllowed [\"v\"]"
+      }
+    },
+    {
+      "checks": [
+        "fieldSelectionMerging"
+      ],
+      "summary": "§5.3.2 Field Selection Merging isn't enforced: accepts documents that break only this rule",
+      "cases": 22,
+      "draftOnly": 0,
+      "fixtures": {
+        "merging": 22
+      },
+      "fixture": "merging",
+      "example": {
+        "input": "FieldSelectionMerging-59: { node(id: \"1\") { ... on User { a: __typename } ... on Post { a: id } } }",
+        "response": {
+          "valid": true,
+          "errors": []
+        },
+        "expected": "invalid: FieldSelectionMerging [\"conflict\"]"
+      }
+    },
+    {
+      "checks": [
+        "singleRootField"
+      ],
+      "summary": "§5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft",
+      "cases": 15,
+      "draftOnly": 15,
+      "fixtures": {
+        "operations": 13,
+        "random": 1,
+        "spec": 1
+      },
+      "fixture": "spec",
+      "example": {
+        "input": "[draft] SingleRootField-spec-7: subscription sub($bool: Boolean!) { newMessage @include(if: $bool) { body sender } }",
+        "response": {
+          "valid": true,
+          "errors": []
+        },
+        "expected": "invalid: SingleRootField [\"sub\"]"
+      }
+    },
+    {
+      "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
+        "singleRootField"
+      ],
+      "likelyOverStrict": true,
+      "summary": "rejects valid documents: §5.2.4.1 Single Root Field is likely over-strict (14 valid siblings of 16 different invalid vectors rejected, 23 of the same family accepted)",
+      "cases": 14,
+      "draftOnly": 0,
+      "fixtures": {
+        "operations": 14
+      },
+      "fixture": "operations",
+      "problem": "Subscription 'S7' must have exactly one root field and that field must not be an introspection field.",
+      "example": {
+        "input": "SingleRootField-valid-22: subscription S7 { a: postAdded { id } a: postAdded { name } }",
+        "response": {
+          "valid": false,
+          "errors": [
+            {
+              "message": "Subscription 'S7' must have exactly one root field and that field must not be an introspection field.",
+              "locations": [
+                {
+                  "line": 5,
+                  "column": 3
+                }
+              ]
+            }
+          ]
+        },
+        "expected": "valid"
+      }
+    },
+    {
+      "checks": [
+        "operationTypeExistence"
+      ],
+      "summary": "§5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule; all rely on the draft",
+      "cases": 9,
+      "draftOnly": 9,
+      "fixtures": {
+        "operations": 8,
+        "spec": 1
+      },
+      "fixture": "spec",
+      "example": {
+        "input": "[draft] OperationTypeExistence-spec-2: mutation goodbyeMutation { goodbye }",
+        "response": {
+          "valid": true,
+          "errors": []
+        },
+        "expected": "invalid: OperationTypeExistence [\"mutation\"]"
+      }
+    },
+    {
+      "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
+        "loneAnonymousOperation"
+      ],
+      "likelyOverStrict": true,
+      "summary": "rejects valid documents: §5.2.3.1 Lone Anonymous Operation is likely over-strict (9 valid siblings of 6 different invalid vectors rejected, 7 of the same family accepted)",
+      "cases": 9,
+      "draftOnly": 0,
+      "fixtures": {
+        "operations": 9
+      },
+      "fixture": "operations",
+      "problem": "Subscription 'S7' must have exactly one root field and that field must not be an introspection field.",
+      "example": {
+        "input": "LoneAnonymousOperation-valid-7: query A { post { id } } subscription S7 { a: postAdded { id } a: postAdded { name } }",
+        "response": {
+          "valid": false,
+          "errors": [
+            {
+              "message": "Subscription 'S7' must have exactly one root field and that field must not be an introspection field.",
+              "locations": [
+                {
+                  "line": 11,
+                  "column": 3
+                }
+              ]
+            }
+          ]
+        },
+        "expected": "valid"
+      }
+    },
+    {
+      "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
+        "allVariableUsagesAreAllowed"
+      ],
+      "likelyOverStrict": true,
+      "summary": "rejects valid documents: §5.8.5 All Variable Usages Are Allowed is likely over-strict (7 valid siblings of 28 different invalid vectors rejected, 51 of the same family accepted)",
+      "cases": 7,
+      "draftOnly": 0,
+      "fixtures": {
+        "variables": 7
+      },
+      "fixture": "variables",
+      "problem": "Variable '$v' of type '[Int]' used in position expecting type 'Int'.",
+      "example": {
+        "input": "AllVariableUsagesAreAllowed-valid-47: query Q($v: [Int]) { matrix(rows: [$v]) }",
+        "response": {
+          "valid": false,
+          "errors": [
+            {
+              "message": "Variable '$v' of type '[Int]' used in position expecting type 'Int'.",
+              "locations": [
+                {
+                  "line": 1,
+                  "column": 9
+                },
+                {
+                  "line": 2,
+                  "column": 17
+                }
+              ]
+            }
+          ]
+        },
+        "expected": "valid"
+      }
+    },
+    {
+      "checks": [
+        "executableDefinitions"
+      ],
+      "summary": "§5.1.1 Executable Definitions isn't enforced: accepts documents that break only this rule",
+      "cases": 4,
+      "draftOnly": 0,
+      "fixtures": {
+        "executable": 4
+      },
+      "fixture": "executable",
+      "example": {
+        "input": "ExecutableDefinitions-1: directive @x on FIELD { user { id } }",
+        "response": {
+          "valid": true,
+          "errors": []
+        },
+        "expected": "invalid: ExecutableDefinitions [\"document\"]"
+      }
+    },
+    {
+      "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
+        "variablesAreInputTypes"
+      ],
+      "likelyOverStrict": true,
+      "summary": "rejects valid documents: §5.8.2 Variables Are Input Types is likely over-strict (4 valid siblings of 3 different invalid vectors rejected, 1 of the same family accepted)",
+      "cases": 4,
+      "draftOnly": 0,
+      "fixtures": {
+        "extra": 4
+      },
+      "fixture": "extra",
+      "problem": "Invalid literal for argument 'value' of field 'json'. Unable to convert 'GraphQLParser.AST.GraphQLVariableWithLocation' literal from AST representation to any possible type",
+      "example": {
+        "input": "VariablesAreInputTypes-valid-2: query Q($v: Int) { json(value: {a: $v}) }",
+        "response": {
+          "valid": false,
+          "errors": [
+            {
+              "message": "Invalid literal for argument 'value' of field 'json'. Unable to convert 'GraphQLParser.AST.GraphQLVariableWithLocation' literal from AST representation to any possible type",
+              "locations": [
+                {
+                  "line": 2,
+                  "column": 15
+                }
+              ]
+            }
+          ]
+        },
+        "expected": "valid"
+      }
+    },
+    {
+      "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
+        "loneAnonymousOperation",
+        "operationTypeExistence"
+      ],
+      "likelyOverStrict": true,
+      "summary": "rejects valid documents: §5.2.3.1 Lone Anonymous Operation or §5.2.1.1 Operation Type Existence is likely over-strict (3 valid siblings of 6 different invalid vectors rejected, 4 of the same family accepted)",
+      "cases": 3,
+      "draftOnly": 0,
+      "fixtures": {
+        "operations": 3
+      },
+      "fixture": "operations",
+      "problem": "Subscription 'S7' must have exactly one root field and that field must not be an introspection field.",
+      "example": {
+        "input": "OperationTypeExistence-valid-3: query A { user { id } } subscription S7 { a: postAdded { id } a: postAdded { name } }",
+        "response": {
+          "valid": false,
+          "errors": [
+            {
+              "message": "Subscription 'S7' must have exactly one root field and that field must not be an introspection field.",
+              "locations": [
+                {
+                  "line": 11,
+                  "column": 3
+                }
+              ]
+            }
+          ]
+        },
+        "expected": "valid"
+      }
+    },
+    {
+      "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
+        "fragmentSpreadTargetDefined"
+      ],
+      "likelyOverStrict": false,
+      "summary": "rejects valid documents, each one edit from a document that breaks only §5.5.2.1 Fragment Spread Target Defined; the rule it applied is a guess, since the kit doesn't read error messages",
+      "cases": 1,
+      "draftOnly": 0,
+      "fixtures": {
+        "random": 1
+      },
+      "fixture": "random",
+      "problem": "Variable '$v0' of type '[Int]' used in position expecting type 'Int'.",
+      "example": {
+        "input": "FragmentSpreadTargetDefined-valid-3: query Q0($v0: [Int]) { b: node(id: \"1\") { id } matrix(rows: [$v0]) }",
+        "response": {
+          "valid": false,
+          "errors": [
+            {
+              "message": "Variable '$v0' of type '[Int]' used in position expecting type 'Int'.",
+              "locations": [
+                {
+                  "line": 1,
+                  "column": 10
+                },
+                {
+                  "line": 5,
+                  "column": 17
+                }
+              ]
+            }
+          ]
+        },
+        "expected": "valid"
+      }
+    },
+    {
+      "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
+        "allVariableUsagesAreAllowed",
+        "valuesOfCorrectType"
+      ],
+      "likelyOverStrict": false,
+      "summary": "rejects valid documents, each one edit from a document that breaks §5.8.5 All Variable Usages Are Allowed and §5.6.1 Values of Correct Type; the rule it applied is a guess, since the kit doesn't read error messages",
+      "cases": 1,
+      "draftOnly": 0,
+      "fixtures": {
+        "variables": 1
+      },
+      "fixture": "variables",
+      "problem": "Variable '$v' of type '[Int]' used in position expecting type 'Int'.",
+      "example": {
+        "input": "ValuesOfCorrectType-valid-9: query Q($v: [Int] = null) { matrix(rows: [$v]) }",
+        "response": {
+          "valid": false,
+          "errors": [
+            {
+              "message": "Variable '$v' of type '[Int]' used in position expecting type 'Int'.",
+              "locations": [
+                {
+                  "line": 1,
+                  "column": 9
+                },
+                {
+                  "line": 2,
+                  "column": 17
+                }
+              ]
+            }
+          ]
+        },
+        "expected": "valid"
+      }
+    },
+    {
+      "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
+        "directivesAreDefined"
+      ],
+      "likelyOverStrict": false,
+      "summary": "rejects valid documents, each one edit from a document that breaks only §5.7.1 Directives Are Defined; the rule it applied is a guess, since the kit doesn't read error messages",
+      "cases": 1,
+      "draftOnly": 0,
+      "fixtures": {
+        "random": 1
+      },
+      "fixture": "random",
+      "problem": "Variable '$v1' of type '[Int]' used in position expecting type 'Int'.",
+      "example": {
+        "input": "DirectivesAreDefined-valid-16: query Q0($v1: [Int], $v0: [Int!]) { matrix(rows: [$v1]) echo(list: $v0, nums: [1], role: ADMIN) a: node(id: \"1\") { id id } }",
+        "response": {
+          "valid": false,
+          "errors": [
+            {
+              "message": "Variable '$v1' of type '[Int]' used in position expecting type 'Int'.",
+              "locations": [
+                {
+                  "line": 1,
+                  "column": 10
+                },
+                {
+                  "line": 2,
+                  "column": 17
+                }
+              ]
+            }
+          ]
+        },
+        "expected": "valid"
+      }
+    }
+  ],
+  "fixtures": [],
+  "ok": false
+}

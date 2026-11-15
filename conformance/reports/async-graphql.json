@@ -9,14 +9,14 @@
     "subscription"
   ],
   "provenance": {
-    "kit": "c8d6acb7c6e2",
+    "kit": "f0039322bf59",
     "date": "2026-11-15",
     "strict": true,
     "random": 1500,
     "seed": 1,
     "exhaustive": true
   },
-  "checkerSelfTest": "passed (23 negative controls)",
+  "checkerSelfTest": "passed (25 negative controls)",
   "cases": {
     "submitted": 11213,
     "distinct": 350,
@@ -251,6 +251,21 @@
       "failing": 1042
     },
     {
+      "id": "responds",
+      "title": "A request gets a response",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "7.1",
+          "title": "Response Format",
+          "url": "https://spec.graphql.org/draft/#sec-Response-Format"
+        }
+      ],
+      "status": "pass",
+      "cases": 11213,
+      "failing": 0
+    },
+    {
       "id": "eventYieldsResult",
       "title": "A subscription event yields an execution result, even when its data is null",
       "level": "MUST",
@@ -306,8 +321,8 @@
           "url": "https://spec.graphql.org/draft/#sec-Value-Completion"
         }
       ],
-      "status": "pass",
-      "cases": 11213,
+      "status": "untested",
+      "cases": 0,
       "failing": 0
     },
     {
@@ -926,5 +941,6 @@
       "cases": 1614,
       "failing": 504
     }
-  ]
+  ],
+  "ok": false
 }
