@@ -433,6 +433,67 @@ SingleRootField(S, D) ==
   IN IF S.roots.subscription = "" THEN {}
      ELSE {D[i].name : i \in {j \in OperationIndices(D) : D[j].operation = "subscription" /\ ~holds(D[j])}}
 
+\* The October 2021 edition's rule, which isn't one of Rules: the draft
+\* forbids @skip and @include at a subscription's root, where October 2021
+\* applies them. Its §5.2.3.1 Single root field: "Let {variableValues} be
+\* the empty set. Let {groupedFieldSet} be the result of
+\* {CollectFields(subscriptionType, selectionSet, variableValues)}.
+\* {groupedFieldSet} must have exactly one entry, which must not be an
+\* introspection field." Its CollectFields skips a selection when
+\* "{skipDirective}'s {if} argument is {true} or is a variable in
+\* {variableValues} with the value {true}", and when "{includeDirective}'s
+\* {if} argument is not {true} and is not a variable in {variableValues}
+\* with the value {true}". With no variable values only the literal {true}
+\* counts: @skip(if: true) drops a selection, and so does any @include
+\* whose if isn't the literal true. scripts/generate-vectors-validate.mjs
+\* uses it to tell which Single Root Field vectors only the draft rejects.
+IfIsTrue(directive) ==
+  \E j \in DOMAIN directive.arguments :
+    /\ directive.arguments[j].name = "if"
+    /\ directive.arguments[j].value.kind = "boolean"
+    /\ directive.arguments[j].value.value = "true"
+SkippedWithoutVariables(selection) ==
+  \/ \E j \in DOMAIN selection.directives :
+       selection.directives[j].name = "skip" /\ IfIsTrue(selection.directives[j])
+  \/ \E j \in DOMAIN selection.directives :
+       selection.directives[j].name = "include" /\ ~IfIsTrue(selection.directives[j])
+
+\* October 2021's CollectFields(objectType, selectionSet, variableValues,
+\* visitedFragments) with no variable values, over selectionSet[i..],
+\* threading [fields, visited] through the walk as CollectSubscriptionFrom
+\* does. A skipped fragment spread isn't visited.
+RECURSIVE CollectFieldsOctober2021From(_, _, _, _, _, _)
+CollectFieldsOctober2021From(S, D, objectType, set, i, acc) ==
+  IF i > Len(set) THEN acc
+  ELSE
+    LET selection == set[i]
+        next ==
+          IF SkippedWithoutVariables(selection) THEN acc
+          ELSE IF selection.kind = "field" THEN
+            [acc EXCEPT !.fields = @ \cup {[key |-> ResponseKey(selection), name |-> selection.name]}]
+          ELSE IF selection.kind = "fragmentSpread" THEN
+            IF selection.name \in acc.visited THEN acc
+            ELSE
+              LET visited == [acc EXCEPT !.visited = @ \cup {selection.name}] IN
+              IF ~HasFragment(D, selection.name) THEN visited
+              ELSE IF ~DoesFragmentTypeApply(S, objectType, Fragment(D, selection.name).typeCondition)
+              THEN visited
+              ELSE CollectFieldsOctober2021From(S, D, objectType, Fragment(D, selection.name).selectionSet, 1, visited)
+          ELSE IF selection.typeCondition # ""
+                  /\ ~DoesFragmentTypeApply(S, objectType, selection.typeCondition)
+          THEN acc
+          ELSE CollectFieldsOctober2021From(S, D, objectType, selection.selectionSet, 1, acc)
+    IN CollectFieldsOctober2021From(S, D, objectType, set, i + 1, next)
+
+SingleRootFieldOctober2021(S, D) ==
+  LET holds(operation) ==
+        LET collected == CollectFieldsOctober2021From(S, D, S.roots.subscription, operation.selectionSet, 1,
+                                                      [fields |-> {}, visited |-> {}])
+        IN /\ Cardinality({f.key : f \in collected.fields}) = 1
+           /\ \A f \in collected.fields : f.name \notin IntrospectionFields
+  IN IF S.roots.subscription = "" THEN {}
+     ELSE {D[i].name : i \in {j \in OperationIndices(D) : D[j].operation = "subscription" /\ ~holds(D[j])}}
+
 -----------------------------------------------------------------------------
 (* §5.3 Fields *)
 
@@ -1487,9 +1548,48 @@ Vectors ==
     @@ ("arguments" :> ArgumentVectors) @@ ("fragments" :> FragmentVectors) @@ ("values" :> ValueVectors)
     @@ ("directives" :> DirectiveVectors) @@ ("variables" :> VariableVectors)
 
+\* October 2021's Single root field (SingleRootFieldOctober2021): its own
+\* examples, and @skip and @include at the root, which the draft forbids
+\* and October 2021 applies with no variable values. Kept out of Vectors,
+\* which holds the draft's examples.
+SkipIf(value) == <<Dir("skip", <<A("if", value)>>)>>
+IncludeIf(value) == <<Dir("include", <<A("if", value)>>)>>
+BoolVar == <<VarDef("bool", NN(BooleanT))>>
+October2021Vectors == <<
+  V("SingleRootFieldOctober2021", Examples, <<Sub("sub", <<NewMessage>>)>>, TRUE),
+  V("SingleRootFieldOctober2021", Examples,
+    <<Sub("sub", <<Spread("newMessageFields")>>), Frag("newMessageFields", "Subscription", <<NewMessage>>)>>, TRUE),
+  V("SingleRootFieldOctober2021", Examples, <<Sub("sub", <<NewMessage, F("disallowedSecondRootField")>>)>>, FALSE),
+  V("SingleRootFieldOctober2021", Examples,
+    <<Sub("sub", <<Spread("multipleSubscriptions")>>),
+      Frag("multipleSubscriptions", "Subscription", <<NewMessage, F("disallowedSecondRootField")>>)>>, FALSE),
+  V("SingleRootFieldOctober2021", Examples, <<Sub("sub", <<F("__typename")>>)>>, FALSE),
+  \* The draft's requiredRuntimeValidation: only the second field is collected.
+  V("SingleRootFieldOctober2021", Examples,
+    <<Op("subscription", "requiredRuntimeValidation", BoolVar,
+         <<WithDirs(NewMessage, IncludeIf(Var("bool"))),
+           WithDirs(F("disallowedSecondRootField"), SkipIf(Var("bool")))>>)>>, TRUE),
+  V("SingleRootFieldOctober2021", Examples, <<Sub("sub", <<WithDirs(NewMessage, SkipIf(BoolV("true")))>>)>>, FALSE),
+  V("SingleRootFieldOctober2021", Examples, <<Sub("sub", <<WithDirs(NewMessage, SkipIf(BoolV("false")))>>)>>, TRUE),
+  V("SingleRootFieldOctober2021", Examples, <<Sub("sub", <<WithDirs(NewMessage, IncludeIf(BoolV("true")))>>)>>, TRUE),
+  V("SingleRootFieldOctober2021", Examples, <<Sub("sub", <<WithDirs(NewMessage, IncludeIf(BoolV("false")))>>)>>, FALSE),
+  V("SingleRootFieldOctober2021", Examples,
+    <<Op("subscription", "sub", BoolVar, <<WithDirs(NewMessage, IncludeIf(Var("bool")))>>)>>, FALSE),
+  V("SingleRootFieldOctober2021", Examples,
+    <<Op("subscription", "sub", BoolVar, <<WithDirs(NewMessage, SkipIf(Var("bool")))>>)>>, TRUE),
+  \* A skipped spread isn't visited, so the same fragment spread again counts.
+  V("SingleRootFieldOctober2021", Examples,
+    <<Sub("sub", <<WithDirs(Spread("newMessageFields"), SkipIf(BoolV("true"))), Spread("newMessageFields")>>),
+      Frag("newMessageFields", "Subscription", <<NewMessage>>)>>, TRUE),
+  V("SingleRootFieldOctober2021", Examples,
+    <<Sub("sub", <<NewMessage, WithDirs(On("", <<F("disallowedSecondRootField")>>), IncludeIf(BoolV("false")))>>)>>, TRUE)
+>>
+
 \* Each initial state is one vector, so a violation's trace names it.
 VARIABLE vector
-Init == vector \in UNION {{[group |-> g, n |-> n] : n \in DOMAIN Vectors[g]} : g \in DOMAIN Vectors}
+Init ==
+  vector \in UNION {{[group |-> g, n |-> n] : n \in DOMAIN Vectors[g]} : g \in DOMAIN Vectors}
+               \cup {[group |-> "october2021", n |-> n] : n \in DOMAIN October2021Vectors}
 Next == UNCHANGED vector
 
 VectorHolds(group) ==
@@ -1504,4 +1604,7 @@ FragmentExamplesHold == VectorHolds("fragments")
 ValueExamplesHold == VectorHolds("values")
 DirectiveExamplesHold == VectorHolds("directives")
 VariableExamplesHold == VectorHolds("variables")
+October2021ExamplesHold ==
+  vector.group = "october2021" =>
+    LET v == October2021Vectors[vector.n] IN (SingleRootFieldOctober2021(WithIntrospection(v.schema), v.doc) = {}) = v.valid
 ====

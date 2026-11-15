@@ -77,8 +77,11 @@ gets no execution result, only the stream error, so the adapter reports a
 ## Other areas
 
 `Areas.java` answers them. Capabilities claimed: `parse`, `validate`,
-`coerce`, `schema`, `introspect`, `custom-scalar-literals`, `absent-vs-null`,
-and `unvalidated` (not with `--validate`). `exact-numbers` isn't claimed.
+`coerce`, `schema`, `introspect`, `custom-scalar-literals`,
+`custom-directives`, `absent-vs-null`, and `unvalidated` (not with
+`--validate`). `exact-numbers` isn't claimed. `custom-directives` (validate
+and introspect): `SchemaGenerator` builds the SDL's
+`directive @label(...) on ...` definitions, and graphql-java knows them.
 
 In parse, validate, coerce and schema, an exception graphql-java throws where
 it should have given a verdict or a response is answered with an `error`. The
@@ -145,9 +148,9 @@ message's first line reaches the report. The stack trace goes to stderr.
 
 | Area | Result |
 | --- | --- |
-| execution | Unchanged: 2544 of 2544 distinct well-formed cases satisfy the reference (`--random 1500`). 1338 subscription cases are malformed, the deviation above. |
+| execution | Unchanged: 2544 of 2544 distinct well-formed cases satisfy the reference (`--random 1500`). 1338 subscription cases fail `eventYieldsResult`, the deviation above. |
 | parse | 1894 of 1983 vectors agree. 5 checks fail. 81 of the 89 failing vectors are draft only. |
-| validate | 3037 of 3088 vectors agree, and 22 crash. 5 rule checks fail, 3 of them on draft-only vectors only. `acceptsValid` passes. |
+| validate | 3037 of 3088 vectors agree, and 22 crash. 5 rule checks fail, 2 of them on draft-only vectors only. `acceptsValid` passes. |
 | coerce | Unvalidated: 1977 of 2036 results match, and 1 gets no response. With `--validate`: 1978 of 2010 (26 need `unvalidated`), `invalidNotExecuted` passes on all 775 invalid documents, and only `id` and `list` fail. |
 | schema | 152 of 165 schemas agree, 4 of the failures crashes. 10 of 44 rules fail, 3 of them on draft-only vectors only. |
 | introspect | Graded against October 2021, since the draft's query is rejected. 8 of 28 results match. `builtinDefinitions` and `descriptions` fail. |
@@ -205,16 +208,22 @@ graphql-java's public API directly (`Parser.parse`, `SchemaGenerator`,
 - **§5.2.4.1 with `@include(if: true)` at a subscription's root (1 vector,
   draft):** accepted, since graphql-java applies the directive when it
   collects the root fields. October 2021 does the same.
-- **The validator crashes (22 draft-only vectors):**
+- **The validator crashes (22 vectors):**
   for a subscription whose root field has `@skip` or `@include`,
   `validateSubscriptionUniqueRootField` collects the root fields with no
   variables (`OperationValidator.java:1817`). `@include(if: $v)` then throws
-  `NullPointerException` (`execution/conditional/ConditionalNodes.java:99`),
+  `NullPointerException` (`execution/conditional/ConditionalNodes.java:149`,
+  unboxing the missing variable, called from `shouldInclude` at `:99`),
   and `@skip(if: true)` leaves no field, so `get(0)` throws
   `ArrayIndexOutOfBoundsException` (`OperationValidator.java:1827`).
   `GraphQL.execute` would throw rather than answer. The adapter answers with
   an `error`, and the kit reports a crash on documents that break only §5.2.4.1,
-  which fails `singleRootField`.
+  which fails `singleRootField`. Only the draft forbids `@skip` and `@include`
+  at a subscription's root, but 21 of the 22 documents are invalid under
+  October 2021 too: its CollectFields, run with empty variables, leaves no root
+  field for `@skip(if: true)` or `@include(if: $v)`. Only one (spec example 5,
+  `@include(if: $bool)` on one root field and `@skip(if: $bool)` on another)
+  is valid under October 2021.
 
 ### Coerce
 
@@ -224,7 +233,10 @@ With validation (`--validate`), what graphql-java does for a request:
   `[]` or `{"a": 1}` for `ID` becomes `"true"`, `"1.5"`, `"[]"`, `"{a=1}"`.
   `GraphqlIDCoercing#convertImpl` ends with `return String.valueOf(input)`
   (`scalar/GraphqlIDCoercing.java:47`). The JSON number `1e400` becomes
-  `"Infinity"` the same way (`jsonNumbers`, informational).
+  `"Infinity"` the same way. Jackson reads it as the binary64 infinity, a
+  reading the kit allows, and the vector's binary64 answer is then a request
+  error, since a float reaches ID. So this is the same §3.5.5 violation, though
+  the kit files it under `jsonNumbers` (informational).
 - **A null variable as a Non-Null list item (1 vector, §3.11):**
   `query($x: Int = 1) { intsNN(v: [1, $x]) }` with `{"x": null}` gives the
   resolver `[1, null]` for `[Int!]!`. List literals coerce each item with
@@ -292,8 +304,11 @@ informational `loneSurrogates` check records.
   fields, arguments and enum values, `schema/validation/TypeAndFieldRule.java:184-227`,
   not on type names), and `type Int { … }` (`typeNameNotBuiltin`).
   `SchemaValidator` lists its rules at `schema/validation/SchemaValidator.java:18-28`.
-- **Draft rules (4 schemas):** `f(x: Float = 1e400)` (`argDefaultCompatible`,
-  2 schemas: the Float literal isn't checked for finiteness, as in coerce),
+- **Draft rules (4 schemas):** default values that don't coerce
+  (`argDefaultCompatible`, 2 schemas): `f(x: Float = 1e400)`, a Float literal
+  that isn't checked for finiteness, as in coerce, and
+  `input Pick @oneOf { a: Int b: String } type Query { f(p: Pick = {a: null}): Int }`,
+  a OneOf default with a null entry;
   a deprecated field implementing one that isn't (`implDeprecation`), and a
   cycle through a OneOf input object (`inputObjectUnbreakableCycle`).
 

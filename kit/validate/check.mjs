@@ -9,13 +9,18 @@
 //     counts against both.
 //   - rejecting a valid vector fails one check, acceptsValid. The kit doesn't
 //     know which rule the implementation applied, so the rule the vector is
-//     a sibling of is only a hint in the finding.
+//     a sibling of is only a hint in the finding. Rejections that carry an
+//     error message are grouped by the message's wording (names and numbers
+//     left out), which is the implementation's own account of the rule it
+//     applied; the hints of the group are a secondary detail.
 //
 //   - a crash, an `error` answer from the adapter (docs/kit-areas.md,
 //     "Protocol"), gives no verdict. On an invalid vector it fails the rules
 //     the vector breaks, as accepting it would; on a valid one it fails
 //     acceptsValid. Crashes have their own findings, and never count as an
-//     agreement.
+//     agreement. A crash fails in every edition that can build the vector's
+//     schema, so it is draft-only only when the schema has a OneOf Input
+//     Object, whatever the vector's verdict rests on.
 //
 // A rule whose every vector also breaks another rule can't earn a pass: a
 // rejection may be the other rule's doing. Its check is "subsumed" instead.
@@ -53,6 +58,31 @@ export const SEVERAL = 3;
 
 const brokenRules = (vector) => Object.keys(vector.violations ?? {}).sort();
 const isDraft = (vector) => vector.edition === "draft";
+
+// Whether a failure is draft-only. A wrong verdict is when the vector's
+// verdict rests on the draft. A crash is a failure in any edition that can
+// take the input: every document parses under both editions, so only a
+// schema with a OneOf Input Object (new in the draft) makes it draft-only.
+const draftInput = (data, vector) => /@oneOf\b/.test(data.schemas[vector.schema]);
+const failsOnlyInDraft = (data, j) => (j.status === "crash" ? draftInput(data, j.vector) : isDraft(j.vector));
+
+// The wording of an error message, for grouping rejections: its first
+// line, with quoted text, bracketed paths and numbers left out, so
+// "Variable '$v0' of type '[Int]' …" and "Variable '$v1' of type '[ID]' …"
+// read the same.
+export const messagePattern = (message) =>
+  String(message)
+    .split("\n")[0]
+    .replace(/"(?:[^"\\]|\\.)*"|'[^']*'|`[^`]*`|\u201c[^\u201d]*\u201d/g, "…")
+    .replace(/\[[^\]]*\]/g, "[…]")
+    .replace(/\d+/g, "N")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 200);
+const firstMessage = (answer) => {
+  const m = answer?.errors?.[0]?.message;
+  return typeof m === "string" && m.trim() !== "" ? m : undefined;
+};
 
 // The vectors an adapter is graded on, and how many are left out and why.
 export const gradedVectors = (data, capabilities = []) => {
@@ -126,7 +156,7 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
       accepts.cases++;
       if (j.status !== "pass") {
         accepts.failing++;
-        if (isDraft(j.vector)) accepts.failingDraftOnly++;
+        if (failsOnlyInDraft(data, j)) accepts.failingDraftOnly++;
       }
       continue;
     }
@@ -136,21 +166,32 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
       if (j.rules.length === 1) s.alone++;
       if (j.status !== "pass") {
         s.failing++;
-        if (isDraft(j.vector)) s.failingDraftOnly++;
+        if (failsOnlyInDraft(data, j)) s.failingDraftOnly++;
       }
     }
   }
 
   // A finding per kind of failure and set of rules (for a rejected valid
-  // vector, its hint). Its example is the spec's own where there is one,
-  // else the shortest document.
+  // vector, its hint), except that rejected valid vectors whose answer has
+  // an error message are grouped by its wording: one cause in the
+  // implementation shows up as one finding, whatever the vectors' hints.
+  // Its example is the spec's own where there is one, else the shortest
+  // document.
   const findings = new Map();
   for (const j of judged) {
     if (j.status === "pass" || j.status === "malformed") continue;
-    const key = `${j.status}\u0000${j.vector.expected.valid}\u0000${j.rules.join(",")}`;
-    const f = findings.get(key) ?? { kind: j.status, valid: j.vector.expected.valid, rules: j.rules, cases: 0, draft: 0, fixtures: {}, members: [], best: j };
+    const message = j.status === "rejected-valid" ? firstMessage(j.answer) : undefined;
+    const key =
+      message !== undefined
+        ? `${j.status}\u0000message\u0000${messagePattern(message)}`
+        : `${j.status}\u0000${j.vector.expected.valid}\u0000${j.rules.join(",")}`;
+    const f = findings.get(key) ?? {
+      kind: j.status, valid: j.vector.expected.valid, rules: j.rules, byMessage: message !== undefined,
+      hints: new Map(), cases: 0, draft: 0, fixtures: {}, members: [], best: j,
+    };
     f.cases++;
-    if (isDraft(j.vector)) f.draft++;
+    for (const r of j.rules) f.hints.set(r, (f.hints.get(r) ?? 0) + 1);
+    if (failsOnlyInDraft(data, j)) f.draft++;
     f.members.push(j);
     f.fixtures[j.vector.family] = (f.fixtures[j.vector.family] ?? 0) + 1;
     const rank = (x) => [x.vector.family === "spec" ? 0 : 1, x.vector.document.length];
@@ -158,15 +199,26 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
     if (a[0] < b[0] || (a[0] === b[0] && a[1] < b[1])) f.best = j;
     findings.set(key, f);
   }
+  // A group by message names every hint of its members, the most common
+  // first. Several hints mean the vectors aren't near one rule.
+  for (const f of findings.values()) {
+    if (!f.byMessage) continue;
+    f.rules = [...f.hints.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).map(([r]) => r);
+    f.oneHint = f.members.every((j) => j.rules.join(",") === f.members[0].rules.join(","));
+  }
 
   // Whether a group of rejected valid vectors points at its rule: several
   // of them, siblings of different invalid vectors, while a valid vector of
-  // the same family and hint is accepted.
+  // the same family and hint is accepted. A group by message whose members
+  // have different hints doesn't: the same error near several rules says
+  // the cause isn't any one of them.
   const evidence = (f) => {
+    if (f.byMessage && !f.oneHint) return { likely: false, partners: 0, accepted: 0 };
+    const hint = f.byMessage ? f.members[0].rules : f.rules;
     const invalidPartners = new Set(f.members.flatMap((j) => (partners.get(j.vector.id) ?? [j.vector]).map((v) => v.id)));
     const families = new Set(f.members.map((j) => j.vector.family));
     const accepted = judged.filter(
-      (j) => j.vector.expected.valid && j.status === "pass" && j.rules.join(",") === f.rules.join(",") && families.has(j.vector.family),
+      (j) => j.vector.expected.valid && j.status === "pass" && j.rules.join(",") === hint.join(",") && families.has(j.vector.family),
     ).length;
     return { likely: f.cases >= SEVERAL && invalidPartners.size >= SEVERAL && accepted > 0, partners: invalidPartners.size, accepted };
   };
@@ -181,6 +233,11 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
     }
     if (f.kind === "rejected-valid") {
       const e = evidence(f);
+      if (f.byMessage && !f.oneHint) {
+        const counted = f.rules.slice(0, 4).map((r) => `${cite(r, rules)} (${f.hints.get(r)})`);
+        const more = f.rules.length > 4 ? ` and ${plural(f.rules.length - 4, "other rule")}` : "";
+        return `rejects valid documents, all with the same error message; their invalid siblings break ${counted.join(", ")}${more}, so the hints point at no one rule: the message says what the implementation objected to${draft}`;
+      }
       if (e.likely) {
         return `rejects valid documents: ${names.join(" or ")} is likely over-strict (${f.cases} valid siblings of ${e.partners} different invalid vectors rejected, ${e.accepted} of the same family accepted)${draft}`;
       }
@@ -189,7 +246,7 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
         spec === f.cases
           ? `the spec's own examples of documents valid under ${names.join(" and ")}`
           : `each one edit from a document that breaks ${names.length === 1 ? `only ${names[0]}` : `${names.join(" and ")}`}${spec ? ", or the spec's example of a document valid under it" : ""}`;
-      return `rejects valid documents, ${near}; the rule it applied is a guess, since the kit doesn't read error messages${draft}`;
+      return `rejects valid documents, ${near}; the rule it applied is a guess, since the kit doesn't interpret error messages${draft}`;
     }
     return f.rules.length === 1
       ? `${names[0]} isn't enforced: accepts documents that break only this rule${draft}`
@@ -222,7 +279,7 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
     checkerSelfTest: selfTest ? `passed (${controls} negative controls)` : "failed",
     cases: { submitted: judged.length, distinct: judged.length, malformed },
     adapterProblems: malformed,
-    draftOnly: { vectors: judged.filter((j) => isDraft(j.vector)).length, failing: failing.filter((j) => isDraft(j.vector)).length },
+    draftOnly: { vectors: judged.filter((j) => isDraft(j.vector)).length, failing: failing.filter((j) => failsOnlyInDraft(data, j)).length },
     checks: [
       ...Object.keys(rules).map((rule) => {
         const s = stats.get(rule);
@@ -268,7 +325,7 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
           fixture: f.best.vector.family,
           ...(crash ? { problem: f.best.answer.message } : f.best.answer?.errors?.[0]?.message ? { problem: String(f.best.answer.errors[0].message) } : {}),
           example: {
-            input: `${isDraft(f.best.vector) ? "[draft] " : ""}${f.best.vector.id}: ${oneLine(f.best.vector.document)}`,
+            input: `${failsOnlyInDraft(data, f.best) ? "[draft] " : ""}${f.best.vector.id}: ${oneLine(f.best.vector.document)}`,
             response: crash ? crashResponse(f.best.answer) : f.best.answer,
             expected: expected(f.best.vector),
           },
@@ -302,6 +359,30 @@ export const selfTest = (data, vectors = gradedVectors(data).graded) => {
     if (near) return byId.get(near);
     return vectors.find((w) => w.rule === v.rule && w.expected.valid !== v.expected.valid) ?? vectors.find((w) => w.expected.valid !== v.expected.valid);
   };
+
+  // Valid siblings of one rule, each of a different invalid vector, in one
+  // family that has one more: SEVERAL of them, or null.
+  const chosen = (() => {
+    const groups = new Map();
+    for (const v of vectors) {
+      if (!v.expected.valid || !partners.has(v.id)) continue;
+      const key = `${pairsOf(data).hints.get(v.id).join(",")}\u0000${v.family}`;
+      groups.set(key, [...(groups.get(key) ?? []), v]);
+    }
+    const pick = (list) => {
+      const used = new Set();
+      const out = [];
+      for (const v of list) {
+        const ids = partners.get(v.id).map((w) => w.id);
+        if (ids.some((id) => used.has(id))) continue;
+        ids.forEach((id) => used.add(id));
+        out.push(v);
+        if (out.length === SEVERAL) break;
+      }
+      return out.length === SEVERAL && list.length > SEVERAL ? out : null;
+    };
+    return [...groups.values()].map(pick).find(Boolean) ?? null;
+  })();
 
   // Each control: its answers, which vectors the checker must flag, and
   // what the report must then say.
@@ -380,34 +461,36 @@ export const selfTest = (data, vectors = gradedVectors(data).graded) => {
       if (r.findings.some((f) => f.likelyOverStrict)) failures.push(`${name}: a finding names a rule as likely over-strict`);
     },
     // Several siblings of one rule rejected, with others of the same family
-    // accepted, is.
+    // accepted, is, with or without an error message.
     () => {
       const name = "several valid siblings of one rule rejected";
-      const groups = new Map();
-      for (const v of vectors) {
-        if (!v.expected.valid || !partners.has(v.id)) continue;
-        const key = `${pairsOf(data).hints.get(v.id).join(",")}\u0000${v.family}`;
-        groups.set(key, [...(groups.get(key) ?? []), v]);
-      }
-      // Siblings of different invalid vectors, and one left over.
-      const pick = (list) => {
-        const used = new Set();
-        const out = [];
-        for (const v of list) {
-          const ids = partners.get(v.id).map((w) => w.id);
-          if (ids.some((id) => used.has(id))) continue;
-          ids.forEach((id) => used.add(id));
-          out.push(v);
-          if (out.length === SEVERAL) break;
-        }
-        return out.length === SEVERAL && list.length > SEVERAL ? out : null;
-      };
-      const chosen = [...groups.values()].map(pick).find(Boolean);
       if (!chosen) return failures.push(`${name}: no rule has ${SEVERAL + 1} valid siblings in one family`);
-      const answers = vectors.map((v, i) => (chosen.includes(v) ? { valid: false } : right[i]));
-      caught(answers, (v) => chosen.includes(v), name);
+      for (const errors of [undefined, [{ message: "Variable '$v0' is not allowed here." }]]) {
+        const answers = vectors.map((v, i) => (chosen.includes(v) ? { valid: false, ...(errors ? { errors } : {}) } : right[i]));
+        caught(answers, (v) => chosen.includes(v), name);
+        const r = report(answers);
+        if (!r.findings.some((f) => f.likelyOverStrict)) {
+          failures.push(`${name}${errors ? ", with one message" : ""}: no finding names the rule as likely over-strict`);
+        }
+      }
+    },
+    // The same rejections, plus one near another rule, all with one message
+    // that differs only in names: one finding, which blames no rule.
+    () => {
+      const name = "valid vectors near several rules rejected with one message";
+      if (!chosen) return failures.push(`${name}: no rule has ${SEVERAL + 1} valid siblings in one family`);
+      const hintOf = (v) => pairsOf(data).hints.get(v.id).join(",");
+      const other = vectors.find((v) => v.expected.valid && partners.has(v.id) && hintOf(v) !== hintOf(chosen[0]));
+      const rejected = [...chosen, other];
+      const answers = vectors.map((v, i) =>
+        rejected.includes(v) ? { valid: false, errors: [{ message: `Variable '$${v.id}' is not allowed here.` }] } : right[i]);
+      caught(answers, (v) => rejected.includes(v), name);
       const r = report(answers);
-      if (!r.findings.some((f) => f.likelyOverStrict)) failures.push(`${name}: no finding names the rule as likely over-strict`);
+      const found = r.findings.filter((f) => f.checks.includes(ACCEPTS_VALID));
+      if (found.length !== 1 || found[0].cases !== rejected.length) {
+        failures.push(`${name}: ${found.length} findings instead of one with ${rejected.length} cases`);
+      }
+      if (r.findings.some((f) => f.likelyOverStrict)) failures.push(`${name}: a finding names a rule as likely over-strict`);
     },
   ];
   for (const control of controls) control();

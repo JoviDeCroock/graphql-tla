@@ -32,7 +32,8 @@ const nullable = (type) => (graphql.isNonNullType(type) ? type.ofType : type);
 // With `uncoercible` (the fixture asks for invalid results and the adapter
 // has `uncoercible-results`), also a value the leaf type can't represent:
 // a fraction for an Int, a non-finite number for a Float, a name that isn't
-// one of an enum's values (§3.5.1, §3.5.2, §3.9).
+// one of an enum's values (§3.5.1, §3.5.2, §3.9). Driver#allowed then drops
+// what the adapter's hello says it can't return.
 export const choicesFor = (fixture, type, invalidResults, uncoercible = false) => {
   const inner = nullable(type);
   const objects = (names) => names.map((name) => ({ kind: "object", type: name }));
@@ -68,14 +69,22 @@ export const choicesFor = (fixture, type, invalidResults, uncoercible = false) =
 
 // For an adapter without `deferred-items`, a list's items come with the
 // list: each item's outcome is chosen at once, and can't be an error.
-const inlineItems = (fixture, itemType, length, invalidResults, uncoercible, choose) =>
+// `allowed(type, isItem, choices)` drops what the adapter can't return.
+const inlineItems = (fixture, itemType, length, invalidResults, uncoercible, choose, allowed) =>
   Array.from({ length }, () => {
-    const choices = choicesFor(fixture, itemType, invalidResults, uncoercible).filter((c) => c.kind !== "error");
+    const choices = allowed(itemType, true, choicesFor(fixture, itemType, invalidResults, uncoercible).filter((c) => c.kind !== "error"));
     const outcome = choices[choose(choices.length, "outcome")];
     return outcome.kind === "list"
-      ? { ...outcome, items: inlineItems(fixture, nullable(itemType).ofType, outcome.length, invalidResults, uncoercible, choose) }
+      ? { ...outcome, items: inlineItems(fixture, nullable(itemType).ofType, outcome.length, invalidResults, uncoercible, choose, allowed) }
       : outcome;
   });
+
+// The leaf type an `uncoercible` outcome is for, as `uncoercibleTypes`
+// names it.
+const leafKind = (type) => {
+  const inner = nullable(type);
+  return graphql.isEnumType(inner) ? "Enum" : inner.name;
+};
 
 // The settles an inline list implies, item by item, in order.
 const inlineSettles = (path, type, outcome) =>
@@ -101,6 +110,30 @@ export class Driver {
     this.idle = adapter.capabilities.has("idle");
     this.finished = new Set();
     this.deferredItems = adapter.capabilities.has("deferred-items");
+    // Outcomes the kit leaves out because the adapter says it can't return
+    // them: how many times each kind was left out of a settle's choices.
+    this.withheld = new Map();
+  }
+
+  // The choices for a resolver at a position of this type, without what the
+  // adapter can't return: an `uncoercible` value for a leaf type outside its
+  // `uncoercibleTypes`, and, with `nullItems: false`, null for a Non-Null
+  // list item or subscription event. A typed implementation's item type
+  // there has no null, so only a hand-written value could produce one.
+  allowed(fixture, type, isItem, choices) {
+    const withhold = (reason) => this.withheld.set(reason, (this.withheld.get(reason) ?? 0) + 1);
+    const types = this.adapter.uncoercibleTypes;
+    return choices.filter((c) => {
+      if (c.kind === "uncoercible" && types && !types.has(leafKind(type))) {
+        withhold(`uncoercible ${leafKind(type)} results (uncoercibleTypes: ${[...types].join(", ") || "none"})`);
+        return false;
+      }
+      if (c.kind === "null" && this.adapter.nullItems === false && graphql.isNonNullType(type) && isItem) {
+        withhold("null for a Non-Null list item or subscription event (nullItems: false)");
+        return false;
+      }
+      return true;
+    });
   }
 
   // Reads the adapter's messages for execution `id` until it is idle: an
@@ -187,10 +220,13 @@ export class Driver {
       if (run.pending.length === 0) throw new Error(`${fixture.id}: no response and no pending resolver`);
       if (++steps > 1000) throw new Error(`${fixture.id}: runaway execution`);
       const [next] = run.pending.splice(choose(run.pending.length, "which"), 1);
-      const choices = choicesFor(fixture, next.type, invalidResults, uncoercible);
+      // A list item, or a subscription's event (its root call).
+      const isItem = /^(0|[1-9]\d*)$/.test(next.path.at(-1) ?? "") || (fixture.operationType === "subscription" && next.path.length === 1);
+      const choices = this.allowed(fixture, next.type, isItem, choicesFor(fixture, next.type, invalidResults, uncoercible));
       let outcome = choices[choose(choices.length, "outcome")];
       if (outcome.kind === "list" && graphql.isListType(nullable(next.type)) && !this.deferredItems) {
-        outcome = { ...outcome, items: inlineItems(fixture, nullable(next.type).ofType, outcome.length, invalidResults, uncoercible, choose) };
+        const allowed = (type, item, list) => this.allowed(fixture, type, item, list);
+        outcome = { ...outcome, items: inlineItems(fixture, nullable(next.type).ofType, outcome.length, invalidResults, uncoercible, choose, allowed) };
       }
       const { items, ...plain } = outcome;
       run.trace.push({ settle: next.path, outcome: plain }, ...inlineSettles(next.path, next.type, outcome));

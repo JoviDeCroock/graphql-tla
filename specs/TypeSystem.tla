@@ -288,7 +288,11 @@ Operations == <<"query", "mutation", "subscription">>
 \* "The default root type name for each query, mutation, and subscription
 \* root operation type are "Query", "Mutation", and "Subscription"
 \* respectively." Without a schema definition, a type with that name is
-\* "presumed to be" the root operation type.
+\* "presumed to be" the root operation type. That reading comes from the
+\* spec's examples, not a rule. For a type named Mutation that isn't an
+\* object type, it makes the schema invalid (the root isn't an object),
+\* where reading it as no mutation root would make it valid, so the kit
+\* marks that vector `unspecified` (docs/kit/schema.md).
 DefaultRootTypeName(operation) ==
   CASE operation = "query" -> "Query"
     [] operation = "mutation" -> "Mutation"

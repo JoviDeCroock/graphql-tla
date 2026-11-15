@@ -23,8 +23,8 @@ None.
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -115,8 +115,8 @@ expected: {"ok":true}
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -204,8 +204,8 @@ expected: invalid: AllVariableUsagesAreAllowed ["cat"]
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -294,8 +294,8 @@ expected: a field error at float
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -424,8 +424,8 @@ expected: invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other ru
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -511,8 +511,8 @@ expected: [object Object]
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -540,7 +540,7 @@ expected: [object Object]
 | directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types (`directives`) | MUST | [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✓ 24 |
 | @skip and @include are provided, @specifiedBy when the schema has a custom scalar, @oneOf when it has a OneOf input object (`builtinDirectives`) | SHOULD | [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.1](https://spec.graphql.org/draft/#sec-skip) [§3.13.2](https://spec.graphql.org/draft/#sec-include) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy) [§3.13.5](https://spec.graphql.org/draft/#sec-oneOf) | ✓ 24 |
 | The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (`builtinDefinitions`) | MUST | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✓ 38 |
-| The introspection types have no field, argument, enum value or type the spec doesn't define (`builtinAdditions`) | INFO | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | i 24/38 |
+| The introspection types have no field, argument, enum value or type the spec doesn't define (`builtinAdditions`) | INFO | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | i 24/38 (6 draft only) |
 | __typename names the root type, and no fields list includes it (`typename`) | MUST | [§4.1](https://spec.graphql.org/draft/#sec-Type-Name-Introspection) | ✓ 38 |
 | Fields, arguments, enum values, directives, members and interfaces come in source order (`order`). Draft only: October 2021 has no Stable Ordering. | SHOULD (draft only) | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 38 |
 | Anything else Introspection!Matches requires (`other`) | MUST | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 38 |

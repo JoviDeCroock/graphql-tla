@@ -110,17 +110,26 @@ those sources reach the parser as sent.
 ### validate
 
 `build_schema` and `assert_valid_schema` (cached by SDL), `parse`, and
-`validate` with graphql-core's default rules. A `GraphQLError` raised from
-inside `validate` counts as rejecting the document, since the request would
-fail: `SingleFieldSubscriptionsRule` collects the root fields with no
-variable values (`validation/rules/single_field_subscriptions.py:75-88`), so
-`subscription ($v: Boolean!) { postAdded @skip(if: $v) { id } }` raises
+`validate` with graphql-core's default rules. `validate` returns the errors
+that reject a document. It can also raise from inside a rule:
+`SingleFieldSubscriptionsRule` collects the root fields with no variable
+values (`validation/rules/single_field_subscriptions.py:75-88`), so
+`subscription ($v: Boolean!) { postAdded @include(if: $v) { id } }` raises
 "Argument 'if' of required type 'Boolean!' was provided the variable '$v'
-which was not provided a runtime value." graphql-js 16 does the same.
+which was not provided a runtime value." That is a crash, not a rejection:
+`graphql_sync` doesn't catch it either (`graphql.py:301` calls `validate`
+outside any `try`), so a server's caller gets the exception, not a response.
+The adapter lets it propagate and answers `error`, and the kit records a
+crash. The graphql-js adapter does the same for graphql-js 16.
 
-Capability: `custom-scalar-literals`. A scalar `build_schema` makes from SDL
-gets the default `parse_literal`, `value_from_ast_untyped`, which accepts
-every literal.
+Capabilities:
+
+- `custom-scalar-literals`: a scalar `build_schema` makes from SDL gets the
+  default `parse_literal`, `value_from_ast_untyped`, which accepts every
+  literal.
+- `custom-directives` (validate and introspect): `build_schema` keeps the
+  SDL's `directive @label(...) on ...` definitions, so validation knows them
+  and introspection lists them.
 
 ### coerce
 
@@ -164,13 +173,13 @@ the draft's query, so the run is graded against the draft.
 ## Results
 
 From full runs with `--strict` on graphql-core 3.2.14 (execution with
-`--random 300`):
+`--random 1500 --seed 1`, the sheet's run):
 
 | Area | Result |
 | --- | --- |
-| execution | 1534 of 1837 distinct well-formed cases satisfy the reference. `calledSerially` fails on 303 mutation cases (below). With `--coroutine-resolvers`, every case passes. |
+| execution | 11858 cases, 2704 distinct. `calledSerially` fails on 510 mutation cases (below); every other check passes. With `--coroutine-resolvers`, every case passes. |
 | parse | 1973 of 1983 vectors agree. `selectionSets` and `stringValue` fail, on draft-only vectors only. |
-| validate | 3040 of 3088 vectors agree. `fieldSelectionMerging` fails; `operationTypeExistence`, `singleRootField` and `allVariableUsagesAreAllowed` fail on draft-only vectors only. §5.6.2 and §5.6.4 are `subsumed`. |
+| validate | 3029 of 3088 vectors agree; 11 of the 59 failures are crashes. `fieldSelectionMerging` and `singleRootField` fail; `operationTypeExistence` and `allVariableUsagesAreAllowed` fail on draft-only vectors only. §5.6.2 and §5.6.4 are `subsumed`. |
 | coerce | 1239 of 2036 vectors match. `requestErrorNoData` fails on 790 (below). `float`, `floatPrecision` (SHOULD), `inputObject` and `list` fail on 7 more. A lone surrogate is kept as sent. With `--validate`: 450 of 2010 match (26 skipped), and only `requestErrorNoData` fails, on 1560. |
 | schema | 140 of 165 schemas agree. The other 25 include 7 crashes. 36 of 44 tested rules pass, 8 fail. |
 | introspect | 13 of 38 results pass, graded against the draft. `builtinDefinitions` fails on every `__schema` result, and `executes` on the 3 draft-only `directiveDeprecation` results. |
@@ -181,7 +190,8 @@ graphql-core 3.2 tracks graphql-js 16. In parse, validate, schema and
 introspect, every check has the same status and the same number of failing
 vectors as in [graphql-js 16.15.0's
 reports](../../conformance/reports/), and the findings are the same, with the
-same counts. In coerce, every check is the same except `requestErrorNoData`,
+same counts, crashes included (validate's 11 `validate()` throws, as of the
+adapter change that answers them with `error`). In coerce, every check is the same except `requestErrorNoData`,
 which graphql-js 16 passes: `JSON.stringify` drops graphql-js's `data:
 undefined`, but graphql-core's `formatted` always writes `"data"` (below).
 
@@ -242,8 +252,9 @@ Whether a user sees this depends on what the resolver does when it is called:
 `ExecutionResult` with `data=None` (`execution/execute.py:1345`, and
 `graphql.py:290`, `:296` and `:303` for schema, syntax and validation
 errors). So it serializes as `{"data": null, "errors": [...]}`, where the
-draft's §7.1.3 says a request error result must not contain `data`
-(October 2021, §7.1.1: should not):
+draft's §7.1.3 says a request error result must not contain `data`.
+October 2021 says "must not be present" too, in §7.1 and under "Request
+errors" in §7.1.2 (its "Data" paragraph alone says "should not"):
 
 ```
 graphql_sync(schema, "{ int(v: 1) }", operation_name="A").formatted
@@ -287,7 +298,8 @@ Both are draft-only. graphql-js 16 rejects the same 10 vectors.
 
 ### Validate
 
-The same findings as graphql-js 16, with the same counts.
+The same findings as graphql-js 16, with the same counts. The library
+behaves the same, vector for vector.
 
 - **§5.3.2 isn't enforced for `__typename` (22 vectors).** In
   `{ node(id: "1") { ... on User { a: __typename } ... on Post { a: id } } }`
@@ -302,14 +314,23 @@ The same findings as graphql-js 16, with the same counts.
   `mutation { ... }` against a schema without `Mutation` passes. Execution
   then fails it.
 - **§5.2.4.1 with `@skip` or `@include` at a subscription's root (12
-  vectors, draft only).** `subscription { postAdded @skip(if: true) { id } }`
-  is accepted. Only the draft forbids it. With a variable as the condition,
-  `validate` raises instead (above), which counts as a rejection.
+  vectors accepted, 11 crashes; the kit tags them draft only).**
+  `subscription { postAdded @skip(if: true) { id } }` is accepted. The draft
+  forbids `@skip` and `@include` in a subscription's root selection set. But
+  October 2021 forbids this document too: it collects the root fields with no
+  variable values and requires exactly one entry, and `@skip(if: true)` on
+  the only root field leaves none. graphql-core reports an error only when it
+  collects more than one field (`validation/rules/single_field_subscriptions.py:93`).
+  With a variable as the condition (`@include(if: $v)`), `validate` raises
+  instead (above), a crash.
 - **§5.8.5 for OneOf (2 vectors, draft only).** `mutation
   addNullableCat($cat: CatInput) { addPet(pet: {cat: $cat}) { name } }` is
-  accepted. `validate_one_of_input_object` checks only for exactly one key
-  and a null literal, not for a nullable variable
-  (`validation/rules/values_of_correct_type.py:242-275`).
+  accepted. `VariablesInAllowedPositionRule` does check for a nullable
+  variable in a OneOf field, but tests `is_input_object_type(parent_type)`
+  (`validation/rules/variables_in_allowed_position.py:95-98`), and the parent
+  type is still wrapped in Non-Null when the OneOf argument or list item is
+  non-null (`pet: PetInput!` here). With a nullable `PetInput` argument,
+  graphql-core rejects the same document.
 
 ### Schema
 
@@ -358,10 +379,12 @@ deprecated arguments, input fields and directives, `DIRECTIVE_DEFINITION`,
 
 `directiveDeprecation` fails `executes` in all 3 of its vectors, which are
 draft only: `build_schema` can't parse `directive @old @deprecated on FIELD`
-("Expected 'on', found '@'"). The parser reads directives on a directive
-definition only with `experimental_directives_on_directive_definitions=True`
+("Expected 'on', found '@'"). The failure is the SDL parser's, not
+introspection's. The parser reads directives on a directive definition only
+with `experimental_directives_on_directive_definitions=True`
 (`language/parser.py:1442-1446`), which `build_schema` accepts but which is
-off by default. The adapter keeps the default.
+off by default. The adapter keeps the default. With the flag, the schema
+builds and introspection reports the deprecated directive correctly.
 
 Every lookup whose schema builds passes, and so does every other check,
 wrapper types included.

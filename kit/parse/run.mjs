@@ -16,7 +16,15 @@
 // `error` (docs/kit-areas.md, "Protocol"). It fails the vector's check,
 // whatever the vector's verdict, since the implementation gave none, and
 // counts toward its own finding: "crashes on a source §X accepts" or
-// "rejects". It is never counted as an agreement.
+// "rejects". It is never counted as an agreement. Nor is it ever draft
+// only: every source is an input the parser must answer, in either edition,
+// so a crash fails in both, even on a vector whose verdict is draft only.
+//
+// An adapter whose transport can't carry a lone surrogate (a JSON parser
+// that refuses one) answers { unsupported: "why" } for a source that holds
+// one. The vector is then not graded. An `unsupported` answer for any other
+// source is a crash: the adapter could have asked the implementation. A run
+// that grades no vector at all isn't ok.
 
 import { readFileSync } from "node:fs";
 import { Crash, answerOrCrash, crashResponse } from "../areas.mjs";
@@ -74,6 +82,32 @@ export const loadVectors = () => {
   return vectors;
 };
 
+// Whether a source holds a surrogate code unit that isn't half of a pair.
+export const hasLoneSurrogate = (source) => /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(source);
+
+// Sorts the adapter's raw answers: an `unsupported` answer leaves its vector
+// ungraded if the source holds a lone surrogate, and is a crash otherwise.
+export const sortAnswers = (all, raw) => {
+  const vectors = [];
+  const answers = [];
+  const unsupported = [];
+  all.forEach((v, i) => {
+    const answer = raw[i];
+    if (!(answer instanceof Crash) && typeof answer?.unsupported === "string") {
+      if (hasLoneSurrogate(v.source)) {
+        unsupported.push({ id: v.id, reason: answer.unsupported });
+        return;
+      }
+      vectors.push(v);
+      answers.push(new Crash(`answered unsupported for a source without a lone surrogate: ${answer.unsupported}`));
+      return;
+    }
+    vectors.push(v);
+    answers.push(answer);
+  });
+  return { vectors, answers, unsupported };
+};
+
 const quote = (source) => JSON.stringify(source);
 const shorter = (a, b) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0);
 
@@ -90,14 +124,16 @@ export const judge = (vectors, answers) => {
     const f = findings.get(key) ?? { ...finding, cases: 0, fixtures: {}, draftOnly: 0 };
     f.cases++;
     f.fixtures[vector.family] = (f.fixtures[vector.family] ?? 0) + 1;
-    if (vector.edition === "draft" && key !== "malformed") f.draftOnly++;
+    // A crash fails in every edition (see the top of this file).
+    const draftOnly = vector.edition === "draft" && key !== "malformed" && finding.kind !== "crash";
+    if (draftOnly) f.draftOnly++;
     if (!f.shortest || shorter(vector.source, f.shortest) < 0) {
       const sibling = byId.get(vector.sibling);
       f.shortest = vector.source;
       f.fixture = vector.family;
       if (finding.kind === "crash") f.problem = finding.problem;
       f.example = {
-        input: `${vector.edition === "draft" ? "[draft] " : ""}${quote(vector.source)}`,
+        input: `${draftOnly ? "[draft] " : ""}${quote(vector.source)}`,
         response: finding.response,
         expected: JSON.stringify(vector.expected),
         ...(sibling ? { sibling: `${quote(sibling.source)}, which the reference ${sibling.expected.ok ? "accepts" : "rejects"}` } : {}),
@@ -112,7 +148,6 @@ export const judge = (vectors, answers) => {
       crashed.push(i);
       const check = byNumber.get(v.spec[0]);
       stats.get(check.number).failing++;
-      if (v.edition === "draft") stats.get(check.number).failingDraftOnly++;
       const s = section(check.number);
       found(`crash\u0000${check.number}\u0000${v.expected.ok}`, v, {
         checks: [check.id],
@@ -161,6 +196,29 @@ export const judge = (vectors, answers) => {
   };
 };
 
+// Grades the raw answers to every vector: the judged result, the checks, and
+// whether the run is ok. A run that graded nothing is never ok.
+export const grade = (all, raw) => {
+  const { vectors, answers, unsupported } = sortAnswers(all, raw);
+  const result = judge(vectors, answers);
+  const checks = CHECKS.map((c) => {
+    const s = result.stats.get(c.number);
+    return {
+      id: c.id,
+      title: c.title,
+      level: c.level,
+      spec: [section(c.number)],
+      status: s.failing > 0 ? "fail" : s.cases > 0 ? "pass" : "untested",
+      cases: s.cases,
+      failing: s.failing,
+      failingDraftOnly: s.failingDraftOnly,
+    };
+  });
+  // Every check is a MUST, so --strict changes nothing here.
+  const ok = vectors.length > 0 && checks.every((c) => c.status !== "fail") && result.malformed.length === 0;
+  return { vectors, unsupported, result, checks, ok };
+};
+
 // The self-test: deliberately wrong answers, which the checker must flag,
 // and the reference's own answers, which it must not.
 export const selfTest = (vectors) => {
@@ -186,7 +244,22 @@ export const selfTest = (vectors) => {
   const spared = [...primaries].filter((s) => crash.stats.get(s).failing === 0);
   if (spared.length) problems.push(`with every vector crashed, ${spared.map((s) => `§${s}`).join(", ")} still pass`);
   if (crash.findings.some((f) => f.kind !== "crash")) problems.push("a crash counts toward a finding that isn't a crash");
-  return { problems, controls: 4 };
+  // ... and none of those crashes is draft only, though some vectors are.
+  const draftCrashes = [...crash.stats.values()].reduce((n, s) => n + s.failingDraftOnly, 0);
+  if (!vectors.some((v) => v.edition === "draft") || draftCrashes > 0 || crash.findings.some((f) => f.draftOnly || f.edition === "draft" || f.example.input.startsWith("[draft]"))) {
+    problems.push(`with every vector crashed, ${draftCrashes} crashes count as draft only`);
+  }
+  // Every vector answered `unsupported`: only those whose source holds a
+  // lone surrogate go ungraded, every other one is a crash, and the run
+  // fails. With nothing but those vectors, nothing is graded, and the run
+  // fails too.
+  const lone = vectors.filter((v) => hasLoneSurrogate(v.source));
+  const refused = grade(vectors, vectors.map(() => ({ unsupported: "lone surrogate: control" })));
+  if (lone.length === 0 || refused.unsupported.length !== lone.length || refused.result.crashed.length !== n - lone.length || refused.ok) {
+    problems.push(`with every vector answered unsupported, ${refused.unsupported.length} of ${lone.length} sources with a lone surrogate go ungraded and ${refused.result.crashed.length} of ${n - lone.length} others crash`);
+  }
+  if (grade(lone, lone.map(() => ({ unsupported: "lone surrogate: control" }))).ok) problems.push("a run that grades no vector passes");
+  return { problems, controls: 7 };
 };
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -194,23 +267,11 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 export const run = async ({ adapter, strict, log }) => {
   const all = loadVectors();
   const started = Date.now();
-  // An adapter whose transport can't carry a source (a JSON parser that
-  // refuses a lone surrogate) answers { unsupported: "why" }. The vector is
-  // then not graded, rather than credited with an answer the implementation
-  // never gave.
-  const vectors = [];
-  const answers = [];
-  const unsupported = [];
-  for (const v of all) {
-    const answer = await answerOrCrash(adapter, "parse", { source: v.source });
-    if (!(answer instanceof Crash) && typeof answer?.unsupported === "string") unsupported.push({ id: v.id, reason: answer.unsupported });
-    else {
-      vectors.push(v);
-      answers.push(answer);
-    }
-  }
-  if (unsupported.length) log(`- ${plural(unsupported.length, "vector")} not graded: the adapter couldn't receive the source (${unsupported[0].reason})`);
-  const result = judge(vectors, answers);
+  const raw = [];
+  for (const v of all) raw.push(await answerOrCrash(adapter, "parse", { source: v.source }));
+  const { vectors, unsupported, result, checks, ok: passed } = grade(all, raw);
+  if (unsupported.length) log(`- ${plural(unsupported.length, "vector")} not graded: the source holds a lone surrogate, which the adapter couldn't receive (${unsupported[0].reason})`);
+  if (vectors.length === 0) log("✗ no vector was graded");
   const test = selfTest(all);
 
   const draft = (f) => (f.draftOnly ? ` (${f.draftOnly === f.cases ? "all" : f.draftOnly} draft only)` : "");
@@ -223,19 +284,6 @@ export const run = async ({ adapter, strict, log }) => {
   for (const p of test.problems) log(`✗ checker self-test: ${p}`);
   if (test.problems.length === 0) log(`✓ the checker catches all ${test.controls} negative controls`);
 
-  const checks = CHECKS.map((c) => {
-    const s = result.stats.get(c.number);
-    return {
-      id: c.id,
-      title: c.title,
-      level: c.level,
-      spec: [section(c.number)],
-      status: s.failing > 0 ? "fail" : s.cases > 0 ? "pass" : "untested",
-      cases: s.cases,
-      failing: s.failing,
-      failingDraftOnly: s.failingDraftOnly,
-    };
-  });
   const report = {
     format: REPORT_FORMAT,
     area: "parse",
@@ -251,13 +299,13 @@ export const run = async ({ adapter, strict, log }) => {
     adapterProblems: result.malformed.length,
     draftOnly: {
       vectors: vectors.filter((v) => v.edition === "draft").length,
-      failing: [...result.failed, ...result.crashed].filter((i) => vectors[i].edition === "draft").length,
+      // Crashes fail in every edition, so they never count here.
+      failing: result.failed.filter((i) => vectors[i].edition === "draft").length,
     },
     checks,
     findings: result.findings,
     fixtures: [],
   };
-  // Every check is a MUST, so --strict changes nothing here.
-  const ok = checks.every((c) => c.status !== "fail") && result.malformed.length === 0 && test.problems.length === 0;
+  const ok = passed && test.problems.length === 0;
   return { ok, report };
 };

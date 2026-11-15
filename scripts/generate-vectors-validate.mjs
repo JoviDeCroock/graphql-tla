@@ -25,16 +25,19 @@
 //
 // Some vectors carry notes on what their verdict rests on:
 //
-//   requires     ["custom-scalar-literals"]: the document gives a literal to
-//                a custom scalar, which the service defines (§3.5.6)
+//   requires     "custom-scalar-literals": the document gives a literal to
+//                a custom scalar, which the service defines (§3.5.6);
+//                "custom-directives": the document uses a directive the
+//                schema's SDL declares, which a service may provide (§3.13)
 //   unspecified  the spec doesn't settle the verdict: Fragment Spread Is
 //                Possible and All Variable Usages Are Allowed (OneOf) where
 //                the formal text and the prose disagree, and Field Selection
 //                Merging where readings of "identical sets of arguments"
 //                disagree; not graded
-//   edition      "draft": the vector relies on a rule only the draft has,
-//                or on its nested-list coercion, or its schema needs a OneOf
-//                Input Object
+//   edition      "draft": the vector relies on a rule only the draft has
+//                (Single Root Field only where October 2021's own rule,
+//                SingleRootFieldOctober2021, accepts the document), or its
+//                schema needs a OneOf Input Object
 //
 // The differential and examples schemas declare a OneOf Input Object, which
 // an implementation of October 2021 can't build. The vectors file has each
@@ -78,7 +81,7 @@ const SHARD_SIZE = 250;
 const SDL = `
 schema { query: Query subscription: Subscription }
 
-directive @tag(name: String) repeatable on QUERY | SUBSCRIPTION | FIELD | FRAGMENT_DEFINITION | FRAGMENT_SPREAD | INLINE_FRAGMENT
+directive @label(name: String) repeatable on QUERY | SUBSCRIPTION | FIELD | FRAGMENT_DEFINITION | FRAGMENT_SPREAD | INLINE_FRAGMENT
 directive @once on QUERY | FIELD | VARIABLE_DEFINITION
 
 type Query {
@@ -289,7 +292,7 @@ const variables = () => [
   `query Q($v: Int!) { user { ...A } } query R { user { ...A } } fragment A on User { avatar(size: $v) }`,
   `query Q($v: Int!) { user { ...A } } query R($v: Int) { user { ...A } } fragment A on User { avatar(size: $v) }`,
   `query Q($v: Boolean!) { user { ...A @skip(if: $v) } } fragment A on User { id }`,
-  `query Q($v: Boolean!) @tag(name: "x") { user { id } }`,
+  `query Q($v: Boolean!) @label(name: "x") { user { id } }`,
   `query Q($v: Int, $v: Int) { echo(int: $v) }`,
   `query Q($v: User) { echo(int: $v) }`,
   `query Q($v: [Result]) { echo(int: 1) }`,
@@ -322,9 +325,9 @@ const values = () => [
   `{ user { id @skip } }`,
   `{ user { id @skip(if: null) } }`,
   `{ user { id @skip(if: true, if: false) } }`,
-  `{ user { id @tag } }`,
-  `{ user { id @tag(name: null) } }`,
-  `{ user { id @tag(nom: "x") } }`,
+  `{ user { id @label } }`,
+  `{ user { id @label(name: null) } }`,
+  `{ user { id @label(nom: "x") } }`,
   `{ user { id @nope(if: true) } }`,
   `{ user { name(x: 1) } }`,
   `{ bogus(x: 1) }`,
@@ -387,7 +390,7 @@ const operations = () => {
 };
 
 // Directives in every location, once and twice.
-const DIRECTIVES = ["@skip(if: true)", "@include(if: false)", '@tag(name: "x")', "@once", "@nope", "@deprecated", "@oneOf"];
+const DIRECTIVES = ["@skip(if: true)", "@include(if: false)", '@label(name: "x")', "@once", "@nope", "@deprecated", "@oneOf"];
 const DIRECTIVE_LOCATIONS = [
   (d) => `query Q ${d} { user { id } }`,
   (d) => `subscription S ${d} { postAdded { id } }`,
@@ -401,7 +404,7 @@ const directives = () => [
   ...product(DIRECTIVES, DIRECTIVE_LOCATIONS, [1, 2]).map(([d, location, n]) => location(Array(n).fill(d).join(" "))),
   `{ user @skip(if: true) @skip(if: false) { id } }`,
   `{ user @skip(if: true) @include(if: true) { id } }`,
-  `{ user @tag(name: "a") @tag(name: "b") { id } }`,
+  `{ user @label(name: "a") @label(name: "b") { id } }`,
   `{ user @once { id @once } }`,
 ];
 
@@ -418,10 +421,10 @@ const names = () => {
     `{ user { avatar(size: 1, size: 1, bogus: 2) } }`,
     `{ user(bogus: 1) { id } }`,
     `{ echo(int: 1, int2: 2, int: 3) }`,
-    `{ user @tag(name: "a", name: "b") { id } }`,
+    `{ user @label(name: "a", name: "b") { id } }`,
     `{ user @skip(if: true, if: true) { id } }`,
     `{ user @include(unless: true) { id } }`,
-    `{ user @tag(name: "a", label: "b") { id } }`,
+    `{ user @label(name: "a", label: "b") { id } }`,
     `query ($a: Int, $a: Int!) { echo(int: $a) }`,
     `query ($a: Int, $b: Int, $a: Int) { echo(int: $a, opt: $b) }`,
     `query Q($a: User, $b: Result, $c: Role, $d: Filter, $e: [Node], $f: Resource!) { echo(role: $c, filter: $d) }`,
@@ -486,7 +489,7 @@ const randomDocuments = (count, seed) => {
 
   const directivesFor = (usages) => {
     if (!chance(0.12)) return "";
-    const d = pick(["skip", "include", "tag", "once", "nope"]);
+    const d = pick(["skip", "include", "label", "once", "nope"]);
     if (d === "skip" || d === "include") return ` @${d}(if: ${literal(graphql16.GraphQLBoolean, usages)})`;
     return ` @${d}`;
   };
@@ -1641,22 +1644,24 @@ for (const rule of ORDER) {
 
 const {
   TypeInfo, visit, visitWithTypeInfo, getNamedType, getNullableType, isListType, isScalarType, isSpecifiedScalarType,
-  isInputObjectType, isInterfaceType, isAbstractType, valueFromAST,
+  isInputObjectType, isInterfaceType, valueFromAST,
 } = graphql16;
 const LITERAL_KINDS = new Set(["IntValue", "FloatValue", "StringValue", "BooleanValue", "EnumValue", "ListValue", "ObjectValue"]);
 
-// Whether a document puts a OneOf Input Object anywhere a value goes, and
-// whether it gives a literal to a custom scalar. TypeInfo has already
-// stepped into a list's item type when it visits the list, so a list's own
-// position is its parent's.
+// Whether a document puts a OneOf Input Object anywhere a value goes,
+// whether it gives a literal to a custom scalar, and whether it uses a
+// directive its schema's SDL declares (one with an astNode: the built-in
+// directives have none). TypeInfo has already stepped into a list's item
+// type when it visits the list, so a list's own position is its parent's.
 const inspect = (vector) => {
   const schema = built[vector.schema];
   const typeInfo = new TypeInfo(schema);
-  const found = { oneOf: false, scalarLiteral: false, listForScalar: false };
+  const found = { oneOf: false, scalarLiteral: false, listForScalar: false, customDirective: false };
   visit(
     parse(vector.document, { noLocation: true }),
     visitWithTypeInfo(typeInfo, {
       enter(node) {
+        if (node.kind === "Directive" && schema.getDirective(node.name.value)?.astNode) found.customDirective = true;
         const type = node.kind === "ListValue" ? typeInfo.getParentInputType() : typeInfo.getInputType();
         if (!type) return;
         const named = getNamedType(type);
@@ -1671,43 +1676,27 @@ const inspect = (vector) => {
   return found;
 };
 
-// Whether a subscription's root selections, as CollectSubscriptionFields
-// visits them, carry @skip or @include: the draft forbids that (§5.2.4.1),
-// the October 2021 edition applies them.
-const skipAtSubscriptionRoot = (vector) => {
-  const schema = built[vector.schema];
-  const root = schema.getSubscriptionType();
-  if (!root) return false;
-  const ast = parse(vector.document, { noLocation: true });
-  const fragments = new Map(ast.definitions.filter((d) => d.kind === "FragmentDefinition").map((d) => [d.name.value, d]));
-  const applies = (condition) => {
-    if (!condition) return true;
-    const t = schema.getType(condition.name.value);
-    return t === root || (t !== undefined && isAbstractType(t) && schema.isSubType(t, root));
-  };
-  const walk = (set, seen) =>
-    set.selections.some((s) => {
-      if ((s.directives ?? []).some((d) => d.name.value === "skip" || d.name.value === "include")) return true;
-      if (s.kind === "InlineFragment") return applies(s.typeCondition) && walk(s.selectionSet, seen);
-      if (s.kind !== "FragmentSpread" || seen.has(s.name.value)) return false;
-      seen.add(s.name.value);
-      const f = fragments.get(s.name.value);
-      return f !== undefined && applies(f.typeCondition) && walk(f.selectionSet, seen);
-    });
-  return ast.definitions.some((d) => d.kind === "OperationDefinition" && d.operation === "subscription" && walk(d.selectionSet, new Set()));
-};
-
 // Custom scalars. How a custom scalar coerces a literal is up to the
 // service (§3.5.6), so a vector that gives one a literal is graded only for
 // adapters whose custom scalars accept every literal. The reference's
 // Coercible rejects a list literal for a non-list custom scalar, which no
 // such scalar would, so no vector may do that.
+//
+// Custom directives. A service may provide directives beyond the spec's
+// (§3.13), and some can't take one from SDL: Juniper has no public way to
+// declare one. Without the schema's own @label and @once, a valid document
+// that uses them is rejected under §5.7.1, and an invalid one (`@once
+// @once`) is rejected for the wrong reason. So a vector whose document uses
+// a directive the SDL declares is graded only for adapters whose schema
+// keeps it.
 const SCALAR_LITERALS = "custom-scalar-literals";
+const CUSTOM_DIRECTIVES = "custom-directives";
 const inspected = new Map(vectors.map((v) => [v, inspect(v)]));
 for (const v of vectors) {
   const found = inspected.get(v);
   if (found.listForScalar) throw new Error(`${v.id} gives a list literal to a custom scalar, which the reference rejects: ${v.document}`);
-  if (found.scalarLiteral) v.requires = [SCALAR_LITERALS];
+  const requires = [...(found.scalarLiteral ? [SCALAR_LITERALS] : []), ...(found.customDirective ? [CUSTOM_DIRECTIVES] : [])];
+  if (requires.length) v.requires = requires;
 }
 
 // Fragment Spread Is Possible where the formal text and the prose disagree.
@@ -1848,11 +1837,25 @@ for (const v of identityCandidates) {
   );
 }
 
+// Single Root Field. The draft forbids @skip and @include at a
+// subscription's root (§5.2.4.1); October 2021 applies them, collecting the
+// root fields with no variable values, and also asks for exactly one entry
+// (its §5.2.3.1). So `postAdded @skip(if: true)` or `postAdded @include(if:
+// $v)` alone collects nothing and breaks both editions' rule, while
+// `postAdded @include(if: true)` breaks only the draft's. The reference's
+// SingleRootFieldOctober2021 is October 2021's rule; a vector that breaks
+// Single Root Field relies on the draft only when that rule accepts it.
+const singleRootCandidates = vectors.filter((v) => v.violations?.SingleRootField);
+const singleRootOctober2021 = await evaluateVectors(singleRootCandidates, {
+  expression: "SingleRootFieldOctober2021(WithIntrospection(Schema), Docs[i])",
+  read: asList,
+});
+const singleRootDraftOnly = new Set(singleRootCandidates.filter((v) => singleRootOctober2021.get(v).length === 0));
+
 // Vectors that rely on the draft: an invalid vector that breaks Operation
-// Type Existence (new in the draft), that breaks Single Root Field with
-// @skip or @include at the root, or that breaks a rule only because an
-// input object is OneOf, and a valid vector that gives a value to a OneOf
-// Input Object. Whether a OneOf input object decides a verdict is the
+// Type Existence (new in the draft), that breaks Single Root Field only as
+// the draft states it, or that breaks a rule only because an input object
+// is OneOf, and a valid vector that gives a value to a OneOf Input Object. Whether a OneOf input object decides a verdict is the
 // reference's answer again, with every input object's oneOf turned off.
 const oneOfCandidates = vectors.filter((v) => !v.expected.valid && inspected.get(v).oneOf);
 const withoutOneOf = Object.fromEntries(Object.entries(schemaTla).map(([name, tla]) => [name, tla.replaceAll("oneOf |-> TRUE", "oneOf |-> FALSE")]));
@@ -1869,27 +1872,15 @@ oneOfGroups.forEach((g, k) =>
   }),
 );
 
-// Nested lists. The draft coerces a list item that isn't a list, where the
-// item type is a list, as a list of one: `[1]` for `[[Int]]` is `[[1]]`.
-// October 2021's table says "Error: Incorrect item value" for `[1, 2, 3]`
-// (§3.11), so there such a literal breaks §5.6.1. A valid vector with one
-// relies on the draft, and so does an invalid one that doesn't already
-// break §5.6.1, since it breaks a second rule under October 2021.
-const nestedListItem = (v) => {
-  const info = new TypeInfo(built[v.schema]);
-  let found = false;
-  visit(
-    astOf(v),
-    visitWithTypeInfo(info, {
-      ListValue(node) {
-        const list = info.getParentInputType() && getNullableType(info.getParentInputType());
-        if (!list || !isListType(list) || !isListType(getNullableType(list.ofType))) return;
-        if (node.values.some((x) => !["ListValue", "NullValue", "Variable"].includes(x.kind))) found = true;
-      },
-    }),
-  );
-  return found;
-};
+// Nested lists aren't an edition difference. §3.11's prose is the same in
+// the draft and October 2021: a value that isn't a list, given to a list
+// type, is coerced to "a list of size one … (note this may apply
+// recursively for nested lists)", and "list values are accepted only when
+// each item in the list can be accepted by the list's item type". So `[1]`
+// for `[[Int]]` is `[[1]]` in both. Only October 2021's example table
+// disagrees ("Error: Incorrect item value" for `[1, 2, 3]`); examples aren't
+// normative, so those vectors are graded in both editions
+// (docs/kit/validate.md).
 
 // The vectors whose verdict changes against the schema without its OneOf
 // Input Object. They keep the schema that has it, and rely on the draft.
@@ -1901,13 +1892,12 @@ const needsOneOfSchema = new Set(splitCandidates.filter((v) => !sameViolations(w
 for (const v of vectors) {
   const why = [];
   if (v.violations?.OperationTypeExistence) why.push("Operation Type Existence is new in the draft");
-  if (v.violations?.SingleRootField && skipAtSubscriptionRoot(v)) why.push("only the draft forbids @skip and @include at a subscription's root");
+  if (singleRootDraftOnly.has(v)) {
+    why.push("only the draft forbids @skip and @include at a subscription's root: October 2021 applies them with no variable values, and collects exactly one root field here");
+  }
   if (restsOnOneOf.has(v)) why.push("OneOf Input Objects are new in the draft");
   if (v.expected.valid && inspected.get(v).oneOf) why.push("it uses a OneOf Input Object, new in the draft");
   if (needsOneOfSchema.has(v) && why.every((w) => !w.includes("OneOf"))) why.push("its schema needs a OneOf Input Object, new in the draft");
-  if (nestedListItem(v) && (v.expected.valid || !v.violations.ValuesOfCorrectType)) {
-    why.push("only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)");
-  }
   if (why.length) {
     v.edition = "draft";
     v.editionNote = why.join("; ");
@@ -1932,7 +1922,7 @@ for (const rule of ORDER) {
 }
 log(`  ${vectors.length} vectors (${vectors.filter((v) => !v.expected.valid).length} invalid, ${vectors.filter((v) => v.expected.valid).length} valid); ${left.length} spec examples left out`);
 log(
-  `  ${vectors.filter((v) => v.unspecified).length} unspecified, ${vectors.filter((v) => v.requires).length} need ${SCALAR_LITERALS}, ${vectors.filter((v) => v.edition === "draft").length} rely on the draft, ${vectors.filter((v) => Object.keys(v.violations ?? {}).length > 1).length} break two rules, ${vectors.filter((v) => v.schema.endsWith("OneOf")).length} use a schema with a OneOf Input Object`,
+  `  ${vectors.filter((v) => v.unspecified).length} unspecified, ${vectors.filter((v) => v.requires?.includes(SCALAR_LITERALS)).length} need ${SCALAR_LITERALS}, ${vectors.filter((v) => v.requires?.includes(CUSTOM_DIRECTIVES)).length} need ${CUSTOM_DIRECTIVES}, ${vectors.filter((v) => v.edition === "draft").length} rely on the draft, ${vectors.filter((v) => Object.keys(v.violations ?? {}).length > 1).length} break two rules, ${vectors.filter((v) => v.schema.endsWith("OneOf")).length} use a schema with a OneOf Input Object`,
 );
 
 const text = `${JSON.stringify(output, null, 1)}\n`;

@@ -6,6 +6,7 @@
 (*   §3.5   scalar input coercion (Int, Float, String, Boolean, ID)        *)
 (*   §3.9   enum input coercion                                            *)
 (*   §3.10  input object input coercion                                    *)
+(*   §3.10.1 OneOf input object input coercion (the draft only)            *)
 (*   §3.11  list input coercion                                            *)
 (*   §3.12  non-null input coercion                                        *)
 (*   §6.1   GetOperation                                                   *)
@@ -48,6 +49,8 @@
 (*              literal                                                    *)
 (*   schema     [types, fields]: types[name] is [kind, values, fields] for *)
 (*              kind "scalar", "enum" (values) or "inputObject" (fields);  *)
+(*              an input object's record may also have oneOf (TRUE for a   *)
+(*              OneOf Input Object);                                       *)
 (*              fields[fieldName] is the root field's argument definitions *)
 (*              (root field names are unique across Query and Mutation).   *)
 (*              It may also have a policy (see Policy below).              *)
@@ -296,6 +299,11 @@ CoerceEnum(policy, def, v, source) ==
 (* in vars (the coerced variable values, as entries), or "variables" for a *)
 (* JSON value from the request's variables.                                *)
 
+\* §3.10.1 OneOf Input Objects (the draft only). Only an input object's
+\* record may have the oneOf field.
+IsOneOf(def) == "oneOf" \in DOMAIN def /\ def.oneOf
+OneNonNullEntry(entries) == Cardinality(entries) = 1 /\ \A e \in entries : e.value.kind # "null"
+
 \* A Variable in a literal "that was ... not provided a value at runtime".
 IsMissingVariable(v, vars) == v.kind = "variable" /\ ~HasKey(vars, v.str)
 
@@ -349,7 +357,21 @@ CoerceInput(S, type, v, source, vars) ==
            \* type, otherwise a request error must be raised."
            IF /\ v.kind = "object"
               /\ Keys(v.entries) \subseteq {def.fields[i].name : i \in DOMAIN def.fields}
-           THEN CoerceFields(S, def.fields, v.entries, 1, source, vars, {})
+              \* §3.10.1: "Prior to construction of the coerced map via the
+              \* input coercion rules of an Input Object: the value to be
+              \* coerced must contain exactly one entry and that entry must
+              \* not be null or the null literal, otherwise a request error
+              \* must be raised." A variable entry is not the null literal.
+              /\ IsOneOf(def) => OneNonNullEntry(v.entries)
+           THEN
+             LET coerced == CoerceFields(S, def.fields, v.entries, 1, source, vars, {}) IN
+             \* "All Input Object input coercion rules must also apply", and
+             \* "The resulting coerced map must contain exactly one entry and
+             \* the value for that entry must not be null, otherwise an
+             \* execution error must be raised": a variable entry with no
+             \* runtime value, or with null.
+             IF IsOneOf(def) /\ coerced.ok /\ ~OneNonNullEntry(coerced.value.entries) THEN Fail
+             ELSE coerced
            ELSE Fail
 
 CoerceItems(S, itemType, items, i, source, vars, acc) ==
@@ -638,9 +660,13 @@ ExampleSchema ==
      ("Color" :> [kind |-> "enum", values |-> {"RED", "GREEN"}, fields |-> <<>>]) @@
      ("ExampleInputObject" :>
         [kind |-> "inputObject", values |-> {},
-         fields |-> <<Arg("a", Named("String")), Arg("b", NonNull(IntT))>>]),
+         fields |-> <<Arg("a", Named("String")), Arg("b", NonNull(IntT))>>]) @@
+     ("ExampleOneOfInputObject" :>
+        [kind |-> "inputObject", values |-> {},
+         fields |-> <<Arg("a", Named("String")), Arg("b", IntT)>>, oneOf |-> TRUE]),
    fields |->
      ("example" :> <<Arg("arg", ExampleType)>>) @@
+     ("oneOfExample" :> <<Arg("arg", Named("ExampleOneOfInputObject"))>>) @@
      ("int" :> <<Arg("v", IntT)>>) @@
      ("intNN" :> <<Arg("v", NonNull(IntT))>>) @@
      ("intDefault" :> <<Def("v", IntT, TRUE, FromInt("int", 7))>>) @@
@@ -763,6 +789,40 @@ InputObjectCases == <<
   Case(Example(<<>>, ObjV({Entry("b", I(123)), Entry("c", Str("xyz"))}), {}), FieldError)
 >>
 
+\* §3.10.1's table of examples (the draft only), as `oneOfExample(arg:
+\* <literal>)`. Where the literal is $var, the operation declares
+\* `$var: ExampleOneOfInputObject`; $a and $b are declared String and Int.
+OneOfType == Named("ExampleOneOfInputObject")
+OneOf(variables, literal, request) ==
+  Respond(ExampleSchema, Op(variables, "oneOfExample", {Entry("arg", literal)}), request)
+OneOfVar == <<Arg("var", OneOfType)>>
+AVar == <<Arg("a", Named("String"))>>
+ABVars == <<Arg("a", Named("String")), Arg("b", IntT)>>
+OneOfCases == <<
+  Case(OneOf(<<>>, ObjV({Entry("a", Str("abc"))}), {}), Resolved({Entry("arg", ObjV({Entry("a", Str("abc"))}))})),
+  Case(OneOf(<<>>, ObjV({Entry("b", I(123))}), {}), Resolved({Entry("arg", ObjV({Entry("b", N(123))}))})),
+  Case(OneOf(OneOfVar, VarV("var"), {Entry("var", ObjV({Entry("a", Str("abc"))}))}),
+       Resolved({Entry("arg", ObjV({Entry("a", Str("abc"))}))})),
+  Case(OneOf(<<>>, ObjV({Entry("a", NullV)}), {}), FieldError),
+  Case(OneOf(OneOfVar, VarV("var"), {Entry("var", ObjV({Entry("a", NullV)}))}), RequestError),
+  Case(OneOf(AVar, ObjV({Entry("a", VarV("a"))}), {}), FieldError),
+  Case(OneOf(<<>>, ObjV(AB(Str("abc"), I(123))), {}), FieldError),
+  Case(OneOf(<<>>, ObjV(AB(I(456), Str("xyz"))), {}), FieldError),
+  Case(OneOf(OneOfVar, VarV("var"), {Entry("var", ObjV(AB(Str("abc"), J(123))))}), RequestError),
+  Case(OneOf(<<>>, ObjV(AB(Str("abc"), NullV)), {}), FieldError),
+  Case(OneOf(<<Arg("b", IntT)>>, ObjV(AB(Str("abc"), VarV("b"))), {}), FieldError),
+  Case(OneOf(ABVars, ObjV(AB(VarV("a"), VarV("b"))), {Entry("a", Str("abc"))}), FieldError),
+  Case(OneOf(<<>>, ObjV({}), {}), FieldError),
+  Case(OneOf(OneOfVar, VarV("var"), {Entry("var", ObjV({}))}), RequestError),
+  \* Not in the table: a variable entry whose runtime value is null passes
+  \* the first rule, not being the null literal, and fails the last.
+  Case(OneOf(AVar, ObjV({Entry("a", VarV("a"))}), {Entry("a", NullV)}), FieldError),
+  Case(OneOf(AVar, ObjV({Entry("a", VarV("a"))}), {Entry("a", Str("abc"))}),
+       Resolved({Entry("arg", ObjV({Entry("a", Str("abc"))}))})),
+  \* A plain input object with the same fields takes both.
+  Case(Example(<<>>, ObjV(AB(Str("abc"), I(123))), {}), Resolved({Entry("arg", ObjV(AB(Str("abc"), N(123))))}))
+>>
+
 \* §6.1.2: `query($x: T [= default]) { field(v: $x) }`
 X(type, hasDefault, default) == <<Def("x", type, hasDefault, default)>>
 UseX(variables, field, request) == Respond(ExampleSchema, Op(variables, field, {Entry("v", VarV("x"))}), request)
@@ -867,7 +927,7 @@ ResponseCases == <<
 
 \* Each initial state checks one section of examples.
 VARIABLE section
-Sections == {"scalar", "enum", "list", "inputObject", "variables", "arguments", "operation", "response"}
+Sections == {"scalar", "enum", "list", "inputObject", "oneOf", "variables", "arguments", "operation", "response"}
 Init == section \in Sections
 Next == UNCHANGED section
 
@@ -875,6 +935,7 @@ ScalarExamples == section = "scalar" => Failing(ScalarCases) = {}
 EnumExamples == section = "enum" => Failing(EnumCases) = {}
 ListExamples == section = "list" => Failing(ListCases) = {}
 InputObjectExamples == section = "inputObject" => Failing(InputObjectCases) = {}
+OneOfExamples == section = "oneOf" => Failing(OneOfCases) = {}
 VariableExamples == section = "variables" => Failing(VariableCases) = {}
 ArgumentExamples == section = "arguments" => Failing(ArgumentCases) = {}
 OperationExamples == section = "operation" => Failing(OperationCases) = {}

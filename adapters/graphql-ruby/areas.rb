@@ -9,7 +9,8 @@
 #
 # A rejection is an answer. Anything else graphql-ruby raises is a crash,
 # and propagates: adapter.rb answers it with an `error`, which the kit
-# records as a crash. introspect is the exception (see below).
+# records as a crash for that vector. No area answers a crash with a
+# response graphql-ruby didn't give.
 
 module Areas
   # coerce runs Schema.execute as it comes, which validates first. With
@@ -21,6 +22,9 @@ module Areas
   CAPABILITIES = [
     "parse", "validate", "coerce", "schema", "introspect",
     "absent-vs-null",
+    # from_definition builds the SDL's `directive @label(...) on ...`
+    # definitions, so validate knows them and introspection lists them.
+    "custom-directives",
     *(UNVALIDATED ? ["unvalidated"] : []),
   ].freeze
 
@@ -73,14 +77,21 @@ module Areas
   # Floats, so `1e400` is Infinity and `exact-numbers` isn't claimed. The
   # response is Query::Result#to_json, read back: a result that can't be
   # serialized raises there, and is a crash.
+  #
+  # Ruby's JSON parser refuses an escaped lone high surrogate ("\ud800"),
+  # so such variables never reach graphql-ruby: a Ruby server would refuse
+  # the request body before it ran. The adapter says so with `unsupported`
+  # (docs/kit/coerce.md) instead of making up a response graphql-ruby didn't
+  # give. Any other JSON the parser refuses is the adapter's failure.
   def coerce(request)
     schema = cached(:coerce, request["schema"]) { AreaSchema.from_definition(request["schema"], default_resolve: EchoResolver.new) }
     variables =
       begin
         JSON.parse(request["variables"])
       rescue JSON::ParserError => e
-        # A server can't read the request: a request error.
-        return { response: { errors: [{ message: "variables: #{e.message}" }] }, calls: [] }
+        raise unless lone_surrogate?(request["variables"])
+
+        return { unsupported: "lone surrogate: Ruby's JSON parser refuses the variables (#{e.message.lines.first&.strip})" }
       end
     calls = []
     result = schema.execute(
@@ -162,13 +173,20 @@ module Areas
     { valid: false, errors: ["#{e.class}: #{e.message.lines.first&.strip}"] }
   end
 
-  # graphql-ruby reports a schema mistake with one of its own errors, or with
-  # a plain `raise "…"` (RuntimeError) or `raise ArgumentError, "…"` in its
-  # schema definition methods. Anything else, such as a NoMethodError or a
-  # SystemStackError, is a crash. So is a RuntimeError or ArgumentError that
-  # no `raise` in graphql-ruby wrote, such as Ruby's own "cyclic include
-  # detected", and an "Invariant:" error, which graphql-ruby raises for a
-  # state it doesn't expect.
+  # A rejection is a schema error graphql-ruby reports on purpose: one of its
+  # own GraphQL::Error classes, or a plain `raise "…"` (RuntimeError) or
+  # `raise ArgumentError, "…"` that graphql-ruby's schema definition methods
+  # write for a schema mistake. Everything else is a crash, an exception
+  # graphql-ruby didn't turn into a schema error:
+  # - any other class, such as a NoMethodError or a SystemStackError;
+  # - a RuntimeError or ArgumentError that Ruby itself raised from a core
+  #   method graphql-ruby called, such as Module#include's "cyclic include
+  #   detected" for `interface A implements A` (has_interfaces.rb:26 includes
+  #   the interface module into itself). That error is a property of how
+  #   graphql-ruby represents interfaces as Ruby modules, not a check of
+  #   §3.7's rule, which graphql-ruby doesn't make;
+  # - an "Invariant:" error, which graphql-ruby raises for a state it doesn't
+  #   expect.
   def schema_rejection?(error)
     return true if error.is_a?(GraphQL::Error)
     return false unless error.instance_of?(RuntimeError) || error.instance_of?(ArgumentError)
@@ -178,14 +196,29 @@ module Areas
 
   GRAPHQL_LIB = File.join(Gem.loaded_specs["graphql"].full_gem_path, "lib", "graphql")
 
-  # Whether the error comes from a `raise` statement in graphql-ruby's code.
+  # Whether the error comes from a `raise` statement in graphql-ruby's own
+  # code: the innermost frame is graphql-ruby's Ruby code, not a core method
+  # it called, and its line is a `raise`. A core method's frame (a C
+  # function) carries its caller's path and line, so the path alone can't
+  # tell them apart. From Ruby 3.4 on, its label names the method's owner
+  # ("Module#append_features"); before, it doesn't, and the `raise` test
+  # alone decides.
   def raised_by_graphql?(error)
     location = error.backtrace_locations&.first
     path = location&.absolute_path
     return false unless path&.start_with?(GRAPHQL_LIB)
 
-    File.readlines(path)[location.lineno - 1]&.include?("raise") || false
+    owner = location.label[/\A(?:block (?:\(\d+ levels\) )?in )?([A-Z][\w:]*)[#.]/, 1]
+    return false if owner && !owner.start_with?("GraphQL::")
+
+    File.readlines(path)[location.lineno - 1]&.match?(/\braise\b/) || false
   end
+
+  # Whether JSON text holds an escaped lone surrogate: a high surrogate
+  # escape not followed by a low one, or a low one not after a high one.
+  LONE_SURROGATE = /\\u[dD][89abAB]\h{2}(?!\\u[dD][c-fC-F]\h{2})|(?<!\\u[dD][89abAB]\h{2})\\u[dD][c-fC-F]\h{2}/
+
+  def lone_surrogate?(text) = LONE_SURROGATE.match?(text)
 
   class RootTypeResolved < StandardError; end
 
@@ -199,24 +232,19 @@ module Areas
 
   # introspect (docs/kit/introspect.md): from_definition, then the kit's
   # query through Schema.execute, and Query::Result#to_json, read back. A
-  # schema that doesn't build is answered as a request error.
+  # schema that doesn't build is answered as a request error: a rejection,
+  # as schema_rejection? tells one, raised by from_definition or, as in
+  # `schema` above, by Schema.execute when it first loads the types.
   #
-  # In this area an `error` answer stops the kit's run (docs/kit-areas.md),
-  # so a crash, an exception out of from_definition or Schema.execute that
-  # isn't a rejection, is answered as the request error a server's error
-  # handler would send, with the exception in `crash` and on stderr. The kit
-  # grades it as a failure of `executes`.
+  # Any other exception is a crash, not a response graphql-ruby gave, and
+  # propagates: adapter.rb answers it with an `error` (docs/kit-areas.md).
   def introspect(request)
-    step = "from_definition"
     schema = AreaSchema.from_definition(request["sdl"], default_resolve: IntrospectionResolver.new)
-    step = "Schema.execute"
     { response: JSON.parse(schema.execute(request["query"]).to_json) }
-  rescue StandardError, SystemStackError => e
-    message = "#{step}: #{e.class}: #{e.message.lines.first&.strip}"
-    return { response: { errors: [{ message: message }] } } if step == "from_definition" && schema_rejection?(e)
+  rescue StandardError => e
+    raise unless schema_rejection?(e)
 
-    warn "graphql-ruby crashed on introspect request #{request["id"]}: #{message}\n  #{e.backtrace.first(3).join("\n  ")}"
-    { response: { errors: [{ message: message }] }, crash: message }
+    { response: { errors: [{ message: "#{e.class}: #{e.message.lines.first&.strip}" }] } }
   end
 
   # Built schemas, by area and SDL: the validate and coerce vectors share a

@@ -8,3 +8,4 @@ adapters/*/bin/
 adapters/*/obj/
 website/dist/
 .wrangler/
+.gstack/

@@ -906,6 +906,78 @@
   },
   {
    "v": 1,
+   "fixture": "leaves",
+   "trace": [
+    {
+     "call": [
+      "count"
+     ],
+     "type": "Int",
+     "after": 0
+    },
+    {
+     "call": [
+      "ratio"
+     ],
+     "type": "Float",
+     "after": 0
+    },
+    {
+     "call": [
+      "color"
+     ],
+     "type": "Color",
+     "after": 0
+    },
+    {
+     "settle": [
+      "count"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    },
+    {
+     "settle": [
+      "ratio"
+     ],
+     "outcome": {
+      "kind": "uncoercible"
+     }
+    },
+    {
+     "settle": [
+      "color"
+     ],
+     "outcome": {
+      "kind": "null"
+     }
+    }
+   ],
+   "response": {
+    "errors": [
+     {
+      "message": "Float cannot represent non numeric value: Infinity",
+      "locations": [
+       {
+        "line": 3,
+        "column": 3
+       }
+      ],
+      "path": [
+       "ratio"
+      ]
+     }
+    ],
+    "data": {
+     "count": null,
+     "ratio": null,
+     "color": null
+    }
+   }
+  },
+  {
+   "v": 1,
    "fixture": "fragments",
    "trace": [
     {
@@ -1548,6 +1620,27 @@
        ]
       }
      ]
+    }
+   }
+  },
+  {
+   "name": "nulls data while no pending root field can null it",
+   "clause": "dataMatches",
+   "base": 7,
+   "case": {
+    "v": 1,
+    "fixture": "fragments",
+    "trace": [
+     {
+      "call": [
+       "node"
+      ],
+      "type": "Node",
+      "after": 0
+     }
+    ],
+    "response": {
+     "data": null
     }
    }
   },
@@ -2219,6 +2312,70 @@
    }
   },
   {
+   "name": "returns null without an error for a non-finite Float",
+   "clause": "malformed",
+   "check": "resultCoercion",
+   "base": 15,
+   "case": {
+    "v": 1,
+    "fixture": "leaves",
+    "trace": [
+     {
+      "call": [
+       "count"
+      ],
+      "type": "Int",
+      "after": 0
+     },
+     {
+      "call": [
+       "ratio"
+      ],
+      "type": "Float",
+      "after": 0
+     },
+     {
+      "call": [
+       "color"
+      ],
+      "type": "Color",
+      "after": 0
+     },
+     {
+      "settle": [
+       "count"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     },
+     {
+      "settle": [
+       "ratio"
+      ],
+      "outcome": {
+       "kind": "uncoercible"
+      }
+     },
+     {
+      "settle": [
+       "color"
+      ],
+      "outcome": {
+       "kind": "null"
+      }
+     }
+    ],
+    "response": {
+     "data": {
+      "count": null,
+      "ratio": null,
+      "color": null
+     }
+    }
+   }
+  },
+  {
    "name": "produces no response after a resolver returned a non-finite Float or an unknown enum value",
    "clause": "malformed",
    "check": "resultCoercion",
@@ -2366,7 +2523,7 @@
    "name": "calls a field that @include(if: false) leaves out",
    "clause": "malformed",
    "check": "callsSelected",
-   "base": 15,
+   "base": 16,
    "case": {
     "v": 1,
     "fixture": "fragments",
@@ -2455,7 +2612,7 @@
    "name": "calls a field before its parent has a value",
    "clause": "malformed",
    "check": "callsReachable",
-   "base": 15,
+   "base": 16,
    "case": {
     "v": 1,
     "fixture": "fragments",
@@ -2871,6 +3028,231 @@
       }
      ],
      "noResponse": "can't serialize the value"
+    }
+   ]
+  },
+  {
+   "name": "an Int fraction passed through counts under intFraction only",
+   "cases": [
+    {
+     "v": 1,
+     "fixture": "leaves",
+     "trace": [
+      {
+       "call": [
+        "count"
+       ],
+       "type": "Int",
+       "after": 0
+      },
+      {
+       "call": [
+        "ratio"
+       ],
+       "type": "Float",
+       "after": 0
+      },
+      {
+       "call": [
+        "color"
+       ],
+       "type": "Color",
+       "after": 0
+      },
+      {
+       "settle": [
+        "count"
+       ],
+       "outcome": {
+        "kind": "uncoercible"
+       }
+      },
+      {
+       "settle": [
+        "ratio"
+       ],
+       "outcome": {
+        "kind": "null"
+       }
+      },
+      {
+       "settle": [
+        "color"
+       ],
+       "outcome": {
+        "kind": "null"
+       }
+      }
+     ],
+     "response": {
+      "data": {
+       "count": 1.2,
+       "ratio": null,
+       "color": null
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "a truncated Int fraction doesn't hide an error dropped elsewhere in the case",
+   "cases": [
+    {
+     "v": 1,
+     "fixture": "unions",
+     "trace": [
+      {
+       "call": [
+        "search"
+       ],
+       "type": "[SearchResult!]",
+       "after": 0
+      },
+      {
+       "call": [
+        "matrix"
+       ],
+       "type": "[[Int!]]!",
+       "after": 0
+      },
+      {
+       "settle": [
+        "search"
+       ],
+       "outcome": {
+        "kind": "error"
+       }
+      },
+      {
+       "settle": [
+        "matrix"
+       ],
+       "outcome": {
+        "kind": "list",
+        "length": 1
+       }
+      },
+      {
+       "call": [
+        "matrix",
+        "0"
+       ],
+       "type": "[Int!]",
+       "after": 2
+      },
+      {
+       "settle": [
+        "matrix",
+        "0"
+       ],
+       "outcome": {
+        "kind": "list",
+        "length": 1
+       }
+      },
+      {
+       "call": [
+        "matrix",
+        "0",
+        "0"
+       ],
+       "type": "Int!",
+       "after": 3
+      },
+      {
+       "settle": [
+        "matrix",
+        "0",
+        "0"
+       ],
+       "outcome": {
+        "kind": "uncoercible"
+       }
+      }
+     ],
+     "response": {
+      "data": {
+       "search": null,
+       "matrix": [
+        [
+         1
+        ]
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "errors without a path don't hide data nulled past a nullable position",
+   "cases": [
+    {
+     "v": 1,
+     "fixture": "fragments",
+     "trace": [
+      {
+       "call": [
+        "node"
+       ],
+       "type": "Node",
+       "after": 0
+      },
+      {
+       "settle": [
+        "node"
+       ],
+       "outcome": {
+        "kind": "error"
+       }
+      }
+     ],
+     "response": {
+      "data": null,
+      "errors": [
+       {
+        "message": "resolver at node failed",
+        "locations": [
+         {
+          "line": 2,
+          "column": 3
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "a case that breaks two checks counts against both",
+   "cases": [
+    {
+     "v": 1,
+     "fixture": "fragments",
+     "trace": [
+      {
+       "call": [
+        "node"
+       ],
+       "type": "Node",
+       "after": 0
+      },
+      {
+       "settle": [
+        "node"
+       ],
+       "outcome": {
+        "kind": "null"
+       }
+      }
+     ],
+     "response": {
+      "data": {
+       "node": null
+      },
+      "errors": [],
+      "status": "ok"
+     }
     }
    ]
   },

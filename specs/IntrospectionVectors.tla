@@ -252,9 +252,14 @@ ResultsAreJudged == ~done =>
   \* for a Float, but not "1".
   /\ Judge(WithG(Result(FALSE), Value("float", "1", <<>>, <<>>))) = {}
   /\ Judge(WithG(Result(FALSE), Value("string", "1", <<>>, <<>>))) = {"type Query"}
-  \* Built-in descriptions are unspecified.
+  \* Built-in descriptions are unspecified, and so is the description of a
+  \* definition the document doesn't describe. One the document gives must
+  \* be returned as it is.
   /\ Judge(EditType(Result(FALSE), "__Type", LAMBDA t : [t EXCEPT !.description = <<"x">>])) = {}
-  /\ Judge(EditType(Result(FALSE), "Query", LAMBDA t : [t EXCEPT !.description = <<"x">>])) = {"type Query"}
+  /\ Judge(EditType(Result(FALSE), "Query", LAMBDA t : [t EXCEPT !.description = <<"x">>])) = {}
+  /\ Judge(EditType(Result(FALSE), "Query", LAMBDA t : [t EXCEPT !.description = <<"">>])) = {}
+  /\ Judge([Result(FALSE) EXCEPT !.description = <<"x">>]) = {"description"}
+  /\ Judge([Result(FALSE) EXCEPT !.description = None]) = {"description"}
   \* Directive locations are a set.
   /\ Judge([Result(FALSE) EXCEPT !.directives[1].locations = Reverse(@)]) = {}
   /\ Judge([Result(FALSE) EXCEPT !.directives[1].isRepeatable = FALSE]) = {"directive d"}
@@ -282,9 +287,14 @@ ProvidedDirectivesAreRequired == ~done =>
   /\ RequiredDirectiveNames(S, Actual(Result(FALSE))) = {"deprecated", "specifiedBy", "oneOf"}
   /\ RequiredDirectiveNames(S, Actual(NoURL(NotOneOf(Result(FALSE))))) = {"deprecated"}
   /\ RequiredDirectiveNames(Plain, Actual(SchemaResult(Plain, B, FALSE))) = {}
-  \* So leaving either out of directives breaks a MUST.
-  /\ JudgeWithout("specifiedBy") = {"required directives", "type Date"}
-  /\ JudgeWithout("oneOf") = {"required directives", "type In"}
+  \* So leaving either out of directives breaks a MUST, and only that: the
+  \* URL and isOneOf the result shows are still compared with the
+  \* document's.
+  /\ JudgeWithout("specifiedBy") = {"required directives"}
+  /\ JudgeWithout("oneOf") = {"required directives"}
+  /\ Mismatches(S, B, FALSE, TRUE,
+       Leaving(EditType(Result(FALSE), "Date", LAMBDA t : [t EXCEPT !.specifiedByURL = Some("v")]), "specifiedBy"))
+     = {"required directives", "type Date"}
   \* A service that provides neither needn't: Date has no URL, and In isn't
   \* OneOf. That leaves only §3.13's SHOULDs.
   /\ Mismatches(S, B, FALSE, TRUE, Leaving(NoURL(Result(FALSE)), "specifiedBy")) = {}

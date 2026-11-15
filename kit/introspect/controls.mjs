@@ -7,8 +7,9 @@
 // either. PROFILE_CONTROLS script the probe's answers, and the profile
 // run.mjs's chooseProfile picks from them must be as stated.
 
+import { Crash } from "../areas.mjs";
 import { fullResponse } from "./data.mjs";
-import { DISCOVERY_ALIASES, DISCOVERY_QUERY, PROFILES, TYPE_REF_DEPTH, neededFields, schemaQuery } from "./query.mjs";
+import { DISCOVERY_ALIASES, DISCOVERY_QUERY, PROFILES, TYPE_REF_DEPTH, neededArgs, neededFields, schemaQuery } from "./query.mjs";
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -33,16 +34,27 @@ const wrapperOf = (d, name) => d.wrappers.fields.find((f) => f.name === name).ty
 const replacing = (f) => Object.assign(f, { replaces: true });
 const rejected = replacing(() => ({ errors: [{ message: "Unknown directive" }] }));
 const executionFailure = replacing(() => ({ data: null, errors: [{ message: "executor bug", path: ["__schema"] }] }));
+const crash = replacing(() => new Crash("NoMethodError: undefined method 'map' for an instance of Integer"));
 // A response from a service without the field `owner`.`name`
-// (__Type.specifiedByURL or __Directive.isRepeatable): the field is gone
-// from the answers and from the introspection type's own fields.
+// (__Type.specifiedByURL, __Type.isOneOf or __Directive.isRepeatable): the
+// field is gone from the answers and from the introspection type's own
+// fields.
 const lacks = (owner, name) => (s, d) => {
-  const items = owner === "__Type" ? [...s.types, ...d.wrappers.fields.flatMap((f) => levels(f.type))] : s.directives;
+  const items = owner === "__Type" ? (s ? s.types : Object.values(d).filter(Boolean)) : s.directives;
   for (const x of items) delete x[name];
-  const t = type(s, owner);
-  t.fields = t.fields.filter((f) => f.name !== name);
+  if (s) {
+    const t = type(s, owner);
+    t.fields = t.fields.filter((f) => f.name !== name);
+  }
 };
-const levels = (ref) => (ref && ref.ofType !== undefined ? [ref, ...levels(ref.ofType)] : []);
+// A __schema response from a service whose __Schema.directives takes no
+// includeDeprecated: the argument is gone from __Schema's definition, and
+// the deprecated directives from the answer, as the default would have it.
+const lacksDirectivesArgument = (s) => {
+  const f = field(s, "__Schema", "directives");
+  f.args = f.args.filter((a) => a.name !== "includeDeprecated");
+  s.directives = s.directives.filter((d) => !d.isDeprecated);
+};
 const extraField = (name) => ({ name, description: null, args: [], type: named("String"), isDeprecated: false, deprecationReason: null });
 const extraValue = (name) => ({ name, description: null, isDeprecated: false, deprecationReason: null });
 const serviceDirective = (args) => ({ name: "extra", description: null, isRepeatable: false, locations: ["FIELD"], args, isDeprecated: false, deprecationReason: null });
@@ -75,11 +87,15 @@ const BROKEN = [
         deprecationReason: "gone",
       }),
   ],
-  ["rich.inc", "changes a default value", "defaultValue", (s) => (field(s, "Q", "a").args[0].defaultValue = "4")],
+  ["rich.inc", "changes a default value", "defaultValue", (s) => (field(s, "Q", "a").args[0].defaultValue = "4"), { only: true }],
+  ["defaults.inc", "gives a default to an input value without one", "defaultValue", (s) => (type(s, "I").inputFields.find((x) => x.name === "b").defaultValue = "0"), { only: true }],
+  // §4.2.4: "defaultValue may return a String encoding"
+  ["defaults.inc", "returns null for a default of null", "defaultValueOmitted", (s) => (field(s, "Query", "f").args.find((x) => x.name === "n").defaultValue = null), { only: true }],
+  ["rich.inc", "returns null for a default of 3", "defaultValueOmitted", (s) => (field(s, "Q", "a").args[0].defaultValue = null), { only: true }],
   ["order.inc", "reorders a type's interfaces", "order", (s) => type(s, "O").interfaces.reverse()],
   ["order.inc", "reorders a field's arguments", "order", (s) => field(s, "Query", "m").args.reverse()],
   ["rich.inc", "reorders a union's possible types", "order", (s) => type(s, "U").possibleTypes.reverse()],
-  ["rich.inc", "gives an object possibleTypes", "typeKinds", (s) => (type(s, "A").possibleTypes = [])],
+  ["rich.inc", "gives an object possibleTypes", "typeKinds", (s) => (type(s, "A").possibleTypes = []), { draftOnly: false }],
   [
     "rich.inc",
     "lists __typename as a field",
@@ -108,8 +124,12 @@ const BROKEN = [
   ["deprecation.defaults", "doesn't provide @deprecated, in a schema that only deprecates", "deprecation", dropDirectives("deprecated")],
   ["rich.inc", "doesn't provide @specifiedBy, in a schema with a custom scalar without a URL", "builtinDirectives", dropDirectives("specifiedBy"), { only: true }],
   // A directive the result shows is provided must be returned (§3.13).
-  ["scalars.inc", "doesn't return @specifiedBy, though Date has a URL", "specifiedByURL", dropDirectives("specifiedBy")],
-  ["oneOf.inc", "doesn't return @oneOf, though Pick is OneOf", "isOneOf", dropDirectives("oneOf")],
+  ["scalars.inc", "doesn't return @specifiedBy, though Date has a URL", "directives", dropDirectives("specifiedBy"), { only: true }],
+  ["oneOf.inc", "doesn't return @oneOf, though Pick is OneOf", "directives", dropDirectives("oneOf"), { only: true, draftOnly: true }],
+  ["scalars.inc", "doesn't return @specifiedBy, and gives Date another URL", ["directives", "specifiedByURL"], (s) => {
+    dropDirectives("specifiedBy")(s);
+    type(s, "Date").specifiedByURL = "https://example.com/other";
+  }],
   // One that doesn't provide @specifiedBy or @oneOf can't represent them.
   [
     "scalars.inc",
@@ -132,9 +152,19 @@ const BROKEN = [
     { only: true },
   ],
   ["scalars.lookup", "doesn't provide @specifiedBy, and so reports no URL, for __type(name:)", "pass", (s, d) => (d.t0.specifiedByURL = null), { provided: ["skip", "include", "deprecated", "oneOf"] }],
+  // A lookup's URL shows @specifiedBy is provided, whatever the __schema
+  // answer returned: it is graded against the document.
+  ["scalars.lookup", "reports Date's URL for __type(name:), though the __schema answer has no @specifiedBy", "pass", () => {}, { provided: ["skip", "include", "deprecated", "oneOf"] }],
+  ["scalars.lookup", "reports another URL for __type(name:), though the __schema answer has no @specifiedBy", "specifiedByURL", (s, d) => (d.t0.specifiedByURL = "https://example.com/other"), { only: true, provided: ["skip", "include", "deprecated", "oneOf"] }],
   ["scalars.inc", "rejects a schema that applies @specifiedBy", "builtinDirectives", rejected, { only: true }],
   ["oneOf.inc", "rejects a schema that applies @oneOf", "builtinDirectives", rejected, { only: true }],
   ["rich.inc", "rejects a schema that needs no optional directive", "executes", rejected],
+  ["defaults.inc", "crashes (the adapter answers with an error)", "executes", crash, { only: true }],
+  ["inputDeprecation.inc", "crashes on a draft-only schema", "executes", crash, { only: true, draftOnly: true }],
+  // A schema with syntax only the draft's grammar has: a request error isn't
+  // graded, data: null is.
+  ["directiveDeprecation.inc", "rejects a schema that applies a directive to a directive definition", "pass", rejected, { unbuilt: true }],
+  ["directiveDeprecation.inc", "fails executing a schema that applies a directive to a directive definition, with data: null", "executes", executionFailure, { only: true }],
   // data: null with errors is an execution failure, not a request error.
   ["scalars.inc", "fails executing a schema that applies @specifiedBy, with data: null", "executes", executionFailure, { only: true }],
   ["minimal.inc", "doesn't provide @deprecated, @specifiedBy or @oneOf, in a schema with no use for them", "pass", dropDirectives("deprecated", "specifiedBy", "oneOf")],
@@ -142,9 +172,14 @@ const BROKEN = [
   ["rich.inc", "leaves out the mutation root type", "roots", (s) => (s.mutationType = null)],
   ["rich.inc", "drops an input field", "inputFields", (s) => type(s, "In").inputFields.splice(1, 1)],
   ["interfaces.inc", "drops an implemented interface", "interfaces", (s) => type(s, "Image").interfaces.pop()],
-  ["rich.inc", "says a repeatable directive isn't", "directives", (s) => (directive(s, "tag").isRepeatable = false)],
-  ["rich.inc", "drops one of the schema's directives", "directives", (s) => s.directives.splice(s.directives.findIndex((x) => x.name === "tag"), 1)],
-  ["rich.inc", "changes a description", "descriptions", (s) => (type(s, "Q").description = "Another root")],
+  ["rich.inc", "says a repeatable directive isn't", "directives", (s) => (directive(s, "label").isRepeatable = false)],
+  ["rich.inc", "drops one of the schema's directives", "directives", (s) => s.directives.splice(s.directives.findIndex((x) => x.name === "label"), 1)],
+  ["rich.inc", "changes a description", "descriptions", (s) => (type(s, "Q").description = "Another root"), { only: true }],
+  ["rich.inc", "drops the schema's description", "descriptions", (s) => (s.description = null), { only: true }],
+  ["scalars.inc", "drops a scalar's description", "descriptions", (s) => (type(s, "Date").description = null), { only: true }],
+  // §4.2: "description may return a String or null"
+  ["rich.inc", 'describes an undescribed scalar as ""', "pass", (s) => (type(s, "Date").description = "")],
+  ["rich.inc", "describes an undescribed type with a description of its own", "pass", (s) => (type(s, "A").description = "An A")],
   [
     "directiveDeprecation.defaults",
     "returns a deprecated directive when includeDeprecated is false",
@@ -210,7 +245,42 @@ const BROKEN = [
     ["builtinAdditions", "builtinDefinitions"],
     (s) => type(s, "__DirectiveLocation").enumValues.splice(0, 1, extraValue("FRAGMENT_VARIABLE_DEFINITION")),
   ],
-  ["rich.inc", "changes the type of an introspection field, with the same name", "builtinDefinitions", (s) => (field(s, "__Field", "name").type = named("String")), { only: true }],
+  ["rich.inc", "changes the type of an introspection field, with the same name", "builtinDefinitions", (s) => (field(s, "__Field", "name").type = nonNull(named("Boolean"))), { only: true }],
+  // A built-in field's type that differs only in Non-Null is a SHOULD.
+  ["rich.inc", "makes __Directive.isRepeatable nullable", "builtinNullability", (s) => (field(s, "__Directive", "isRepeatable").type = named("Boolean")), { only: true, draftOnly: false }],
+  ["rich.inc", "makes __InputValue.isDeprecated, which October 2021 doesn't have, nullable", "builtinNullability", (s) => (field(s, "__InputValue", "isDeprecated").type = named("Boolean")), { only: true, draftOnly: true }],
+  ["rich.lookup", "makes a field of the document's nullable", "fields", (s, d) => (d.t0.fields[0].type = d.t0.fields[0].type.kind === "NON_NULL" ? d.t0.fields[0].type.ofType : nonNull(d.t0.fields[0].type)), { only: true }],
+  // Under the draft, a built-in that is October 2021's, or that October 2021
+  // doesn't define, rests on the draft alone.
+  ["rich.inc", "gives __Type.fields(includeDeprecated:) October 2021's Boolean", "builtinDefinitions", (s) => (field(s, "__Type", "fields").args[0].type = named("Boolean")), { only: true, draftOnly: true }],
+  ["rich.inc", "gives __Field.args(includeDeprecated:), which October 2021 doesn't have, the type Boolean", "builtinDefinitions", (s) => (field(s, "__Field", "args").args[0].type = named("Boolean")), { only: true, draftOnly: true }],
+  ["rich.inc", "gives @skip a location neither edition has", "builtinDefinitions", (s) => directive(s, "skip").locations.push("QUERY"), { only: true, draftOnly: false }],
+  // A service that lacks a field or argument the draft defines: the absence
+  // counts once per run (run.mjs), not in each result, and what it hides
+  // isn't graded. The rest still is.
+  ["oneOf.inc", "has no __Type.isOneOf", "pass", lacks("__Type", "isOneOf"), { missing: ["__Type.isOneOf"] }],
+  ["rich.inc", "has no __Directive.isRepeatable", "pass", lacks("__Directive", "isRepeatable"), { missing: ["__Directive.isRepeatable"] }],
+  [
+    "rich.inc",
+    "has no __Directive.isRepeatable, and gives a directive the wrong locations",
+    "directives",
+    (s, d) => {
+      lacks("__Directive", "isRepeatable")(s, d);
+      directive(s, "label").locations.pop();
+    },
+    { only: true, missing: ["__Directive.isRepeatable"] },
+  ],
+  ["directiveDeprecation.inc", "has no __Schema.directives(includeDeprecated:)", "pass", lacksDirectivesArgument, { missing: ["__Schema.directives(includeDeprecated:)"] }],
+  [
+    "directiveDeprecation.inc",
+    "has no __Schema.directives(includeDeprecated:), and drops a directive that isn't deprecated",
+    "directives",
+    (s) => {
+      lacksDirectivesArgument(s);
+      s.directives = s.directives.filter((d) => d.name !== "new");
+    },
+    { only: true, missing: ["__Schema.directives(includeDeprecated:)"] },
+  ],
   // The service's own directives, and the types they reach
   [
     "rich.inc",
@@ -267,16 +337,22 @@ const BROKEN = [
   ["rich.lookup", "leaves out a selected ofType", "executes", (s, d) => delete d.t0.fields[0].args[0].type.ofType],
   ["rich.lookup", "answers errors: []", "envelope", (s, d, r) => (r.errors = [])],
   // §4.2.2: a List or Non-Null type's other fields are null
-  ["minimal.inc", "gives a Non-Null type a description", "typeKinds", (s, d) => (wrapperOf(d, "types").description = "x"), { only: true }],
-  ["minimal.inc", "gives a List type fields: []", "typeKinds", (s, d) => (wrapperOf(d, "types").ofType.fields = []), { only: true }],
-  ["minimal.inc", "gives a Non-Null type isOneOf: false", "typeKinds", (s, d) => (wrapperOf(d, "queryType").isOneOf = false), { only: true }],
-  ["minimal.inc", "leaves out a wrapper's selected interfaces", "executes", (s, d) => delete wrapperOf(d, "types").interfaces],
+  ["wrappers", "gives a Non-Null type a description", "typeKinds", (s, d) => (wrapperOf(d, "types").description = "x"), { only: true, draftOnly: false }],
+  ["wrappers", "gives a List type fields: []", "typeKinds", (s, d) => (wrapperOf(d, "types").ofType.fields = []), { only: true }],
+  ["wrappers", "gives a Non-Null type isOneOf: false", "typeKinds", (s, d) => (wrapperOf(d, "queryType").isOneOf = false), { only: true, draftOnly: true }],
+  // isOneOf is only the draft's: null where it shouldn't be, or the other
+  // way round, rests on the draft.
+  ["rich.inc", "gives a scalar isOneOf: false", "typeKinds", (s) => (type(s, "Date").isOneOf = false), { only: true, draftOnly: true }],
+  ["rich.inc", "gives a built-in scalar isOneOf: false", "typeKinds", (s) => (type(s, "Int").isOneOf = false), { only: true, draftOnly: true }],
+  ["rich.inc", "gives an input object isOneOf: null", "typeKinds", (s) => (type(s, "In").isOneOf = null), { only: true, draftOnly: true }],
+  ["wrappers", "leaves out a wrapper's selected interfaces", "executes", (s, d) => delete wrapperOf(d, "types").interfaces],
+  ["wrappers", "rejects the query", "executes", rejected, { only: true }],
   // The wrapper types must come from each of __Schema's fields.
-  ["minimal.inc", 'answers no fields for __type(name: "__Schema")', "typeKinds", (s, d) => (d.wrappers.fields = []), { only: true }],
-  ["minimal.inc", 'answers null for __type(name: "__Schema")', "typeKinds", (s, d) => (d.wrappers = null), { only: true }],
-  ["minimal.inc", 'leaves out __Schema.types from __type(name: "__Schema")', "typeKinds", (s, d) => d.wrappers.fields.splice(d.wrappers.fields.findIndex((f) => f.name === "types"), 1), { only: true }],
+  ["wrappers", 'answers no fields for __type(name: "__Schema")', "typeKinds", (s, d) => (d.wrappers.fields = []), { only: true }],
+  ["wrappers", 'answers null for __type(name: "__Schema")', "typeKinds", (s, d) => (d.wrappers = null), { only: true }],
+  ["wrappers", 'leaves out __Schema.types from __type(name: "__Schema")', "typeKinds", (s, d) => d.wrappers.fields.splice(d.wrappers.fields.findIndex((f) => f.name === "types"), 1), { only: true }],
   [
-    "minimal.inc",
+    "wrappers",
     'loses the Non-Null wrapper of __Schema.queryType in __type(name: "__Schema")',
     "typeKinds",
     (s, d) => {
@@ -287,40 +363,38 @@ const BROKEN = [
   ],
   // The October 2021 profile
   ...[
+    // A built-in that is as the draft defines it is informational.
     [
       "minimal.inc",
       "gives @deprecated the draft's locations",
-      "builtinDefinitions",
+      "builtinEdition",
       (s) => directive(s, "deprecated").locations.push("ARGUMENT_DEFINITION", "INPUT_FIELD_DEFINITION", "DIRECTIVE_DEFINITION"),
+      { only: true },
     ],
-    ["minimal.inc", "gives @deprecated(reason:) the draft's String!", "builtinDefinitions", (s) => (directive(s, "deprecated").args[0].type = nonNull(named("String")))],
-    ["minimal.inc", "gives __Type.fields(includeDeprecated:) the draft's Boolean!", "builtinDefinitions", (s) => (field(s, "__Type", "fields").args[0].type = nonNull(named("Boolean")))],
+    ["minimal.inc", "gives @deprecated a location neither edition has", "builtinDefinitions", (s) => directive(s, "deprecated").locations.push("FIELD"), { only: true }],
+    ["minimal.inc", "gives @deprecated(reason:) the draft's String!", "builtinEdition", (s) => (directive(s, "deprecated").args[0].type = nonNull(named("String"))), { only: true }],
+    ["minimal.inc", "gives __Type.fields(includeDeprecated:) the draft's Boolean!", "builtinEdition", (s) => (field(s, "__Type", "fields").args[0].type = nonNull(named("Boolean"))), { only: true }],
     [
       "minimal.inc",
       "lists the draft's __Type.isOneOf among __Type's fields",
-      "builtinAdditions",
+      "builtinEdition",
       (s) => type(s, "__Type").fields.push({ name: "isOneOf", description: null, args: [], type: named("Boolean"), isDeprecated: false, deprecationReason: null }),
       { only: true },
     ],
-    ["minimal.inc", "has DIRECTIVE_DEFINITION among __DirectiveLocation's values", "builtinAdditions", (s) => type(s, "__DirectiveLocation").enumValues.push(extraValue("DIRECTIVE_DEFINITION")), { only: true }],
-    // A service that lacks a field (graphql-dotnet lacks both): the rest is
-    // graded, and the field counts against its check.
-    ["rich.inc", "has no __Directive.isRepeatable", ["builtinDefinitions", "directives"], lacks("__Directive", "isRepeatable"), { missing: ["__Directive.isRepeatable"] }],
-    ["minimal.inc", "has no __Type.specifiedByURL", ["builtinDefinitions", "specifiedByURL"], lacks("__Type", "specifiedByURL"), { missing: ["__Type.specifiedByURL"] }],
-    [
-      "minimal.lookup",
-      "has no __Type.specifiedByURL, for __type(name:)",
-      "specifiedByURL",
-      (s, d) => Object.values(d).forEach((t) => t && delete t.specifiedByURL),
-      { only: true, missing: ["__Type.specifiedByURL"] },
-    ],
+    ["minimal.inc", "has DIRECTIVE_DEFINITION among __DirectiveLocation's values", "builtinEdition", (s) => type(s, "__DirectiveLocation").enumValues.push(extraValue("DIRECTIVE_DEFINITION")), { only: true }],
+    ["minimal.inc", "adds a field to __Type that neither edition defines", "builtinAdditions", (s) => type(s, "__Type").fields.push(extraField("extra")), { only: true }],
+    // A service that lacks a field (graphql-dotnet lacks both): the absence
+    // counts once per run, and the rest is graded.
+    ["rich.inc", "has no __Directive.isRepeatable", "pass", lacks("__Directive", "isRepeatable"), { missing: ["__Directive.isRepeatable"] }],
+    ["minimal.inc", "has no __Type.specifiedByURL", "pass", lacks("__Type", "specifiedByURL"), { missing: ["__Type.specifiedByURL"] }],
+    ["minimal.lookup", "has no __Type.specifiedByURL, for __type(name:)", "pass", lacks("__Type", "specifiedByURL"), { missing: ["__Type.specifiedByURL"] }],
     ["minimal.inc", "answers isOneOf, which the October 2021 query doesn't select", "executes", (s) => (type(s, "Query").isOneOf = null)],
     ["minimal.inc", "provides @oneOf as a directive of its own", "pass", (s) => s.directives.push({ name: "oneOf", description: null, isRepeatable: false, locations: ["INPUT_OBJECT"], args: [] })],
     ["order.inc", "reorders an object's fields, which October 2021 doesn't grade", "pass", (s) => type(s, "Query").fields.reverse()],
-    ["scalars.inc", "doesn't return @specifiedBy, though Date has a URL", "specifiedByURL", dropDirectives("specifiedBy")],
+    ["scalars.inc", "doesn't return @specifiedBy, though Date has a URL", "directives", dropDirectives("specifiedBy"), { only: true }],
     ["rich.inc", "reports a deprecated field as not deprecated", "deprecation", (s) => Object.assign(field(s, "Q", "old"), { isDeprecated: false, deprecationReason: null })],
     ["rich.inc", "drops an input field", "inputFields", (s) => type(s, "In").inputFields.splice(1, 1)],
-    ["minimal.inc", "gives a List type a specifiedByURL", "typeKinds", (s, d) => (wrapperOf(d, "types").ofType.specifiedByURL = "u"), { only: true }],
+    ["wrappers", "gives a List type a specifiedByURL", "typeKinds", (s, d) => (wrapperOf(d, "types").ofType.specifiedByURL = "u"), { only: true }],
     ["rich.lookup", "answers null for a type the schema has", "typeByName", (s, d) => (d.t1 = null)],
     ["deprecation.lookup.defaults", "returns a deprecated value when includeDeprecated is false", "deprecation", (s, d) => d.t2.enumValues.push({ name: "B", description: null, isDeprecated: true, deprecationReason: "Gone" })],
   ].map(([id, name, check, change, options = {}]) => [id, `October 2021: ${name}`, check, change, { ...options, profile: "oct2021" }]),
@@ -364,13 +438,13 @@ export const CONTROLS = (vectors, builtins) => {
       if (JSON.stringify(other) !== JSON.stringify(own)) controls.push({ name: "another vector's expected response", vector: v, profile, response: other, check: "any" });
     });
   }
-  for (const [id, name, check, change, { only = false, profile = "draft", provided, missing = [] } = {}] of BROKEN) {
+  for (const [id, name, check, change, { only = false, profile = "draft", provided, missing = [], draftOnly, unbuilt } = {}] of BROKEN) {
     const v = byId.get(id);
     if (!v) throw new Error(`no vector ${id} for a control`);
     let response = clone(fullResponse(v, builtins, profile));
     if (change.replaces) response = change();
     else change(response.data.__schema, response.data, response);
-    controls.push({ name, vector: v, profile, response, check, only, missing, ...(provided ? { provided: new Set(provided) } : {}) });
+    controls.push({ name, vector: v, profile, response, check, only, missing, draftOnly, unbuilt, ...(provided ? { provided: new Set(provided) } : {}) });
   }
   controls.push({
     name: "answers with errors",
@@ -384,47 +458,89 @@ export const CONTROLS = (vectors, builtins) => {
 
 // Scripted answers for the probe (the first vector), and the profile
 // chooseProfile must pick from them: [name, answer(query), profile, the
-// fields left out].
+// fields and arguments left out].
 export const PROFILE_CONTROLS = (vectors, builtins) => {
   const probe = vectors[0];
-  const failure = { data: null, errors: [{ message: "executor bug", path: ["__schema"] }] };
+  const failure = { data: null, errors: [{ message: "Cannot query field", path: ["__schema"] }] };
   const requestError = { errors: [{ message: "Cannot query field" }] };
   const answered = fullResponse(probe, builtins, "oct2021");
-  // DISCOVERY_QUERY's answer for a service with October 2021's fields, plus
-  // `extra`, without `lacking`.
-  const fields = (lacking, extra = []) => {
-    const need = neededFields("oct2021");
+  // DISCOVERY_QUERY's answer for a service with a profile's fields and
+  // arguments, plus `extra`, without `lacking`.
+  const discovered = (profile, lacking, extra = []) => {
+    const fields = neededFields(profile);
+    const args = neededArgs(profile);
     const data = {};
     for (const [alias, owner] of DISCOVERY_ALIASES) {
-      const names = [...need[owner], ...extra.filter((m) => m.startsWith(`${owner}.`)).map((m) => m.split(".")[1])];
-      data[alias] = { fields: names.filter((n) => !lacking.includes(`${owner}.${n}`)).map((n) => ({ name: n })) };
+      const names = [...fields[owner], ...extra.filter((m) => m.startsWith(`${owner}.`)).map((m) => m.split(".")[1])];
+      data[alias] = {
+        fields: names
+          .filter((n) => !lacking.includes(`${owner}.${n}`))
+          .map((n) => ({ name: n, args: (args[`${owner}.${n}`] ?? []).filter((a) => !lacking.includes(`${owner}.${n}(${a}:)`)).map((a) => ({ name: a })) })),
+      };
     }
     return { data };
   };
+  // An answer for one query, a request error for every other.
+  const only = (answers) => (q) => answers.get(q) ?? requestError;
   const dotnet = ["__Type.specifiedByURL", "__Directive.isRepeatable"];
-  const dotnetQuery = schemaQuery("oct2021", probe.includeDeprecated, dotnet);
+  const draftOnly = [
+    "__InputValue.isDeprecated",
+    "__InputValue.deprecationReason",
+    "__Directive.isDeprecated",
+    "__Directive.deprecationReason",
+    "__Type.inputFields(includeDeprecated:)",
+    "__Field.args(includeDeprecated:)",
+    "__Directive.args(includeDeprecated:)",
+    "__Schema.directives(includeDeprecated:)",
+  ];
+  const juniper = ["__Directive.isDeprecated", "__Directive.deprecationReason", "__Schema.directives(includeDeprecated:)"];
+  const draftWithout = (missing) => schemaQuery("draft", probe.includeDeprecated, missing);
   return [
     {
-      name: "an execution failure (data: null) for the draft's query keeps the draft profile",
-      answer: (q) => (q === probe.query ? failure : answered),
+      name: "an answer for the draft's query keeps the draft profile",
+      answer: only(new Map([[probe.query, answered]])),
       profile: "draft",
       missing: [],
     },
     {
-      name: "a request error for the draft's query, and an answer for October 2021's, selects October 2021",
-      answer: (q) => (q === probe.query2021 ? answered : requestError),
+      name: "errors with data: null for the draft's query, unreadable fields, and an answer for October 2021's, selects October 2021",
+      answer: only(new Map([[probe.query, failure], [probe.query2021, answered]])),
       profile: "oct2021",
       missing: [],
     },
     {
-      name: "both queries rejected, and the introspection types lack __Type.specifiedByURL and __Directive.isRepeatable",
-      answer: (q) => (q === DISCOVERY_QUERY ? fields(dotnet, ["__Type.isOneOf"]) : q === dotnetQuery ? answered : requestError),
+      name: "a request error for the draft's query, and an answer for October 2021's, selects October 2021",
+      answer: only(new Map([[probe.query2021, answered]])),
       profile: "oct2021",
-      missing: dotnet,
+      missing: [],
     },
     {
-      name: "both queries rejected, and the introspection types lack __Type.kind, without which nothing can be graded",
-      answer: (q) => (q === DISCOVERY_QUERY ? fields(["__Type.kind"]) : requestError),
+      name: "the draft's query rejected, and __Type lacks isOneOf, selects the draft without it",
+      answer: only(new Map([[DISCOVERY_QUERY, discovered("draft", ["__Type.isOneOf"])], [draftWithout(["__Type.isOneOf"]), answered], [probe.query2021, answered]])),
+      profile: "draft",
+      missing: ["__Type.isOneOf"],
+    },
+    {
+      name: "the draft's query rejected, and the introspection types lack __Schema.directives(includeDeprecated:) and __Directive's deprecation, selects the draft without them",
+      answer: only(new Map([[DISCOVERY_QUERY, discovered("draft", juniper)], [draftWithout(juniper), answered]])),
+      profile: "draft",
+      missing: juniper,
+    },
+    {
+      name: "the draft's query rejected, and the introspection types are October 2021's without __Type.specifiedByURL and __Directive.isRepeatable, selects the draft without them",
+      answer: only(new Map([[DISCOVERY_QUERY, discovered("oct2021", dotnet, ["__Type.isOneOf"])], [draftWithout([...dotnet, ...draftOnly]), answered]])),
+      profile: "draft",
+      missing: [...dotnet, ...draftOnly],
+    },
+    {
+      name: "the draft's query without what the service lacks rejected too, and October 2021's answered, selects October 2021",
+      answer: only(new Map([[DISCOVERY_QUERY, discovered("draft", ["__Type.isOneOf"])], [probe.query2021, answered]])),
+      profile: "oct2021",
+      missing: [],
+    },
+    {
+      name: "both rejected, and the introspection types lack __Type.kind, without which nothing can be graded, keeps the draft profile",
+      answer: only(new Map([[DISCOVERY_QUERY, discovered("draft", ["__Type.kind"])]])),
       profile: "draft",
       missing: [],
     },

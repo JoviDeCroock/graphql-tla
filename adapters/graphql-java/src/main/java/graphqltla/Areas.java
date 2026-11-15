@@ -52,6 +52,9 @@ final class Areas {
         // validate: RuntimeWiring.MOCKED_WIRING's custom scalars parse every
         // literal (MockedWiringFactory#getScalar).
         capabilities.add("custom-scalar-literals");
+        // validate and introspect: SchemaGenerator builds the SDL's
+        // `directive @label(...) on ...` definitions.
+        capabilities.add("custom-directives");
         // coerce: graphql-java leaves an argument or input field with no value
         // out of the argument map (ValuesResolver#getArgumentValuesImpl), so
         // absent and null differ.

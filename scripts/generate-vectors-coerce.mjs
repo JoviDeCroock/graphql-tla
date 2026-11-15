@@ -10,17 +10,22 @@
 //                      policy (every SHOULD followed, JSON strings taken as
 //                      enum values): the expected answer. Under the other
 //                      policies, the answers the spec also permits
-//                      (`alternatives`). Under October 2021's rules
-//                      (default values used as they are, and no list of one
-//                      made for an item whose type is a list): where that
+//                      (`alternatives`). Under October 2021's rule for
+//                      default values (used as they are): where that
 //                      answer differs, the vector relies on the draft
 //                      (`edition`), and the answer is an `oct2021`
-//                      alternative. With the variables read as a binary64
+//                      alternative. Under October 2021's §3.11 table of
+//                      examples (no list of one made for an item whose
+//                      type is a list), which its own prose contradicts:
+//                      an `oct2021Example` alternative, not an edition's
+//                      answer. With the variables read as a binary64
 //                      JSON parser reads them, the `binary64` answer, where
 //                      it differs. With a lone surrogate in a JSON string
 //                      kept as sent, or replaced with U+FFFD, the
 //                      `loneSurrogate` answers, where they differ;
 //   Coercion!GetOperation    which root field the selected operation runs;
+//   Lexer!StringValueAt      every string literal's Unicode text (§2.10.4),
+//                      which the coercion cases hold;
 //   Validation!IsValid whether the document is valid. A document that is
 //                      invalid by Validation.tla is `valid: false`. One that
 //                      is only invalid because an Int or Float literal
@@ -30,8 +35,11 @@
 //                      validator must catch it rests on Int's SHOULD and on
 //                      the reference's reading of Float's precision.
 //
-// graphql-js only parses the SDL and the documents here. It never decides
-// an answer.
+// graphql-js only parses the SDL and the documents here, and finds string
+// literals in them. It never decides an answer. The generator also names,
+// for each vector, the vectors that hold its list items or input object
+// fields on their own (`restsOn`), and files it under a check; neither
+// decides an answer.
 //
 // Usage: node scripts/generate-vectors-coerce.mjs [--check]
 //
@@ -104,6 +112,15 @@ type Query {
   example(arg: ExampleInputObject): String
 }
 `;
+
+// The schema of the OneOf vectors: the same, plus §3.10.1's
+// ExampleOneOfInputObject and a field that takes it. It is a schema of its
+// own, since @oneOf is only in the draft: an implementation that can't build
+// it fails only these vectors.
+const SDL_ONEOF = SDL.replace(
+  "type Mutation {",
+  "input ExampleOneOfInputObject @oneOf {\n  a: String\n  b: Int\n}\n\ntype Mutation {",
+).replace("  example(arg: ExampleInputObject): String\n", "  example(arg: ExampleInputObject): String\n  oneOfExample(arg: ExampleOneOfInputObject): String\n");
 
 // Copied from differential-coercion.mjs: argument literals as GraphQL
 // source, variable values as JSON source, and a variable default and value
@@ -196,6 +213,51 @@ const SPEC_EXAMPLES = [
   ['{ example(arg: { b: 123, c: "xyz" }) }', "{}"],
 ];
 
+// §3.10.1's table of examples (the draft only), as `oneOfExample(arg:
+// <literal>)`, plus a few more. Where the literal uses $var, the operation
+// declares `$var: ExampleOneOfInputObject`; $a and $b are String and Int.
+const ONEOF_EXAMPLES = [
+  ['{ oneOfExample(arg: { a: "abc" }) }', "{}"],
+  ["{ oneOfExample(arg: { b: 123 }) }", "{}"],
+  ["query($var: ExampleOneOfInputObject) { oneOfExample(arg: $var) }", '{"var": {"a": "abc"}}'],
+  ["{ oneOfExample(arg: { a: null }) }", "{}"],
+  ["query($var: ExampleOneOfInputObject) { oneOfExample(arg: $var) }", '{"var": {"a": null}}'],
+  ["query($a: String) { oneOfExample(arg: { a: $a }) }", "{}"],
+  ['{ oneOfExample(arg: { a: "abc", b: 123 }) }', "{}"],
+  ['{ oneOfExample(arg: { a: 456, b: "xyz" }) }', "{}"],
+  ["query($var: ExampleOneOfInputObject) { oneOfExample(arg: $var) }", '{"var": {"a": "abc", "b": 123}}'],
+  ['{ oneOfExample(arg: { a: "abc", b: null }) }', "{}"],
+  ['query($b: Int) { oneOfExample(arg: { a: "abc", b: $b }) }', "{}"],
+  ["query($a: String, $b: Int) { oneOfExample(arg: { a: $a, b: $b }) }", '{"a": "abc"}'],
+  ["{ oneOfExample(arg: {}) }", "{}"],
+  ["query($var: ExampleOneOfInputObject) { oneOfExample(arg: $var) }", '{"var": {}}'],
+  ["query($a: String!) { oneOfExample(arg: { a: $a }) }", '{"a": "abc"}'],
+  ["query($a: String) { oneOfExample(arg: { a: $a }) }", '{"a": null}'],
+  ["query($var: ExampleOneOfInputObject) { oneOfExample(arg: $var) }", '{"var": {"b": 7}}'],
+  ["query($var: ExampleOneOfInputObject) { oneOfExample(arg: $var) }", '{"var": {"c": 1}}'],
+  ["query($var: ExampleOneOfInputObject) { oneOfExample(arg: $var) }", '{"var": "abc"}'],
+  ['{ oneOfExample(arg: { c: "abc" }) }', "{}"],
+];
+
+// String literals whose Unicode text (§2.10.4) is the same in both editions:
+// escapes, and block strings with indentation, blank lines and an escaped
+// triple quote. Each is `{ string(v: <literal>) }`. Lexer.tla gives every
+// string literal's text, here and in every other vector.
+const STRING_LITERALS = [
+  String.raw`"\u0041\u00E9"`,
+  String.raw`"a\u000Ab"`,
+  String.raw`"\"\\\/\b\f\n\r\t"`,
+  '"\u00e9\u{1F600}"',
+  '"""simple"""',
+  '""""""',
+  '"""\n  first\n    second\n      third\n  """',
+  '"""  first line\n    indented\n  next"""',
+  '"""\n\n  x\n\n"""',
+  String.raw`"""a \"""b"""`,
+  String.raw`"""a\nb\u0041"""`,
+  '"""\ta\r\n\t\tb\r  c"""',
+];
+
 // Operation selection (§6.1 GetOperation): a document with its operation
 // names to try, and variable sets. null leaves operationName out.
 const OPERATIONS = [
@@ -212,7 +274,7 @@ const OPERATIONS = [
 // ---------------------------------------------------------------------------
 // The schema, from its SDL (as differential-coercion.mjs reads it).
 
-const sdl = graphql.parse(SDL);
+const sdl = graphql.parse(SDL_ONEOF);
 const typeRef = (node) => {
   if (node.kind === "NamedType") return { name: node.name.value, wrappers: [] };
   const inner = typeRef(node.type);
@@ -232,7 +294,8 @@ for (const def of sdl.definitions) {
   if (def.kind === "EnumTypeDefinition") {
     model.types.set(def.name.value, { kind: "enum", values: def.values.map((v) => v.name.value) });
   } else if (def.kind === "InputObjectTypeDefinition") {
-    model.types.set(def.name.value, { kind: "inputObject", fields: def.fields.map(inputValue) });
+    const oneOf = def.directives.some((d) => d.name.value === "oneOf");
+    model.types.set(def.name.value, { kind: "inputObject", fields: def.fields.map(inputValue), oneOf });
   } else if (def.kind === "ObjectTypeDefinition") {
     for (const field of def.fields) model.fields.set(field.name.value, field.arguments.map(inputValue));
   }
@@ -286,6 +349,66 @@ const checkFor = (type, value) => {
   return { String: "string", Boolean: "boolean", ID: "id" }[type.name];
 };
 
+// ---------------------------------------------------------------------------
+// What a vector rests on first. A list item or an input object field that
+// is a literal or a JSON value is also, on its own, the argument of a
+// `literal` or `variable` vector: `[1.0]` as [Int] holds `1.0` as Int, and
+// `{ x: 1, z: 1 }` as [Point!] is `{ x: 1, z: 1 }` as Point!. Where the
+// implementation fails both the same way, the kit counts the outer vector's
+// failure where the inner one's counts (docs/kit/coerce.md, "Attribution"),
+// so that one rule broken inside a list or an input object isn't a second
+// finding under §3.11 or §3.10. This only names vectors. It never decides
+// an answer.
+
+const typeText = (t) => t.wrappers.reduceRight((inner, w) => (w === "list" ? `[${inner}]` : `${inner}!`), t.name);
+// A JSON value (parseExact's) written as the generator writes JSON_VALUES.
+const jsonText = (v) => {
+  if (v === null || typeof v === "boolean") return String(v);
+  if (typeof v === "string") return JSON.stringify(v);
+  if (Array.isArray(v)) return `[${v.map(jsonText).join(", ")}]`;
+  if (NUMBER in v) return v[NUMBER];
+  return `{${Object.entries(v).map(([k, x]) => `${JSON.stringify(k)}: ${jsonText(x)}`).join(", ")}}`;
+};
+const valueText = (kind, v) => (kind === "literal" ? graphql.print(v) : jsonText(v));
+const isNullOf = (kind, v) => (kind === "literal" ? v.kind === "NullValue" : v === null);
+// The positions directly inside a value of a type: [type, value] pairs. A
+// variable inside a literal has no vector of its own, so it is skipped.
+const childrenOf = (kind, type, value) => {
+  if (isNullOf(kind, value) || (kind === "literal" && value.kind === "Variable")) return [];
+  if (type.wrappers[0] === "nonNull") return childrenOf(kind, { ...type, wrappers: type.wrappers.slice(1) }, value);
+  const itemType = { ...type, wrappers: type.wrappers.slice(1) };
+  if (type.wrappers[0] === "list") {
+    const items = kind === "literal" ? (value.kind === "ListValue" ? value.values : null) : Array.isArray(value) ? value : null;
+    return (items ?? [value]).filter((v) => kind !== "literal" || v.kind !== "Variable").map((v) => [itemType, v]);
+  }
+  const def = model.types.get(type.name);
+  if (def.kind !== "inputObject") return [];
+  const entries =
+    kind === "literal"
+      ? value.kind === "ObjectValue" ? value.fields.map((f) => [f.name.value, f.value]) : []
+      : value !== null && typeof value === "object" && !Array.isArray(value) && !(NUMBER in value) ? Object.entries(value) : [];
+  return entries.flatMap(([name, v]) => {
+    const field = def.fields.find((f) => f.name === name);
+    return field && (kind !== "literal" || v.kind !== "Variable") ? [[field.type, v]] : [];
+  });
+};
+// The argument a vector's root field gets: its type, and the literal or
+// the JSON value the request gives it, or undefined.
+const argumentOf = (o) => {
+  const operation = graphql.parse(o.document).definitions[0];
+  const field = operation.selectionSet?.selections[0];
+  const args = field?.arguments ?? [];
+  if (operation.kind !== "OperationDefinition" || args.length !== 1) return undefined;
+  const [argument] = args;
+  const declared = model.fields.get(field.name.value).find((a) => a.name === argument.name.value);
+  if (argument.value.kind !== "Variable") return { kind: "literal", type: declared.type, value: argument.value };
+  const name = argument.value.name.value;
+  const variables = parseExact(o.variables);
+  if (!Object.hasOwn(variables, name)) return undefined;
+  const definition = operation.variableDefinitions.find((v) => v.variable.name.value === name);
+  return definition && { kind: "json", type: typeRef(definition.type), value: variables[name] };
+};
+
 // A JSON number in the variables that a double can't hold, so the answer
 // depends on how the implementation's JSON parser reads numbers.
 const needsExactNumbers = (text) => {
@@ -304,10 +427,10 @@ const needsExactNumbers = (text) => {
 // The operations
 
 const operations = [];
-const add = (family, check, document, variables, operationName = null) =>
-  operations.push({ family, check, document, variables, operationName });
+const add = (family, check, document, variables, operationName = null, schema = undefined) =>
+  operations.push({ family, check, document, variables, operationName, schema });
 for (const [field, args] of model.fields) {
-  if (field === "pair" || field === "example" || field === "mutate") continue;
+  if (field === "pair" || field === "example" || field === "mutate" || field === "oneOfExample") continue;
   const [arg] = args;
   const type = arg.typeText;
   add("omitted", "arguments", `{ ${field} }`, "{}");
@@ -320,9 +443,12 @@ for (const [field, args] of model.fields) {
   const [def, jsonValue] = DEFAULTS[field];
   for (const variableType of arg.type.wrappers[0] === "nonNull" ? [type, type.slice(0, -1)] : [type]) {
     const withDefault = `query($x: ${variableType} = ${def}) { ${field}(v: $x) }`;
+    // The default is used, or null overrides it: §6.1.2's. A value
+    // overrides it too, and is then coerced as in the variable family, so
+    // that vector is filed by the value's type, as there.
     add("variable-default", "variables", withDefault, "{}");
     add("variable-default", "variables", withDefault, '{"x": null}');
-    add("variable-default", "variables", withDefault, `{"x": ${jsonValue}}`);
+    add("variable-default", checkFor(arg.type, parseExact(jsonValue)), withDefault, `{"x": ${jsonValue}}`);
   }
   if (arg.type.wrappers[0] === "nonNull") {
     const nullable = `query($x: ${type.slice(0, -1)}) { ${field}(v: $x) }`;
@@ -337,6 +463,8 @@ for (const [family, check, document, variableSets] of EXTRA) {
   for (const variables of variableSets) add(family, check, document, variables);
 }
 for (const [document, variables] of SPEC_EXAMPLES) add("spec-example", "inputObject", document, variables);
+for (const [document, variables] of ONEOF_EXAMPLES) add("oneOf", "oneOf", document, variables, null, "oneOf");
+for (const literal of STRING_LITERALS) add("string-value", "stringValue", `{ string(v: ${literal}) }`, "{}");
 for (const [document, names, variableSets] of OPERATIONS) {
   for (const name of names) for (const variables of variableSets) add("operation", "getOperation", document, variables, name);
 }
@@ -344,12 +472,16 @@ for (const [document, names, variableSets] of OPERATIONS) {
 // ---------------------------------------------------------------------------
 // TLA+ encodings for Coercion.tla (as in differential-coercion.mjs)
 
+// A string as a TLA+ string. A code unit that isn't printable ASCII, or is
+// a quote or a backslash, is written as the JSON escape \uXXXX, in the
+// TLA+ string as six characters: JsonOf below writes it out as it is, and
+// JSON.parse reads it back. Coercion.tla only compares strings with names
+// and digits, which are plain ASCII.
 const str = (s) => {
-  if (s.includes("\\") || s.includes('"')) throw new Error(`can't encode ${s}`);
   let out = "";
-  for (const unit of s) {
-    const code = unit.codePointAt(0);
-    out += code >= 0x20 && code < 0x7f ? unit : `\\\\u${code.toString(16).padStart(4, "0")}`;
+  for (let i = 0; i < s.length; i++) {
+    const code = s.charCodeAt(i);
+    out += code >= 0x20 && code < 0x7f && code !== 0x22 && code !== 0x5c ? s[i] : `\\\\u${code.toString(16).padStart(4, "0")}`;
   }
   return `"${out}"`;
 };
@@ -378,7 +510,7 @@ const literal = (node) => {
     case "NullValue": return "NullV";
     case "IntValue": return num("int", node.value);
     case "FloatValue": return num("float", node.value);
-    case "StringValue": return strV(node.value);
+    case "StringValue": return strV(stringText(node));
     case "BooleanValue": return `Bool(${bool(node.value)})`;
     case "EnumValue": return `EnumV(${str(node.value)})`;
     case "Variable": return `VarV(${str(node.name.value)})`;
@@ -386,6 +518,15 @@ const literal = (node) => {
     case "ObjectValue": return `ObjV(${set(node.fields.map((f) => entry(f.name.value, literal(f.value))))})`;
     default: throw new Error(`unexpected literal ${node.kind}`);
   }
+};
+// A string literal's Unicode text, as Lexer.tla gives it (StringValueAt):
+// graphql-js only finds the literal in the source.
+const stringTexts = new Map();
+const stringSource = (node) => node.loc.source.body.slice(node.loc.start, node.loc.end);
+const stringText = (node) => {
+  const text = stringTexts.get(stringSource(node));
+  if (text === undefined) throw new Error(`no text from Lexer.tla for ${stringSource(node)}`);
+  return text;
 };
 // strings: how a JSON string with a lone surrogate reaches coercion: "as
 // read" (not a valid Unicode string), "kept" (taken as a string anyway) or
@@ -421,7 +562,7 @@ const coercionSchema = () => {
     if (def.kind === "enum") {
       return `(${str(name)} :> [kind |-> "enum", values |-> ${set(def.values.map(str))}, fields |-> <<>>])`;
     }
-    return `(${str(name)} :> [kind |-> "inputObject", values |-> {}, fields |-> ${seq(def.fields.map(defTla))}])`;
+    return `(${str(name)} :> [kind |-> "inputObject", values |-> {}, fields |-> ${seq(def.fields.map(defTla))}${def.oneOf ? ", oneOf |-> TRUE" : ""}])`;
   });
   const fields = [...model.fields].map(([name, args]) => `(${str(name)} :> ${seq(args.map(defTla))})`);
   return `[types |-> ${types.join(" @@ ")},\n  fields |-> ${fields.join(" @@ ")}]`;
@@ -495,7 +636,10 @@ const valueToTla = (v) => {
   switch (v.kind) {
     case "IntValue": return base("int", v.value);
     case "FloatValue": return base("float", v.value);
-    case "StringValue": return base("string", v.value);
+    // Validation.tla only needs the kind: a character TLA+ strings can't
+    // hold plainly is written as its code, which keeps distinct strings
+    // distinct.
+    case "StringValue": return base("string", [...v.value].map((c) => (/[\x20-\x7e]/.test(c) && c !== "\\" && c !== "\"" ? c : `<${c.codePointAt(0)}>`)).join(""));
     case "BooleanValue": return base("boolean", v.value);
     case "NullValue": return base("null", "");
     case "EnumValue": return base("enum", v.value);
@@ -609,6 +753,20 @@ OneState == section = "scalar"
 ====
 `;
 
+// Each string literal's Unicode text, as a sequence of code points.
+const lexerModule = (name, sources) => `---- MODULE ${name} ----
+EXTENDS Lexer, TLC
+
+Sources == ${seq(sources.map((src) => seq([...src].map((c) => String(c.codePointAt(0))))))}
+
+ASSUME \\A i \\in DOMAIN Sources :
+  LET r == StringValueAt(Sources[i], 1) IN PrintT(<<"text", i, r.ok /\\ r.end = Len(Sources[i]) + 1, r.value>>)
+ASSUME PrintT(<<"done", Len(Sources)>>)
+
+OneState == vector = [group |-> "Strings", n |-> 1]
+====
+`;
+
 const validationModule = (name, schemaTla, docs) => `---- MODULE ${name} ----
 EXTENDS Validation
 
@@ -641,6 +799,7 @@ const runJobs = async (jobs) => {
   try {
     cpSync(join(root, "specs/Coercion.tla"), join(dir, "Coercion.tla"));
     cpSync(join(root, "specs/Validation.tla"), join(dir, "Validation.tla"));
+    cpSync(join(root, "specs/Lexer.tla"), join(dir, "Lexer.tla"));
     let next = 0;
     const worker = async () => {
       while (next < jobs.length) {
@@ -694,11 +853,8 @@ const VECTOR = new RegExp(
   String.raw`<<\s*"vector",\s*(\d+),\s*"(\w*)",\s*${Array(ANSWERS).fill(ANSWER).join(String.raw`,\s*`)},\s*(TRUE|FALSE)\s*>>`,
   "g",
 );
-const EDITION_REASONS = {
-  coerceDefaults: "only the draft coerces a default value; October 2021 uses it as it is",
-  nestedListItems:
-    "only the draft coerces an item that isn't a list as a list of one where the item type is a list; October 2021's §3.11 table says [1, 2, 3] for [[Int]] is \"Error: Incorrect item value\"",
-};
+const EDITION_REASON = "only the draft coerces a default value; October 2021 uses it as it is";
+const ONEOF_REASON = "OneOf Input Objects (§3.10.1, @oneOf) are only in the draft: under October 2021 the schema is invalid";
 const OUTCOMES = { requestError: "request-error", fieldError: "field-error", resolved: "value" };
 const answerOf = (kind, text, field) => {
   const outcome = OUTCOMES[kind];
@@ -736,8 +892,38 @@ const hasLoneSurrogate = (text) => {
 const isIntegerInput = (v) => v?.kind === "IntValue" || (v?.[NUMBER] !== undefined && integerOf(v) !== undefined);
 
 const generate = async () => {
+  // Every string literal's text first, from Lexer.tla: the coercion cases
+  // hold it.
+  const sources = new Set();
+  const collect = (doc) =>
+    graphql.visit(doc, {
+      StringValue: (node) => {
+        sources.add(stringSource(node));
+      },
+    });
+  collect(sdl);
+  for (const o of operations) collect(graphql.parse(o.document));
+  const sourceList = [...sources];
+  await runJobs([
+    {
+      name: "Strings",
+      size: sourceList.length,
+      module: lexerModule("Strings", sourceList),
+      read: (flat) => {
+        let n = 0;
+        for (const [, i, ok, points] of flat.matchAll(/<<\s*"text",\s*(\d+),\s*(TRUE|FALSE),\s*<<([\d,\s]*)>>\s*>>/g)) {
+          const source = sourceList[Number(i) - 1];
+          if (ok !== "TRUE") throw new Error(`Lexer.tla doesn't read ${source} as one string literal`);
+          stringTexts.set(source, String.fromCodePoint(...points.split(",").map((x) => x.trim()).filter(Boolean).map(Number)));
+          n++;
+        }
+        if (n !== sourceList.length) throw new Error(`read ${n} string texts from Lexer.tla, which has ${sourceList.length}`);
+      },
+    },
+  ]);
+
   const coercionSchemaTla = coercionSchema();
-  const validationSchemaTla = validationSchema(graphql.buildSchema(SDL));
+  const validationSchemaTla = validationSchema(graphql.buildSchema(SDL_ONEOF));
   const cases = operations.map((o) => {
     const document = graphql.parse(o.document);
     const has64 = needsExactNumbers(o.variables);
@@ -810,23 +996,30 @@ const generate = async () => {
     const binary64 = r.binary64 && answerKey(r.binary64) !== answerKey(expected) ? r.binary64 : undefined;
     // October 2021's answer. Its CoerceVariableValues and
     // CoerceArgumentValues add a default value as it is, and its §3.10 uses
-    // an input field's default without coercing it. Its §3.11 table says
-    // [1, 2, 3] for [[Int]] is "Error: Incorrect item value". Where that
-    // changes the answer, the vector relies on the draft. A rule is a reason
-    // when following the draft on it alone changes October 2021's answer.
-    const oct2021 = r.oct2021.both;
+    // an input field's default without coercing it: where that changes the
+    // answer, the vector relies on the draft.
+    const oct2021 = r.oct2021.coerceDefaults;
     const draftOnly = answerKey(oct2021) !== answerKey(expected);
-    const reasons = !draftOnly
-      ? []
-      : [
-          ...(answerKey(oct2021) !== answerKey(r.oct2021.nestedListItems) ? [EDITION_REASONS.coerceDefaults] : []),
-          ...(answerKey(oct2021) !== answerKey(r.oct2021.coerceDefaults) ? [EDITION_REASONS.nestedListItems] : []),
-        ];
-    if (draftOnly && reasons.length === 0) reasons.push(EDITION_REASONS.coerceDefaults, EDITION_REASONS.nestedListItems);
     if (draftOnly && !alternatives.some((x) => answerKey(x) === answerKey(oct2021))) alternatives.push({ ...oct2021, policy: ["oct2021"] });
-    const editionNote = draftOnly
-      ? `${reasons.join("; ")}. Under October 2021 the answer is ${oct2021.outcome === "value" ? `the arguments ${JSON.stringify(oct2021.arguments)}` : `a ${oct2021.outcome.replace("-", " ")}`}`
-      : undefined;
+    const editionNote = o.schema === "oneOf"
+      ? ONEOF_REASON
+      : draftOnly
+        ? `${EDITION_REASON}. Under October 2021 the answer is ${oct2021.outcome === "value" ? `the arguments ${JSON.stringify(oct2021.arguments)}` : `a ${oct2021.outcome.replace("-", " ")}`}`
+        : undefined;
+    // October 2021's §3.11 table of examples says [1, 2, 3] for [[Int]] is
+    // "Error: Incorrect item value". Its prose, the same as the draft's,
+    // says otherwise, and examples are non-normative, so that answer isn't
+    // an edition's: it is recorded, under either edition's default rule, so
+    // that a result that follows the table is named as such. A literal the
+    // table refuses isn't "coercible" (§5.6.1) either, so a service whose
+    // validator follows the table answers with a request error.
+    for (const a of [r.oct2021.nestedListItems, r.oct2021.both]) {
+      if ([expected, ...alternatives].some((x) => answerKey(x) === answerKey(a))) continue;
+      alternatives.push({ ...a, policy: ["oct2021Example"] });
+      if (a.outcome === "field-error" && r.valid && r.inRange && !alternatives.some((x) => x.outcome === "request-error")) {
+        alternatives.push({ outcome: "request-error", policy: ["oct2021Example", "validating"] });
+      }
+    }
     // A JSON string with a lone surrogate: what String or ID gets is the
     // JSON parser's doing, and the spec doesn't define a valid Unicode
     // string. Where keeping it, or replacing it with U+FFFD, changes the
@@ -848,6 +1041,7 @@ const generate = async () => {
       spec,
       check,
       family: o.family,
+      schema: o.schema,
       document: o.document,
       variables: o.variables,
       operationName: o.operationName,
@@ -861,6 +1055,30 @@ const generate = async () => {
       loneSurrogate,
       editionNote,
     };
+  });
+
+  // restsOn: for each vector, the `literal` or `variable` vectors that
+  // hold its list items or input object fields on their own. A position's
+  // type is matched as written, or else with the other nullability for a
+  // value that isn't null; the first such vector in file order is taken.
+  const probes = new Map();
+  const probeKey = (kind, type, value) => `${kind}\u0000${typeText(type)}\u0000${valueText(kind, value)}`;
+  const argumentsOf = operations.map(argumentOf);
+  operations.forEach((o, i) => {
+    const a = argumentsOf[i];
+    if (!a || (o.family !== "literal" && o.family !== "variable")) return;
+    const key = probeKey(a.kind, a.type, a.value);
+    if (!probes.has(key)) probes.set(key, vectors[i].id);
+  });
+  const probeFor = (kind, type, value) => {
+    const nullable = type.wrappers[0] === "nonNull" ? { ...type, wrappers: type.wrappers.slice(1) } : { ...type, wrappers: ["nonNull", ...type.wrappers] };
+    return probes.get(probeKey(kind, type, value)) ?? (isNullOf(kind, value) ? undefined : probes.get(probeKey(kind, nullable, value)));
+  };
+  vectors.forEach((v, i) => {
+    const a = argumentsOf[i];
+    if (!a) return;
+    const restsOn = [...new Set(childrenOf(a.kind, a.type, a.value).map(([type, value]) => probeFor(a.kind, type, value)).filter((id) => id && id !== v.id))];
+    if (restsOn.length) v.restsOn = restsOn;
   });
 
   // absent-vs-null: two vectors on the same field whose arguments differ
@@ -891,6 +1109,7 @@ const generate = async () => {
     spec: v.spec,
     check: v.check,
     family: v.family,
+    ...(v.schema ? { schema: v.schema } : {}),
     document: v.document,
     variables: v.variables,
     ...(v.operationName !== null ? { operationName: v.operationName } : {}),
@@ -899,6 +1118,7 @@ const generate = async () => {
     ...(v.idFromInteger ? { idFromInteger: true } : {}),
     expected: v.expected,
     ...(v.alternatives.length ? { alternatives: v.alternatives } : {}),
+    ...(v.restsOn ? { restsOn: v.restsOn } : {}),
     ...(v.binary64 ? { binary64: v.binary64 } : {}),
     ...(v.loneSurrogate ? { loneSurrogate: v.loneSurrogate } : {}),
     ...(v.editionNote ? { edition: "draft", editionNote: v.editionNote } : {}),
@@ -915,6 +1135,7 @@ const generate = async () => {
     "{\n" +
     `  "source": "Expected answers from specs/Coercion.tla (ExecuteRequest, GetOperation) and document validity from specs/Validation.tla (IsValid), evaluated by tla-ts. Regenerate with node scripts/generate-vectors-coerce.mjs.",\n` +
     `  "schema": ${JSON.stringify(SDL)},\n` +
+    `  "schemas": ${JSON.stringify({ oneOf: SDL_ONEOF })},\n` +
     `  "inputs": ${JSON.stringify(inputs)},\n` +
     `  "vectors": [\n${ordered.map((v) => `    ${JSON.stringify(v)}`).join(",\n")}\n  ]\n}\n`
   );

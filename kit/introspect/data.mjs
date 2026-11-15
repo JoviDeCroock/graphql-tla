@@ -5,7 +5,7 @@
 // (query.mjs): "draft" or "oct2021".
 
 import { parseDefault } from "../schema/tla.mjs";
-import { SELECTED, TYPE_REF_DEPTH, WRAPPER_DEPTH, selection } from "./query.mjs";
+import { SELECTED, TYPE_REF_DEPTH, WRAPPER_DEPTH, isArgument, selection } from "./query.mjs";
 
 export const BUILTIN_DIRECTIVES = ["skip", "include", "deprecated", "specifiedBy", "oneOf"];
 // The built-in directives of each edition: October 2021 has no @oneOf, so
@@ -60,9 +60,11 @@ export const isRequestError = (response) => isMap(response) && Array.isArray(res
 //
 // A field the service lacks (`missing`, query.mjs) isn't selected either.
 // It is filled in with null, or false for isDeprecated and isRepeatable, so
-// that the rest can be graded; the kit counts the missing field against its
-// check (run.mjs), and any result where the filled value is wrong fails that
-// check too.
+// that the rest can be graded. Its definition, and that of an argument the
+// service lacks, is put back into the introspection types the service
+// returned (fillDefinitions). The kit counts each missing field or argument
+// once per run, and leaves out of each result the problems it can't see
+// without it (run.mjs).
 
 export class Malformed extends Error {}
 
@@ -167,9 +169,9 @@ const directiveOf = (d, i, S) => {
   };
 };
 
-// __type(name: "__Schema")'s answer: its fields, each with its type as a
-// ref (fields, for Introspection!SchemaFieldsMatch), and the List and
-// Non-Null types among those types (levels), each as
+// __type(name: "__Schema")'s answer (wrappersQuery): its fields, each with
+// its type as a ref (fields, for Introspection!SchemaFieldsMatch), and the
+// List and Non-Null types among those types (levels), each as
 // Introspection!WrapperMatches reads it: where it is, its kind, and its
 // other fields, a list field as the names of its items. A null answer has
 // no fields.
@@ -284,7 +286,6 @@ export const caseOf = (response, documentDirectives, documentTypes, profile = "d
   const s = object(data.__schema, "__schema", S.schema);
   const types = value(s, "types", "__schema", isList).map((t, i) => typeOf(t, `types[${i}]`, S));
   const directives = value(s, "directives", "__schema", isList).map((d, i) => directiveOf(d, i, S));
-  const wrappers = wrappersOf(data.wrappers, S);
   const ofRoot = (key) => (s[key] === null ? [] : [refOf(s[key], key, 0)]);
   const doc = new Set(documentDirectives);
   const builtin = EDITION_DIRECTIVES[profile];
@@ -303,10 +304,16 @@ export const caseOf = (response, documentDirectives, documentTypes, profile = "d
       builtinTypeNames: new Set(types.map((t) => t.name[0]).filter((n) => n !== undefined && isBuiltinType(n))),
       directives,
       builtinDirectiveNames: new Set(directives.map((d) => d.name).filter((n) => !doc.has(n))),
-      wrappers: wrappers.levels,
-      wrapperFields: wrappers.fields,
     },
   };
+};
+
+// The case for the answer to wrappersQuery.
+export const wrappersCaseOf = (response, profile = "draft", missing = []) => {
+  const S = selection(profile, missing);
+  const data = object(dataOf(response), "data", ["wrappers"]);
+  const { levels, fields } = wrappersOf(data.wrappers, S);
+  return { actual: { wrappers: levels, wrapperFields: fields } };
 };
 
 // The case for one response to __type(name:) lookups: [name, result] per
@@ -482,8 +489,10 @@ const wrappersJson = (builtins, profile) => {
 
 // A vector's full expected response under a profile: its own part plus
 // the built-ins (vectors.json's builtins[profile], already in the
-// profile's shape), for a __schema vector, or its lookups' types.
+// profile's shape), for a __schema vector, its lookups' types, or for the
+// wrappers vector, __Schema's fields as the profile's built-ins have them.
 export const fullResponse = (vector, builtins, profile = "draft") => {
+  if (vector.wrappers) return { data: { wrappers: wrappersJson(builtins[profile], profile) } };
   const d = vector.expected.response.data;
   if (vector.lookups) return { data: Object.fromEntries(Object.entries(d).map(([k, t]) => [k, typeFor(profile, t)])) };
   const s = d.__schema;
@@ -496,7 +505,61 @@ export const fullResponse = (vector, builtins, profile = "draft") => {
         types: [...s.types.map((t) => typeFor(profile, t)), ...b.types],
         directives: [...s.directives.map((x) => directiveFor(profile, x)), ...b.directives],
       },
-      wrappers: wrappersJson(b, profile),
     },
   };
+};
+
+// ---------------------------------------------------------------------------
+// Fields and arguments a service lacks
+
+const pick = (obj, keys) => Object.fromEntries(keys.map((k) => [k, obj[k]]));
+const clone = (x) => JSON.parse(JSON.stringify(x));
+
+// The response with the definitions of the `missing` fields and arguments
+// put back into the introspection types it returns (in __schema's types,
+// in __type(name:) answers, and among __Schema's fields in `wrappers`), as
+// the profile's built-ins `b` (builtins[profile]) define them, shaped as
+// the query without them selects. A service that lacks a field doesn't list
+// it among its type's fields either; the kit counts that once per run
+// (run.mjs), not in every result. Anything that isn't shaped as expected is
+// left as it is, for caseOf to judge.
+export const fillDefinitions = (response, missing, b, profile) => {
+  if (missing.length === 0 || !isMap(response) || !isMap(response.data)) return response;
+  const S = selection(profile, missing);
+  const out = clone(response);
+  const inputValue = (v) => pick(v, S.inputValue);
+  const field = (f) => ({ ...pick(f, S.field), ...(S.field.includes("args") ? { args: f.args.map(inputValue) } : {}) });
+  const fill = (t) => {
+    if (!isMap(t) || typeof t.name !== "string" || !Array.isArray(t.fields)) return;
+    const def = b.types.find((x) => x.name === t.name);
+    if (!def) return;
+    for (const m of missing) {
+      const [, owner, name, arg] = m.match(/^(\w+)\.(\w+)(?:\((\w+):\))?$/);
+      if (owner !== t.name) continue;
+      const expected = def.fields.find((f) => f.name === name);
+      if (!expected) continue;
+      if (!arg) {
+        if (!t.fields.some((f) => f?.name === name)) t.fields.push(field(expected));
+        continue;
+      }
+      const own = t.fields.find((f) => f?.name === name);
+      const expectedArg = expected.args.find((a) => a.name === arg);
+      if (expectedArg && isMap(own) && Array.isArray(own.args) && !own.args.some((a) => a?.name === arg)) own.args.push(inputValue(expectedArg));
+    }
+  };
+  const types = out.data.__schema?.types;
+  if (Array.isArray(types)) types.forEach(fill);
+  for (const [key, t] of Object.entries(out.data)) if (key !== "__schema" && key !== "__typename" && key !== "wrappers") fill(t);
+  const w = out.data.wrappers;
+  if (isMap(w) && Array.isArray(w.fields)) {
+    const expected = wrappersJson(b, profile).fields;
+    const level = (node, depth) =>
+      depth === 0 || node.ofType === undefined ? pick(node, ["kind", "name"]) : { ...pick(node, S.wrapper), ofType: node.ofType === null ? null : level(node.ofType, depth - 1) };
+    for (const m of missing.filter((x) => !isArgument(x) && x.startsWith("__Schema."))) {
+      const name = m.split(".")[1];
+      const f = expected.find((x) => x.name === name);
+      if (f && !w.fields.some((x) => x?.name === name)) w.fields.push({ name, type: level(f.type, WRAPPER_DEPTH) });
+    }
+  }
+  return out;
 };

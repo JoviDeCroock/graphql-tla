@@ -23,6 +23,16 @@
 // entry in SchemaResult's types, or null for a name the schema doesn't
 // have, such as a built-in scalar nothing references.
 //
+// A schema that declares a directive of its own needs the adapter's
+// custom-directives capability (`requires`). One that applies a directive
+// to a directive definition uses syntax only the draft's grammar has
+// (`syntax`, the reason the kit gives for not grading a schema that
+// doesn't build).
+//
+// The last vector, `wrappers`, asks __type(name: "__Schema")'s fields with
+// every field of their types (query.mjs's wrappersQuery), for the minimal
+// schema. Its expected answer follows from the built-ins.
+//
 // The expected responses are what the self-test and findings show. The
 // kit doesn't compare responses with them directly: it evaluates
 // Introspection!Matches on each response (kit/introspect/run.mjs), which
@@ -33,8 +43,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { lookupQuery, schemaQuery } from "../kit/introspect/query.mjs";
-import { directiveFor, responseOf, typeFor, typeJson } from "../kit/introspect/data.mjs";
+import { lookupQuery, schemaQuery, wrappersQuery } from "../kit/introspect/query.mjs";
+import { directiveFor, fullResponse, responseOf, typeFor, typeJson } from "../kit/introspect/data.mjs";
 import { chunked, evaluateModule, moduleFooter, pool, schemaData, tla } from "../kit/schema/tla.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
@@ -55,7 +65,7 @@ enum E { X "Why" Y @deprecated }
 input In { a: Int = 1, b: Int, e: E = Y, old: String }
 input Pick { id: ID, name: String }
 scalar Date
-"Tags a field" directive @tag(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY`,
+"Labels a field" directive @label(v: String, w: Int = 2) repeatable on FIELD_DEFINITION | QUERY`,
   ],
   [
     "interfaces",
@@ -149,6 +159,13 @@ const LOOKUP_DEFAULTS = new Set(["deprecation", "inputDeprecation"]);
 
 const lookupsOf = (family) => [...LOOKUPS[family], UNKNOWN].map((name, i) => ({ alias: `t${i}`, name }));
 
+// The adapter capability a schema with directives of its own needs.
+const CUSTOM_DIRECTIVES = "custom-directives";
+// Why a schema that applies a directive to a directive definition may not
+// build: October 2021's DirectiveDefinition has no Directives.
+const DIRECTIVE_DEFINITION_DIRECTIVES =
+  "the schema applies a directive to a directive definition, which only the draft's grammar has (§3.13 DirectiveDefinition)";
+
 const generate = async () => {
   const data = SCHEMAS.map(([, , sdl]) => schemaData(sdl));
   const results = await pool(
@@ -193,7 +210,12 @@ ${moduleFooter}`;
   const same = (family, what, a, b) => {
     if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${family}: ${what} under October 2021 isn't the draft's without the draft-only fields`);
   };
-  const meta = (r) => ({ ...(r.oct2021 ? {} : { edition: "draft" }), ...(r.needs.length ? { needs: r.needs } : {}) });
+  const meta = (r, i) => ({
+    ...(r.oct2021 ? {} : { edition: "draft" }),
+    ...(r.needs.length ? { needs: r.needs } : {}),
+    ...(data[i].directives.length ? { requires: [CUSTOM_DIRECTIVES] } : {}),
+    ...(data[i].directives.some((d) => d.directives.size > 0) ? { syntax: DIRECTIVE_DEFINITION_DIRECTIVES } : {}),
+  });
   const vectors = [];
   SCHEMAS.forEach(([family, spec, sdl], i) => {
     const r = results[i];
@@ -218,7 +240,7 @@ ${moduleFooter}`;
         id: `${family}.${variant}`,
         spec,
         family,
-        ...meta(r),
+        ...meta(r, i),
         includeDeprecated,
         sdl,
         query: schemaQuery("draft", includeDeprecated),
@@ -246,7 +268,7 @@ ${moduleFooter}`;
         id: `${family}.${variant}`,
         spec: ["4.2"],
         family,
-        ...meta(r),
+        ...meta(r, i),
         includeDeprecated,
         sdl,
         query: lookupQuery("draft", lookups, includeDeprecated),
@@ -255,6 +277,17 @@ ${moduleFooter}`;
         expected: { response: { data } },
       });
     }
+  });
+  vectors.push({
+    id: "wrappers",
+    spec: ["4.2.2"],
+    family: "wrappers",
+    includeDeprecated: false,
+    sdl: SCHEMAS[0][2],
+    query: wrappersQuery("draft"),
+    query2021: wrappersQuery("oct2021"),
+    wrappers: true,
+    expected: { response: fullResponse({ wrappers: true }, builtins, "draft") },
   });
   return {
     source:
@@ -280,7 +313,8 @@ if (process.argv.includes("--check")) {
   const all = JSON.parse(text).vectors;
   const lookups = all.filter((v) => v.lookups).length;
   const draft = all.filter((v) => v.edition === "draft").length;
+  const custom = all.filter((v) => v.requires).length;
   console.log(
-    `wrote ${all.length} vectors (${SCHEMAS.length} schemas: ${all.length - lookups} __schema, ${lookups} __type lookups; ${draft} draft only) to kit/introspect/vectors.json`,
+    `wrote ${all.length} vectors (${SCHEMAS.length} schemas: ${all.length - lookups - 1} __schema, ${lookups} __type lookups, 1 wrappers; ${draft} draft only, ${custom} need ${CUSTOM_DIRECTIVES}) to kit/introspect/vectors.json`,
   );
 }

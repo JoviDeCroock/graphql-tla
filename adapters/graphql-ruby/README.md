@@ -10,8 +10,11 @@ Source references below are to graphql-ruby 2.6.15, files under
 
 ## Setup
 
-Needs Ruby and Bundler (checked with Ruby 3.4). The gems go into
-`vendor/bundle`, which is gitignored.
+Needs Ruby and Bundler (checked with Ruby 3.4.3). The gems go into
+`vendor/bundle`, which is gitignored. The Gemfile pins graphql-ruby and the
+`json` gem (2.9.1, the version Ruby 3.4.3 ships), since the adapter reads
+the kit's messages with it, and which inputs it refuses shows up in the
+results ([parse](#parse), [coerce](#coerce)).
 
 ```shell
 cd adapters/graphql-ruby
@@ -34,8 +37,10 @@ node kit/cli.mjs run coerce --adapter "adapters/graphql-ruby/run.sh --unvalidate
 it is set, otherwise `ruby` from `PATH`. It passes its arguments on:
 
 - `--lazy` waits through `lazy_resolve` instead of the Dataloader (below).
-- `--invalid-results` turns wrong-shaped results into field errors with
-  graphql-ruby's documented hooks, and claims `invalid-results` (below).
+- `--invalid-results` turns wrong-shaped and uncoercible results into field
+  errors with graphql-ruby's documented hooks (below). Without it,
+  graphql-ruby raises out of `execute` for them, and the adapter answers
+  `no-response`.
 - `--no-idle` leaves out `idle`, so the kit falls back to `--grace`.
 - `--unvalidated` makes `coerce` execute without validating, and claims
   `unvalidated` (see [coerce](#coerce)).
@@ -109,25 +114,32 @@ its own value arrives. A list's items can be lazy too, so this mode claims
   a resolver, and graphql-ruby only waits for a list item that is a
   registered lazy (`resolve_list_item`, `runtime.rb:840`), so by default
   items come inline.
-- `invalid-results` and `uncoercible-results`: only with `--invalid-results`.
-  By default graphql-ruby doesn't produce a response for them (below). The
-  conformance sheet runs the adapter with `--invalid-results`.
+- `invalid-results` and `uncoercible-results`: in both modes. Out of the box
+  graphql-ruby raises out of `Schema#execute` for most of these values
+  (below). Then a client gets no response, so the adapter answers
+  `no-response`, and the kit counts it against `responds`, or
+  `resultCoercion` after an uncoercible value. With `--invalid-results` they
+  become field errors. The conformance sheet runs the adapter with
+  `--invalid-results`. An exception that is the adapter's own (a message
+  from the kit it didn't expect) is answered with `error`, in both modes.
 - `error-propagation-off` isn't claimed: graphql-ruby 2.6.15 has no switch
   or directive that disables null propagation.
 
 ## Known graphql-ruby deviations in execution
 
-Every case satisfies the reference. The kit's one finding is a SHOULD:
-graphql-ruby truncates a fraction returned for an Int (`intFraction`,
-below). The rest are graphql-ruby's defaults around wrong-shaped results,
-which the kit only reaches with `--invalid-results` or doesn't reach at
-all.
+With `--invalid-results`, every well-formed case satisfies the reference, and
+the kit's one finding is a SHOULD: graphql-ruby truncates a fraction returned
+for an Int (`intFraction`, below). That run's `resultCoercion` pass depends
+on the hooks. Out of the box, graphql-ruby raises out of `execute` for
+wrong-shaped results, a non-finite Float and an unknown enum value, and the
+kit reports those runs as `responds` and `resultCoercion` failures.
 
 ### Wrong-shaped results raise out of `execute`
 
 §3.5 and §6.4.3 make a result that can't be coerced, or a runtime type that
 isn't a possible type, a field error. By default graphql-ruby raises out of
-`Schema#execute` instead, so the client gets no response:
+`Schema#execute` instead, so the client gets no response, and the adapter
+answers `no-response`:
 
 - a non-list for a list type: `.each` fails, and graphql-ruby raises
   `ListResultFailedError` (`runtime.rb:808-811`);
@@ -138,12 +150,17 @@ isn't a possible type, a field error. By default graphql-ruby raises out of
   `lib/graphql/schema.rb:1500`);
 - a type that isn't one of the abstract type's possible types: the default
   `Schema.type_error` raises `UnresolvedTypeError`
-  (`lib/graphql/schema.rb:1745-1746`).
+  (`lib/graphql/schema.rb:1745-1746`);
+- a non-finite Float: `Types::Float.coerce_result` passes a
+  `FloatEncodingError` to `Schema.type_error`, which raises it
+  (`lib/graphql/types/float.rb:22-27`, `lib/graphql/schema.rb:1745-1746`);
+- a name that isn't one of an enum's values: `Enum.coerce_result` raises
+  `Enum::UnresolvedValueError` (`lib/graphql/schema/enum.rb:255`).
 
 graphql-ruby treats these as programming errors. `--invalid-results` uses the
 two hooks its documentation offers, `rescue_from` and `type_error`, to report
 them as field errors at the field's path. With those, the kit's
-`invalid-results` cases pass.
+`invalid-results` cases pass, and so does `resultCoercion`.
 
 ### Lenient result coercion
 
@@ -154,9 +171,10 @@ so any value but `nil` and `false`, including an object or the string
 error where a value can't be coerced without losing information. A schema with
 resolvers returning `1.5` for an Int and `"false"` for a Boolean answers
 `{"data":{"i":1,"b":true}}`. The kit's `leaves` fixture catches the Int case:
-with `--invalid-results`, an `uncoercible` outcome returns `1.2` for an Int,
-and graphql-ruby answers `1` instead of an error (`resultCoercion`). It doesn't
-probe Boolean, since §3.5.4 leaves reasonable coercions to the service.
+an `uncoercible` outcome returns `1.2` for an Int, and graphql-ruby answers `1`
+instead of an error (`intFraction`, a SHOULD, in both modes, since no hook is
+involved). It doesn't probe Boolean, since §3.5.4 leaves reasonable coercions
+to the service.
 
 ## Other areas
 
@@ -168,15 +186,16 @@ whose only setting is its logger: graphql-ruby logs to `$stdout` by default
 areas log errors to stderr and drop warnings (see [Validate](#validate-1) for
 the warnings validation logs).
 
-Capabilities claimed: `parse`, `validate`, `coerce`, `schema`, `introspect` and
-`absent-vs-null`, and `unvalidated` with `--unvalidated`. Not claimed:
-`custom-scalar-literals` and `exact-numbers` (below).
+Capabilities claimed: `parse`, `validate`, `coerce`, `schema`, `introspect`,
+`absent-vs-null` and `custom-directives` (`from_definition` builds the SDL's
+`directive @label(...) on ...` definitions, so validation knows them and
+introspection lists them), and `unvalidated` with `--unvalidated`. Not
+claimed: `custom-scalar-literals` and `exact-numbers` (below).
 
 A crash, an exception from graphql-ruby that isn't a parse error, a validation
-error or a schema error, is answered with `error`, which the kit records as a
-crash in parse, validate, coerce and schema. In introspect an `error` stops the
-run, so a crash there is answered as a request error instead, with the
-exception in a `crash` field and on stderr.
+error or a schema error, is answered with `error` in every area, introspect
+included, and the kit records it as a crash for that vector. A crash is never
+answered as a response, since graphql-ruby gave none.
 
 ### parse
 
@@ -185,10 +204,13 @@ default parser and settings. A `GraphQL::ParseError` is `ok: false`. The parser
 also reads the type system language, so every definition must be an operation
 or a fragment.
 
-Ruby's JSON parser (json 2.11) refuses an escaped lone surrogate ("incomplete
-surrogate pair"), so the kit's messages for the vectors that hold one can't be
-read. The adapter answers those parse requests `unsupported`, so the kit
-doesn't grade them: graphql-ruby's parser never sees the source.
+Ruby's JSON parser (json 2.9.1) refuses an escaped lone high surrogate
+("incomplete surrogate pair"), so the kit's messages for the vectors that
+hold one can't be read. The adapter answers those parse requests
+`{"unsupported": "lone surrogate: ..."}`, so the kit doesn't grade them:
+graphql-ruby's parser never sees the source. A lone low surrogate is read,
+into a string that isn't valid UTF-8, and reaches the parser. Any other line
+the adapter can't read is answered with `error`.
 
 ### validate
 
@@ -211,7 +233,10 @@ and returns `"ok"`. The request runs through `Schema.execute`, and the response
 is `Query::Result#to_json`, read back. The variables are read with Ruby's
 `JSON.parse`, as Rack and Rails read a request body: integers exactly, other
 numbers as `Float`, so `1e400` becomes `Infinity` and `exact-numbers` isn't
-claimed.
+claimed. Variables with an escaped lone high surrogate (`{"x": "\ud800"}`)
+are refused by that parser, as a Ruby server would refuse the request body
+before graphql-ruby ran. The adapter answers them
+`{"unsupported": "lone surrogate: ..."}`, so the kit doesn't grade them.
 
 - `absent-vs-null`: graphql-ruby leaves an argument or input field that has
   no value out of the keyword arguments, and out of an input object
@@ -249,8 +274,10 @@ asks the application's `resolve_type` for the root value. The adapter answers
 ### introspect
 
 `Schema.from_definition`, then the kit's query through `Schema.execute`, and
-`Query::Result#to_json`. A schema graphql-ruby rejects is answered as a
-request error.
+`Query::Result#to_json`. A schema graphql-ruby rejects, by the same test as in
+schema above, whether `from_definition` or `Schema.execute` raises it, is
+answered as a request error. Any other exception is a crash, answered with
+`error`.
 
 ## Results
 
@@ -258,12 +285,18 @@ request error.
 
 | Area | Result |
 | --- | --- |
-| execution | Unchanged by the other areas: with `--random 300 --seed 7`, the same 1439 of 1439 distinct well-formed cases satisfy the reference before and after, and the same 126 cases are malformed (lenient result coercion, above). |
-| parse | 1858 of 1983 vectors agree. 10 of 31 checks fail. 73 of the 125 failing vectors are draft only. |
-| validate | 2748 of 3079 vectors agree. 6 rule checks and `acceptsValid` fail, `singleRootField` on draft-only vectors only. 282 of the 331 failing vectors are graphql-ruby's legacy defaults (below). |
-| coerce | Validating: 1987 of 2010 results match (26 need `unvalidated`), 5 of them crashes. `int`, `inputObject`, `list` and `invalidNotExecuted` (MUST) and `idCoerced` (SHOULD) fail. With `--unvalidated`: 1242 of 2036, 173 crashes. |
+| execution | With `--random 1500 --seed 1` (the sheet's run): 11864 cases, 1929 distinct. Every well-formed case satisfies the reference; the 385 malformed cases are `intFraction` (343 in `leaves`, 42 in `unions`, lenient result coercion, above). |
+| parse | 1852 of the 1977 graded vectors agree; 6 lone-surrogate sources are `unsupported`, not graded. 10 of 31 checks fail. 73 of the 125 failing vectors are draft only. |
+| validate | 2748 of 3079 vectors agree. 6 rule checks and `acceptsValid` fail. 282 of the 331 failing vectors are graphql-ruby's legacy defaults (below), and 25 are hidden types. |
+| coerce | Validating: 1968 of the 1991 results run match (26 need `unvalidated`); 19 lone-surrogate vectors are `unsupported`, not graded. 5 failures are crashes. `int`, `inputObject`, `list` and `invalidNotExecuted` (MUST) and `idCoerced` (SHOULD) fail. With `--unvalidated` (before the lone-surrogate change): 1242 of 2036, 173 crashes. |
 | schema | 115 of 165 schemas agree, 1 of the failures a crash. 31 of 44 rules fail, 5 of them on draft-only vectors only, most because graphql-ruby doesn't check them. |
-| introspect | Graded against October 2021, since the draft's query is rejected. 8 of 28 results match. `executes` (a crash), `types`, `typeByName`, `descriptions` and `builtinDefinitions` fail. |
+| introspect | Graded against October 2021, since the draft's query is rejected. The 3 nested list defaults (below) crash and are answered with `error`, which the kit records as crashes. With a kit that still stops the run on an introspect `error`, the run stops at the first of them. Before the adapter answered crashes with `error`: 8 of 28 results matched, and `executes` (the crash), `types`, `typeByName`, `descriptions` and `builtinDefinitions` failed. |
+
+Execution out of the box (`run.sh` without `--invalid-results`, `--random 50
+--no-exhaustive`): every distinct well-formed case satisfies the reference,
+and 59 of 350 cases are malformed: `no-response` for wrong-shaped results
+(`responds`), for a non-finite Float or an unknown enum value
+(`resultCoercion`), and `intFraction`.
 
 ## Known deviations in the other areas
 
@@ -341,9 +374,19 @@ vectors.
   exist on type 'Query'" (24 vectors). The examples schema's `DogOrHuman`
   union is unreferenced, so §5.5.2.3's own example `...dogOrHumanFragment`
   fails with "No such type DogOrHuman" (1 vector). The spec defines a schema's
-  types as all the types it defines.
+  types as all the types it defines. The kit files the 25 under 11 findings,
+  by the rule each vector's invalid sibling breaks, but they have this one
+  cause. With graphql-ruby's newer `GraphQL::Schema::Visibility`
+  (`schema.use(GraphQL::Schema::Visibility)`), the 24 `resource` documents are
+  accepted; `DogOrHuman` is still hidden. The same hiding makes 15 invalid
+  documents that use `resource` fail with "Field 'resource' doesn't exist"
+  rather than for the rule they break, so they pass for the wrong reason.
 - **§5.2.4.1 with `@skip` or `@include` at a subscription's root (22 vectors,
-  all draft only):** accepted, as October 2021 allows.
+  tagged draft only):** accepted. The draft forbids both directives in the
+  root selection set. October 2021 collects the root fields with no variable
+  values and requires exactly one, so 11 of the 22, which put `@skip(if:
+  true)` on the only root field (`subscription S5 { postAdded @skip(if: true)
+  { id } }`), break October 2021's rule too: nothing is collected.
 - **§5.7.3 not checked on variable definitions (1 vector):**
   `query Q($v: Int @once @once)` is accepted. `UniqueDirectivesPerLocation`
   hooks every node with directives except variable definitions
@@ -364,13 +407,15 @@ vectors.
 
 Validating, as graphql-ruby runs a request:
 
-- **A JSON number with a fraction part isn't an Int or an ID (14 vectors:
-  `int`, `list`, `inputObject`, and `idCoerced`, a SHOULD):**
+- **A JSON number written with a fraction or an exponent isn't an Int or an
+  ID (14 vectors: `int`, `list`, `inputObject`, and `idCoerced`, a SHOULD):**
   `query($x: Int) { int(v: $x) }` with `{"x": 1.0}` is a request error, "Could
-  not coerce value 1.0 to Int". Ruby's JSON parser reads `1.0` as a `Float`, and
+  not coerce value 1.0 to Int", and an ID given `1e21` is too. The `list` and
+  `inputObject` ones are this Int coercion inside a list or an input object.
+  Ruby's JSON parser reads `1.0` and `1e21` as a `Float`, and
   `Types::Int.coerce_input` accepts only an `Integer` (`types/int.rb:13-14`),
   `Types::ID` only a `String` or an `Integer` (`types/id.rb:15-23`). The kit
-  counts JSON `1.0` as an integer (§3.5.1).
+  counts JSON `1.0` as an integer (§3.5).
 - **A non-finite number for an input object crashes (5 vectors, `inputObject`
   and `list`):** `query($x: Point) { point(v: $x) }` with `{"x": 1e400}`
   (`Infinity` once parsed) raises `JSON::GeneratorError: Infinity not allowed
@@ -395,12 +440,15 @@ and an input object argument given a scalar literal, such as
 `{ point(v: 0) }`, raises `NoMethodError: undefined method 'key?' for an
 instance of Integer` (`schema/argument.rb:496`): 168 crashes.
 
-The two JSON strings with a lone surrogate are refused by Ruby's JSON parser,
-a request error, which the informational `loneSurrogates` check records.
+The 19 vectors whose variables hold a lone surrogate (`{"x": "\ud800"}`) are
+answered `unsupported` (above): the refusal is Ruby's JSON parser's, so
+graphql-ruby isn't graded on them. Before, the adapter answered them with a
+request error of its own, which passed 17 of them under MUST checks and the 2
+others under the informational `loneSurrogates`.
 
 ### Schema
 
-- **Rules graphql-ruby doesn't check (23 rules, and 2 it only warns about):** `typeNamesUnique`
+- **Rules graphql-ruby doesn't check (26 rules, and 2 it only warns about):** `typeNamesUnique`
   (`scalar A scalar A`), `typeNameNotBuiltin` (`type Int { … }`),
   `directiveNamesUnique`, the reserved `__` prefix on type, field, argument,
   input field, enum value and directive names, `rootTypesAreObjects` (an
@@ -412,9 +460,14 @@ a request error, which the informational `loneSurrogates` check records.
   `implDeprecation`), `unionMembersDefined` and `unionMembersUnique`, and
   `inputObjectUnbreakableCycle` (5, 2 of them draft only, including §3.10's
   `input Example { self: Example! }`) and `inputObjectDefaultValueCycle` (4,
-  draft only). `fieldsDefined` and `inputFieldsDefined` only warn on stderr
-  that an empty type "will raise an error in a future GraphQL-Ruby version"
-  (`schema/member/has_fields.rb:338`, `schema/input_object.rb:311`).
+  draft only), `directiveUsesItself` and `directiveReferencesItselfIndirectly`
+  (below), and `implementsItself` (below). `fieldsDefined` and
+  `inputFieldsDefined` only warn on stderr that an empty type "will raise an
+  error in a future GraphQL-Ruby version" (`schema/member/has_fields.rb:338`,
+  `schema/input_object.rb:311`). `fieldsDefined.2.invalid`, an `interface I`
+  without fields, is rejected only because graphql-ruby's parser requires
+  braces on an interface definition ("Expected LCURLY, not end of file",
+  `language/parser.rb:344-349`), which both editions' grammar doesn't.
 - **Some rules checked only where a type is visible:** `fieldNamesUnique`
   catches duplicate fields on an object, but not on an interface with no
   implementations, which is hidden (above) and never loaded.
@@ -438,10 +491,17 @@ a request error, which the informational `loneSurrogates` check records.
   `INPUT_FIELD_DEFINITION` (`schema/directive.rb:291-296`). §3.13's
   `@invalidExample` and `directiveReferencesItselfIndirectly.2.invalid` are
   rejected with the same message, so `directiveUsesItself` passes for the
-  wrong reason.
+  wrong reason. Declared `on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION`,
+  `directive @d(a: String @d)` and the `@d`/`@e` cycle build and introspect
+  without error: graphql-ruby doesn't check §3.13's self-reference rules.
 - **Crash (1 schema, `implementsItself`):** `interface A implements A` raises
-  Ruby's own `ArgumentError: cyclic include detected`, from the `include` that
-  makes an interface module implement another (`schema/member/has_interfaces.rb:26`).
+  `ArgumentError: cyclic include detected`. graphql-ruby doesn't check §3.7's
+  rule; it represents an interface as a Ruby module and `include`s each
+  interface it implements (`schema/member/has_interfaces.rb:26`), and Ruby's
+  `Module#include` refuses the cycle. The adapter counts as a rejection only
+  what graphql-ruby reports as a schema error: its own error classes, or a
+  `raise` in its own code. An exception Ruby raises from a core method that
+  graphql-ruby called, as here, is a crash.
 
 ### Introspect
 
@@ -458,10 +518,15 @@ a request error, which the informational `loneSurrogates` check records.
   `onFragment` and `onField` (`introspection/directive_type.rb:19-21`).
 - **Built-in definitions (`builtinDefinitions`, every `__schema` result,
   16):** `__Directive.isRepeatable` is `Boolean`, not `Boolean!`
-  (`introspection/directive_type.rb:23`), and `@deprecated` also has the draft's
-  `ARGUMENT_DEFINITION` and `INPUT_FIELD_DEFINITION` locations
-  (`schema/directive/deprecated.rb:8`), with its October 2021 `String` argument.
-- **A crash on a nested list default (3 results, `executes`):**
+  (`introspection/directive_type.rb:23`); every value it returns is still
+  `true` or `false`. `@deprecated` is on `FIELD_DEFINITION`, `ENUM_VALUE`,
+  `ARGUMENT_DEFINITION` and `INPUT_FIELD_DEFINITION`
+  (`schema/directive/deprecated.rb:8`), with October 2021's `String` argument.
+  The two extra locations are the draft's (which also has
+  `DIRECTIVE_DEFINITION`), not a departure from both editions: the run is
+  graded against October 2021 only because graphql-ruby lacks
+  `__Schema.directives(includeDeprecated:)`.
+- **A crash on a nested list default (3 vectors):**
   `type Query { f(w: [[Int]] = [1, 2]): Int }` makes `from_definition` raise
   `NoMethodError: undefined method 'map' for an instance of Integer`.
   `validate_default_value` wraps a single default in a list only at the outer
@@ -475,4 +540,4 @@ a request error, which the informational `loneSurrogates` check records.
 - **An unreferenced type is hidden (3 results, `types` and `typeByName`):**
   with `schema { query: Q subscription: S }`, a `type Mutation` nothing
   references is left out of `types`, and `__type(name: "Mutation")` is null
-  (`schema/warden.rb:509-517`).
+  (`schema/warden.rb:509-517`). `GraphQL::Schema::Visibility` hides it too.

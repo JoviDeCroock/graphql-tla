@@ -7,6 +7,7 @@ GEM
       base64
       fiber-storage
       logger
+    json (2.9.1)
     logger (1.7.0)
 
 PLATFORMS
@@ -15,6 +16,7 @@ PLATFORMS
 
 DEPENDENCIES
   graphql (= 2.6.15)
+  json (= 2.9.1)
 
 BUNDLED WITH
    2.6.8

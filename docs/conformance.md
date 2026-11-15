@@ -37,6 +37,8 @@ The adapter starts by announcing itself:
 {"type":"hello","protocol":1,"name":"my-graphql 2.3","capabilities":["idle","deferred-items","mutation","subscription"]}
 ```
 
+Two optional `hello` fields tell the kit about outcomes a typed implementation can't produce (see [Capabilities](#capabilities)): `"uncoercibleTypes":["Float"]` and `"nullItems":false`.
+
 The kit, for each execution:
 
 ```json
@@ -80,7 +82,7 @@ The resolver returns this for each outcome:
 | `{"kind":"list","length":2}` | A list of `length` items. With `deferred-items`, each item is itself pending and is reported with its own `call`. |
 | `{"kind":"null"}` | null |
 | `{"kind":"error"}` | An error, by throwing, rejecting or returning an error value |
-| `{"kind":"uncoercible"}` | A value the leaf type can't represent: `1.2` for an Int, a non-finite number (`Infinity` or `NaN`) for a Float, a name that isn't one of an enum's values. Only sent with `uncoercible-results`. Each should raise an execution error (§3.5.1, §3.5.2, §3.9). The Int fraction is graded as `intFraction`, a SHOULD, the others as `resultCoercion`, a MUST. |
+| `{"kind":"uncoercible"}` | A value the leaf type can't represent: `1.2` for an Int, a non-finite number (`Infinity` or `NaN`) for a Float, a name that isn't one of an enum's values. Only sent with `uncoercible-results`, and only for the leaf types in `uncoercibleTypes` if the adapter gives it. Each should raise an execution error (§3.5.1, §3.5.2, §3.9). The Int fraction is graded as `intFraction`, a SHOULD, the others as `resultCoercion`, a MUST. |
 
 The kit checks leaf values in the response against the same table, because the reference abstracts them away. Results of the wrong shape are only sent to adapters with `invalid-results`:
 
@@ -95,11 +97,15 @@ The kit checks leaf values in the response against the same table, because the r
 | `idle` | After each `execute` and `settle`, the adapter lets the engine run until it is blocked on the kit, then sends `idle`. That makes runs deterministic, which the exhaustive runs need. Without it, the kit waits `--grace` ms of silence instead and only does random runs. |
 | `deferred-items` | A list's items settle one by one. Without it, a list `settle` carries `items`, the outcome of each item (never `error`), and the adapter returns them inline. |
 | `invalid-results` | The adapter can return results of the wrong shape. Typed implementations usually can't. |
-| `uncoercible-results` | The adapter can return the `uncoercible` values above, in fixtures with invalid results. |
+| `uncoercible-results` | The adapter can return the `uncoercible` values above, in fixtures with invalid results. If `hello` also has `uncoercibleTypes`, a list of `"Int"`, `"Float"` and `"Enum"`, the kit sends `uncoercible` only for those leaf types. In a typed implementation an Int field returns an integer type and an enum field a native enum, so neither can hold such a value: Juniper claims `["Float"]`, since an `f64` can be infinite. |
 | `mutation`, `subscription` | It runs those operation types. A subscription's source stream yields one event, and the response is the result for that event. In graphql-js, the root field's resolver runs on the event (`{}`) and is the root `call`. In engines where the stream's item is the root field's value, the source stream's request for its event is the root `call`, and the settled outcome is the event. |
 | `error-propagation-off` | It can execute with `errorPropagation: false`. That runs the `noPropagation` fixture, whose failures are informational. |
 
 Fixtures that need a capability the adapter doesn't have are skipped, and the report says so.
+
+`"nullItems": false` in `hello` says the adapter can't return null for a list item of a Non-Null type, or for a subscription's event when the root field's type is Non-Null. In a typed implementation the item type there (`Vec<Post>` for `[Post!]`, a stream of `Post` for `Post!`) has no null, so only an adapter's hand-written value could produce one. The kit then never settles such a position with `null`. Fields of a Non-Null type still get `null`, since the implementation checks those itself. It's an opt-out: without it, adapters get these outcomes as before.
+
+Outcomes left out this way aren't graded. The report's `provenance.skipped` records each kind and how many times the kit left it out of a settle's choices, for example `{"uncoercible Int results (uncoercibleTypes: Float)": 2950}`.
 
 ### Engines that run resolvers synchronously
 
@@ -112,7 +118,7 @@ For each case, the kit evaluates `Cases!Failures` in [`kit/execution/Cases.tla`]
 | Clause | The response breaks it when |
 | --- | --- |
 | `complete` | it was sent while a resolver it depends on was still pending |
-| `dataMatches` | `data` isn't the completed value, up to key order |
+| `dataMatches` | `data` isn't the completed value, up to key order. Sent while execution is pending, `data` is null though no root field can still null it: every root field is nullable or has completed, and no pending Non-Null position under a Non-Null root field remains (`DataNulledEarly` in [`Cases.tla`](../kit/execution/Cases.tla)). §6.4.4 nulls `data` only through Non-Null positions, so no outcome of the pending resolvers can make it null. If a Non-Null root field may still raise, an early null is only `complete` |
 | `keyOrder` | keys aren't in collected field order. This is a SHOULD (§7.2.2); it only fails with `--strict`, as do extra entries in an error |
 | `errorsWereRaised` | an error's path isn't where an execution error was raised |
 | `errorPathsUnique` | two errors share a path (§6.4.4). A MUST in the draft, a SHOULD in October 2021 |
@@ -135,22 +141,29 @@ Before that, the kit rejects malformed cases. It works out each position's type 
 - an error path isn't a list, has a string where §7.1.4 wants an integer list index, uses a field name where the response name is an alias (`responsePosition`, a MUST in the draft and a SHOULD in October 2021), or names a position the operation doesn't select (`errorPath`);
 - `errors` is an empty list;
 - a leaf isn't the canonical value for its position's type;
-- a position whose resolver returned an `uncoercible` value holds a value instead of null (`intFraction` for a fraction at an Int, `resultCoercion` otherwise).
+- a position whose resolver returned an `uncoercible` value holds a value instead of null, or is null without an error at its path (`intFraction` for a fraction at an Int, `resultCoercion` otherwise). A silent null there is graded as this rule, not as `nullsExplained`. The leaf check above skips these positions, so a value passed through counts once.
 
 The trace comes first, whatever the response, so a call with the wrong type is a `protocol` problem even when the implementation then produced no response.
 
-`intFraction` is a SHOULD and fails only with `--strict`. §3.5.1 states the rule with must ("otherwise they must raise an execution error"), but its example for this very case says "a floating-point number 1.2 should raise an execution error instead of being truncated to 1". Where the level is in doubt, the kit takes the weaker one. A truncating case is still malformed, so the reference never sees it.
+`intFraction` is a SHOULD and fails only with `--strict`. §3.5.1 states the rule with must ("otherwise they must raise an execution error"), but its example for this very case says "a floating-point number 1.2 should raise an execution error instead of being truncated to 1". Where the level is in doubt, the kit takes the weaker one. A truncating case is still malformed, and the reference still checks it, as below, so a MUST failure elsewhere in the same case isn't hidden behind the SHOULD.
 
 These are reported as SHOULDs, and fail only with `--strict`:
 - extra entries in an error (`errorEntries`, §7.1.6);
 - an error's `locations` that isn't a list of maps with positive integer `line` and `column` (`errorLocations`, §7.1.6, where the whole sentence about locations is a should);
 - a leaf with the canonical value but the wrong JSON type, such as `"1"` for Int 1 (`leafEncoding`, §7.2.1: "the following JSON values should be used").
 
-Each problem belongs to one check in [`kit/execution/checks.mjs`](../kit/execution/checks.mjs), which also lists the spec sections each check rests on. In a report, a malformed case counts against its first problem, in the order above. That is the root cause when one fault shows up several ways. Two kinds of problem count as well: every `protocol` problem, so `adapterProblems` counts each case where the adapter broke the protocol, and, when the first problem can't fail a run by itself (a SHOULD, or informational), the first problem of each check that can. A problem that fails the run is never hidden behind one that doesn't. A case counts once against each check, however many times it breaks it, and a warning counts under the level of its own case's fixture.
+Each problem belongs to one check in [`kit/execution/checks.mjs`](../kit/execution/checks.mjs), which also lists the spec sections each check rests on. In a report, a malformed case counts against every check it breaks, once per check, however many times it breaks it, so one problem never hides another. The exception is a case where the adapter broke the protocol (`protocol`): the response comes from a run the adapter misreported, so only the problems of its trace count (`protocol`, `callsOnce`, `callsSelected`, `callsReachable`). `adapterProblems` counts each case where the adapter broke the protocol. A warning counts under the level of its own case's fixture.
+
+A malformed case still goes to the reference when what it breaks leaves the trace and `data` usable, and its clause failures count like any other case's:
+- if its trace is broken (a `protocol` or `calls…` problem), it has no response or no `data`, or `data` holds a position the operation doesn't select, the reference doesn't see it;
+- if an error has no usable path (`errorPath`, `responsePosition`, or an error that isn't a map), only the clauses that don't read error paths count: `complete`, `dataMatches`, `keyOrder` and `calledSerially`. So errors without a path don't hide `data` nulled past a nullable position;
+- otherwise every clause counts. A position whose resolver returned an `uncoercible` value is given to the reference as the implementation completed it: as a leaf if it holds a value, as null if it is null without an error. So an Int fraction truncated to 1 doesn't hide a dropped error elsewhere in the case, and isn't counted a second time.
+
+The summary line says how many distinct malformed cases also break the reference, and those failures are listed after the malformed groups.
 
 Failures are grouped by fixture and clause, and each group is shown by its shortest case: its trace, the response, and the data the reference expected.
 
-Every run also checks the checker. [`kit/execution/controls.json`](../kit/execution/controls.json) holds known-good cases recorded from graphql-js, 31 broken variants of them, and 4 report controls. Some examples:
+Every run also checks the checker. [`kit/execution/controls.json`](../kit/execution/controls.json) holds known-good cases recorded from graphql-js, 33 broken variants of them, and 8 report controls. Some examples:
 - an error dropped;
 - an error reported under a field name instead of its alias;
 - a location with line 0, and an Int written as a string (SHOULDs);
@@ -158,6 +171,8 @@ Every run also checks the checker. [`kit/execution/controls.json`](../kit/execut
 - a key reordered;
 - a mutation field called early;
 - a response sent while a resolver it needs is pending;
+- `data` null while only nullable root fields are pending;
+- a non-finite Float that comes back as null without an error;
 - a list index written as a string;
 - a field called that `@include(if: false)` leaves out;
 - a field called before its parent had a value;
@@ -165,7 +180,7 @@ Every run also checks the checker. [`kit/execution/controls.json`](../kit/execut
 
 Each base must pass, and each control must be caught by the clause it names. A malformed control must be caught by the check it names, and a SHOULD control by the SHOULD check it names. So a green run can't be vacuous. No control base comes from the `noPropagation` fixture.
 
-A report control is a small set of cases, and a fact their report must show. It tests the counting across cases that one case can't: a SHOULD warning in a normal fixture still counts as a SHOULD after the same warning in `noPropagation`; a case that breaks a SHOULD twice counts once; a call with the wrong type before a missing response is a `protocol` problem, not `intFraction`; and a root field called twice with different types in `noPropagation` counts under `callsOnce` and `protocol` and fails the fixture. Every report, the run's included, must also never count more failing cases for a check than the cases it applies to. The corpus doesn't depend on your cases. `node scripts/generate-controls.mjs` regenerates it.
+A report control is a small set of cases, and a fact their report must show. It tests the counting across cases that one case can't: a SHOULD warning in a normal fixture still counts as a SHOULD after the same warning in `noPropagation`; a case that breaks a SHOULD twice counts once; a call with the wrong type before a missing response is a `protocol` problem, not `intFraction`; an Int fraction passed through counts under `intFraction` only, not `leafValues`; an Int fraction truncated to 1 doesn't hide a dropped error in the same case (`nullsExplained`); errors without a path don't hide `data` nulled past a nullable position (`dataMatches`), and the clauses that read error paths aren't graded on that case; a case that breaks two checks counts against both; and a root field called twice with different types in `noPropagation` counts under `callsOnce` and `protocol` and fails the fixture. Every report, the run's included, must also never count more failing cases for a check than the cases it applies to. The corpus doesn't depend on your cases. `node scripts/generate-controls.mjs` regenerates it.
 
 ### How strict `nullsExplained` is
 

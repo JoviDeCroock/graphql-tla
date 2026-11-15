@@ -41,8 +41,9 @@
 (*     §3.13 says it must provide (RequiredDirectiveNames): @deprecated    *)
 (*     for a schema that deprecates something, and any the result shows    *)
 (*     it provides. The result is compared with SchemaResult for the       *)
-(*     built-ins it did return, and without @specifiedBy or @oneOf a       *)
-(*     scalar has no URL and no input object is OneOf (AsProvided).        *)
+(*     built-ins it did return. A service that neither returns nor shows   *)
+(*     @specifiedBy or @oneOf has no scalar URL and no OneOf input object  *)
+(*     (AsProvided, ProvidedNames).                                        *)
 (*   - B may be SpecBuiltins (the draft) or Oct2021Builtins (the October   *)
 (*     2021 edition).                                                      *)
 (*   - A wrapper type's fields other than kind and ofType are null         *)
@@ -51,7 +52,10 @@
 (*   - An interface's `possibleTypes` and a directive's `locations` have   *)
 (*     no source order, and are compared as sets.                          *)
 (*   - The spec gives no descriptions for built-in definitions, so their   *)
-(*     description may be anything (AnyDescription).                       *)
+(*     description may be anything (AnyDescription). "description may      *)
+(*     return a String or null", and nothing says a definition the         *)
+(*     document doesn't describe must return null, so its description may *)
+(*     be anything too (DescriptionMatches).                               *)
 (*   - `defaultValue` "may return a String encoding (using the GraphQL     *)
 (*     language) of the default value": two encodings match when they      *)
 (*     coerce to the same value for the input value's type, so `[1]` and   *)
@@ -512,7 +516,12 @@ TypeByName(S, B, inc, name) ==
 -----------------------------------------------------------------------------
 (* Comparing a service's result with the expected one *)
 
-DescriptionMatches(e, a) == e = AnyDescription \/ e = a
+\* A description the document gives must be returned: §3.2 says
+\* documentation is "written immediately alongside definitions in a
+\* TypeSystemDocument and made available via introspection". Where it gives
+\* none (e = None), §4.2's "description may return a String or null" allows
+\* any answer.
+DescriptionMatches(e, a) == e = AnyDescription \/ e = None \/ e = a
 
 \* Two encodings of a default value match when they coerce to the same
 \* value for the input value's type.
@@ -652,6 +661,13 @@ AsProvidedType(T, names) ==
 AsProvided(S, names) ==
   [S EXCEPT !.types = [i \in DOMAIN S.types |-> AsProvidedType(S.types[i], names)]]
 
+\* The built-in directives a result shows the service provides: those it
+\* returned, and those its types show (ShownDirectiveNames). A scalar's URL
+\* is compared with the document's whenever the result shows @specifiedBy,
+\* so that a URL returned without @specifiedBy in directives is one
+\* problem, the missing directive, and not a wrong URL too.
+ProvidedNames(actual) == actual.builtinDirectiveNames \cup ShownDirectiveNames(actual)
+
 \* What is wrong with a service's __schema result `actual` for S, B and
 \* includeDeprecated: the names of the parts that don't match. actual has
 \* the shape of SchemaResult, plus builtinTypeNames and
@@ -663,7 +679,7 @@ AsProvided(S, names) ==
 \* that a differential needn't repeat the built-ins for every schema; the
 \* built-ins are then compared by name only.
 Mismatches(S0, B, inc, full, actual) ==
-  LET S == AsProvided(S0, actual.builtinDirectiveNames)
+  LET S == AsProvided(S0, ProvidedNames(actual))
       P == Providing(B, actual.builtinDirectiveNames)
       FS == Full(S, P)
       expected == SchemaResult(S, P, inc)

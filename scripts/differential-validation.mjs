@@ -58,7 +58,7 @@ const VERSIONS = [graphql16, graphql17];
 const SDL = `
 schema { query: Query subscription: Subscription }
 
-directive @tag(name: String) repeatable on QUERY | SUBSCRIPTION | FIELD | FRAGMENT_DEFINITION | FRAGMENT_SPREAD | INLINE_FRAGMENT
+directive @label(name: String) repeatable on QUERY | SUBSCRIPTION | FIELD | FRAGMENT_DEFINITION | FRAGMENT_SPREAD | INLINE_FRAGMENT
 directive @once on QUERY | FIELD | VARIABLE_DEFINITION
 
 type Query {
@@ -391,7 +391,7 @@ const variables = () => [
   `query Q($v: Int!) { user { ...A } } query R { user { ...A } } fragment A on User { avatar(size: $v) }`,
   `query Q($v: Int!) { user { ...A } } query R($v: Int) { user { ...A } } fragment A on User { avatar(size: $v) }`,
   `query Q($v: Boolean!) { user { ...A @skip(if: $v) } } fragment A on User { id }`,
-  `query Q($v: Boolean!) @tag(name: "x") { user { id } }`,
+  `query Q($v: Boolean!) @label(name: "x") { user { id } }`,
   `query Q($v: Int, $v: Int) { echo(int: $v) }`,
   `query Q($v: User) { echo(int: $v) }`,
   `query Q($v: [Result]) { echo(int: 1) }`,
@@ -424,9 +424,9 @@ const values = () => [
   `{ user { id @skip } }`,
   `{ user { id @skip(if: null) } }`,
   `{ user { id @skip(if: true, if: false) } }`,
-  `{ user { id @tag } }`,
-  `{ user { id @tag(name: null) } }`,
-  `{ user { id @tag(nom: "x") } }`,
+  `{ user { id @label } }`,
+  `{ user { id @label(name: null) } }`,
+  `{ user { id @label(nom: "x") } }`,
   `{ user { id @nope(if: true) } }`,
   `{ user { name(x: 1) } }`,
   `{ bogus(x: 1) }`,
@@ -489,7 +489,7 @@ const operations = () => {
 };
 
 // Directives in every location, once and twice.
-const DIRECTIVES = ["@skip(if: true)", "@include(if: false)", '@tag(name: "x")', "@once", "@nope", "@deprecated", "@oneOf"];
+const DIRECTIVES = ["@skip(if: true)", "@include(if: false)", '@label(name: "x")', "@once", "@nope", "@deprecated", "@oneOf"];
 const DIRECTIVE_LOCATIONS = [
   (d) => `query Q ${d} { user { id } }`,
   (d) => `subscription S ${d} { postAdded { id } }`,
@@ -503,7 +503,7 @@ const directives = () => [
   ...product(DIRECTIVES, DIRECTIVE_LOCATIONS, [1, 2]).map(([d, location, n]) => location(Array(n).fill(d).join(" "))),
   `{ user @skip(if: true) @skip(if: false) { id } }`,
   `{ user @skip(if: true) @include(if: true) { id } }`,
-  `{ user @tag(name: "a") @tag(name: "b") { id } }`,
+  `{ user @label(name: "a") @label(name: "b") { id } }`,
   `{ user @once { id @once } }`,
 ];
 
@@ -520,10 +520,10 @@ const names = () => {
     `{ user { avatar(size: 1, size: 1, bogus: 2) } }`,
     `{ user(bogus: 1) { id } }`,
     `{ echo(int: 1, int2: 2, int: 3) }`,
-    `{ user @tag(name: "a", name: "b") { id } }`,
+    `{ user @label(name: "a", name: "b") { id } }`,
     `{ user @skip(if: true, if: true) { id } }`,
     `{ user @include(unless: true) { id } }`,
-    `{ user @tag(name: "a", label: "b") { id } }`,
+    `{ user @label(name: "a", label: "b") { id } }`,
     `query ($a: Int, $a: Int!) { echo(int: $a) }`,
     `query ($a: Int, $b: Int, $a: Int) { echo(int: $a, opt: $b) }`,
     `query Q($a: User, $b: Result, $c: Role, $d: Filter, $e: [Node], $f: Resource!) { echo(role: $c, filter: $d) }`,
@@ -588,7 +588,7 @@ const randomDocuments = (count, seed) => {
 
   const directivesFor = (usages) => {
     if (!chance(0.12)) return "";
-    const d = pick(["skip", "include", "tag", "once", "nope"]);
+    const d = pick(["skip", "include", "label", "once", "nope"]);
     if (d === "skip" || d === "include") return ` @${d}(if: ${literal(graphql16.GraphQLBoolean, usages)})`;
     return ` @${d}`;
   };

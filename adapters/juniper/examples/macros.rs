@@ -4,7 +4,8 @@
 //     cargo run --release --example macros
 //
 // Each case prints the response a client would get, serialized as Juniper's
-// HTTP integrations serialize it.
+// HTTP integrations serialize it, and a subscription event as
+// juniper_graphql_ws does.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -122,7 +123,15 @@ fn subscription(document: &str) -> String {
     let request = GraphQLRequest::new(document.into(), None, None);
     futures::executor::block_on(async {
         let mut connection = coordinator.subscribe(&request, &()).await.unwrap();
-        serde_json::to_string(&connection.next().await.unwrap()).unwrap()
+        let output = connection.next().await.unwrap();
+        // As juniper_graphql_ws 0.6.0's `NextPayload` serializes an event:
+        // `errors` only if there are any (src/server_message.rs:13-25).
+        let mut payload = serde_json::Map::new();
+        payload.insert("data".into(), serde_json::to_value(&output.data).unwrap());
+        if !output.errors.is_empty() {
+            payload.insert("errors".into(), serde_json::to_value(&output.errors).unwrap());
+        }
+        serde_json::Value::Object(payload).to_string()
     })
 }
 

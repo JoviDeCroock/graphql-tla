@@ -126,6 +126,25 @@ const ignoredSection = (source, verdict) => {
   if (!verdict.lexOk) return IGNORED_SECTION[String.fromCodePoint(codePoints(source)[verdict.lexPos - 1])] ?? ["2.1.5"];
   return /#[^\n\r]*[\u2028\u0085]/.test(source) ? ["2.1.2"] : ["2.1.3"];
 };
+// An accepted sequence that shows a unit in use. Inside a comment, a unit is
+// a CommentChar, not an ignored token of its own: a control character there
+// is about which code points are a SourceCharacter (§2.1), which is where
+// the editions differ, not about White Space.
+const isControl = (unit) => /^[\u0000-\u0008\u000B\u000C\u000E-\u001F]$/.test(unit);
+const onlyInComments = (units, unit) => {
+  let comment = false;
+  let seen = false;
+  for (const u of units) {
+    if (u === unit) {
+      if (!comment) return false;
+      seen = true;
+    }
+    if (u === "#") comment = true;
+    else if (u === "\n" || u === "\r") comment = false;
+  }
+  return seen;
+};
+const ignoredPositive = (units, unit) => (isControl(unit) && onlyInComments(units, unit) ? ["2.1", "2.1.3"] : IGNORED_SECTION[unit]);
 
 const inValue = (w) => `{a(x: ${w})}`;
 // Numbers go in a list, where a number split in two, such as 0x1 read as
@@ -138,14 +157,32 @@ const inList = (w) => `{a(x: [${w}])}`;
 //
 //   lexical   a rejection must come from Lex; its section is the token Lex
 //             fails on. Other rejections are dropped.
+//   ownToken  for a lexical family, the section of its own token: Lex
+//             failing at a character that starts no token, right after
+//             that token, means the token ended where the edit made it end.
+//   holds     for a lexical family, the section of what an accepted sibling
+//             holds, which it rests on first: rejecting `[0-0]`, two Int
+//             Values, is about §2.10.1 even though its sibling `[0-.]`
+//             fails at a Float Value.
 //   classify  the section comes from the rejected source and its verdict.
 //   tags      the section is the edited unit's, else fallback.
 //   also      sections every vector of the family exercises besides.
 //   positives how many accepted candidates to keep for each unit.
 //   keep      which sequences to use, if not all.
 
-const NUMBER_RUN = /^[-+.eE0-9]*/;
-const numberSection = (text) => (/[.eE]/.test(text.match(NUMBER_RUN)[0]) ? "2.10.2" : "2.10.1");
+// The section of the number token text starts with: a Float Value if its
+// integer part runs into a `.` or an exponent, otherwise an Int Value. Only
+// the first token counts: `0-0` is the two Int Values `0` and `-0`.
+const numberSection = (text) => (/^-?[0-9]*[.eE]/.test(text) ? "2.10.2" : "2.10.1");
+// An accepted list of numbers and names, such as `0-0` or `1e1`: a Float
+// Value if any of its tokens is one, else an Int Value if any is a number,
+// else an Enum Value (`e`).
+const listSection = (text) => {
+  const tokens = text.match(/[A-Za-z_][A-Za-z0-9_]*|-?[0-9]+(?:\.[0-9]+)?(?:[eE][-+]?[0-9]+)?/g) ?? [];
+  const numbers = tokens.filter((t) => /^-?[0-9]/.test(t));
+  if (numbers.some((n) => /[.eE]/.test(n))) return "2.10.2";
+  return numbers.length > 0 ? "2.10.1" : "2.10.6";
+};
 
 const wordFamily = (name, atoms, maxLength, render, options) => ({
   name,
@@ -164,6 +201,7 @@ const extraWords = (atoms, count, seed, lengths) => {
 const wordFamilies = () => [
   wordFamily("strings", IN_STRING, 2, (w) => inValue(`"${w}"`), {
     lexical: true,
+    ownToken: "2.10.4",
     extra: extraWords(IN_STRING, 400, 11, [3, 4]),
     positives: 2,
     positive: () => ["2.10.4"],
@@ -172,6 +210,7 @@ const wordFamilies = () => [
   }),
   wordFamily("block-strings", IN_BLOCK, 3, (w) => inValue(`"""${w}"""`), {
     lexical: true,
+    ownToken: "2.10.4",
     positives: 2,
     positive: () => ["2.10.4"],
     pairs: 50,
@@ -180,11 +219,10 @@ const wordFamilies = () => [
   wordFamily("numbers", IN_NUMBER, 3, inList, {
     lexical: true,
     positives: 2,
-    // An accepted value here is a number, or an enum value such as `e`.
-    positive: (units) => {
-      const text = units.join("");
-      return [/^-?(0|[1-9][0-9]*)$/.test(text) ? "2.10.1" : /^-?[0-9]/.test(text) ? "2.10.2" : "2.10.6"];
-    },
+    // An accepted value here is one or more numbers, or an enum value such
+    // as `e`.
+    positive: (units) => [listSection(units.join(""))],
+    holds: (units) => [units.length === 0 ? "2.10.7" : listSection(units.join(""))],
     pairs: 100,
     perKey: 2,
   }),
@@ -208,7 +246,7 @@ const wordFamilies = () => [
     classify: ignoredSection,
     also: ["2.1.6"],
     positives: 4,
-    positive: (units, unit) => IGNORED_SECTION[unit],
+    positive: ignoredPositive,
     pairs: 110,
     perKey: 3,
   }),
@@ -371,6 +409,9 @@ const randomDocument = ({ int, pick, chance }) => {
   return { tokens, nodes };
 };
 
+// Random documents put a BOM only between tokens, never in a string or comment.
+const withoutBom = (source) => source.replaceAll(BOM, " ");
+
 const render = (tokens) => tokens.map((t, i) => (i === 0 ? "" : t.sep || " ") + t.text).join("");
 
 // The production an edit of one token is about: the innermost one with more
@@ -379,6 +420,16 @@ const render = (tokens) => tokens.map((t, i) => (i === 0 ? "" : t.sep || " ") + 
 const ownerOf = (doc, path) => {
   for (let i = path.length - 1; i >= 0; i--) {
     const n = doc.nodes[path[i]];
+    if (n.keep || n.size > 1) return n.section;
+  }
+  return "2.3";
+};
+// A deleted token's production. Description is optional, so deleting a
+// whole one-token Description is an edit of the definition it described.
+const deletedOf = (doc, path) => {
+  for (let i = path.length - 1; i >= 0; i--) {
+    const n = doc.nodes[path[i]];
+    if (n.section === "2.2" && n.size === 1) return ownerOf(doc, path.slice(0, i));
     if (n.keep || n.size > 1) return n.section;
   }
   return "2.3";
@@ -398,18 +449,28 @@ const mutate = ({ int, pick }, doc) => {
     tokens.splice(at, 0, { text, path: [], sep: at === 0 ? "" : " " });
     if (at === 0) tokens[1].sep = " ";
   };
-  // The section of a token inserted before token j.
-  const between = (j) => (j === 0 || j === doc.tokens.length ? "2.3" : commonOf(doc, doc.tokens[j - 1], doc.tokens[j]));
+  // The section of a token inserted before token j. A string there is a
+  // Description if it comes before a definition, after a Description, or at
+  // the end: as in `"d" {a}`, the query shorthand takes none.
+  const isString = (text) => text.startsWith('"');
+  const definitionAt = (j) => j === doc.tokens.length || j === 0 || doc.tokens[j - 1].path[1] !== doc.tokens[j].path[1];
+  const afterDescription = (j) => j > 0 && doc.nodes[doc.tokens[j - 1].path.at(-1)].section === "2.2";
+  const between = (j, text) =>
+    isString(text) && (definitionAt(j) || afterDescription(j))
+      ? "2.2"
+      : j === 0 || j === doc.tokens.length
+        ? "2.3"
+        : commonOf(doc, doc.tokens[j - 1], doc.tokens[j]);
   switch (int(5)) {
     case 0: {
       const [gone] = tokens.splice(i, 1);
       if (tokens.length === 0) return null;
       if (i === 0) tokens[0].sep = "";
-      return { tokens, section: ownerOf(doc, gone.path), kind: "delete", unit: gone.text };
+      return { tokens, section: deletedOf(doc, gone.path), kind: "delete", unit: gone.text };
     }
     case 1:
       insert(i + 1, tokens[i].text);
-      return { tokens, section: between(i + 1), kind: "duplicate", unit: doc.tokens[i].text };
+      return { tokens, section: between(i + 1, tokens[i].text), kind: "duplicate", unit: doc.tokens[i].text };
     case 2: {
       if (i + 1 >= tokens.length || tokens[i].text === tokens[i + 1].text) return null;
       [tokens[i].text, tokens[i + 1].text] = [tokens[i + 1].text, tokens[i].text];
@@ -418,7 +479,7 @@ const mutate = ({ int, pick }, doc) => {
     case 3: {
       const text = pick(TOKEN_POOL);
       insert(i, text);
-      return { tokens, section: between(i), kind: "insert", unit: text };
+      return { tokens, section: between(i, text), kind: "insert", unit: text };
     }
     default: {
       const text = pick(TOKEN_POOL);
@@ -492,7 +553,7 @@ const PARSER_SECTIONS = {
   "{b: a}": "2.8", "{a: b: c}": "2.8", "{a:}": "2.8",
   "{a(x: 1) @d @e(y: 2) {b}}": "2.6", "{__typename a {b {c}}}": "2.6",
   "{a()}": "2.7", "{a(x)}": "2.7", "{a(x:)}": "2.7",
-  "{a @}": "2.13", "{a @d()}": "2.13", "query @d(x: $v) {a}": "2.13",
+  "{a @}": "2.13", "{a @d()}": "2.7", "query @d(x: $v) {a}": "2.13",
   "{...F @d}": "2.9", "{...on}": "2.9", "{...F {a}}": "2.9", "fragment F on T @d {a}": "2.9", "fragment on on T {a}": "2.9",
   "fragment F on T": "2.9", "fragment F on T @d": "2.9", "fragment F($a: Int) on T {a}": "2.9",
   "{... on T {a}}": "2.9.2", "{... @d {a}}": "2.9.2", "{... {a}}": "2.9.2",
@@ -508,6 +569,10 @@ const PARSER_SECTIONS = {
   'query ("d" $a: Int """e""" $b: Int) {a}': "2.2",
   "query ($a: Int) @d": "2.4", "{a": "2.5", "{a}}": "2.5", "{(a)}": "2.5",
 };
+// Int Values beyond 32 and 64 bits. §2.10.1 puts no bound on an IntValue:
+// the range of Int is a matter of coercion (§3.5.1), not of parsing.
+const RANGE_EXAMPLES = ["{a(x: [2147483648])}", "{a(x: [-2147483649])}", "{a(x: [18446744073709551616])}"];
+
 const parserExamples = () =>
   Object.entries(PARSER_GROUPS).flatMap(([name, fallback]) =>
     literals(block("Parser.tla", name), /(?:Parses|Rejects)\("((?:[^"\\]|\\.)*)"/g).map((source) => ({
@@ -524,7 +589,8 @@ const text = (s) => `<<${codePoints(s).join(",")}>>`;
 
 // For a lexical rejection, also the index where the failing token starts,
 // found the way LexFrom scans. For a document, whether its tree has an
-// empty selection set or a description.
+// empty selection set or a description, and whether a variable's type names
+// a keyword, such as `$a: on`.
 const moduleFor = (sources) => `---- MODULE ParseVectors ----
 EXTENDS Parser, TLC
 
@@ -547,12 +613,26 @@ HasDescription(n) ==
   \\/ n.kind \\in {"OperationDefinition", "FragmentDefinition", "VariableDefinition"} /\\ n.children[1] # NoNode
   \\/ \\E k \\in DOMAIN n.children : HasDescription(n.children[k])
 
+Keywords == {KwQuery, KwMutation, KwSubscription, KwFragment, KwOn, KwTrue, KwFalse, KwNull}
+
+RECURSIVE NamesKeyword(_)
+NamesKeyword(t) ==
+  IF t.kind = "NamedType" THEN t.text \\in Keywords
+  ELSE \\E k \\in DOMAIN t.children : NamesKeyword(t.children[k])
+
+\\* The third child of a VariableDefinition is its Type.
+RECURSIVE HasKeywordType(_)
+HasKeywordType(n) ==
+  \\/ n.kind = "VariableDefinition" /\\ NamesKeyword(n.children[3])
+  \\/ \\E k \\in DOMAIN n.children : HasKeywordType(n.children[k])
+
 ASSUME \\A i \\in DOMAIN Sources :
   LET lexed == Lex(Sources[i])
       parsed == ParseExecutable(Sources[i])
   IN PrintT(<<"verdict", i, parsed.ok, lexed.ok, lexed.pos,
               IF lexed.ok THEN 0 ELSE FailingToken(Sources[i], 1),
-              parsed.ok /\\ HasEmptySelectionSet(parsed.node), parsed.ok /\\ HasDescription(parsed.node)>>)
+              parsed.ok /\\ HasEmptySelectionSet(parsed.node), parsed.ok /\\ HasDescription(parsed.node),
+              parsed.ok /\\ HasKeywordType(parsed.node)>>)
 ASSUME PrintT(<<"checked", Len(Sources)>>)
 
 VectorsInit == vector = 0
@@ -594,18 +674,19 @@ const evaluate = async (sources) => {
           throw new Error(`tla-ts failed on chunk ${index}:\n${lines.map((l) => l.slice(0, 300)).join("\n")}`);
         }
         const verdicts = [
-          ...flat.matchAll(/<<\s*"verdict",\s*(\d+),\s*(TRUE|FALSE),\s*(TRUE|FALSE),\s*(\d+),\s*(\d+),\s*(TRUE|FALSE),\s*(TRUE|FALSE)\s*>>/g),
+          ...flat.matchAll(/<<\s*"verdict",\s*(\d+),\s*(TRUE|FALSE),\s*(TRUE|FALSE),\s*(\d+),\s*(\d+),\s*(TRUE|FALSE),\s*(TRUE|FALSE),\s*(TRUE|FALSE)\s*>>/g),
         ];
         if (new Set(verdicts.map((m) => m[1])).size !== chunk.length) {
           throw new Error(`read ${verdicts.length} verdicts from chunk ${index}, which has ${chunk.length} sources`);
         }
-        for (const [, i, ok, lexOk, lexPos, failing, empty, description] of verdicts) {
+        for (const [, i, ok, lexOk, lexPos, failing, empty, description, keywordType] of verdicts) {
           results.set(chunk[Number(i) - 1], {
             ok: ok === "TRUE",
             lexOk: lexOk === "TRUE",
             lexPos: Number(lexPos),
             failingToken: Number(failing),
             newer: [...(empty === "TRUE" ? ["2.5"] : []), ...(description === "TRUE" ? ["2.2"] : [])],
+            keywordType: keywordType === "TRUE",
           });
         }
       }
@@ -615,6 +696,36 @@ const evaluate = async (sources) => {
     rmSync(base, { recursive: true, force: true });
   }
   return results;
+};
+
+// Whether a Byte Order Mark stands between tokens, as an Ignored token: one
+// outside every comment and string.
+const hasIgnoredBom = (source) => {
+  const cs = Array.from(source);
+  const quotes = (k) => cs[k] === '"' && cs[k + 1] === '"' && cs[k + 2] === '"';
+  let i = 0;
+  while (i < cs.length) {
+    if (cs[i] === "#") {
+      while (i < cs.length && cs[i] !== "\n" && cs[i] !== "\r") i++;
+    } else if (quotes(i)) {
+      i += 3;
+      while (i < cs.length) {
+        if (cs[i] === "\\" && quotes(i + 1)) i += 4;
+        else if (quotes(i)) {
+          i += 3;
+          break;
+        } else i++;
+      }
+    } else if (cs[i] === '"') {
+      i++;
+      while (i < cs.length && cs[i] !== "\n" && cs[i] !== "\r") {
+        if (cs[i] === "\\") i += 2;
+        else if (cs[i++] === '"') break;
+      }
+    } else if (cs[i] === BOM) return true;
+    else i++;
+  }
+  return false;
 };
 
 const isScalar = (c) => (c >= 0 && c <= 0xd7ff) || (c >= 0xe000 && c <= 0x10ffff);
@@ -805,7 +916,7 @@ const familyPairs = (family, verdicts) => {
       }
     }
     if (!found) continue;
-    const spec = [
+    const sections = [
       ...(family.lexical
         ? [lexicalSection(c.source, verdict)]
         : family.classify
@@ -813,12 +924,15 @@ const familyPairs = (family, verdicts) => {
           : (family.tags?.(found.unit) ?? [family.fallback])),
       ...(family.also ?? []),
     ];
+    // Pairs are chosen by where Lex fails, and tagged with ownToken first.
+    const spec = family.ownToken && sections[0] === "2.1.5" ? [family.ownToken, ...sections] : sections;
     pairs.push({
       rejected: c.source,
       accepted: found.sibling.source,
       spec,
-      section: spec[0],
-      key: `${spec[0]}|${found.kind}|${JSON.stringify(found.unit)}`,
+      ...(family.holds ? { acceptedSpec: [...new Set([...family.holds(found.sibling.units), ...spec])] } : {}),
+      section: sections[0],
+      key: `${sections[0]}|${found.kind}|${JSON.stringify(found.unit)}`,
       size: c.source,
     });
   }
@@ -847,8 +961,9 @@ const build = async () => {
     ...new Set([
       ...lexer.map((e) => e.source),
       ...parser.map((e) => e.source),
+      ...RANGE_EXAMPLES,
       ...families.flatMap((f) => f.candidates.map((c) => c.source)),
-      ...documents.flatMap((d) => [d.base, ...d.mutants.map((m) => m.source)]),
+      ...documents.flatMap((d) => [d.base, ...d.mutants.map((m) => m.source)]).flatMap((s) => (s.includes(BOM) ? [s, withoutBom(s)] : [s])),
     ]),
   ];
   const started = Date.now();
@@ -868,7 +983,7 @@ const build = async () => {
   };
   const addPair = (family, pair) => {
     const r = add(pair.rejected, family, pair.spec);
-    const a = add(pair.accepted, family, pair.spec);
+    const a = add(pair.accepted, family, pair.acceptedSpec ?? pair.spec);
     if (r.expected.ok || !a.expected.ok) throw new Error(`not a pair: ${JSON.stringify(pair)}`);
     r.sibling ??= a.id;
     a.sibling ??= r.id;
@@ -882,6 +997,10 @@ const build = async () => {
     add(e.source, "lexer-examples", [e.section]);
   }
   for (const e of parser) add(e.source, "parser-examples", [e.section]);
+  for (const source of RANGE_EXAMPLES) {
+    if (!verdicts.get(source).ok) throw new Error(`the reference rejects ${source}`);
+    add(source, "int-range", ["2.10.1"]);
+  }
 
   for (const family of families) {
     for (const pair of choose(familyPairs(family, verdicts), { perKey: family.perKey, cap: family.pairs })) addPair(family.name, pair);
@@ -897,18 +1016,48 @@ const build = async () => {
       (verdicts.get(m.source).ok ? mutantPositives : mutantPairs).push(item);
     }
   }
-  for (const pair of choose(mutantPairs, { perKey: 2, perSection: 45 })) addPair("random-documents", pair);
-  for (const p of choose(mutantPositives, { perKey: 1, perSection: 8 })) add(p.rejected, "random-documents", p.spec);
+  // A random document separates its tokens with a Byte Order Mark now and
+  // then. One that also has a description, an empty selection set or a
+  // keyword as a type (see below) gets spaces instead, with its sibling, so
+  // that an accepted document leaves one likely reason to reject it.
+  const isolated = (pair) => {
+    const v = verdicts.get(pair.accepted);
+    if (!(v.ok && (v.newer.length > 0 || v.keywordType) && pair.accepted.includes(BOM))) return pair;
+    const out = { ...pair, rejected: withoutBom(pair.rejected), accepted: withoutBom(pair.accepted) };
+    for (const k of ["rejected", "accepted"]) {
+      if (verdicts.get(out[k]).ok !== verdicts.get(pair[k]).ok) throw new Error(`spaces for BOMs change the verdict on ${JSON.stringify(pair[k])}`);
+    }
+    return out;
+  };
+  for (const pair of choose(mutantPairs, { perKey: 2, perSection: 45 })) addPair("random-documents", isolated(pair));
+  for (const p of choose(mutantPositives, { perKey: 1, perSection: 8 })) {
+    const q = isolated({ ...p, accepted: p.rejected });
+    add(q.accepted, "random-documents", p.spec);
+  }
 
-  // An accepted document with an empty selection set, or a description on
-  // an operation, fragment or variable, uses grammar the draft added after
-  // the October 2021 edition. An implementation that rejects it most likely
-  // lacks that, whichever edit the vector was chosen for, so the vector
-  // rests on that section first.
+  // Some accepted documents use grammar that an implementation can lack
+  // whatever edit the vector was chosen for. An implementation that rejects
+  // such a document most likely lacks that grammar, so the vector rests on
+  // its section first, and one missing rule makes one finding instead of
+  // spreading over the sections of every edit near it:
+  //
+  //   - an empty selection set (§2.5), or a description on an operation,
+  //     fragment or variable (§2.2): the draft added both after the October
+  //     2021 edition;
+  //   - a keyword, such as `on` or `query`, as a variable's type (§2.12):
+  //     NamedType is any Name;
+  //   - a Byte Order Mark between tokens (§2.1.6): "a Byte Order Mark may
+  //     appear before or after any lexical token and is Ignored".
+  //
+  // In that order: a document with more than one rests on the first, and
+  // its other sections follow.
   const list = [...vectors.values()];
   for (const v of list) {
-    const newer = verdicts.get(v.source).newer;
-    if (newer.length > 0 && !newer.includes(v.spec[0])) v.spec = [...newer, ...v.spec.filter((s) => !newer.includes(s))];
+    const verdict = verdicts.get(v.source);
+    const first = verdict.ok
+      ? [...verdict.newer, ...(verdict.keywordType ? ["2.12"] : []), ...(hasIgnoredBom(v.source) ? ["2.1.6"] : [])]
+      : [];
+    if (first.length > 0) v.spec = [...first, ...v.spec.filter((s) => !first.includes(s))];
     v.spec.forEach(section);
   }
 

@@ -130,6 +130,8 @@ try {
       }
     }
   }
+  // Count only what the graded runs left out.
+  driver.withheld = new Map();
   const cases = [];
   const skipped = [];
   for (const fixture of fixtures) {
@@ -155,12 +157,15 @@ try {
   const out = option("--out");
   if (out) writeFileSync(out, cases.map((c) => JSON.stringify(c)).join("\n") + "\n");
   if (cases.length === 0) console.log("✗ no fixture ran");
+  for (const [reason, n] of driver.withheld) console.log(`- not sent, as the adapter asked: ${reason}, at ${n} settles`);
   const result = await check(allFixtures, cases, {
     strict,
     implementation: adapter.name,
     capabilities: [...adapter.capabilities],
     skipped,
-    run: { random: count, seed, exhaustive: Boolean(runExhaustive) },
+    // Outcomes the adapter said it can't return, and how many times each
+    // was left out of a settle's choices: what the run didn't grade.
+    run: { random: count, seed, exhaustive: Boolean(runExhaustive), ...(driver.withheld.size ? { skipped: Object.fromEntries(driver.withheld) } : {}) },
   });
   ok = result.ok && cases.length > 0;
   writeReport(result.report, ok);

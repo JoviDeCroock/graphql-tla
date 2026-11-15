@@ -28,8 +28,11 @@ Build the schema, parse the document and validate it with every rule the impleme
 | Capability | Meaning |
 | --- | --- |
 | `custom-scalar-literals` | A custom scalar declared in the request's SDL (`scalar Json`) accepts every literal: numbers, strings, booleans, enum values, lists and input objects. That is what graphql-js's `buildSchema` gives a scalar with no parser of its own. |
+| `custom-directives` | The schema built from the request's SDL keeps the directives the SDL declares (`directive @label(name: String) repeatable on …`), so the validator knows them. Shared with `introspect`. |
 
 How a custom scalar coerces a literal is up to the service (§3.5.6), and the spec never says what `Json` must accept. So the vectors that give a literal to a custom scalar are graded only for adapters with `custom-scalar-literals`. There are 9 of them, all for §5.8.2 (see [Schemas](#vectors)). Without the capability §5.8.2 is untested.
+
+Custom directives are something a service *may* provide (§3.13: "GraphQL services and client tooling may provide any additional *custom directive* beyond those defined in this document"), and not every implementation can declare one from SDL. Juniper, for one, can't. The `differential` schema declares two, `@label` and `@once`. An adapter whose schema drops them would reject the valid documents that use them under §5.7.1, and reject `@once @once` as an unknown directive rather than under §5.7.3. So the 52 vectors whose document uses `@label` or `@once` (51 graded: 25 valid, 26 invalid) are graded only for adapters with `custom-directives`. The kit's directive was called `@tag` until it turned out to collide with Hot Chocolate's built-in `@tag`.
 
 ## Result
 
@@ -38,23 +41,25 @@ How a custom scalar coerces a literal is up to the service (§3.5.6), and the sp
 ```
 
 - **`valid`:** `true` if the implementation would go on to execute the document, `false` if it rejects it with validation errors.
-- **`errors`** (optional): the validation errors, each with an optional `message` and `locations`. They aren't checked, but the report quotes the first message in a finding, which helps tell what the implementation objected to.
+- **`errors`** (optional): the validation errors, each with an optional `message` and `locations`. They aren't checked. The report quotes the first message in a finding, which helps tell what the implementation objected to, and groups rejected valid documents by its wording (see [Verdicts](#verdicts)).
 
 An answer whose `valid` isn't a boolean counts as malformed. Malformed answers are counted under `adapterProblems` and fail the run.
 
 **Crashes.** If the implementation crashes on a vector, say the validator throws a null dereference, answer with an `error` rather than a verdict. The kit reports the vector as a crash and goes on ([the protocol](../kit-areas.md#protocol)). Only the message's first line reaches the report. Answer `valid: false` only when the implementation reports validation errors: an adapter that turns every exception into `valid: false` hides its crashes, which then pass on invalid documents.
 
-The graphql-js adapter ([`adapters/graphql-js/areas/validate.mjs`](../../adapters/graphql-js/areas/validate.mjs)) uses `buildSchema`, `parse` and `validate` with the default rules, and claims `custom-scalar-literals`. graphql-js 16 can throw from inside `validate()` (a subscription with `@skip(if: $v)` at its root). The adapter still counts that as rejecting the document, so the throw isn't reported as a crash.
+The graphql-js adapter ([`adapters/graphql-js/areas/validate.mjs`](../../adapters/graphql-js/areas/validate.mjs)) uses `buildSchema`, `parse` and `validate` with the default rules, and claims `custom-scalar-literals` and `custom-directives`. graphql-js 16 can throw from inside `validate()`: its §5.2.4.1 rule collects a subscription's root fields, and `@include(if: $v)` there throws because `$v` has no value. The adapter lets the throw through as an `error`, so graphql-js 16's report counts 11 crashes.
 
 ## Verdicts
 
 Each vector has the reference's answer, `expected.valid`. There are three kinds of failure. Only the first bears on a rule by itself:
 
 - **Not enforced:** the implementation accepts an invalid vector. None of the rules the vector breaks caught it, so each of them fails. This is conclusive. Most invalid vectors break one rule. The 21 that break two fail both checks, never just one.
-- **A valid document rejected:** the implementation rejects a valid vector. This fails `acceptsValid`, not a rule's check. The kit doesn't read error messages, so it can't tell which rule the implementation applied. The finding names the rules the vector's invalid siblings break as a hint. A spec example that is valid has no sibling, so its hint is the example's own rule.
+- **A valid document rejected:** the implementation rejects a valid vector. This fails `acceptsValid`, not a rule's check. The kit doesn't interpret error messages, so it can't tell which rule the implementation applied. The finding names the rules the vector's invalid siblings break as a hint. A spec example that is valid has no sibling, so its hint is the example's own rule.
 
-  A finding says a rule is *likely* over-strict only when the evidence points at it. At least 3 rejected valid vectors must share that hint, and they must be siblings of at least 3 different invalid vectors. A valid vector of the same family and hint must also be accepted. Otherwise the finding gives the hint and says it is a guess.
-- **A crash:** the adapter answered with an `error`. The implementation gave no verdict, so a crash counts where a wrong answer would. On an invalid vector it fails each rule the vector breaks; on a valid one, `acceptsValid`, with the hint. Crashes have their own findings, with `"kind": "crash"` and the adapter's message as `problem`. The summary counts them apart from agreements.
+  Rejections are grouped by the implementation's first error message where the answer has one, and by hint otherwise. The grouping compares the message's wording only: its first line, with quoted text (`"…"`, `'…'`, `` `…` ``), bracketed paths and numbers left out. So "Variable '$v0' of type '[Int]' used in position expecting type 'Int'." and the same message about `$v1` are one finding, whatever their hints. One cause in the implementation then shows up as one finding, and the finding's `hint` lists every hint of its vectors, the most common first. When those hints differ, the summary says so and blames no rule: the same error near several rules means the cause is none of them in particular.
+
+  A finding says a rule is *likely* over-strict only when the evidence points at it. Its vectors must all have that one hint. At least 3 of them must be rejected, and they must be siblings of at least 3 different invalid vectors. A valid vector of the same family and hint must also be accepted. Otherwise the finding gives the hint and says it is a guess.
+- **A crash:** the adapter answered with an `error`. The implementation gave no verdict, so a crash counts where a wrong answer would. On an invalid vector it fails each rule the vector breaks; on a valid one, `acceptsValid`, with the hint. Crashes have their own findings, with `"kind": "crash"` and the adapter's message as `problem`. The summary counts them apart from agreements. A crash is a failure under either edition, whatever the vector's verdict rests on, so it counts as draft-only only when October 2021 can't take the input at all: when the vector's schema has a OneOf Input Object.
 
 There is one check per rule, at MUST, cited by its section, and `acceptsValid`, at MUST, cited by §5 itself:
 
@@ -86,16 +91,17 @@ A rule's check has one of four statuses:
 
 `acceptsValid` fails if any valid vector was rejected, and passes otherwise. Findings group failures by kind and rules: "§5.3.2 isn't enforced" and "valid documents rejected, hint §5.3.2" are separate findings. Each finding's example is the spec's own example where one failed, and otherwise the shortest failing document.
 
-**Draft-only vectors.** A vector tagged `"edition": "draft"` relies on something only the draft has, and `editionNote` says what. Findings count them (`draftOnly`) and mark their example `[draft]`. Each check gives `failingDraftOnly`, how many of its failing vectors are draft-only, so a check whose failures are all draft-only can be told apart. The report's `draftOnly` gives how many graded vectors are draft-only and how many of those failed. They are graded like any other vector. 207 vectors carry the tag, one of them `unspecified` as well:
+**Draft-only vectors.** A vector tagged `"edition": "draft"` relies on something only the draft has, and `editionNote` says what. Findings count failures that are draft-only (`draftOnly`) and mark such an example `[draft]`. Each check gives `failingDraftOnly`, how many of its failing vectors are draft-only, so a check whose failures are all draft-only can be told apart. The report's `draftOnly` gives how many graded vectors are draft-only and how many of those failed. They are graded like any other vector. A crash on a draft-only vector isn't a draft-only failure unless its schema has a OneOf Input Object (see [Verdicts](#verdicts)). 179 vectors carry the tag, one of them `unspecified` as well:
 
 - 12 break §5.2.1.1 Operation Type Existence, which is new in the draft;
-- 23 break §5.2.4.1 Single Root Field with `@skip` or `@include` at a subscription's root, which only the draft forbids. The October 2021 edition applies those directives instead, so it may give these a different answer;
+- 2 break §5.2.4.1 Single Root Field only as the draft states it. The draft forbids `@skip` and `@include` at a subscription's root. October 2021 applies them instead, with no variable values: "Let {variableValues} be the empty set. Let {groupedFieldSet} be the result of {CollectFields(subscriptionType, selectionSet, variableValues)}. {groupedFieldSet} must have exactly one entry" (its §5.2.3.1). Its CollectFields drops a selection when "{skipDirective}'s {if} argument is {true} or is a variable in {variableValues} with the value {true}", and when "{includeDirective}'s {if} argument is not {true} and is not a variable in {variableValues} with the value {true}". So `postAdded @skip(if: true)` or `postAdded @include(if: $v)` alone collects no field and breaks October 2021's rule too; those 21 vectors aren't tagged. `b: postAdded @include(if: true)` (`SingleRootField-51`) and the draft's `requiredRuntimeValidation` example (`SingleRootField-spec-5`, where `@include(if: $bool)` drops the first field and `@skip(if: $bool)` keeps the second) collect one field, so only the draft rejects them. `Validation.tla`'s `SingleRootFieldOctober2021` is October 2021's rule, and the generator tags a Single Root Field vector only when that rule accepts it;
 - 8 break §5.6.1 or §5.8.5 only because an input object is OneOf. The generator finds them by evaluating the reference again with every input object's `oneOf` turned off;
 - 16 are valid documents that give a value to a OneOf Input Object;
-- 141 need a schema with a OneOf Input Object for another reason: they name its type or the argument that takes it, so their verdict changes without it (see [Schemas](#vectors));
-- 7 rely on the draft's coercion of nested lists. The draft coerces `[1]` for `[[Int]]` to `[[1]]` (§3.11's table: `[1, 2, 3]` gives `[[1], [2], [3]]`). October 2021's table gives "Error: Incorrect item value" for the same input, so there the literal breaks §5.6.1. That makes the 4 valid vectors invalid, and the 3 invalid ones (`FieldSelectionMerging-668`, `FragmentsMustBeUsed-73`, `DirectivesAreDefined-21`) break a second rule. The generator tags every vector with a list item that isn't a list, null or a variable where the item type is a list, unless it already breaks §5.6.1. October 2021's prose ("this may apply recursively for nested lists") contradicts its own table, so that edition doesn't settle it.
+- 141 need a schema with a OneOf Input Object for another reason: they name its type or the argument that takes it, so their verdict changes without it (see [Schemas](#vectors)).
 
 No vector uses draft-only grammar. Every document parses with graphql-js 16, so none has a description on an operation.
+
+Nested lists are graded in both editions. 7 vectors give a list item that isn't a list where the item type is a list, such as `matrix(rows: [1])` for `[[Int]]`: 4 valid (`ValuesOfCorrectType-valid-32`, `-valid-45`, `FragmentsMustBeUsed-valid-17`, `DirectivesAreDefined-valid-15`) and 3 invalid ones that break another rule (`FieldSelectionMerging-668`, `FragmentsMustBeUsed-73`, `DirectivesAreDefined-21`). §3.11's prose is the same in the draft and October 2021: "list values are accepted only when each item in the list can be accepted by the list's item type", and a value that isn't a list is coerced to "a list of size one … (note this may apply recursively for nested lists)". So `[1]` for `[[Int]]` is `[[1]]` under both. October 2021's example table disagrees: it gives "Error: Incorrect item value" for `[1, 2, 3]` as `[[Int]]`, where the draft's table gives `[[1], [2], [3]]`. The table is an example, and the prose is the rule, so the vectors follow the prose.
 
 **Self-test.** Every run also checks answers against the same checker on purpose:
 
@@ -105,7 +111,8 @@ No vector uses draft-only grammar. Every document parses with graphql-js 16, so 
 - every document rejected: `acceptsValid` must fail, no rule's check may fail, and §5.6.2 and §5.6.4 must be `subsumed`;
 - every document accepted: every rule's check with a vector must fail;
 - one valid vector rejected: `acceptsValid` must fail, and no finding may name a rule as likely over-strict;
-- 3 valid siblings of one rule rejected, with the rest of their family accepted: a finding must name the rule as likely over-strict.
+- 3 valid siblings of one rule rejected, with the rest of their family accepted, once without error messages and once all with the same message: a finding must name the rule as likely over-strict;
+- the same 3, and one valid vector with another hint, all rejected with one message that differs only in a quoted name: they must make one finding, which names no rule as likely over-strict.
 
 The reference's own answers must also come out clean, with §5.6.2 and §5.6.4 `subsumed`.
 
@@ -115,11 +122,11 @@ The reference's own answers must also come out clean, with §5.6.2 and §5.6.4 `
 
 Each invalid vector records the rules it breaks and the subjects each rule reports (`"violations": {"FieldSelectionMerging": ["conflict"]}`), and `siblings` lists its valid siblings. A vector may also carry:
 
-- **`requires`:** `["custom-scalar-literals"]` when the document gives a literal to a custom scalar;
+- **`requires`:** `"custom-scalar-literals"` when the document gives a literal to a custom scalar, and `"custom-directives"` when it uses a directive the schema's SDL declares;
 - **`unspecified`:** why the spec doesn't settle the vector. These vectors aren't sent to the adapter or graded;
 - **`edition`** and **`editionNote`:** `"draft"` and the reason, as above.
 
-12 vectors are `unspecified`. An adapter with every capability is graded on 3,088 vectors, 206 of them draft-only. One without `custom-scalar-literals` is graded on 3,079.
+12 vectors are `unspecified`. An adapter with every capability is graded on 3,088 vectors, 178 of them draft-only. One without `custom-scalar-literals` is graded on 3,079, one without `custom-directives` on 3,037, and one without either on 3,028.
 
 **Where the documents come from:**
 
@@ -183,7 +190,7 @@ Under every reading the arguments are a set, so their order never matters, and a
 - **Rules that can't break alone.** §5.6.1 asks for a value coercible to its type, and input coercion (§3.10.1) already rejects an unknown or missing input field. So every document that breaks §5.6.2 Input Object Field Names or §5.6.4 Input Object Required Fields also breaks §5.6.1. Their 19 vectors break both rules. Accepting one fails both checks. Rejecting them all leaves §5.6.2 and §5.6.4 `subsumed`, since §5.6.1 alone may have rejected them. The generator fails if the reference ever reports either rule alone.
 - **Introspection fields at a subscription's root.** §5.2.4.1 forbids an introspection field as a subscription's root field. `__typename` breaks only that rule, but `__schema` and `__type` exist only on the query root (§4.2), and the root types must all be different (§3.3.1). So `subscription { __type(name: "Post") { name } }` also breaks §5.3.1. Its 2 vectors (`SingleRootField-53` and `-54`) count against both rules, like the 19 above.
 - **Error locations aren't checked.** The reference's violations name subjects, such as `User.name`, `$v` or `conflict`, not positions in the document. Locating them would mean a second implementation of each rule in JavaScript, which the kit would then have to trust. Locations are a SHOULD at most (§7.1.6), so the area leaves them out.
-- **Error messages aren't read.** That is why a rejected valid document fails `acceptsValid` rather than a rule.
+- **Error messages aren't interpreted.** That is why a rejected valid document fails `acceptsValid` rather than a rule. Their wording only groups rejections (see [Verdicts](#verdicts)).
 - **Introspection.** `Validation.tla` adds the draft's introspection types (§4.2) to every schema, with `__schema` and `__type(name: String!)` on the query root. The draft's introspection schema has fields October 2021 lacks, such as `__Type.isOneOf`; the vectors select only fields both editions have. String and Boolean, which the introspection types use, are therefore in every schema.
 - **Descriptions aren't tested.** The draft says descriptions in executable documents "MUST NOT affect the execution, validation, or response of a GraphQL document" (§2.2). Pairs of documents that differ only by a description would test it, but descriptions on operations, fragments and variable definitions are draft-only grammar: graphql-js 16, which the generator parses with, rejects them, and an October 2021 parser would fail the request, which stops the run as an adapter error. So no vector has one.
 - **The reference's simplifications apply.** Values of Correct Type checks literals by kind: Int, Float and ID literals are taken to be in range. Custom scalars accept any literal except a list, which `Coercible` rejects before it reaches the scalar case. No graded vector gives a list literal to a custom scalar, and the generator fails if one ever does. Field Selection Merging recurses at most 6 levels deep, which is deeper than any vector. Fragment Spread Is Possible follows the formal text; the vectors where the prose says otherwise aren't graded (see above).

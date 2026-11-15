@@ -50,16 +50,22 @@ const fixtureList = (f) =>
     .map(([id]) => `\`${id}\``)
     .join(", ");
 
+// A failing check's severity: a MUST (or the kit's own ADAPTER checks)
+// fails, a SHOULD is a should, an INFO check is informational. Each has
+// its symbol, whatever edition the failing cases rely on.
+export const severity = (level) => (level === "SHOULD" ? "SHOULD" : level === "INFO" ? "INFO" : "MUST");
+const SYMBOL = { MUST: "✗", SHOULD: "!", INFO: "i" };
+// Whether every failing case of a check relies on the draft.
+const allDraftOnly = (c) => c.failingDraftOnly > 0 && c.failingDraftOnly >= c.failing;
+const draftNote = (c) => (c.failingDraftOnly ? (allDraftOnly(c) ? " (all draft only)" : ` (${c.failingDraftOnly} draft only)`) : "");
+
 // A check's cell: ✓ N (passed in all N cases), ✗ n/N (broke a MUST in n of
-// N), ! n/N (a SHOULD), ~ inconclusive, ⊂ subsumed by another check, –
-// not exercised.
-const cell = (check) => {
+// N), ! n/N (a SHOULD), i n/N (an informational check differed), each with
+// how many of the n rely on the draft; ~ inconclusive, ⊂ subsumed by
+// another check, – not exercised.
+export const cell = (check) => {
   if (!check) return "n/a";
-  if (check.status === "fail") {
-    if (check.level === "INFO") return `i ${check.failing}/${check.cases}`;
-    const draft = check.failingDraftOnly ? (check.failingDraftOnly >= check.failing ? " (all draft only)" : ` (${check.failingDraftOnly} draft only)`) : "";
-    return `${check.level === "MUST" || check.level === "ADAPTER" ? "✗" : "!"} ${check.failing}/${check.cases}${draft}`;
-  }
+  if (check.status === "fail") return `${SYMBOL[severity(check.level)]} ${check.failing}/${check.cases}${draftNote(check)}`;
   if (check.status === "pass") return `✓ ${check.cases}`;
   if (check.status === "inconclusive") return `~ ${check.cases}`;
   if (check.status === "subsumed") return "⊂";
@@ -72,8 +78,8 @@ const levelText = (c) => (c.oct2021 ? `${c.level} (Oct 2021: ${c.oct2021})` : c.
 const legend = [
   "- **✓ N:** every one of the N cases it applied to satisfied it.",
   "- **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.",
-  "- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.",
   "- **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.",
+  "- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.",
   "- **~:** inconclusive (see the implementation's page).",
   "- **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).",
   "- **–:** never exercised: the adapter lacks the capability, or no case reached it.",
@@ -81,23 +87,55 @@ const legend = [
 ].join("\n");
 
 // A section's verdict, from the checks that cite it (fixtures only say a
-// section was exercised): ✗ if a MUST check failed, ! if only a SHOULD did,
-// ✓ if every check that ran passed.
-const sectionCell = (key, number) => {
-  const checks = reports
-    .filter((r) => r.key === key)
-    .flatMap((r) => r.checks)
-    .filter((c) => c.spec.some((s) => s.number === number));
+// section was exercised). Failing checks are named in groups, worst level
+// first: ✗ for MUSTs, ! for SHOULDs, i for informational checks, each group
+// split into the checks that fail outright and those that fail only in
+// draft-only cases ("(draft only)"). With no MUST or SHOULD failing, the
+// verdict leads with ✓ if a check passed (~ if one was inconclusive).
+export const sectionVerdict = (checks) => {
   if (checks.length === 0) return null;
-  const failed = checks.filter((c) => c.status === "fail" && c.level !== "INFO");
-  const draftOnly = (c) => c.failingDraftOnly && c.failingDraftOnly >= c.failing;
-  if (failed.length && failed.every(draftOnly)) return `✗ (draft only) ${failed.map((c) => `\`${c.id}\``).join(" ")}`;
-  const must = failed.filter((c) => c.level !== "SHOULD" && !draftOnly(c));
-  if (must.length) return `✗ ${must.map((c) => `\`${c.id}\``).join(" ")}`;
-  if (failed.length) return `! ${failed.map((c) => `\`${c.id}\``).join(" ")}`;
-  if (checks.some((c) => c.status === "pass")) return "✓";
-  if (checks.some((c) => c.status === "inconclusive")) return "~";
-  return "–";
+  const failed = checks.filter((c) => c.status === "fail");
+  const ids = (cs) => cs.map((c) => `\`${c.id}\``).join(" ");
+  const groups = [];
+  for (const level of ["MUST", "SHOULD", "INFO"]) {
+    const at = failed.filter((c) => severity(c.level) === level);
+    const outright = at.filter((c) => !allDraftOnly(c));
+    const draft = at.filter(allDraftOnly);
+    if (outright.length) groups.push(`${SYMBOL[level]} ${ids(outright)}`);
+    if (draft.length) groups.push(`${SYMBOL[level]} (draft only) ${ids(draft)}`);
+  }
+  if (failed.some((c) => severity(c.level) !== "INFO")) return groups.join("; ");
+  const base = checks.some((c) => c.status === "pass") ? "✓" : checks.some((c) => c.status === "inconclusive") ? "~" : groups.length ? null : "–";
+  return [base, ...groups].filter(Boolean).join("; ");
+};
+const sectionCell = (key, number) =>
+  sectionVerdict(
+    reports
+      .filter((r) => r.key === key)
+      .flatMap((r) => r.checks)
+      .filter((c) => c.spec.some((s) => s.number === number)),
+  );
+
+// A fixture's verdict: ✗ if a failing case broke a MUST, ! if the failing
+// cases broke only SHOULDs (the kit fails a fixture on a SHOULD in strict
+// runs). The level comes from the findings that hold the fixture's cases;
+// n counts every failing case.
+export const fixtureCell = (fixture, report) => {
+  if (fixture.status === "skipped") return "–";
+  if (fixture.status === "pass") return fixture.informational ? `i ${fixture.informational}/${fixture.cases}` : `✓ ${fixture.cases}`;
+  const levels = report.findings
+    .filter((f) => f.fixtures?.[fixture.id])
+    .flatMap((f) => (f.checks.length ? f.checks.map((id) => severity(report.checks.find((c) => c.id === id)?.level)) : ["MUST"]));
+  const symbol = levels.includes("MUST") || levels.length === 0 ? "✗" : levels.includes("SHOULD") ? "!" : "i";
+  return `${symbol} ${fixture.failing}/${fixture.cases}`;
+};
+
+// A finding's level, as a label: none for a MUST, else "(SHOULD)" or
+// "(informational)"; and "(draft only)" when every case relies on the draft.
+export const findingLabels = (f, checks) => {
+  const levels = f.checks.map((id) => severity(checks.find((c) => c.id === id)?.level));
+  const worst = levels.length === 0 || levels.includes("MUST") ? "MUST" : levels.includes("SHOULD") ? "SHOULD" : "INFO";
+  return [worst === "SHOULD" && "(SHOULD)", worst === "INFO" && "(informational)", f.draftOnly && f.draftOnly >= f.cases && "(draft only)"].filter(Boolean);
 };
 
 const caveats = [
@@ -135,13 +173,13 @@ const matrix = () => {
     "",
     "**Finding groups** counts kinds of failure, not distinct bugs: one root cause can show up as several groups, and the number isn't a ranking. **Cases failing direct checks** are cases the kit rejected before consulting the reference, for something it checks on its own, such as a response stream that failed, a leaf value that should have raised an error, or a malformed error entry. They are the implementation's failures unless the adapter-problems column says otherwise.",
   );
-  lines.push("", "## Findings", "", "Each finding is one kind of failure: the set of clauses a case broke, or a malformed case's first problem, which is the root cause when one fault shows up several ways. A case counts toward one finding only.", "");
+  lines.push("", "## Findings", "", "Each finding is one kind of failure: the set of clauses or direct checks a case broke. A case belongs to one finding, but a malformed case counts against every check it breaks, so one problem never hides another.", "");
   for (const key of keys) {
     const own = reports.filter((r) => r.key === key);
-    const findings = own.flatMap((r) => r.findings.map((f, i) => ({ f, i, area: r.area, informational: f.checks.length > 0 && f.checks.every((id) => r.checks.find((c) => c.id === id)?.level === "INFO") })));
+    const findings = own.flatMap((r) => r.findings.map((f, i) => ({ f, i, area: r.area, labels: findingLabels(f, r.checks) })));
     lines.push(`- **[${nameOf(key)}](${key}.md):** ${findings.length === 0 ? "none" : ""}`);
-    findings.forEach(({ f, i, area, informational }) => {
-      lines.push(`  - ${informational ? "(informational) " : ""}[${f.checks.map((c) => `\`${c}\``).join(", ") || "malformed result"}](${key}.md#${anchor(area, i)})${f.summary ? `: ${f.summary}` : ""} (${plural(f.cases, "case")}, ${fixtureList(f)})`);
+    findings.forEach(({ f, i, area, labels }) => {
+      lines.push(`  - ${labels.map((l) => `${l} `).join("")}[${f.checks.map((c) => `\`${c}\``).join(", ") || "malformed result"}](${key}.md#${anchor(area, i)})${f.summary ? `: ${f.summary}` : ""} (${plural(f.cases, "case")}, ${fixtureList(f)})`);
     });
   }
   lines.push("");
@@ -157,15 +195,14 @@ const matrix = () => {
     }
     lines.push("");
     if (first.fixtures.length === 0) continue;
-    lines.push(`### ${cap(area)}: each fixture`, "", "The sections a fixture lists are the ones it exercises; its verdict is whether any of its cases failed a check.", "");
+    lines.push(`### ${cap(area)}: each fixture`, "", "The sections a fixture lists are the ones it exercises; its verdict is whether any of its cases failed a check: ✗ n/N if a failing case broke a MUST, ! n/N if the failing cases broke only SHOULDs, where n counts every failing case; i n/N if they only differed on an informational check.", "");
     lines.push(...header(["Fixture", "Exercises", ...keys.map(nameOf)]));
     for (const f of first.fixtures) {
       const cells = keys.map((k) => {
         const own = reportFor(k, area)?.fixtures.find((x) => x.id === f.id);
         if (!own) return " ";
         if (own.status === "skipped") return `– ${own.reason}`;
-        if (own.status === "pass") return own.informational ? `i ${own.informational}/${own.cases}` : `✓ ${own.cases}`;
-        return `✗ ${own.failing}/${own.cases}`;
+        return fixtureCell(own, reportFor(k, area));
       });
       lines.push(`| [\`${f.id}\`](../fixtures/${f.id}.graphql) | ${f.spec.map(link).join(" ")} | ${cells.join(" | ")} |`);
     }
@@ -177,7 +214,7 @@ const matrix = () => {
   lines.push(
     "## By spec section",
     "",
-    "A section's verdict comes from the checks that cite it, and names the ones that failed. Sections that fixtures exercise but no check targets have no verdict of their own; their fixtures' verdicts are above.",
+    "A section's verdict comes from the checks that cite it, and names the ones that failed, worst level first: ✗ for a MUST, ! for a SHOULD, i for an informational check that differed. Within a level, **(draft only)** marks the checks whose failing cases all rely on the draft, not the October 2021 edition. With no MUST or SHOULD failing, ✓ means every check that ran passed or only differed informationally, ~ that one was inconclusive and – that none was exercised. Sections that fixtures exercise but no check targets have no verdict of their own; their fixtures' verdicts are above.",
     "",
     ...header(["Section", ...keys.map(nameOf)]),
   );
@@ -211,6 +248,9 @@ const page = (key) => {
     lines.push(`- **Cases:** ${r.cases.submitted} submitted, ${r.cases.distinct} distinct, ${r.cases.malformed} malformed`);
     if (r.cases.skipped) lines.push(`- **Skipped:** ${r.cases.skipped}`);
     const p0 = r.provenance;
+    if (p0.vectors === undefined && p0.skipped && Object.keys(p0.skipped).length) {
+      lines.push(`- **Not sent:** ${Object.entries(p0.skipped).map(([reason, n]) => `${n} ${reason}`).join(", ")}`);
+    }
     if (p0.vectors !== undefined && p0.graded !== undefined) {
       const why = Object.entries(p0.skipped ?? {}).map(([reason, n]) => `${n} ${reason}`).join(", ");
       lines.push(`- **Vectors:** ${p0.graded} of ${p0.vectors} graded${why ? ` (not graded: ${why})` : ""}`);
@@ -269,7 +309,7 @@ const page = (key) => {
     if (based.length) lines.push("", ...based.map((c) => `- **Basis for \`${c.id}\`:** ${c.basis}`));
     if (r.fixtures.length) lines.push("", "### Fixtures", "", ...header(["Fixture", "Result", "Note"]));
     for (const f of r.fixtures) {
-      const result = f.status === "skipped" ? "–" : f.status === "pass" ? (f.informational ? `i ${f.informational}/${f.cases}` : `✓ ${f.cases}`) : `✗ ${f.failing}/${f.cases}`;
+      const result = fixtureCell(f, r);
       lines.push(`| [\`${f.id}\`](../fixtures/${f.id}.graphql) | ${result} | ${f.reason ?? f.note ?? ""} |`);
     }
     lines.push("");
@@ -277,11 +317,14 @@ const page = (key) => {
   return lines.join("\n");
 };
 
-const outputs = new Map([[join(dir, "README.md"), matrix()], ...keys.map((k) => [join(dir, `${k}.md`), page(k)])]);
-if (process.argv.includes("--check")) {
-  const stale = [...outputs].filter(([path, text]) => !existsSync(path) || readFileSync(path, "utf8") !== text);
-  for (const [path] of stale) console.error(`✗ ${path} is out of date; run node scripts/conformance-sheet.mjs`);
-  process.exit(stale.length ? 1 : 0);
+// Writes the sheets when run, not when a test imports the helpers above.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const outputs = new Map([[join(dir, "README.md"), matrix()], ...keys.map((k) => [join(dir, `${k}.md`), page(k)])]);
+  if (process.argv.includes("--check")) {
+    const stale = [...outputs].filter(([path, text]) => !existsSync(path) || readFileSync(path, "utf8") !== text);
+    for (const [path] of stale) console.error(`✗ ${path} is out of date; run node scripts/conformance-sheet.mjs`);
+    process.exit(stale.length ? 1 : 0);
+  }
+  for (const [path, text] of outputs) writeFileSync(path, text);
+  console.log(`wrote ${outputs.size} files from ${plural(reports.length, "report")}`);
 }
-for (const [path, text] of outputs) writeFileSync(path, text);
-console.log(`wrote ${outputs.size} files from ${plural(reports.length, "report")}`);

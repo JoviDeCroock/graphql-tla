@@ -41,5 +41,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run test:sheet
       - run: npm run website:test
       - run: npm run website:build

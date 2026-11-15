@@ -18,6 +18,7 @@
     "website:dev": "vite website",
     "website:build": "tsc -p website/tsconfig.json && vite build website",
     "website:preview": "vite preview website",
+    "test:sheet": "node --test scripts/test/*.test.mjs",
     "website:test": "node --test website/test/*.test.mjs"
   },
   "devDependencies": {

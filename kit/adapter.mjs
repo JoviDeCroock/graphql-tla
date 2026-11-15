@@ -71,6 +71,21 @@ export class Adapter {
     }
     this.name = message.name ?? this.command;
     this.capabilities = new Set(message.capabilities ?? []);
+    // Execution only (docs/conformance.md, "Capabilities"): the leaf types
+    // `uncoercible-results` covers, all of them if absent, and whether the
+    // adapter can return null for a Non-Null list item or subscription
+    // event.
+    if (message.uncoercibleTypes !== undefined) {
+      const known = ["Int", "Float", "Enum"];
+      if (!Array.isArray(message.uncoercibleTypes) || message.uncoercibleTypes.some((t) => !known.includes(t))) {
+        throw new Error(`uncoercibleTypes must be a list of ${known.join(", ")}; got ${JSON.stringify(message.uncoercibleTypes)}`);
+      }
+      this.uncoercibleTypes = new Set(message.uncoercibleTypes);
+    }
+    if (message.nullItems !== undefined && typeof message.nullItems !== "boolean") {
+      throw new Error(`nullItems must be a boolean; got ${JSON.stringify(message.nullItems)}`);
+    }
+    this.nullItems = message.nullItems !== false;
     return message;
   }
 

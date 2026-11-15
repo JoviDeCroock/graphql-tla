@@ -37,8 +37,8 @@ response: none: GraphQLSerializer.Serialize threw ArgumentException: .NET number
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -227,8 +227,8 @@ expected: {"ok":false}
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -516,8 +516,8 @@ expected: valid
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -849,8 +849,8 @@ expected: invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other ru
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -1141,8 +1141,8 @@ expected: [object Object]
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.

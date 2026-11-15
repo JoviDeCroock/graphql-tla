@@ -102,6 +102,19 @@ export const CONTROLS = [
         : [],
   },
   {
+    name: "nulls data while no pending root field can null it",
+    clause: "dataMatches",
+    make: (c, fixture) => {
+      // Every root field nullable, so none can null data; then drop the
+      // last settle, so execution is still pending.
+      if (fixture.operationType !== "query") return [];
+      const fields = Object.values(fixture.schema.getQueryType().getFields());
+      if (fields.some((f) => String(f.type).endsWith("!"))) return [];
+      const last = c.trace.findLastIndex((e) => e.settle);
+      return last === -1 ? [] : [{ trace: c.trace.filter((_, i) => i !== last), response: { data: null } }];
+    },
+  },
+  {
     name: "responds while a resolver it needs is pending",
     clause: "complete",
     make: (c) => {
@@ -217,6 +230,16 @@ export const CONTROLS = [
       const errors = (c.response.errors ?? []).filter((e) => JSON.stringify(e.path) !== JSON.stringify(["color"]));
       const { errors: _, ...rest } = c.response;
       return [{ response: { ...rest, data: { ...c.response.data, color: "BLUE" }, ...(errors.length ? { errors } : {}) } }];
+    },
+  },
+  {
+    name: "returns null without an error for a non-finite Float",
+    clause: "malformed",
+    check: "resultCoercion",
+    make: (c) => {
+      const settle = c.trace.find((e) => e.settle?.length === 1 && e.settle[0] === "ratio" && e.outcome.kind === "uncoercible");
+      if (!settle || c.response.data?.ratio !== null) return [];
+      return [{ response: withoutErrors(c.response, (e) => !samePath(e.path, ["ratio"])) }];
     },
   },
   {
@@ -369,6 +392,64 @@ export const REPORT_CONTROLS = [
       report.adapterProblems === 1 && check(report, "intFraction").failing === 0
         ? ""
         : `adapterProblems is ${report.adapterProblems} and intFraction fails on ${check(report, "intFraction").failing} cases, not 1 and 0`,
+  },
+  {
+    name: "an Int fraction passed through counts under intFraction only",
+    strict: false,
+    bases: [(c, fixture) => !outsideSpec(fixture) && c.trace.some((e) => e.settle?.length === 1 && e.settle[0] === "count" && e.outcome.kind === "uncoercible") && c.response?.data?.count === null],
+    make: ([c]) => [{ ...c, response: { ...withoutErrors(c.response, (e) => !samePath(e.path, ["count"])), data: { ...c.response.data, count: 1.2 } } }],
+    expect: (report) => {
+      const problems = [];
+      if (check(report, "intFraction").failing !== 1) problems.push(`intFraction fails on ${check(report, "intFraction").failing} cases, not 1`);
+      if (check(report, "leafValues").failing !== 0) problems.push(`leafValues fails on ${check(report, "leafValues").failing} cases, not 0`);
+      return problems.join("; ");
+    },
+  },
+  {
+    name: "a truncated Int fraction doesn't hide an error dropped elsewhere in the case",
+    strict: false,
+    bases: [
+      (c, fixture) =>
+        !outsideSpec(fixture) &&
+        c.fixture === "unions" &&
+        c.trace.some((e) => samePath(e.settle ?? [], ["matrix"]) && e.outcome.kind === "list" && e.outcome.length === 1) &&
+        c.trace.some((e) => samePath(e.settle ?? [], ["matrix", "0"]) && e.outcome.kind === "list" && e.outcome.length === 1) &&
+        c.trace.some((e) => samePath(e.settle ?? [], ["matrix", "0", "0"]) && e.outcome.kind === "uncoercible") &&
+        c.response?.data?.search === null &&
+        c.response.errors?.some((e) => e.path[0] === "search"),
+    ],
+    // matrix.0.0 truncated to 1 without its error, and the errors that
+    // explain the null search dropped.
+    make: ([c]) => [{ ...c, response: { ...withoutErrors(c.response, (e) => e.path[0] !== "search" && e.path[0] !== "matrix"), data: { ...c.response.data, matrix: [[1]] } } }],
+    expect: (report) => {
+      const problems = [];
+      if (check(report, "intFraction").failing !== 1) problems.push(`intFraction fails on ${check(report, "intFraction").failing} cases, not 1`);
+      if (check(report, "nullsExplained").failing !== 1) problems.push(`nullsExplained fails on ${check(report, "nullsExplained").failing} cases, not 1`);
+      return problems.join("; ");
+    },
+  },
+  {
+    name: "errors without a path don't hide data nulled past a nullable position",
+    strict: false,
+    bases: [(c, fixture) => !outsideSpec(fixture) && fixture.operationType === "query" && c.response?.data !== null && c.response?.errors?.length > 0],
+    make: ([c]) => [{ ...c, response: { data: null, errors: c.response.errors.map(({ path: _, ...e }) => e) } }],
+    expect: (report) => {
+      const problems = [];
+      if (check(report, "errorPath").failing !== 1) problems.push(`errorPath fails on ${check(report, "errorPath").failing} cases, not 1`);
+      if (check(report, "dataMatches").failing !== 1) problems.push(`dataMatches fails on ${check(report, "dataMatches").failing} cases, not 1`);
+      if (check(report, "nullsExplained").cases !== 0) problems.push("nullsExplained was graded on a case without error paths");
+      return problems.join("; ");
+    },
+  },
+  {
+    name: "a case that breaks two checks counts against both",
+    strict: false,
+    bases: [(c, fixture) => !outsideSpec(fixture) && c.response?.data != null && !hasErrors(c)],
+    make: ([c]) => [{ ...c, response: { ...c.response, errors: [], status: "ok" } }],
+    expect: (report) =>
+      check(report, "errorsList").failing === 1 && check(report, "additionalEntries").failing === 1
+        ? ""
+        : `errorsList fails on ${check(report, "errorsList").failing} cases and additionalEntries on ${check(report, "additionalEntries").failing}, not 1 and 1`,
   },
   {
     name: "a root field called twice with different types, outside the spec",

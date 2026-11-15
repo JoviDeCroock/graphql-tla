@@ -64,6 +64,7 @@ send({
     "uncoercible-results",
     "mutation",
     "subscription",
+    "custom-directives",
     // @experimental_disableErrorPropagation is new in graphql-js 17.
     ...(version === "16" ? [] : ["error-propagation-off"]),
     ...areaCapabilities,

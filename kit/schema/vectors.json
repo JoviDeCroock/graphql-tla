@@ -280,6 +280,7 @@
       "family": "root",
       "rule": "ROOT_TYPES_ARE_OBJECTS",
       "origin": "§3.3.1: a valid schema without a mutation root operation type, even though it contains a type named Mutation",
+      "unspecified": "No normative sentence says what the mutation root is when the schema definition is omitted and a type named Mutation isn't an object type. §3.3.1 only says the definition \"can omit the schema definition when each root operation type uses its respective default root type name, no other type uses any default root type name, and the schema does not have a description\", a condition on writing SDL. The reading that Mutation is the mutation root, an interface, and so the schema is invalid, rests on an example's \"would be incorrectly presumed to be the mutation root operation type\". October 2021 has neither the \"no other type\" clause nor that example, and its text allows reading the schema as one with no mutation root, which is valid. TypeSystem.tla follows the example.",
       "pair": "rootTypesAreObjects.2.valid",
       "sdl": "type Query { a: Int } interface Mutation { a: Int }",
       "verdict": [
@@ -866,7 +867,11 @@
       ],
       "expected": {
         "valid": false
-      }
+      },
+      "siblings": [
+        "requiredArgNotDeprecated.1.valid",
+        "requiredArgNotDeprecated.2.valid"
+      ]
     },
     {
       "id": "requiredArgNotDeprecated.1.valid",
@@ -887,26 +892,6 @@
       }
     },
     {
-      "id": "requiredArgNotDeprecated.2.invalid",
-      "spec": [
-        "3.6",
-        "3.13.3"
-      ],
-      "family": "typeUse",
-      "rule": "REQUIRED_ARG_NOT_DEPRECATED",
-      "origin": "§3.13.3: a required argument must first be made optional, by adding a default value",
-      "edition": "draft",
-      "editionNote": "new in the draft: deprecated arguments",
-      "pair": "requiredArgNotDeprecated.2.valid",
-      "sdl": "type Query { f(oldArg: String! @deprecated): Int }",
-      "verdict": [
-        "REQUIRED_ARG_NOT_DEPRECATED"
-      ],
-      "expected": {
-        "valid": false
-      }
-    },
-    {
       "id": "requiredArgNotDeprecated.2.valid",
       "spec": [
         "3.6",
@@ -917,7 +902,7 @@
       "origin": "§3.13.3: a required argument must first be made optional, by adding a default value",
       "edition": "draft",
       "editionNote": "new in the draft: deprecated arguments",
-      "pair": "requiredArgNotDeprecated.2.invalid",
+      "pair": "requiredArgNotDeprecated.1.invalid",
       "sdl": "type Query { f(oldArg: String! = \"s\" @deprecated): Int }",
       "verdict": [],
       "expected": {
@@ -1421,6 +1406,36 @@
       "rule": "IMPLEMENTS_ITSELF",
       "pair": "implementsItself.1.invalid",
       "sdl": "interface A { x: Int } type Query { a: A }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implementsItself.2.invalid",
+      "spec": [
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPLEMENTS_ITSELF",
+      "pair": "implementsItself.2.valid",
+      "sdl": "interface A implements A { x: Int } type Query implements A { x: Int a: A }",
+      "verdict": [
+        "IMPLEMENTS_ITSELF"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implementsItself.2.valid",
+      "spec": [
+        "3.7"
+      ],
+      "family": "implementation",
+      "rule": "IMPLEMENTS_ITSELF",
+      "pair": "implementsItself.2.invalid",
+      "sdl": "interface A { x: Int } type Query implements A { x: Int a: A }",
       "verdict": [],
       "expected": {
         "valid": true
@@ -2275,7 +2290,11 @@
       ],
       "expected": {
         "valid": false
-      }
+      },
+      "siblings": [
+        "inputObjectUnbreakableCycle.1.valid",
+        "inputObjectUnbreakableCycle.2.valid"
+      ]
     },
     {
       "id": "inputObjectUnbreakableCycle.1.valid",
@@ -2293,23 +2312,6 @@
       }
     },
     {
-      "id": "inputObjectUnbreakableCycle.2.invalid",
-      "spec": [
-        "3.10"
-      ],
-      "family": "input",
-      "rule": "INPUT_OBJECT_UNBREAKABLE_CYCLE",
-      "origin": "§3.10: a list breaks the cycle",
-      "pair": "inputObjectUnbreakableCycle.2.valid",
-      "sdl": "input Example { self: Example! value: String } type Query { f(e: Example): Int }",
-      "verdict": [
-        "INPUT_OBJECT_UNBREAKABLE_CYCLE"
-      ],
-      "expected": {
-        "valid": false
-      }
-    },
-    {
       "id": "inputObjectUnbreakableCycle.2.valid",
       "spec": [
         "3.10"
@@ -2317,7 +2319,7 @@
       "family": "input",
       "rule": "INPUT_OBJECT_UNBREAKABLE_CYCLE",
       "origin": "§3.10: a list breaks the cycle",
-      "pair": "inputObjectUnbreakableCycle.2.invalid",
+      "pair": "inputObjectUnbreakableCycle.1.invalid",
       "sdl": "input Example { self: [Example!]! value: String } type Query { f(e: Example): Int }",
       "verdict": [],
       "expected": {
@@ -2587,6 +2589,36 @@
       }
     },
     {
+      "id": "directiveUsesItself.2.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_USES_ITSELF",
+      "pair": "directiveUsesItself.2.valid",
+      "sdl": "directive @d(arg: String @d) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION type Query { a: Int }",
+      "verdict": [
+        "DIRECTIVE_USES_ITSELF"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveUsesItself.2.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_USES_ITSELF",
+      "pair": "directiveUsesItself.2.invalid",
+      "sdl": "directive @d(arg: String) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION type Query { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
       "id": "directiveReferencesItselfIndirectly.1.invalid",
       "spec": [
         "3.13"
@@ -2673,6 +2705,36 @@
       "rule": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
       "pair": "directiveReferencesItselfIndirectly.3.invalid",
       "sdl": "directive @d(c: Color) on ENUM_VALUE enum Color { RED BLUE } type Query { a: Color }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveReferencesItselfIndirectly.4.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+      "pair": "directiveReferencesItselfIndirectly.4.valid",
+      "sdl": "directive @d(a: Int @e) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION type Query { a: Int }",
+      "verdict": [
+        "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveReferencesItselfIndirectly.4.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+      "pair": "directiveReferencesItselfIndirectly.4.invalid",
+      "sdl": "directive @d(a: Int @e) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @e(b: Int) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION type Query { a: Int }",
       "verdict": [],
       "expected": {
         "valid": true

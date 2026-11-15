@@ -17,13 +17,21 @@
 (*     RecommendedDirectiveNames is a builtinDirectives problem, a SHOULD, *)
 (*     which Matches doesn't see.                                          *)
 (*   - The profile (c.profile) picks the built-ins: SpecBuiltins for the   *)
-(*     draft, Oct2021Builtins for October 2021. A draft answer with        *)
-(*     problems is also compared with Oct2021Builtins, so that the kit can *)
-(*     tell which problems with built-ins match October 2021.              *)
-(*   - Wrapper types (actual.wrappers) must pass WrapperMatches: a         *)
+(*     draft, Oct2021Builtins for October 2021. An answer with problems is *)
+(*     also compared with the other edition's built-ins, so that the kit   *)
+(*     can tell which problems with built-ins match that edition.          *)
+(*   - Wrapper types (a "wrappers" case, the answer to __type(name:        *)
+(*     "__Schema"), asked on its own) must pass WrapperMatches: a          *)
 (*     "wrapper" problem otherwise. The answer they come from              *)
 (*     (actual.wrapperFields) must pass SchemaFieldsMatch: a               *)
 (*     "wrapperFields" problem per field of __Schema otherwise.            *)
+(*   - Some differences get their own aspect, so that the kit can grade    *)
+(*     them at the level the spec gives them: "includeDeprecated" (a list  *)
+(*     whose only difference is deprecated items), "nullability" (a        *)
+(*     field's type differs only in Non-Null), "defaultValueOmitted" (null *)
+(*     for an input value that has a default), "isRepeatable", and         *)
+(*     "isOneOfNull" and "wrapperIsOneOf" (isOneOf, which only the draft   *)
+(*     has, null where it shouldn't be or not null where it should).       *)
 (*   - An item a service adds to a built-in list (a field, argument or     *)
 (*     enum value), or a type it adds, is an "added:" problem, set apart   *)
 (*     from one it leaves out.                                             *)
@@ -55,7 +63,7 @@ DeprecatedNames(seq) == {seq[k].name : k \in {j \in DOMAIN seq : IsDeprecated(se
 \* Items left out and items added are set apart: an added item is
 \* "added:" \o aspect, so that the kit can tell an extension of a built-in
 \* type from a change to it. When the difference is only deprecated items,
-\* includeDeprecated wasn't honoured.
+\* includeDeprecated wasn't honoured: an "includeDeprecated" problem.
 MembershipProblems(aspect, where, e, a, dep) ==
   LET en == NameSet(e)
       an == NameSet(a)
@@ -63,10 +71,10 @@ MembershipProblems(aspect, where, e, a, dep) ==
       added == an \ en
   IN IF Len(a) # Cardinality(an) THEN {P(aspect, where)}
      ELSE (IF missing = {} THEN {}
-           ELSE IF missing \subseteq dep THEN {P("deprecation", where)}
+           ELSE IF missing \subseteq dep THEN {P("includeDeprecated", where)}
            ELSE {P(aspect, where)})
           \cup (IF added = {} THEN {}
-                ELSE IF added \subseteq dep THEN {P("deprecation", where)}
+                ELSE IF added \subseteq dep THEN {P("includeDeprecated", where)}
                 ELSE {P("added:" \o aspect, where)})
 
 OrderProblems(where, e, a) == IF NamesOf(e) = NamesOf(a) THEN {} ELSE {P("order", where)}
@@ -83,11 +91,19 @@ DeprecationProblems(where, e, a) ==
   IF e.isDeprecated = a.isDeprecated /\ e.deprecationReason = a.deprecationReason
   THEN {} ELSE {P("deprecation", where)}
 
+\* §4.2.4: "defaultValue may return a String encoding ... of the default
+\* value". Null for an input value that has a default is
+\* "defaultValueOmitted"; any other difference is "defaultValue".
+DefaultProblems(FS, where, e, a) ==
+  IF DefaultMatches(FS, e.ref, e.defaultValue, a.defaultValue) THEN {}
+  ELSE IF e.defaultValue # None /\ a.defaultValue = None THEN {P("defaultValueOmitted", where)}
+  ELSE {P("defaultValue", where)}
+
 \* One argument or input field. e has the declared type in `ref`.
 InputValueProblems(FS, aspect, where, e, a) ==
   (IF e.type = a.type THEN {} ELSE {P(aspect, where)})
   \cup DescriptionProblems(where, e, a)
-  \cup (IF DefaultMatches(FS, e.ref, e.defaultValue, a.defaultValue) THEN {} ELSE {P("defaultValue", where)})
+  \cup DefaultProblems(FS, where, e, a)
   \cup DeprecationProblems(where, e, a)
 
 \* A list of arguments (open "(", close ":)") or input fields (".", "").
@@ -96,8 +112,15 @@ InputValuesProblems(FS, ordered, aspect, where, open, close, defs, e, a) ==
   \cup UNION {InputValueProblems(FS, aspect, where \o open \o n \o close, ByName(e, n), ByName(a, n)) :
                 n \in Common(e, a)}
 
+\* A type ref without its Non-Null wrappers.
+Nullable(ref) == SelectSeq(ref, LAMBDA r : r.kind # "NON_NULL")
+
+\* A field whose type differs from the expected one only in Non-Null is a
+\* "nullability" problem.
 FieldProblems(FS, ordered, where, def, e, a) ==
-  (IF e.type = a.type THEN {} ELSE {P("fields", where)})
+  (IF e.type = a.type THEN {}
+   ELSE IF Nullable(e.type) = Nullable(a.type) THEN {P("nullability", where)}
+   ELSE {P("fields", where)})
   \cup DescriptionProblems(where, e, a)
   \cup DeprecationProblems(where, e, a)
   \cup InputValuesProblems(FS, ordered, "arguments", where, "(", ":)", def.args, e.args, a.args)
@@ -108,7 +131,8 @@ RefsProblems(aspect, where, e, a, ordered) ==
   ELSE IF SameRefSet(e, a) THEN (IF ordered THEN {P("order", where)} ELSE {})
   ELSE {P(aspect, where)}
 
-\* §4.2.2: which of __Type's fields are null depends on the kind.
+\* §4.2.2: which of __Type's fields are null depends on the kind. isOneOf,
+\* which only the draft has, is apart: an "isOneOfNull" problem.
 KindMismatch(e, a) ==
   \/ e.kind # a.kind
   \/ IsNull(e.fields) # IsNull(a.fields)
@@ -116,7 +140,6 @@ KindMismatch(e, a) ==
   \/ IsNull(e.interfaces) # IsNull(a.interfaces)
   \/ IsNull(e.possibleTypes) # IsNull(a.possibleTypes)
   \/ IsNull(e.enumValues) # IsNull(a.enumValues)
-  \/ IsNull(e.isOneOf) # IsNull(a.isOneOf)
   \/ e.kind # "SCALAR" /\ ~IsNull(a.specifiedByURL)
 
 TypeProblems(FS, T, e, a) ==
@@ -127,7 +150,9 @@ TypeProblems(FS, T, e, a) ==
   ELSE
     DescriptionProblems(n, e, a)
     \cup (IF e.specifiedByURL = a.specifiedByURL THEN {} ELSE {P("specifiedByURL", n)})
-    \cup (IF e.isOneOf = a.isOneOf THEN {} ELSE {P("isOneOf", n)})
+    \cup (IF e.isOneOf = a.isOneOf THEN {}
+          ELSE IF IsNull(e.isOneOf) # IsNull(a.isOneOf) THEN {P("isOneOfNull", n)}
+          ELSE {P("isOneOf", n)})
     \cup (IF IsNull(e.fields) THEN {}
           ELSE LET ef == e.fields[1]
                    af == Without(a.fields[1], {"__typename"}, 1, <<>>)
@@ -152,8 +177,8 @@ TypeProblems(FS, T, e, a) ==
 DirectiveProblems(FS, D, e, a) ==
   LET w == "@" \o D.name IN
   DescriptionProblems(w, e, a)
-  \cup (IF e.isRepeatable = a.isRepeatable
-           /\ Len(e.locations) = Len(a.locations) /\ Range(e.locations) = Range(a.locations)
+  \cup (IF e.isRepeatable = a.isRepeatable THEN {} ELSE {P("isRepeatable", w)})
+  \cup (IF Len(e.locations) = Len(a.locations) /\ Range(e.locations) = Range(a.locations)
         THEN {} ELSE {P("directives", w)})
   \cup InputValuesProblems(FS, ~IsBuiltinDirectiveName(D.name), "arguments", w, "(", ":)", D.args, e.args, a.args)
   \cup DeprecationProblems(w, e, a)
@@ -181,7 +206,7 @@ InputKinds == {"SCALAR", "ENUM", "INPUT_OBJECT"}
 \* plus `typename`, the root's __typename. extraTypes are the service's
 \* types that B also has.
 Problems(S0, B, extraTypes, inc, actual) ==
-  LET S == AsProvided(S0, actual.builtinDirectiveNames)
+  LET S == AsProvided(S0, ProvidedNames(actual))
       P0 == Providing(B, actual.builtinDirectiveNames)
       FS == Full(S, P0)
       expected == SchemaResult(S, P0, inc)
@@ -214,7 +239,14 @@ Problems(S0, B, extraTypes, inc, actual) ==
   \cup {P("requiredDirective", "@" \o d) : d \in required \ returned}
   \cup {P("builtinDirectives", "@" \o d) : d \in RecommendedDirectiveNames(S0) \ (returned \cup required)}
   \cup UNION {DirectiveProblems(FS, DirectiveNamed(FS, d), ByName(ed, d), ByName(ad, d)) : d \in Common(ed, ad)}
-  \cup {P("wrapper", w.where) : w \in {x \in Range(actual.wrappers) : ~WrapperMatches(x)}}
+
+\* What is wrong with the answer to __type(name: "__Schema"): the wrapper
+\* types among its fields' types, and the fields themselves.
+\* A wrapper whose only non-null field besides kind and ofType is isOneOf,
+\* which only the draft has, is a "wrapperIsOneOf" problem.
+WrappersProblems(B, actual) ==
+  {P(IF WrapperMatches([w EXCEPT !.isOneOf = None]) THEN "wrapperIsOneOf" ELSE "wrapper", w.where) :
+     w \in {x \in Range(actual.wrappers) : ~WrapperMatches(x)}}
   \cup WrapperFieldsProblems(B, actual.wrapperFields)
 
 \* What is wrong with a sequence of __type(name:) results, each
@@ -235,25 +267,28 @@ LookupProblems(S0, B, inc, lookups, provided) ==
 
 EditionBuiltins(profile) == IF profile = "oct2021" THEN Oct2021Builtins ELSE SpecBuiltins
 
+OtherEdition(profile) == IF profile = "oct2021" THEN SpecBuiltins ELSE Oct2021Builtins
+
 \* The problems with a case for the edition's built-ins E.
 CaseProblems(S, c, E) ==
-  IF c.kind = "lookup"
-  THEN LookupProblems(S, E, c.inc, c.actual, c.provided)
-  ELSE Problems(S, ServiceBuiltins(E, c.extras, c.extraTypes), c.extraTypes, c.inc, c.actual)
+  CASE c.kind = "lookup" -> LookupProblems(S, E, c.inc, c.actual, c.provided)
+    [] c.kind = "wrappers" -> WrappersProblems(E, c.actual)
+    [] OTHER -> Problems(S, ServiceBuiltins(E, c.extras, c.extraTypes), c.extraTypes, c.inc, c.actual)
 
-\* The reference's verdict on a case, the problems behind it, and for a
-\* draft answer with problems, its problems against October 2021's
+\* The reference's verdict on a case, the problems behind it, and for an
+\* answer with problems, its problems against the other edition's
 \* built-ins.
 CaseResult(S, c) ==
   LET E == EditionBuiltins(c.profile)
       problems == CaseProblems(S, c, E)
       matches ==
-        IF c.kind = "lookup"
-        THEN \A i \in DOMAIN c.actual :
-               TypeByNameMatches(AsProvided(S, c.provided), E, c.inc, c.actual[i].name, c.actual[i].result)
-        ELSE /\ Matches(S, ServiceBuiltins(E, c.extras, c.extraTypes), c.inc, TRUE, c.actual)
-             /\ \A i \in DOMAIN c.actual.wrappers : WrapperMatches(c.actual.wrappers[i])
-             /\ SchemaFieldsMatch(E, c.actual.wrapperFields)
+        CASE c.kind = "lookup" ->
+               \A i \in DOMAIN c.actual :
+                 TypeByNameMatches(AsProvided(S, c.provided), E, c.inc, c.actual[i].name, c.actual[i].result)
+          [] c.kind = "wrappers" ->
+               /\ \A i \in DOMAIN c.actual.wrappers : WrapperMatches(c.actual.wrappers[i])
+               /\ SchemaFieldsMatch(E, c.actual.wrapperFields)
+          [] OTHER -> Matches(S, ServiceBuiltins(E, c.extras, c.extraTypes), c.inc, TRUE, c.actual)
   IN <<problems, matches,
-       IF c.profile = "draft" /\ problems # {} THEN CaseProblems(S, c, Oct2021Builtins) ELSE {}>>
+       IF problems # {} THEN CaseProblems(S, c, OtherEdition(c.profile)) ELSE {}>>
 ====

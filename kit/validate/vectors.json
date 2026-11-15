@@ -1,8 +1,8 @@
 {
  "source": "specs/Validation.tla, evaluated with tla-ts by scripts/generate-vectors-validate.mjs",
  "schemas": {
-  "differential": "schema { query: Query subscription: Subscription }\n\ndirective @tag(name: String) repeatable on QUERY | SUBSCRIPTION | FIELD | FRAGMENT_DEFINITION | FRAGMENT_SPREAD | INLINE_FRAGMENT\ndirective @once on QUERY | FIELD | VARIABLE_DEFINITION\n\ntype Query {\n  node(id: ID!): Node\n  user(id: ID): User\n  post: Post\n  resource: Resource\n  search(term: String = \"\", filter: Filter): [Result!]\n  matrix(rows: [[Int]]): [[Int!]]\n  echo(int: Int, float: Float, opt: Int! = 1, list: [Int!], nums: [Int!] = [1], filter: Filter, role: Role): String\n}\n\ntype Subscription {\n  postAdded: Post\n  userJoined(room: ID!): User\n}\n\ninterface Node { id: ID! }\ninterface Resource implements Node { id: ID! url: String }\n\ntype User implements Node {\n  id: ID!\n  name: String\n  score: Int\n  role: Role\n  avatar(size: Int!): String\n  friends(first: Int = 10): [User]\n  posts: [Post!]!\n}\n\ntype Post implements Node {\n  id: ID!\n  name: String!\n  score: Float\n  author: User\n  tags: [[String!]]\n}\n\nunion Result = User | Post\nenum Role { ADMIN GUEST }\ninput Filter { role: Role limit: Int! offset: Int! = 0 tags: [String!] }\n",
-  "differentialOneOf": "schema { query: Query subscription: Subscription }\n\ndirective @tag(name: String) repeatable on QUERY | SUBSCRIPTION | FIELD | FRAGMENT_DEFINITION | FRAGMENT_SPREAD | INLINE_FRAGMENT\ndirective @once on QUERY | FIELD | VARIABLE_DEFINITION\n\ntype Query {\n  node(id: ID!): Node\n  user(id: ID): User\n  post: Post\n  resource: Resource\n  search(term: String = \"\", filter: Filter): [Result!]\n  matrix(rows: [[Int]]): [[Int!]]\n  echo(int: Int, float: Float, opt: Int! = 1, list: [Int!], nums: [Int!] = [1], filter: Filter, pick: Pick, role: Role): String\n}\n\ntype Subscription {\n  postAdded: Post\n  userJoined(room: ID!): User\n}\n\ninterface Node { id: ID! }\ninterface Resource implements Node { id: ID! url: String }\n\ntype User implements Node {\n  id: ID!\n  name: String\n  score: Int\n  role: Role\n  avatar(size: Int!): String\n  friends(first: Int = 10): [User]\n  posts: [Post!]!\n}\n\ntype Post implements Node {\n  id: ID!\n  name: String!\n  score: Float\n  author: User\n  tags: [[String!]]\n}\n\nunion Result = User | Post\nenum Role { ADMIN GUEST }\ninput Filter { role: Role limit: Int! offset: Int! = 0 tags: [String!] }\ninput Pick @oneOf { id: ID name: String }\n",
+  "differential": "schema { query: Query subscription: Subscription }\n\ndirective @label(name: String) repeatable on QUERY | SUBSCRIPTION | FIELD | FRAGMENT_DEFINITION | FRAGMENT_SPREAD | INLINE_FRAGMENT\ndirective @once on QUERY | FIELD | VARIABLE_DEFINITION\n\ntype Query {\n  node(id: ID!): Node\n  user(id: ID): User\n  post: Post\n  resource: Resource\n  search(term: String = \"\", filter: Filter): [Result!]\n  matrix(rows: [[Int]]): [[Int!]]\n  echo(int: Int, float: Float, opt: Int! = 1, list: [Int!], nums: [Int!] = [1], filter: Filter, role: Role): String\n}\n\ntype Subscription {\n  postAdded: Post\n  userJoined(room: ID!): User\n}\n\ninterface Node { id: ID! }\ninterface Resource implements Node { id: ID! url: String }\n\ntype User implements Node {\n  id: ID!\n  name: String\n  score: Int\n  role: Role\n  avatar(size: Int!): String\n  friends(first: Int = 10): [User]\n  posts: [Post!]!\n}\n\ntype Post implements Node {\n  id: ID!\n  name: String!\n  score: Float\n  author: User\n  tags: [[String!]]\n}\n\nunion Result = User | Post\nenum Role { ADMIN GUEST }\ninput Filter { role: Role limit: Int! offset: Int! = 0 tags: [String!] }\n",
+  "differentialOneOf": "schema { query: Query subscription: Subscription }\n\ndirective @label(name: String) repeatable on QUERY | SUBSCRIPTION | FIELD | FRAGMENT_DEFINITION | FRAGMENT_SPREAD | INLINE_FRAGMENT\ndirective @once on QUERY | FIELD | VARIABLE_DEFINITION\n\ntype Query {\n  node(id: ID!): Node\n  user(id: ID): User\n  post: Post\n  resource: Resource\n  search(term: String = \"\", filter: Filter): [Result!]\n  matrix(rows: [[Int]]): [[Int!]]\n  echo(int: Int, float: Float, opt: Int! = 1, list: [Int!], nums: [Int!] = [1], filter: Filter, pick: Pick, role: Role): String\n}\n\ntype Subscription {\n  postAdded: Post\n  userJoined(room: ID!): User\n}\n\ninterface Node { id: ID! }\ninterface Resource implements Node { id: ID! url: String }\n\ntype User implements Node {\n  id: ID!\n  name: String\n  score: Int\n  role: Role\n  avatar(size: Int!): String\n  friends(first: Int = 10): [User]\n  posts: [Post!]!\n}\n\ntype Post implements Node {\n  id: ID!\n  name: String!\n  score: Float\n  author: User\n  tags: [[String!]]\n}\n\nunion Result = User | Post\nenum Role { ADMIN GUEST }\ninput Filter { role: Role limit: Int! offset: Int! = 0 tags: [String!] }\ninput Pick @oneOf { id: ID name: String }\n",
   "scalars": "type Query {\n  json(value: Json): String\n  dog: Dog\n}\n\nscalar Json\n\ntype Dog {\n  id: ID\n  name: String\n  age: Int\n  weight: Float\n  good: Boolean\n}\n\ninput DogInput {\n  name: String\n}\n",
   "examples": "schema { query: Query subscription: Subscription }\n\ntype Alien implements Sentient {\n  homePlanet: String\n  name: String!\n}\n\ntype Arguments {\n  booleanArgField(booleanArg: Boolean): Boolean\n  booleanListArgField(booleanListArg: [Boolean]!): [Boolean]\n  floatArgField(floatArg: Float): Float\n  intArgField(intArg: Int): Int\n  multipleRequirements(x: Int!, y: Int!): Int!\n  nonNullBooleanArgField(nonNullBooleanArg: Boolean!): Boolean!\n  optionalNonNullBooleanArgField(optionalBooleanArg: Boolean! = false): Boolean!\n}\n\ntype Cat implements Pet {\n  doesKnowCommand(catCommand: CatCommand!): Boolean!\n  meowVolume: Int\n  name: String!\n  nickname: String\n}\n\nenum CatCommand { JUMP }\n\ninput CatInput {\n  meowVolume: Int\n  name: String!\n  nickname: String\n}\n\nunion CatOrDog = Cat | Dog\n\ntype Dog implements Pet {\n  barkVolume: Int\n  doesKnowCommand(dogCommand: DogCommand!): Boolean!\n  isHouseTrained(atOtherHomes: Boolean): Boolean!\n  name: String!\n  nickname: String\n  owner: Human\n}\n\nenum DogCommand { DOWN HEEL SIT }\n\ninput DogInput {\n  barkVolume: Int\n  name: String!\n  nickname: String\n}\n\nunion DogOrHuman = Dog | Human\n\ninput FindDogInput {\n  name: String\n  owner: String\n}\n\ntype Human implements Sentient {\n  name: String!\n  pets: [Pet!]\n}\n\nunion HumanOrAlien = Alien | Human\n\ntype Message {\n  body: String\n  sender: String\n}\n\ninterface Node {\n  id: ID!\n}\n\ninterface Pet {\n  name: String!\n}\n\ntype Query {\n  arguments: Arguments\n  booleanList(booleanListArg: [Boolean!]): Boolean\n  catOrDog: CatOrDog\n  dog: Dog\n  findDog(searchBy: FindDogInput): Dog\n  human: Human\n  pet: Pet\n}\n\ninterface Resource {\n  id: ID!\n  url: String\n}\n\ninterface Sentient {\n  name: String!\n}\n\ntype Subscription {\n  disallowedSecondRootField: Boolean\n  newMessage: Message\n}\n",
   "examplesOneOf": "schema { query: Query mutation: Mutation subscription: Subscription }\n\ntype Alien implements Sentient {\n  homePlanet: String\n  name: String!\n}\n\ntype Arguments {\n  booleanArgField(booleanArg: Boolean): Boolean\n  booleanListArgField(booleanListArg: [Boolean]!): [Boolean]\n  floatArgField(floatArg: Float): Float\n  intArgField(intArg: Int): Int\n  multipleRequirements(x: Int!, y: Int!): Int!\n  nonNullBooleanArgField(nonNullBooleanArg: Boolean!): Boolean!\n  optionalNonNullBooleanArgField(optionalBooleanArg: Boolean! = false): Boolean!\n}\n\ntype Cat implements Pet {\n  doesKnowCommand(catCommand: CatCommand!): Boolean!\n  meowVolume: Int\n  name: String!\n  nickname: String\n}\n\nenum CatCommand { JUMP }\n\ninput CatInput {\n  meowVolume: Int\n  name: String!\n  nickname: String\n}\n\nunion CatOrDog = Cat | Dog\n\ntype Dog implements Pet {\n  barkVolume: Int\n  doesKnowCommand(dogCommand: DogCommand!): Boolean!\n  isHouseTrained(atOtherHomes: Boolean): Boolean!\n  name: String!\n  nickname: String\n  owner: Human\n}\n\nenum DogCommand { DOWN HEEL SIT }\n\ninput DogInput {\n  barkVolume: Int\n  name: String!\n  nickname: String\n}\n\nunion DogOrHuman = Dog | Human\n\ninput FindDogInput {\n  name: String\n  owner: String\n}\n\ntype Human implements Sentient {\n  name: String!\n  pets: [Pet!]\n}\n\nunion HumanOrAlien = Alien | Human\n\ntype Message {\n  body: String\n  sender: String\n}\n\ntype Mutation {\n  addPet(pet: PetInput!): Pet\n  addPets(pets: [PetInput!]!): [Pet]\n}\n\ninterface Node {\n  id: ID!\n}\n\ninterface Pet {\n  name: String!\n}\n\ninput PetInput @oneOf {\n  cat: CatInput\n  dog: DogInput\n}\n\ntype Query {\n  arguments: Arguments\n  booleanList(booleanListArg: [Boolean!]): Boolean\n  catOrDog: CatOrDog\n  dog: Dog\n  findDog(searchBy: FindDogInput): Dog\n  human: Human\n  pet: Pet\n}\n\ninterface Resource {\n  id: ID!\n  url: String\n}\n\ninterface Sentient {\n  name: String!\n}\n\ntype Subscription {\n  disallowedSecondRootField: Boolean\n  newMessage: Message\n}\n",
@@ -2605,9 +2605,7 @@
    },
    "siblings": [
     "SingleRootField-valid-26"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-valid-26",
@@ -2641,9 +2639,7 @@
    },
    "siblings": [
     "SingleRootField-valid-27"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-valid-27",
@@ -2677,9 +2673,7 @@
    },
    "siblings": [
     "SingleRootField-valid-28"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-valid-28",
@@ -2713,9 +2707,7 @@
    },
    "siblings": [
     "SingleRootField-valid-29"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-valid-29",
@@ -2749,9 +2741,7 @@
    },
    "siblings": [
     "SingleRootField-valid-30"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-valid-30",
@@ -2785,9 +2775,7 @@
    },
    "siblings": [
     "SingleRootField-valid-31"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-valid-31",
@@ -2821,9 +2809,7 @@
    },
    "siblings": [
     "SingleRootField-valid-32"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-valid-32",
@@ -2857,9 +2843,7 @@
    },
    "siblings": [
     "SingleRootField-valid-33"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-valid-33",
@@ -2893,9 +2877,7 @@
    },
    "siblings": [
     "SingleRootField-valid-34"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-valid-34",
@@ -2929,9 +2911,7 @@
    },
    "siblings": [
     "SingleRootField-valid-35"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-valid-35",
@@ -2965,9 +2945,7 @@
    },
    "siblings": [
     "SingleRootField-valid-36"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-valid-36",
@@ -3001,9 +2979,7 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-8"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-43",
@@ -3024,9 +3000,7 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-1"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-44",
@@ -3047,9 +3021,7 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-9"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-45",
@@ -3070,9 +3042,7 @@
    },
    "siblings": [
     "OperationTypeExistence-valid-10"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-46",
@@ -3093,9 +3063,7 @@
    },
    "siblings": [
     "SingleRootField-valid-22"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-47",
@@ -3116,9 +3084,7 @@
    },
    "siblings": [
     "SingleRootField-valid-23"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-48",
@@ -3139,9 +3105,7 @@
    },
    "siblings": [
     "SingleRootField-valid-24"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-49",
@@ -3162,9 +3126,7 @@
    },
    "siblings": [
     "SingleRootField-valid-37"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-valid-37",
@@ -3198,9 +3160,7 @@
    },
    "siblings": [
     "SingleRootField-valid-25"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   ]
   },
   {
    "id": "SingleRootField-51",
@@ -3223,7 +3183,7 @@
     "SingleRootField-valid-38"
    ],
    "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root: October 2021 applies them with no variable values, and collects exactly one root field here"
   },
   {
    "id": "SingleRootField-valid-38",
@@ -3431,7 +3391,7 @@
    },
    "example": "requiredRuntimeValidation",
    "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   "editionNote": "only the draft forbids @skip and @include at a subscription's root: October 2021 applies them with no variable values, and collects exactly one root field here"
   },
   {
    "id": "SingleRootField-spec-6",
@@ -3469,9 +3429,7 @@
      "sub"
     ]
    },
-   "example": "sub",
-   "edition": "draft",
-   "editionNote": "only the draft forbids @skip and @include at a subscription's root"
+   "example": "sub"
   },
   {
    "id": "FieldSelections-1",
@@ -3890,7 +3848,7 @@
    "family": "random",
    "rule": "FieldSelections",
    "schema": "differential",
-   "document": "{\n  post @tag {\n    id\n    bogus\n  }\n}",
+   "document": "{\n  post @label {\n    id\n    bogus\n  }\n}",
    "expected": {
     "valid": false
    },
@@ -3901,6 +3859,9 @@
    },
    "siblings": [
     "FieldSelections-valid-13"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -3914,7 +3875,10 @@
    "document": "{\n  resource {\n    id @once\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "FieldSelections-14",
@@ -4071,6 +4035,9 @@
    },
    "siblings": [
     "FieldSelections-valid-18"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -4084,7 +4051,10 @@
    "document": "query Q0 {\n  node(id: \"1\") {\n    id\n    ...F2\n  }\n  post {\n    tags\n    name\n    ... on Node {\n      __typename\n      id\n      id @once\n    }\n  }\n}\n\nfragment F2 on Result {\n  __typename\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "FieldSelections-19",
@@ -25376,9 +25346,7 @@
    },
    "siblings": [
     "FieldSelectionMerging-valid-545"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)"
+   ]
   },
   {
    "id": "FieldSelectionMerging-valid-545",
@@ -26652,7 +26620,7 @@
    "family": "random",
    "rule": "LeafFieldSelections",
    "schema": "differential",
-   "document": "{\n  resource {\n    id {\n      id\n    }\n    id @tag\n  }\n}",
+   "document": "{\n  resource {\n    id {\n      id\n    }\n    id @label\n  }\n}",
    "expected": {
     "valid": false
    },
@@ -26663,6 +26631,9 @@
    },
    "siblings": [
     "LeafFieldSelections-valid-22"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -26673,10 +26644,13 @@
    "family": "random",
    "rule": "LeafFieldSelections",
    "schema": "differential",
-   "document": "{\n  resource {\n    id\n    id @tag\n  }\n}",
+   "document": "{\n  resource {\n    id\n    id @label\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "LeafFieldSelections-31",
@@ -26720,7 +26694,7 @@
    "family": "random",
    "rule": "LeafFieldSelections",
    "schema": "differential",
-   "document": "{\n  ...F0\n}\n\nfragment F0 on Query {\n  user {\n    role {\n      id\n    }\n    posts @tag {\n      a: id\n      id\n    }\n  }\n}",
+   "document": "{\n  ...F0\n}\n\nfragment F0 on Query {\n  user {\n    role {\n      id\n    }\n    posts @label {\n      a: id\n      id\n    }\n  }\n}",
    "expected": {
     "valid": false
    },
@@ -26731,6 +26705,9 @@
    },
    "siblings": [
     "LeafFieldSelections-valid-24"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -26741,47 +26718,16 @@
    "family": "random",
    "rule": "LeafFieldSelections",
    "schema": "differential",
-   "document": "{\n  ...F0\n}\n\nfragment F0 on Query {\n  user {\n    role\n    posts @tag {\n      a: id\n      id\n    }\n  }\n}",
+   "document": "{\n  ...F0\n}\n\nfragment F0 on Query {\n  user {\n    role\n    posts @label {\n      a: id\n      id\n    }\n  }\n}",
    "expected": {
     "valid": true
-   }
-  },
-  {
-   "id": "LeafFieldSelections-33",
-   "spec": [
-    "5.3.3"
-   ],
-   "family": "random",
-   "rule": "LeafFieldSelections",
-   "schema": "differential",
-   "document": "{\n  ...F1\n}\n\nfragment F1 on Query {\n  resource @tag {\n    id {\n      id\n    }\n  }\n  a: search(term: \"s\") {\n    __typename\n  }\n}",
-   "expected": {
-    "valid": false
    },
-   "violations": {
-    "LeafFieldSelections": [
-     "id"
-    ]
-   },
-   "siblings": [
-    "LeafFieldSelections-valid-25"
+   "requires": [
+    "custom-directives"
    ]
   },
   {
-   "id": "LeafFieldSelections-valid-25",
-   "spec": [
-    "5.3.3"
-   ],
-   "family": "random",
-   "rule": "LeafFieldSelections",
-   "schema": "differential",
-   "document": "{\n  ...F1\n}\n\nfragment F1 on Query {\n  resource @tag {\n    id\n  }\n  a: search(term: \"s\") {\n    __typename\n  }\n}",
-   "expected": {
-    "valid": true
-   }
-  },
-  {
-   "id": "LeafFieldSelections-34",
+   "id": "LeafFieldSelections-33",
    "spec": [
     "5.3.3"
    ],
@@ -26798,11 +26744,11 @@
     ]
    },
    "siblings": [
-    "LeafFieldSelections-valid-26"
+    "LeafFieldSelections-valid-25"
    ]
   },
   {
-   "id": "LeafFieldSelections-valid-26",
+   "id": "LeafFieldSelections-valid-25",
    "spec": [
     "5.3.3"
    ],
@@ -26815,6 +26761,46 @@
    }
   },
   {
+   "id": "LeafFieldSelections-34",
+   "spec": [
+    "5.3.3"
+   ],
+   "family": "random",
+   "rule": "LeafFieldSelections",
+   "schema": "differential",
+   "document": "{\n  ...F1\n}\n\nfragment F1 on Query {\n  resource @label {\n    id {\n      id\n    }\n  }\n  a: search(term: \"s\") {\n    __typename\n  }\n}",
+   "expected": {
+    "valid": false
+   },
+   "violations": {
+    "LeafFieldSelections": [
+     "id"
+    ]
+   },
+   "siblings": [
+    "LeafFieldSelections-valid-26"
+   ],
+   "requires": [
+    "custom-directives"
+   ]
+  },
+  {
+   "id": "LeafFieldSelections-valid-26",
+   "spec": [
+    "5.3.3"
+   ],
+   "family": "random",
+   "rule": "LeafFieldSelections",
+   "schema": "differential",
+   "document": "{\n  ...F1\n}\n\nfragment F1 on Query {\n  resource @label {\n    id\n  }\n  a: search(term: \"s\") {\n    __typename\n  }\n}",
+   "expected": {
+    "valid": true
+   },
+   "requires": [
+    "custom-directives"
+   ]
+  },
+  {
    "id": "LeafFieldSelections-35",
    "spec": [
     "5.3.3"
@@ -26822,7 +26808,7 @@
    "family": "random",
    "rule": "LeafFieldSelections",
    "schema": "differential",
-   "document": "{\n  resource {\n    url\n    url\n  }\n  node(id: \"1\") {\n    b: __typename\n    ... on User @tag {\n      score {\n        id\n      }\n    }\n  }\n}",
+   "document": "{\n  resource {\n    url\n    url\n  }\n  node(id: \"1\") {\n    b: __typename\n    ... on User @label {\n      score {\n        id\n      }\n    }\n  }\n}",
    "expected": {
     "valid": false
    },
@@ -26833,6 +26819,9 @@
    },
    "siblings": [
     "LeafFieldSelections-valid-27"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -26843,10 +26832,13 @@
    "family": "random",
    "rule": "LeafFieldSelections",
    "schema": "differential",
-   "document": "{\n  resource {\n    url\n    url\n  }\n  node(id: \"1\") {\n    b: __typename\n    ... on User @tag {\n      score\n    }\n  }\n}",
+   "document": "{\n  resource {\n    url\n    url\n  }\n  node(id: \"1\") {\n    b: __typename\n    ... on User @label {\n      score\n    }\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "LeafFieldSelections-spec-1",
@@ -26987,17 +26979,20 @@
    "family": "values",
    "rule": "ArgumentNames",
    "schema": "differential",
-   "document": "{\n  user {\n    id @tag(nom: \"x\")\n  }\n}",
+   "document": "{\n  user {\n    id @label(nom: \"x\")\n  }\n}",
    "expected": {
     "valid": false
    },
    "violations": {
     "ArgumentNames": [
-     "@tag(nom)"
+     "@label(nom)"
     ]
    },
    "siblings": [
     "ArgumentNames-valid-1"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -27008,10 +27003,13 @@
    "family": "values",
    "rule": "ArgumentNames",
    "schema": "differential",
-   "document": "{\n  user {\n    id @tag(name: null)\n  }\n}",
+   "document": "{\n  user {\n    id @label(name: null)\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "ArgumentNames-3",
@@ -27055,17 +27053,20 @@
    "family": "names",
    "rule": "ArgumentNames",
    "schema": "differential",
-   "document": "{\n  user @tag(name: \"a\", label: \"b\") {\n    id\n  }\n}",
+   "document": "{\n  user @label(name: \"a\", label: \"b\") {\n    id\n  }\n}",
    "expected": {
     "valid": false
    },
    "violations": {
     "ArgumentNames": [
-     "@tag(label)"
+     "@label(label)"
     ]
    },
    "siblings": [
     "ArgumentNames-valid-3"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -27076,10 +27077,13 @@
    "family": "names",
    "rule": "ArgumentNames",
    "schema": "differential",
-   "document": "{\n  user @tag(name: \"a\") {\n    id\n  }\n}",
+   "document": "{\n  user @label(name: \"a\") {\n    id\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "ArgumentNames-5",
@@ -27411,7 +27415,7 @@
    "family": "names",
    "rule": "ArgumentUniqueness",
    "schema": "differential",
-   "document": "{\n  user @tag(name: \"a\", name: \"b\") {\n    id\n  }\n}",
+   "document": "{\n  user @label(name: \"a\", name: \"b\") {\n    id\n  }\n}",
    "expected": {
     "valid": false
    },
@@ -27422,6 +27426,9 @@
    },
    "siblings": [
     "ArgumentNames-valid-3"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -27470,10 +27477,13 @@
    "family": "values",
    "rule": "RequiredArguments",
    "schema": "differential",
-   "document": "{\n  user {\n    id @tag\n  }\n}",
+   "document": "{\n  user {\n    id @label\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "RequiredArguments-2",
@@ -27601,10 +27611,13 @@
    "family": "random",
    "rule": "RequiredArguments",
    "schema": "differential",
-   "document": "{\n  user {\n    avatar(size: 1) @tag\n  }\n}",
+   "document": "{\n  user {\n    avatar(size: 1) @label\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "RequiredArguments-7",
@@ -28934,7 +28947,7 @@
    "family": "random",
    "rule": "FragmentsOnObjectInterfaceOrUnionTypes",
    "schema": "differential",
-   "document": "{\n  resource {\n    ... on Role @tag {\n      a: __typename\n    }\n    id\n    url\n  }\n  echo(role: GUEST)\n}",
+   "document": "{\n  resource {\n    ... on Role @label {\n      a: __typename\n    }\n    id\n    url\n  }\n  echo(role: GUEST)\n}",
    "expected": {
     "valid": false
    },
@@ -28945,6 +28958,9 @@
    },
    "siblings": [
     "FragmentsOnObjectInterfaceOrUnionTypes-valid-15"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -30754,9 +30770,7 @@
    },
    "siblings": [
     "FragmentsMustBeUsed-valid-17"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)"
+   ]
   },
   {
    "id": "FragmentsMustBeUsed-valid-17",
@@ -30769,9 +30783,7 @@
    "document": "{\n  b: matrix(rows: [1])\n}",
    "expected": {
     "valid": true
-   },
-   "edition": "draft",
-   "editionNote": "only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)"
+   }
   },
   {
    "id": "FragmentsMustBeUsed-74",
@@ -30860,6 +30872,9 @@
    },
    "siblings": [
     "FragmentsMustBeUsed-valid-20"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -30873,7 +30888,10 @@
    "document": "query Q0 {\n  resource @once {\n    __typename\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "FragmentsMustBeUsed-77",
@@ -33399,7 +33417,7 @@
    "family": "random",
    "rule": "FragmentSpreadIsPossible",
    "schema": "differential",
-   "document": "query Q0 {\n  user {\n    id @tag\n  }\n  __typename\n}\n\nquery Q1 {\n  resource {\n    id\n    ... on Resource {\n      url\n    }\n    url\n  }\n  echo(opt: 1, role: GUEST)\n}",
+   "document": "query Q0 {\n  user {\n    id @label\n  }\n  __typename\n}\n\nquery Q1 {\n  resource {\n    id\n    ... on Resource {\n      url\n    }\n    url\n  }\n  echo(opt: 1, role: GUEST)\n}",
    "expected": {
     "valid": false
    },
@@ -33411,6 +33429,9 @@
    "siblings": [
     "FragmentSpreadIsPossible-valid-22"
    ],
+   "requires": [
+    "custom-directives"
+   ],
    "unspecified": "the formal text rejects this spread because no object type implements the interface; the prose allows an interface fragment in the scope of an interface it implements, and doesn't settle an interface in its own scope"
   },
   {
@@ -33421,10 +33442,13 @@
    "family": "random",
    "rule": "FragmentSpreadIsPossible",
    "schema": "differential",
-   "document": "query Q0 {\n  user {\n    id @tag\n  }\n  __typename\n}\n\nquery Q1 {\n  resource {\n    id\n    url\n  }\n  echo(opt: 1, role: GUEST)\n}",
+   "document": "query Q0 {\n  user {\n    id @label\n  }\n  __typename\n}\n\nquery Q1 {\n  resource {\n    id\n    url\n  }\n  echo(opt: 1, role: GUEST)\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "FragmentSpreadIsPossible-37",
@@ -35566,9 +35590,7 @@
    "document": "{\n  matrix(rows: [1])\n}",
    "expected": {
     "valid": true
-   },
-   "edition": "draft",
-   "editionNote": "only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)"
+   }
   },
   {
    "id": "ValuesOfCorrectType-70",
@@ -37201,9 +37223,7 @@
    "document": "{\n  matrix(rows: [1, null])\n}",
    "expected": {
     "valid": true
-   },
-   "edition": "draft",
-   "editionNote": "only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)"
+   }
   },
   {
    "id": "ValuesOfCorrectType-139",
@@ -39839,7 +39859,7 @@
    "family": "random",
    "rule": "ValuesOfCorrectType",
    "schema": "differential",
-   "document": "{\n  post @include(if: true) {\n    tags @tag\n    b: author {\n      a: avatar(size: 1)\n      id @include(if: true)\n      id @include(if: \"s\")\n    }\n  }\n}",
+   "document": "{\n  post @include(if: true) {\n    tags @label\n    b: author {\n      a: avatar(size: 1)\n      id @include(if: true)\n      id @include(if: \"s\")\n    }\n  }\n}",
    "expected": {
     "valid": false
    },
@@ -39850,6 +39870,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-55"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -39860,10 +39883,13 @@
    "family": "random",
    "rule": "ValuesOfCorrectType",
    "schema": "differential",
-   "document": "{\n  post @include(if: true) {\n    tags @tag\n    b: author {\n      a: avatar(size: 1)\n      id @include(if: true)\n      id\n    }\n  }\n}",
+   "document": "{\n  post @include(if: true) {\n    tags @label\n    b: author {\n      a: avatar(size: 1)\n      id @include(if: true)\n      id\n    }\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "ValuesOfCorrectType-259",
@@ -39918,6 +39944,9 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-57"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -39931,7 +39960,10 @@
    "document": "query Q0 {\n  post {\n    name @once\n    score\n    score\n  }\n  b: matrix\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "ValuesOfCorrectType-spec-1",
@@ -40778,7 +40810,10 @@
    "document": "{\n  user @once {\n    id\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "DirectivesAreDefined-3",
@@ -40812,7 +40847,10 @@
    "document": "query Q @once {\n  user {\n    id\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "DirectivesAreDefined-4",
@@ -40846,7 +40884,10 @@
    "document": "query Q($v: Int @once) {\n  echo(int: $v)\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "DirectivesAreDefined-5",
@@ -40969,7 +41010,10 @@
    "document": "{\n  user @once {\n    id @once\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "DirectivesAreDefined-9",
@@ -41118,10 +41162,13 @@
    "family": "directives",
    "rule": "DirectivesAreDefined",
    "schema": "differential",
-   "document": "{\n  user {\n    ...F\n  }\n}\n\nfragment F on User @tag(name: \"x\") {\n  id\n}",
+   "document": "{\n  user {\n    ...F\n  }\n}\n\nfragment F on User @label(name: \"x\") {\n  id\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "DirectivesAreDefined-15",
@@ -41199,7 +41246,7 @@
    "family": "random",
    "rule": "DirectivesAreDefined",
    "schema": "differential",
-   "document": "{\n  post {\n    ...F2\n  }\n  matrix\n}\n\nfragment F2 on Post {\n  name @tag\n  name @nope\n}",
+   "document": "{\n  post {\n    ...F2\n  }\n  matrix\n}\n\nfragment F2 on Post {\n  name @label\n  name @nope\n}",
    "expected": {
     "valid": false
    },
@@ -41210,6 +41257,9 @@
    },
    "siblings": [
     "DirectivesAreDefined-valid-11"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -41220,10 +41270,13 @@
    "family": "random",
    "rule": "DirectivesAreDefined",
    "schema": "differential",
-   "document": "{\n  post {\n    ...F2\n  }\n  matrix\n}\n\nfragment F2 on Post {\n  name @tag\n  name\n}",
+   "document": "{\n  post {\n    ...F2\n  }\n  matrix\n}\n\nfragment F2 on Post {\n  name @label\n  name\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "DirectivesAreDefined-18",
@@ -41346,9 +41399,7 @@
    },
    "siblings": [
     "DirectivesAreDefined-valid-15"
-   ],
-   "edition": "draft",
-   "editionNote": "only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)"
+   ]
   },
   {
    "id": "DirectivesAreDefined-valid-15",
@@ -41361,9 +41412,7 @@
    "document": "query Q0 {\n  ...F0\n}\n\nfragment F0 on Query {\n  matrix(rows: [1])\n  node(id: \"1\") {\n    ...F1\n  }\n}\n\nfragment F1 on Node {\n  b: id\n  id\n}",
    "expected": {
     "valid": true
-   },
-   "edition": "draft",
-   "editionNote": "only the draft coerces a list item that isn't a list as a list of one where the item type is a list (October 2021 rejects it under §5.6.1)"
+   }
   },
   {
    "id": "DirectivesAreDefined-22",
@@ -41653,6 +41702,9 @@
    },
    "siblings": [
     "DirectivesAreDefined-valid-4"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -41695,6 +41747,9 @@
    },
    "siblings": [
     "DirectivesAreDefined-valid-5"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -41716,6 +41771,9 @@
    },
    "siblings": [
     "DirectivesAreDefined-valid-5"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -41852,10 +41910,13 @@
    "family": "directives",
    "rule": "DirectivesAreInValidLocations",
    "schema": "differential",
-   "document": "query Q @tag(name: \"x\") {\n  user {\n    id\n  }\n}",
+   "document": "query Q @label(name: \"x\") {\n  user {\n    id\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "DirectivesAreInValidLocations-19",
@@ -41876,6 +41937,9 @@
    },
    "siblings": [
     "DirectivesAreDefined-valid-2"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -41928,10 +41992,13 @@
    "family": "directives",
    "rule": "DirectivesAreInValidLocations",
    "schema": "differential",
-   "document": "subscription S @tag(name: \"x\") {\n  postAdded {\n    id\n  }\n}",
+   "document": "subscription S @label(name: \"x\") {\n  postAdded {\n    id\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "DirectivesAreInValidLocations-22",
@@ -42025,17 +42092,20 @@
    "family": "directives",
    "rule": "DirectivesAreInValidLocations",
    "schema": "differential",
-   "document": "query Q($v: Int @tag(name: \"x\")) {\n  echo(int: $v)\n}",
+   "document": "query Q($v: Int @label(name: \"x\")) {\n  echo(int: $v)\n}",
    "expected": {
     "valid": false
    },
    "violations": {
     "DirectivesAreInValidLocations": [
-     "tag@VARIABLE_DEFINITION"
+     "label@VARIABLE_DEFINITION"
     ]
    },
    "siblings": [
     "DirectivesAreDefined-valid-3"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -42078,6 +42148,9 @@
    },
    "siblings": [
     "DirectivesAreDefined-valid-1"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -42099,6 +42172,9 @@
    },
    "siblings": [
     "DirectivesAreDefined-valid-2"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -42120,6 +42196,9 @@
    },
    "siblings": [
     "DirectivesAreDefined-valid-3"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -42833,7 +42912,7 @@
    "family": "random",
    "rule": "AllVariableUsesDefined",
    "schema": "differential",
-   "document": "query Q0 {\n  ...F2\n}\n\nfragment F2 on Query {\n  search(term: \"s\", filter: {limit: 1, offset: 1}) @tag {\n    a: __typename\n  }\n  a: node(id: \"1\") {\n    id\n    id @skip(if: $v1)\n  }\n}",
+   "document": "query Q0 {\n  ...F2\n}\n\nfragment F2 on Query {\n  search(term: \"s\", filter: {limit: 1, offset: 1}) @label {\n    a: __typename\n  }\n  a: node(id: \"1\") {\n    id\n    id @skip(if: $v1)\n  }\n}",
    "expected": {
     "valid": false
    },
@@ -42844,6 +42923,9 @@
    },
    "siblings": [
     "AllVariableUsesDefined-valid-4"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -42854,10 +42936,13 @@
    "family": "random",
    "rule": "AllVariableUsesDefined",
    "schema": "differential",
-   "document": "query Q0 {\n  ...F2\n}\n\nfragment F2 on Query {\n  search(term: \"s\", filter: {limit: 1, offset: 1}) @tag {\n    a: __typename\n  }\n  a: node(id: \"1\") {\n    id\n    id\n  }\n}",
+   "document": "query Q0 {\n  ...F2\n}\n\nfragment F2 on Query {\n  search(term: \"s\", filter: {limit: 1, offset: 1}) @label {\n    a: __typename\n  }\n  a: node(id: \"1\") {\n    id\n    id\n  }\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "AllVariableUsesDefined-6",
@@ -43243,7 +43328,7 @@
    "family": "variables",
    "rule": "AllVariablesUsed",
    "schema": "differential",
-   "document": "query Q($v: Boolean!) @tag(name: \"x\") {\n  user {\n    id\n  }\n}",
+   "document": "query Q($v: Boolean!) @label(name: \"x\") {\n  user {\n    id\n  }\n}",
    "expected": {
     "valid": false
    },
@@ -43254,6 +43339,9 @@
    },
    "siblings": [
     "DirectivesAreInValidLocations-valid-1"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -43330,6 +43418,9 @@
    },
    "siblings": [
     "AllVariablesUsed-valid-2"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -43343,7 +43434,10 @@
    "document": "query Q0 {\n  matrix @once\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "AllVariablesUsed-8",
@@ -57949,6 +58043,9 @@
    },
    "siblings": [
     "AllVariableUsagesAreAllowed-valid-62"
+   ],
+   "requires": [
+    "custom-directives"
    ]
   },
   {
@@ -57962,7 +58059,10 @@
    "document": "query Q0 {\n  b: post {\n    id\n    a: tags @once\n  }\n  __typename\n}",
    "expected": {
     "valid": true
-   }
+   },
+   "requires": [
+    "custom-directives"
+   ]
   },
   {
    "id": "AllVariableUsagesAreAllowed-spec-1",

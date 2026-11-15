@@ -1,3 +1,5 @@
 source "https://rubygems.org"
 
 gem "graphql", "2.6.15"
+# Read the kit's requests and variables with the json Ruby 3.4.3 ships.
+gem "json", "2.9.1"

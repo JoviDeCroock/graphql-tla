@@ -28,8 +28,10 @@ public static class Areas
 
     // validate: a custom scalar is Hot Chocolate's JsonType (AreaSchemas),
     // whose IsInstanceOfType accepts every literal.
+    // validate and introspect: custom-directives, since Hot Chocolate builds
+    // the `directive @label(...) on ...` definitions of the SDL.
     // coerce: exact-numbers, but not absent-vs-null or unvalidated (see Coerce).
-    public static readonly string[] Capabilities = ["custom-scalar-literals", "exact-numbers"];
+    public static readonly string[] Capabilities = ["custom-scalar-literals", "custom-directives", "exact-numbers"];
 
     // The parser options a request executor parses requests with
     // (DocumentParserMiddleware takes them from the application's services).
@@ -56,10 +58,9 @@ public static class Areas
         }
         catch (Exception error)
         {
-            // In parse, validate, coerce and schema the kit reports this as a
-            // crash of Hot Chocolate's on that vector (docs/kit-areas.md,
-            // "Protocol"); in introspect, the adapter failed. The stack trace
-            // goes to stderr.
+            // The kit reports this as a crash of Hot Chocolate's on that
+            // vector, in every area (docs/kit-areas.md, "Protocol"). The
+            // stack trace goes to stderr.
             Console.Error.WriteLine(error);
             return new JsonObject { ["type"] = "error", ["id"] = id, ["message"] = $"{error.GetType().Name}: {error.Message}" };
         }
@@ -78,37 +79,41 @@ public static class Areas
         return executor;
     }
 
-    // Is the source a syntactically valid executable document? Parsed with
-    // Utf8GraphQLParser and the request executor's parser options, as
-    // DocumentParserMiddleware parses a request's document. The parser also
-    // reads the type system language, so every definition must be an
-    // operation or a fragment.
+    // Is the source a syntactically valid executable document? Read the way
+    // a Hot Chocolate server reads a request: the request body
+    // {"query": <source>} goes through Utf8GraphQLRequestParser, which
+    // unescapes the JSON string (Utf8Helper.Unescape) and parses the result
+    // with Utf8GraphQLParser, with the request executor's parser options.
+    // The source's JSON string is passed on exactly as the kit wrote it, so
+    // a source holding a lone surrogate (escaped as \uD800 in the request)
+    // reaches Hot Chocolate as it would on a server. The parser also reads
+    // the type system language, so every definition must be an operation or
+    // a fragment.
     private static JsonObject Parse(JsonElement request)
     {
-        string source;
+        var source = request.GetProperty("source");
+        if (source.ValueKind != JsonValueKind.String) throw new InvalidOperationException("source isn't a string");
+        var raw = source.GetRawText();
+        if (raw == "\"\"")
+        {
+            // An empty query. A server's request parser has a document
+            // cache, and with one ParseQuery leaves an empty query
+            // unparsed, so the request has no document and no id: a
+            // SyntaxException, NoIdAndNoQuery (Utf8GraphQLRequestParser.cs,
+            // ParseQuery and ParseMutableRequest). The adapter's parser has
+            // no cache, so it answers that here.
+            return new JsonObject { ["ok"] = false, ["error"] = "Utf8GraphQLRequestParser: no id and no query" };
+        }
+        var body = Encoding.UTF8.GetBytes("{\"query\":" + raw + "}");
         try
         {
-            source = request.GetProperty("source").GetString()!;
-        }
-        catch (InvalidOperationException)
-        {
-            // A lone surrogate: System.Text.Json refuses to read it into a
-            // string, so a request holding one never reaches Hot Chocolate.
-            return new JsonObject { ["ok"] = false, ["error"] = "System.Text.Json can't read the source into a string" };
-        }
-        try
-        {
-            var document = Utf8GraphQLParser.Parse(source, RequestParserOptions);
+            var document = Utf8GraphQLRequestParser.Parse(body, RequestParserOptions)[0].Query
+                ?? throw new InvalidOperationException("Utf8GraphQLRequestParser returned no document");
             var executable = document.Definitions.All(d => d is OperationDefinitionNode or FragmentDefinitionNode);
             return new JsonObject { ["ok"] = executable };
         }
         catch (SyntaxException error)
         {
-            return new JsonObject { ["ok"] = false, ["error"] = error.Message };
-        }
-        catch (ArgumentException error) when (source.Length == 0)
-        {
-            // Parse(string) refuses an empty source text up front.
             return new JsonObject { ["ok"] = false, ["error"] = error.Message };
         }
         // Any other exception is a crash (see README.md): the parser throws
@@ -123,8 +128,13 @@ public static class Areas
     // InterfaceHasAtLeastOneImplementationRule (see README.md). That rule,
     // like every schema validation rule, only runs with StrictValidation,
     // which nothing in document validation or execution reads. So when the
-    // default build throws a SchemaException, the schema is built again
-    // with StrictValidation off.
+    // default build throws a SchemaException whose every error is that
+    // rule's ("There is no object type implementing interface `Resource`.",
+    // code SCHEMA_INTERFACE_NO_IMPL), the schema is built again with
+    // StrictValidation off. Any other SchemaException propagates, and is a
+    // crash on the vector.
+    private const string InterfaceNoImplementation = "SCHEMA_INTERFACE_NO_IMPL";
+
     private static Built ValidationExecutor(string sdl)
     {
         if (!ValidationExecutors.TryGetValue(sdl, out var executor))
@@ -133,7 +143,7 @@ public static class Areas
             {
                 executor = Executor(sdl);
             }
-            catch (SchemaException error)
+            catch (SchemaException error) when (error.Errors.Count > 0 && error.Errors.All(e => e.Code == InterfaceNoImplementation))
             {
                 Console.Error.WriteLine($"hotchocolate adapter: validate: the schema is built without StrictValidation: {string.Join("; ", error.Errors.Select(e => e.Message))}");
                 executor = AreaSchemas.BuildAsync(sdl, strict: false).GetAwaiter().GetResult();

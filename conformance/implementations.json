@@ -35,7 +35,8 @@
       "adapter": "adapters/async-graphql/target/release/graphql-tla-async-graphql",
       "build": "adapters/async-graphql/target/release/graphql-tla-async-graphql",
       "notes": [
-        "The adapter uses async-graphql's dynamic schema API (`async_graphql::dynamic`). The derive-macro API may behave differently. See the [adapter's README](../adapters/async-graphql/README.md)."
+        "The adapter uses async-graphql's dynamic schema API (`async_graphql::dynamic`). Every execution finding comes from `async_graphql::dynamic::resolve`, which the derive-macro API doesn't use: resolver errors without a path, any error nulling all of `data`, a null list item completed as an object, and fields resolved once per selection. The derive API may behave differently; it does stop an error at a nullable field. See the [adapter's README](../adapters/async-graphql/README.md#known-async-graphql-deviations).",
+        "The adapter doesn't claim `uncoercible-results`, so `resultCoercion` and `intFraction` are untested here, not passed."
       ]
     },
     {
@@ -64,8 +65,8 @@
       "adapter": "adapters/graphql-ruby/run.sh --invalid-results",
       "build": "adapters/graphql-ruby/vendor/bundle",
       "notes": [
-        "The sheet runs graphql-ruby with `--invalid-results`: a schema that uses graphql-ruby's documented `type_error` and `rescue_from` hooks. Out of the box, a resolver result of the wrong shape (a non-list for a list, an object for an Int, a runtime type that isn't a possible type, an unknown enum value) raises out of `execute` instead of becoming a field error (§6.4.4), so the client gets no response at all.",
-        "The `resultCoercion` finding is graphql-ruby's Int coercion, which calls `to_i`, so `1.2` becomes `1`. Boolean is `!!value`, so `\"false\"` becomes `true`; the kit doesn't probe Boolean, since §3.5.4 leaves reasonable coercions to the service. See the [adapter's README](../adapters/graphql-ruby/README.md).",
+        "The sheet runs graphql-ruby with `--invalid-results`: a schema that uses graphql-ruby's documented `type_error` and `rescue_from` hooks. Out of the box, a resolver result of the wrong shape (a non-list for a list, an object for an Int, a runtime type that isn't a possible type) or one its type can't represent (a non-finite Float, an unknown enum value) raises out of `execute` instead of becoming a field error (§6.4.4), so the client gets no response at all. The sheet's `resultCoercion` pass depends on the hooks; without them the adapter answers `no-response` and the kit counts these against `responds` and `resultCoercion`.",
+        "The `intFraction` finding (a SHOULD) is graphql-ruby's Int coercion, which calls `to_i`, so `1.2` becomes `1`, with or without the hooks. Boolean is `!!value`, so `\"false\"` becomes `true`; the kit doesn't probe Boolean, since §3.5.4 leaves reasonable coercions to the service. See the [adapter's README](../adapters/graphql-ruby/README.md).",
         "graphql-ruby validates before executing, and documents running an invalid document with `validate: false` as undefined, so the sheet's coerce run validates first and grades invalid documents under `invalidNotExecuted` (§6.1.1). graphql-ruby's validate results use its defaults, including the `allow_legacy_*` settings that only log a warning; see the [adapter's README](../adapters/graphql-ruby/README.md)."
       ]
     },
@@ -79,7 +80,7 @@
       ],
       "notes": [
         "graphql-go doesn't make runs deterministic (it resolves fields in Go map order), so the adapter doesn't claim `idle` and the kit waits 10 ms after each settle instead; the sheet's cases are random runs only.",
-        "The resolver returns a thunk, graphql-go's way to keep several resolvers pending. The Non-Null propagation and mutation ordering findings come from thunks; with `--sync` only the key order, leaf coercion and mutation error findings remain. See the [adapter's README](../adapters/graphql-go/README.md#known-graphql-go-deviations)."
+        "The resolver returns a thunk, graphql-go's way to keep several resolvers pending. The Non-Null propagation and mutation ordering findings come from thunks; with `--sync` only the key order, leaf coercion and mutation error findings remain. Under `--strict`, key order (a SHOULD) fails most `leaves` cases by itself, since graphql-go writes keys sorted. See the [adapter's README](../adapters/graphql-go/README.md#known-graphql-go-deviations)."
       ]
     },
     {
@@ -91,7 +92,7 @@
       },
       "notes": [
         "The adapter uses graphql-dotnet's schema-first `Schema.For`, its default `DocumentExecuter` and the System.Text.Json serializer. List items are `IDataLoaderResult` values, the only kind of item graphql-dotnet waits for. `idle` holds because everything runs on one thread; the determinism replay passed.",
-        "The `resultCoercion` finding: `FloatGraphType` passes a non-finite double through, and `GraphQLSerializer` then throws, so the client gets no response. graphql-dotnet rejects the kit's full introspection queries: it has no `specifiedByURL`, and `isRepeatable` and input-value deprecation are behind experimental flags that are off by default. The kit then discovers which fields exist and grades the rest under the October 2021 profile. Parse, validate, schema and introspect findings are described with source locations in the [adapter's README](../adapters/graphql-dotnet/README.md#known-graphql-dotnet-deviations)."
+        "The `resultCoercion` finding: `FloatGraphType` passes a non-finite double through, and `GraphQLSerializer` then throws, so the client gets no response. graphql-dotnet rejects the kit's full introspection queries: it has no `specifiedByURL`, input-value deprecation is behind an experimental flag that is off by default, and `isRepeatable` needs that kind of flag and is also hidden by the default schema filter (only `EnableExperimentalIntrospectionFeatures` shows it). The kit then discovers which fields exist and grades the rest under the October 2021 profile. The default schema filter also hides every directive with a type system location from `__schema.directives`. Parse, validate, schema and introspect findings are described with source locations in the [adapter's README](../adapters/graphql-dotnet/README.md#known-graphql-dotnet-deviations)."
       ]
     },
     {
@@ -99,8 +100,9 @@
       "adapter": "adapters/juniper/target/release/graphql-tla-juniper",
       "build": "adapters/juniper/target/release/graphql-tla-juniper",
       "notes": [
-        "Juniper builds schemas from Rust types. The adapter uses its documented dynamic route, a hand-written `GraphQLType` with `TypeInfo`, and Juniper's own code completes objects, lists and scalars. The Int fraction, unknown enum value and null list item findings need hand-written types; every other execution finding reproduces with `#[graphql_object]` (`examples/macros.rs`). See the [adapter's README](../adapters/juniper/README.md#known-juniper-deviations).",
-        "The adapter doesn't claim `invalid-results` (result shapes are fixed by Rust types) or the schema area (Juniper doesn't read SDL, so every verdict would be the adapter's)."
+        "Juniper builds schemas from Rust types. The adapter uses its documented dynamic route, a hand-written `GraphQLType` with `TypeInfo`, and Juniper's own code completes objects, lists and scalars. Values a typed schema can't hold aren't sent: uncoercible results only for Float (`uncoercibleTypes`), so `intFraction` is untested, and no null for a Non-Null list item or subscription event (`nullItems: false`). The report's provenance counts what was left out.",
+        "Fields called twice, error paths without list indices, the nested list, the non-finite Float and the subscription findings reproduce with `#[graphql_object]` (`examples/macros.rs`). The findings where a list item's error is reported at the list's path need an item type whose own resolution fails, which only a hand-written type (here, the adapter's deferred items) has; with `--inline-items` they go away. See the [adapter's README](../adapters/juniper/README.md#known-juniper-deviations).",
+        "The adapter doesn't claim `invalid-results` (result shapes are fixed by Rust types), `custom-directives` (Juniper can't declare a directive of its own), or the schema area (Juniper doesn't read SDL, so every verdict would be the adapter's)."
       ]
     }
   ]

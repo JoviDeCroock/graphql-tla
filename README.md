@@ -77,7 +77,7 @@ The kit has six areas. Each checks one part of the spec against its TLA+ referen
 | [`parse`](docs/kit/parse.md) | §2 | `Lexer.tla`, `Parser.tla` | accept or reject about 2,000 source texts, mostly in minimal pairs |
 | [`validate`](docs/kit/validate.md) | §5 | `Validation.tla` | about 3,000 documents, each breaking one rule (two in 21 documented cases) or none, so each rule gets its own verdict |
 | [`coerce`](docs/kit/coerce.md) | §3.5, §3.9–3.12, §6.1, §6.4.1 | `Coercion.tla` | about 2,000 operations with variables, and operation selection: a request error, a field error, or the coerced arguments |
-| [`schema`](docs/kit/schema.md) | §3 | `TypeSystem.tla` | 84 minimal pairs of SDL schemas, one or more per type-system rule |
+| [`schema`](docs/kit/schema.md) | §3 | `TypeSystem.tla` | 87 minimal pairs of SDL schemas, one or more per type-system rule |
 | [`introspect`](docs/kit/introspect.md) | §4 | `Introspection.tla` | 38 introspection queries over 12 schemas, with the variation the spec allows, answered under the draft or the October 2021 profile |
 
 Outside execution, every expected answer comes from evaluating the reference with tla-ts, never from graphql-js. [`docs/kit-areas.md`](docs/kit-areas.md) describes how those areas work.
@@ -96,7 +96,7 @@ An adapter is a small program that speaks newline-delimited JSON. It builds the 
 | [`juniper`](adapters/juniper) | Juniper 0.18.0 (Rust) | Doesn't collect fields: a field selected twice resolves twice (§6.3.2). Error paths have no list indices (§7.1.4). A nested list's items are checked against the outer item type. A null item at a Non-Null position nulls the list without an error. Leaves aren't coerced, so a non-finite Float becomes null with no error. Validation lacks the Single Root Field and Unique Directives rules. |
 | [`async-graphql`](adapters/async-graphql) | async-graphql 7.0.17, dynamic schemas | Its dynamic schema API breaks four rules: resolver errors have no `path`; errors don't stop at the nearest nullable field; an explicit null isn't treated as null; merged fields run their resolver twice. |
 
-The kit checks the checker too. Every run evaluates a shipped corpus of 35 negative controls, and each must be caught by the clause or check it names.
+The kit checks the checker too. Every run evaluates a shipped corpus of 41 negative controls, and each must be caught by the clause or check it names.
 
 **[The conformance sheet](conformance/README.md)** shows what each implementation was checked against and what it breaks, by spec section and by check, with the shortest failing case for each failure. Every cell is a count from a kit report (`--report`); `npm run conformance` regenerates it.
 
@@ -213,7 +213,7 @@ Every resolver settles in its own step. Each `@defer` may be honored or inlined,
 
 ## Mutants
 
-A property that no bug can break proves nothing. Each `specs/*.mutants.mjs` lists realistic bugs, 191 in all over 101 properties. For example:
+A property that no bug can break proves nothing. Each `specs/*.mutants.mjs` lists realistic bugs, 201 in all over 103 properties. For example:
 
 - nulling a failing Non-Null field instead of its parent;
 - filtering errors against the final null set, which drops a mutation's earlier errors;

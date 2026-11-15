@@ -107,9 +107,14 @@ With thunks (the default):
   `completeValueCatchingError`. The panic reaches the recover in `Execute`
   (executor.go:53-58), which returns a new `Result` holding only that error
   and no data. So `{ user { id } }` with `id: ID!` null gives
-  `{"data": null}`, not `{"data": {"user": null}}` (`dataMatches`), errors
-  raised earlier are lost (`nullsExplained`), and the response goes out
-  while other resolvers are pending (`complete`).
+  `{"data": null}`, not `{"data": {"user": null}}` (`dataMatches`), and
+  errors raised earlier are lost (`nullsExplained`). The panic also abandons
+  the thunks still pending, so the response goes out early (`complete`).
+  The `complete` findings are this same panic: when no root field could
+  still null `data` (in `lists`, `posts` has absorbed the error and `tags`
+  only waits on nullable items), the kit counts them under `dataMatches`
+  too. When a Non-Null root field is still pending, as in some `mutation`
+  cases, `data: null` might yet be right, so only `complete` is certain.
 - **Mutation root fields aren't serial.** `executeFieldsSerially`
   (executor.go:249-275) calls every root field's resolver, then dethunks the
   results (executor.go:268). With thunks, all root fields are called before
@@ -124,12 +129,17 @@ In both modes:
   `Serialize` returns nil, and raises nothing. `coerceInt`, `coerceFloat`
   and `coerceBool` return nil for an object, and `Enum.Serialize` returns
   nil for a name that isn't a value (definition.go:1007-1019). A nullable
-  position then holds null with no error (`nullsExplained`); a Non-Null one
-  gets graphql-go's "Cannot return null" error. The same goes for an
-  unknown enum name (`resultCoercion`).
+  position then holds null with no error; a Non-Null one gets graphql-go's
+  "Cannot return null" error. For an object given to an Int or Float, the
+  kit counts the silent null under `nullsExplained`. For an unknown enum
+  name, which §3.9 says must raise an execution error, it counts it under
+  `resultCoercion`.
 - **A fraction for an Int is truncated.** `1.2` becomes `1` (`coerceInt`,
-  scalars.go:124-128), where §3.5.1 requires an execution error
-  (`resultCoercion`).
+  scalars.go:124-128). §3.5.1 says a service must raise an execution error
+  when it can't coerce "without losing information", but its example for
+  this case says 1.2 "should raise an execution error instead of being
+  truncated", so the kit grades it as a SHOULD (`intFraction`, `--strict`
+  only).
 - **A non-finite Float leaves the client without a response.** `coerceFloat`
   returns `+Inf` unchanged (scalars.go:259), where §3.5.2 requires an
   execution error. `encoding/json` then refuses to serialize the result
@@ -139,7 +149,9 @@ In both modes:
 - **Keys are sorted, not in field order.** `Result.Data` is a
   `map[string]interface{}` (executor.go:288-311), and `encoding/json` writes
   map keys sorted. §7.2.2 says they SHOULD follow the selection set
-  (`keyOrder`, `--strict` only).
+  (`keyOrder`, `--strict` only). Under `--strict`, this is most of what
+  fails in `leaves`: `color, count, ratio` never matches the selection's
+  `count, ratio, color`.
 - **A Non-Null mutation root error loses earlier errors**, even with
   `--sync`: it panics up to the same recover in `Execute`, which drops the
   errors already collected (`serialErrorsKept`).

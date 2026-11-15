@@ -33,7 +33,8 @@ public static class Schemas
     // - a scalar type for each `scalar X`. SchemaBuilder skips scalar
     //   definitions, so a reference to X fails to resolve unless the
     //   application registers a ScalarGraphType named X. This registers
-    //   graphql-dotnet's ComplexScalarGraphType, which accepts any value.
+    //   graphql-dotnet's ComplexScalarGraphType, which accepts any value,
+    //   with the definition's description.
     public static Schema Build(string sdl)
     {
         var definitions = GraphQLParser.Parser.Parse(sdl).Definitions;
@@ -56,7 +57,12 @@ public static class Schemas
         foreach (var scalar in definitions.OfType<GraphQLScalarTypeDefinition>())
         {
             var name = scalar.Name.StringValue;
-            if (!SpecScalars.Contains(name)) schema.RegisterType(new ComplexScalarGraphType { Name = name });
+            // Its description is the definition's, as SchemaBuilder gives the
+            // object, interface, enum and input types it builds.
+            if (!SpecScalars.Contains(name))
+            {
+                schema.RegisterType(new ComplexScalarGraphType { Name = name, Description = scalar.Description?.Value.ToString() });
+            }
         }
         schema.Initialize();
         return schema;

@@ -6,7 +6,10 @@
 // Each vector names its primary check. A vector whose expected request
 // error comes from CoerceVariableValues also exercises `variables`, and one
 // whose expected answer is a field error also exercises `arguments` (the
-// vector's `spec` lists §6.1.2 or §6.4.1).
+// vector's `spec` lists §6.1.2 or §6.4.1). A vector that holds a list item
+// or an input object field with a vector of its own rests on that vector
+// first (its `restsOn`): where both fail, the failure counts where the inner
+// vector's does (kit/coerce/run.mjs, attribute).
 
 export const CHECKS = [
   { id: "int", title: "Int accepts only integer input values", level: "MUST", spec: ["3.5.1"] },
@@ -31,7 +34,7 @@ export const CHECKS = [
     level: "SHOULD",
     spec: ["3.5.2"],
     basis:
-      "The sentence says a request error \"must be raised\" for \"a value outside the available precision\", but which values that covers is Coercion.tla's reading (an integral value must be exactly representable), so the check takes the weaker level.",
+      "The sentence says a request error \"must be raised\" for \"a value outside the available precision\", but which values that covers is Coercion.tla's reading (an integral value must be exactly representable). A fraction such as 0.1 has no exact double either, and is accepted, so the text doesn't settle it, and the check takes the weaker level.",
   },
   {
     id: "string",
@@ -39,6 +42,14 @@ export const CHECKS = [
     level: "MUST",
     spec: ["3.5.3"],
     basis: "A JSON string with a lone surrogate is graded under loneSurrogates, not here.",
+  },
+  {
+    id: "stringValue",
+    title: "A string literal's escapes and block string indentation decode to its Unicode text",
+    level: "MUST",
+    spec: ["2.10.4"],
+    basis:
+      "§2.10.4's Static Semantics give a StringValue's Unicode text: each escape sequence's value, and for a block string BlockStringValue(), which removes the common indentation and the leading and trailing blank lines. They have no key word, but they define the value §3.5.3 then accepts, and the draft says \"Errors encountered during this evaluation ... must result in a parsing error\". The vectors use only escapes and block strings whose text is the same in both editions (no braced or surrogate pair escapes). Expected texts come from Lexer.tla.",
   },
   { id: "boolean", title: "Boolean accepts only boolean input values", level: "MUST", spec: ["3.5.4"] },
   {
@@ -79,7 +90,8 @@ export const CHECKS = [
     title: "OneOf input objects take exactly one non-null field",
     level: "MUST",
     spec: ["3.10.1"],
-    untested: "Coercion.tla doesn't model OneOf input objects, so there are no vectors for them.",
+    basis:
+      "§3.10.1 (the draft only): the value \"must contain exactly one entry and that entry must not be null or the null literal, otherwise a request error must be raised\", and \"The resulting coerced map must contain exactly one entry and the value for that entry must not be null, otherwise an execution error must be raised.\" The vectors are §3.10.1's table of examples and a few more, on a schema of their own (the vectors' `schema: \"oneOf\"`), all draft-only.",
   },
   {
     id: "list",
@@ -87,7 +99,7 @@ export const CHECKS = [
     level: "MUST",
     spec: ["3.11"],
     basis:
-      "An item that isn't a list, where the item type is a list, is coerced as a list of one, as the draft's table gives [[1], [2], [3]] for [1, 2, 3] as [[Int]]. October 2021's table says \"Error: Incorrect item value\", so those vectors are draft-only.",
+      "An item that isn't a list, where the item type is a list, is coerced as a list of one: \"list values are accepted only when each item in the list can be accepted by the list's item type\", and a value that is \"not a list\" is accepted by a list type as \"a list of size one\". That prose is the same in both editions. October 2021's table of examples says \"Error: Incorrect item value\" for [1, 2, 3] as [[Int]], but examples are non-normative (\"Examples in this document are non-normative\"), and the draft's table gives [[1], [2], [3]]. So these vectors aren't draft-only, and the table's answer fails this check under a finding of its own.",
   },
   { id: "nonNull", title: "Non-Null rejects null", level: "MUST", spec: ["3.12"] },
   {
@@ -111,20 +123,35 @@ export const CHECKS = [
   },
   {
     id: "invalidNotExecuted",
-    title: "An invalid document fails as a request error, without executing",
+    title: "A document with known validation errors fails as a request error, without executing",
     level: "MUST",
     spec: ["6.1.1"],
     basis:
-      "\"If validation errors are known, they should be reported in the list of \\\"errors\\\" in the response and the request must fail without operation execution.\" Graded for adapters without `unvalidated`, on vectors Validation.tla rejects: a request error, no data, no resolver called.",
+      "\"If validation errors are known, they should be reported in the list of \\\"errors\\\" in the response and the request must fail without operation execution.\" The MUST holds only where the errors are known: graded for adapters without `unvalidated` that claim `validate`, on vectors Validation.tla rejects and the implementation's own validator (asked through the validate area) rejects too. A request error, no data, no resolver called. October 2021 says the same.",
+  },
+  {
+    id: "onlyValidExecuted",
+    title: "Only valid documents are executed",
+    level: "SHOULD",
+    spec: ["6.1.1", "5"],
+    basis:
+      "\"only operations from documents which pass all validation rules should be executed\" (§6.1.1), and \"execution should only occur for valid requests\" (§5). Graded for adapters without `unvalidated`, on vectors Validation.tla rejects whose errors the implementation's validator doesn't report (it accepts the document in the validate area, or the adapter doesn't claim validate, so the kit can't tell). Such a document is a validation rule the implementation misses, which the validate area grades at MUST; executing it is only this SHOULD. October 2021 says the same.",
+  },
+  {
+    id: "acceptsValid",
+    title: "A valid document isn't rejected at validation",
+    level: "MUST",
+    spec: ["5"],
+    basis:
+      "As the validate area's check of the same name: a document that breaks no validation rule is valid, and must not be refused as invalid. Graded for adapters without `unvalidated` that claim `validate`: a valid vector answered with a request error whose document the implementation's own validator rejects (asked through the validate area) fails here, not under the coercion rule the vector is about, whether or not the reference's answer is also a request error.",
   },
   {
     id: "requestErrorNoData",
     title: "A request error result has no data entry",
     level: "MUST",
-    oct2021: "SHOULD",
     spec: ["7.1.3"],
     basis:
-      "The draft: \"The request error result map must not contain an entry with key {\"data\"}.\" October 2021 (§7.1.1): \"If an error was raised before execution begins, the data entry should not be present in the result.\" A request error with \"data\": null is still a request error for the vector's own check, and fails this one.",
+      "The draft: \"The request error result map must not contain an entry with key {\"data\"}.\" October 2021, §7.1: \"If the request failed before execution, due to a syntax error, missing information, or validation error, this entry must not be present.\" and §7.1.2: \"If a request error is raised, execution does not begin and the data entry in the response must not be present.\" Its §7.1.1 also says \"should not be present\", but the two MUST sentences are the ones about request errors, so the check is a MUST in both editions. A request error with \"data\": null is still a request error for the vector's own check, and fails this one.",
   },
   {
     id: "responds",
@@ -141,6 +168,22 @@ export const CHECKS = [
     spec: ["7.1.6", "7.1.4"],
     basis:
       "§7.1.6: an error that \"can be associated to a particular field in the GraphQL result ... must contain an entry with the key {\"path\"} with a response path which describes the response position which raised the error\". §7.1.4: a response path names response positions, not arguments. A result whose data holds the field as null, with one error and no resolver call, is a field error whatever its path. If that is the answer the vector expects, a path other than the field's fails this check. Every vector that accepts a field error exercises it.",
+  },
+  {
+    id: "errorFormat",
+    title: "Every error is a map with a string message",
+    level: "MUST",
+    spec: ["7.1.6"],
+    basis:
+      "\"Every error must contain an entry with the key {\"message\"} with a string description of the error\", and each error \"must be a map\" (§7.1.1, §7.1.3). October 2021 says the same (\"each error is a map\", \"Every error must contain an entry with the key message\"). A result whose errors aren't all maps with a string message, such as [null], or a field error with only a path, fails this check wherever its outcome would otherwise match. Every vector exercises it.",
+  },
+  {
+    id: "errorsList",
+    title: "errors, when present, is a non-empty list",
+    level: "MUST",
+    spec: ["7.1.1"],
+    basis:
+      "The same check as execution's. The draft, §7.1.1: \"If any errors are raised during operation execution, the execution result must contain an entry with key {\"errors\"}. The value of this entry must be a non-empty list ... If the request completed without raising any errors, this entry must not be present.\" October 2021, §7.1: \"If the request raised any errors, the response map must contain an entry with key errors. ... If the request completed without raising any errors, this entry must not be present.\" Its §7.1.2 also says \"should not be present\", but the §7.1 MUST is the sentence about the entry, so the check is a MUST in both editions, as in execution. A value with \"errors\": [] is still a value for the vector's own check, and fails this one. Every vector exercises it.",
   },
   {
     id: "loneSurrogates",
@@ -173,9 +216,19 @@ export const POLICIES = {
   missingListItemError: { level: "unspecified" },
   missingListItemDropped: { level: "unspecified" },
   // October 2021's answer to a draft-only vector (Coercion.tla's
-  // coerceDefaults and nestedListItems switches): recognised, but it fails
-  // the vector's check, since draft-only vectors are graded like any other.
+  // coerceDefaults switch): recognised, but it fails the vector's check,
+  // since draft-only vectors are graded like any other.
   oct2021: { level: "edition" },
+  // The answer October 2021's §3.11 table of examples gives for an item
+  // that isn't a list where the item type is a list (Coercion.tla's
+  // nestedListItems switch). The table is non-normative, and §3.11's prose,
+  // the same in both editions, gives the other answer: recognised, but it
+  // fails the vector's check in both editions. With `validating`, the
+  // answer of a service whose validator follows the table too (§5.6.1 asks
+  // for literals to be coercible): a request error, graded only for
+  // adapters without `unvalidated`.
+  oct2021Example: { level: "example" },
+  validating: { level: "example" },
 };
 
 export const CHECK_IDS = new Set(CHECKS.map((c) => c.id));

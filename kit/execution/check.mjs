@@ -155,10 +155,50 @@ const causalProblems = (trace, add) => {
   }
 };
 
+// The checks on the trace itself. A case that breaks one of them says
+// nothing reliable about what the resolvers produced, so the reference
+// doesn't see it.
+const TRACE_CHECKS = new Set(["protocol", "callsOnce", "callsSelected", "callsReachable"]);
+// The checks that make a response's error paths unusable, as does an error
+// that isn't a map or has no list for a path. The reference still sees such
+// a case, but only its clauses on data and calls count.
+const ERROR_PATH_CHECKS = new Set(["errorPath", "responsePosition"]);
+// The clauses that don't read error paths.
+export const DATA_CLAUSES = new Set(["complete", "dataMatches", "keyOrder", "calledSerially"]);
+
+// The case in the shape the TLA+ side reads. `outcomes` replaces the
+// outcome of a settle, by path key.
+const referenceCase = (c, data, errorPaths, outcomes = new Map()) => ({
+  fixture: c.fixture,
+  trace: c.trace.map((e) =>
+    e.call
+      ? { call: e.call.map(String), type: e.type, ...(Number.isInteger(e.after) ? { after: e.after } : {}), ...(e.inline ? { inline: true } : {}) }
+      : {
+          settle: e.settle.map(String),
+          outcome: outcomes.get(pathKey(e.settle.map(String))) ?? e.outcome,
+          ...(e.inline ? { inline: true } : {}),
+        },
+  ),
+  data,
+  errors: errorPaths.map((p) => p.map(String)),
+});
+
 // Checks what the reference can't see, and puts the case in the shape the
 // TLA+ side reads. Returns { problems, ids } for a malformed case, where
 // ids[i] is the check (kit/execution/checks.mjs) problems[i] breaks, and
 // { case, warnings, warningIds } otherwise; warnings break a SHOULD.
+//
+// A malformed case can still be checked against the reference when its
+// problems leave the trace and data usable: then it also has `case`, and
+// `clauses` is "all", or "data" when its error paths are unusable and only
+// DATA_CLAUSES count. So one problem doesn't hide a failure of the
+// reference: an Int fraction truncated to 1 doesn't hide a dropped error
+// elsewhere in the case, and errors without a path don't hide data nulled
+// past a nullable position. A position whose resolver returned a value its
+// type can't represent is given to the reference as the implementation
+// completed it: as a leaf if it holds a value, as null if it is null
+// without an error. That fault is graded once, by intFraction or
+// resultCoercion.
 export const normalize = (fixture, c) => {
   const problems = [];
   const ids = [];
@@ -300,20 +340,32 @@ export const normalize = (fixture, c) => {
 
   // §3.5.1, §3.5.2, §3.9: a leaf value the type can't represent must raise
   // an execution error (a fraction for an Int only should: intFraction), so
-  // the position can't hold a value.
+  // the position can't hold a value, and if it is null, an error must say
+  // why. A silent null there is this rule's failure, not nullsExplained's:
+  // the reference sees the position as null, the implementation's own
+  // coercion.
   const valueAt = (path) => path.reduce((v, k) => (v === null || typeof v !== "object" ? undefined : v[k]), response.data ?? null);
+  const errorAt = new Set(errors.filter((e) => isMap(e) && Array.isArray(e.path)).map((e) => pathKey(e.path.map(String))));
+  const coerced = new Map();
   for (const event of uncoercible) {
     const value = valueAt(event.settle.map((k) => (/^\d+$/.test(k) ? Number(k) : k)));
+    const check = coercionCheck(at, event.settle);
+    const level = check === "intFraction" ? "should" : "must";
+    const k = pathKey(event.settle.map(String));
     if (value !== undefined && value !== null) {
-      add(
-        coercionCheck(at, event.settle),
-        `${event.settle.join(".")} is ${JSON.stringify(value)}, though its resolver returned a value its type can't represent, which ${coercionCheck(at, event.settle) === "intFraction" ? "should" : "must"} raise an execution error`,
-      );
+      coerced.set(k, { kind: "leaf" });
+      add(check, `${event.settle.join(".")} is ${JSON.stringify(value)}, though its resolver returned a value its type can't represent, which ${level} raise an execution error`);
+    } else if (value === null && !errorAt.has(k)) {
+      coerced.set(k, { kind: "null" });
+      add(check, `${event.settle.join(".")} is null without an error, though its resolver returned a value its type can't represent, which ${level} raise an execution error`);
     }
   }
 
   // Leaf values: the reference abstracts them away, so check them here
   // against the canonical value for the position's type in the fixture.
+  // A position whose resolver returned an uncoercible value is graded above
+  // only, by intFraction or resultCoercion.
+  const skipLeaf = new Set(uncoercible.map((e) => pathKey(e.settle.map(String))));
   const walk = (value, path) => {
     if (value === null) return;
     if (Array.isArray(value)) return value.forEach((v, i) => walk(v, [...path, i]));
@@ -321,6 +373,7 @@ export const normalize = (fixture, c) => {
     const position = at(path);
     if (!position) return add("dataShape", `data has a value at ${path.join(".")}, which the operation doesn't select`);
     if (path.length > 0 && path[path.length - 1] === "__typename") return;
+    if (skipLeaf.has(pathKey(path.map(String)))) return;
     const canonical = leafValue(position.type);
     if (value === canonical) return;
     // The right value as the wrong JSON type, such as "1" for Int 1: §7.2.1
@@ -333,22 +386,16 @@ export const normalize = (fixture, c) => {
   };
   walk(response.data ?? null, []);
 
-  return problems.length > 0
-    ? { problems, ids }
-    : {
-        warnings,
-        warningIds,
-        case: {
-          fixture: c.fixture,
-          trace: c.trace.map((e) =>
-            e.call
-              ? { call: e.call.map(String), type: e.type, ...(Number.isInteger(e.after) ? { after: e.after } : {}), ...(e.inline ? { inline: true } : {}) }
-              : { settle: e.settle.map(String), outcome: e.outcome, ...(e.inline ? { inline: true } : {}) },
-          ),
-          data: response.data,
-          errors: errors.map((e) => e.path.map(String)),
-        },
-      };
+  if (problems.length === 0) return { warnings, warningIds, case: referenceCase(c, response.data, errors.map((e) => e.path)) };
+  // What the reference can still check of a malformed case: nothing if the
+  // trace is broken, there is no data, or data holds a position the
+  // operation doesn't select; only the clauses on data and calls if error
+  // paths are unusable; everything otherwise.
+  if (ids.some((id) => TRACE_CHECKS.has(id) || id === "dataPresent" || id === "dataShape")) return { problems, ids };
+  const usable = errors.every((e) => isMap(e) && Array.isArray(e.path)) && !ids.some((id) => ERROR_PATH_CHECKS.has(id));
+  const clauses = usable ? "all" : "data";
+  const paths = clauses === "all" ? errors.map((e) => e.path) : [];
+  return { problems, ids, clauses, case: referenceCase(c, response.data, paths, coerced) };
 };
 
 // ---------------------------------------------------------------------------
@@ -550,17 +597,28 @@ const answered = (raw) => !("streamError" in raw) && !("noResponse" in raw);
 
 // Sorts cases for checking and reporting: the malformed ones with their
 // problems; the warnings, one per case for each check and text, graded by
-// the case's own fixture; and the distinct well-formed cases, each with its
-// shortest submitted case.
+// the case's own fixture; the distinct well-formed cases, each with its
+// shortest submitted case; and the distinct malformed cases the reference
+// can still check (`partials`), each with its shortest submitted case and
+// the clauses that count. `tla` lists what to evaluate: the cases, then the
+// partials.
 const collect = (byId, rawCases, prepare) => {
   const malformed = [];
   const warnings = [];
   const distinct = new Map();
+  const partials = new Map();
   const tlaOf = new Map();
   for (const raw of rawCases) {
     const prepared = prepare(raw);
     if (prepared.problems) {
-      malformed.push({ raw, problems: prepared.problems, ids: prepared.ids });
+      let partial;
+      if (prepared.tla) {
+        const key = `${prepared.clauses}\u0000${prepared.tla}`;
+        partial = partials.get(key);
+        if (!partial) partials.set(key, (partial = { tla: prepared.tla, clauses: prepared.clauses, case: prepared.case, raw }));
+        else if (prepared.case.trace.length < partial.case.trace.length) Object.assign(partial, { case: prepared.case, raw });
+      }
+      malformed.push({ raw, problems: prepared.problems, ids: prepared.ids, partial });
       continue;
     }
     tlaOf.set(raw, prepared.tla);
@@ -575,8 +633,21 @@ const collect = (byId, rawCases, prepare) => {
     const shortest = distinct.get(prepared.tla);
     if (!shortest || prepared.case.trace.length < shortest.case.trace.length) distinct.set(prepared.tla, { ...prepared, raw });
   }
-  return { rawCases, malformed, warnings, cases: [...distinct.values()], tlaOf };
+  const cases = [...distinct.values()];
+  const partialList = [...partials.values()];
+  return { rawCases, malformed, warnings, cases, partials: partialList, tlaOf, tla: [...cases.map((c) => c.tla), ...partialList.map((p) => p.tla)] };
 };
+
+// Splits the verdicts on collected.tla into results (for the cases) and
+// partialResults (for the partials), keeping only the clauses that count
+// for each partial.
+const split = (collected, verdicts) => ({
+  results: verdicts.slice(0, collected.cases.length),
+  partialResults: collected.partials.map((p, i) => {
+    const r = verdicts[collected.cases.length + i];
+    return { ...r, failures: r.failures.filter((f) => p.clauses === "all" || DATA_CLAUSES.has(f)) };
+  }),
+});
 
 // What's wrong with a report whatever the cases: a check failing on more
 // cases than it applies to.
@@ -591,12 +662,12 @@ const preparer = (byId) => (raw) => {
   const fixture = byId.get(raw.fixture);
   if (!fixture) return { problems: [`unknown fixture ${raw.fixture}`], ids: ["protocol"] };
   const result = normalize(fixture, raw);
-  return result.problems ? result : { ...result, tla: caseToTla(fixture, result.case) };
+  return result.case ? { ...result, tla: caseToTla(fixture, result.case) } : result;
 };
 
 // What's wrong with a report control's report (controls.mjs), or "".
-const reportControlProblem = (byId, control, collected, results) => {
-  const report = buildReport({ byId, ...collected, results, strict: control.strict, selfTest: true, controls: 0, implementation: "report control", capabilities: [], skipped: [], provenance: {} });
+const reportControlProblem = (byId, control, collected, verdicts) => {
+  const report = buildReport({ byId, ...collected, ...split(collected, verdicts), strict: control.strict, selfTest: true, controls: 0, implementation: "report control", capabilities: [], skipped: [], provenance: {} });
   return control.expect(report, collected.rawCases) || overcounted(report);
 };
 
@@ -604,7 +675,7 @@ const reportControlProblem = (byId, control, collected, results) => {
 export const judgeReportControl = async (fixtures, control, rawCases) => {
   const byId = new Map(fixtures.map((f) => [f.id, f]));
   const collected = collect(byId, rawCases, preparer(byId));
-  return reportControlProblem(byId, control, collected, await evaluate(collected.cases.map((c) => c.tla)));
+  return reportControlProblem(byId, control, collected, await evaluate(collected.tla));
 };
 
 // Checks cases against the reference, alongside the control corpus.
@@ -630,16 +701,16 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
   }));
   const evaluated = [...bases, ...controls.map((c) => c.prepared)].filter((p) => !p.problems);
   const all = await evaluate([
-    ...cases.map((c) => c.tla),
+    ...collected.tla,
     ...evaluated.map((p) => p.tla),
-    ...reportControls.flatMap((r) => r.collected.cases.map((c) => c.tla)),
+    ...reportControls.flatMap((r) => r.collected.tla),
   ]);
-  const results = all.slice(0, cases.length);
-  const resultOf = new Map(evaluated.map((p, i) => [p, all[cases.length + i]]));
-  let offset = cases.length + evaluated.length;
+  const { results, partialResults } = split(collected, all.slice(0, collected.tla.length));
+  const resultOf = new Map(evaluated.map((p, i) => [p, all[collected.tla.length + i]]));
+  let offset = collected.tla.length + evaluated.length;
   for (const r of reportControls) {
-    r.results = all.slice(offset, offset + r.collected.cases.length);
-    offset += r.collected.cases.length;
+    r.verdicts = all.slice(offset, offset + r.collected.tla.length);
+    offset += r.collected.tla.length;
   }
 
   let ok = true;
@@ -698,6 +769,26 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
     if (!group.example || c.case.trace.length < group.example.case.trace.length) group.example = { ...c, expected };
     groups.set(key, group);
   });
+  // Malformed cases the reference could still check, grouped the same way.
+  const partialGroups = new Map();
+  collected.partials.forEach((p, i) => {
+    const { failures, expected } = partialResults[i];
+    if (failures.length === 0) return;
+    const key = `${p.case.fixture}: ${failures.sort().join(", ")}${p.clauses === "data" ? " (of the clauses on data and calls)" : ""}`;
+    const group = partialGroups.get(key) ?? { count: 0, example: null, failures };
+    group.count++;
+    if (!group.example || p.case.trace.length < group.example.case.trace.length) group.example = { ...p, expected };
+    partialGroups.set(key, group);
+  });
+  for (const [key, { count, example, failures }] of partialGroups) {
+    const ids = [...new Set(failures.map((f) => gradedAs(byId.get(example.case.fixture), f)))];
+    const fatal = ids.some((id) => isFatal(id, strict));
+    if (fatal) ok = false;
+    log(`${fatal ? "✗" : "!"} malformed, and also: ${key} (${plural(count, "distinct case")})${fatal ? "" : leniency(ids.includes(OUTSIDE_SPEC) ? OUTSIDE_SPEC : ids[0])}`);
+    log(`    trace:    ${describeTrace(example.case.trace)}`);
+    log(`    response: ${responseText(example.raw)}`);
+    log(`    expected: data ${example.expected}`);
+  }
   let warnings = 0;
   let failing = 0;
   for (const [key, { count, example, failures }] of groups) {
@@ -738,7 +829,7 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
     }
   }
   for (const r of reportControls) {
-    const problem = r.control ? reportControlProblem(byId, r.control, r.collected, r.results) : "it isn't in kit/execution/controls.mjs";
+    const problem = r.control ? reportControlProblem(byId, r.control, r.collected, r.verdicts) : "it isn't in kit/execution/controls.mjs";
     if (problem) {
       selfTest = false;
       log(`✗ report control "${r.name}": ${problem}`);
@@ -748,11 +839,13 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
 
   // The summary, always: what passed, alongside what didn't.
   const passed = cases.length - failing - warnings - informational;
+  const partialFailing = partialResults.filter((r) => r.failures.length > 0).length;
   const should = warnings ? `, ${warnings} more break only a SHOULD` : "";
   const info = informational ? `, ${informational} more fail only outside the spec (${OUTSIDE_SPEC})` : "";
   log(
     `${failing === 0 && cases.length > 0 ? "✓" : "✗"} ${passed} of ${cases.length} distinct well-formed cases satisfy the reference${should}${info}` +
-      (malformed.length ? `; ${plural(malformed.length, "case")} malformed` : ""),
+      (malformed.length ? `; ${plural(malformed.length, "case")} malformed` : "") +
+      (partialFailing ? ` (${partialFailing} distinct ones also break the reference)` : ""),
   );
   const unstamped = cases.filter((c) => byId.get(c.case.fixture).operationType === "mutation" && !isStamped(c.case.trace));
   if (unstamped.length > 0) {
@@ -763,6 +856,7 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
     byId,
     ...collected,
     results,
+    partialResults,
     strict,
     selfTest,
     controls: controlCount,
@@ -815,23 +909,23 @@ const uncoercibleChecks = (raw, fixture) => {
   return new Set(settles.map((e) => coercionCheck(at, e.settle)));
 };
 
-// The problems a malformed case counts against, by index: its first, which
-// is the root cause when one fault shows up several ways; every protocol
-// problem, so adapterProblems counts each case where the adapter broke the
-// protocol; and, when the first problem can't fail a run by itself (a
-// SHOULD, or informational), the first problem of each check that can, so
-// a problem that fails the run is never hidden behind one that doesn't.
+// The problems a malformed case counts against, by index: the first problem
+// of each check it breaks, so one problem never hides another check's
+// failure. If the adapter broke the protocol, only the problems of the
+// trace count: the response came from a run the adapter misreported, so
+// what it says about the implementation can't be relied on.
 const countedProblems = (fixture, ids) => {
-  const graded = ids.map((id) => gradedAs(fixture, id));
-  const failsRun = (id) => LEVEL.get(id) === "MUST" || LEVEL.get(id) === "ADAPTER";
-  const kept = new Map([[graded[0], 0]]);
-  graded.forEach((id, i) => {
-    if (!kept.has(id) && (id === "protocol" || (!failsRun(graded[0]) && failsRun(id)))) kept.set(id, i);
+  const adapterBroke = ids.includes("protocol");
+  const kept = new Map();
+  ids.forEach((id, i) => {
+    if (adapterBroke && !TRACE_CHECKS.has(id)) return;
+    const graded = gradedAs(fixture, id);
+    if (!kept.has(graded)) kept.set(graded, i);
   });
   return [...kept.values()];
 };
 
-const buildReport = ({ byId, rawCases, malformed, warnings, cases, tlaOf, results, strict, selfTest, controls, implementation, capabilities, skipped, provenance }) => {
+const buildReport = ({ byId, rawCases, malformed, warnings, cases, partials = [], tlaOf, results, partialResults = [], strict, selfTest, controls, implementation, capabilities, skipped, provenance }) => {
   // Each check's failing cases are a set, so a case counts once per check
   // however many times it breaks it.
   const stats = new Map(CHECKS.map((c) => [c.id, { cases: 0, failing: new Set() }]));
@@ -911,23 +1005,23 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, tlaOf, result
     });
   }
 
-  // The reference's clauses, over the distinct well-formed cases. Every
-  // clause a case breaks counts against that clause; the finding is the
-  // set of clauses it breaks. In a fixture outside the spec, the clauses
-  // graded as OUTSIDE_SPEC make a finding of their own.
-  cases.forEach((c, i) => {
+  // The reference's clauses, over the distinct well-formed cases, and the
+  // distinct malformed cases it could still check (only the clauses that
+  // count for each). Every clause a case breaks counts against that clause;
+  // the finding is the set of clauses it breaks. In a fixture outside the
+  // spec, the clauses graded as OUTSIDE_SPEC make a finding of their own.
+  const graded = (c, failures, expectedData, inScope) => {
     const fixture = byId.get(c.case.fixture);
     const mutation = fixture.operationType === "mutation";
-    const failures = results[i].failures;
     for (const check of CHECKS) {
-      if (!check.reference || (check.mutationOnly && !mutation)) continue;
+      if (!check.reference || (check.mutationOnly && !mutation) || !inScope(check.id)) continue;
       if (gradedAs(fixture, check.id) !== check.id) continue;
       stats.get(check.id).cases++;
       if (failures.includes(check.id)) stats.get(check.id).failing.add(c);
     }
     const own = failures.filter((f) => gradedAs(fixture, f) === f).sort();
     const outside = failures.filter((f) => gradedAs(fixture, f) === OUTSIDE_SPEC).sort();
-    const expected = { expected: `data ${results[i].expected}` };
+    const expected = { expected: `data ${expectedData}` };
     if (outside.length > 0) {
       found(`${OUTSIDE_SPEC},${outside.join(",")}`, c.raw, {
         checks: [OUTSIDE_SPEC],
@@ -937,7 +1031,11 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, tlaOf, result
       });
     }
     if (own.length > 0) found(own.join(","), c.raw, { checks: own, fixture: c.case.fixture, example: example(c.raw, expected) });
-  });
+  };
+  cases.forEach((c, i) => graded(c, results[i].failures, results[i].expected, () => true));
+  partials.forEach((p, i) =>
+    graded(p, partialResults[i].failures, partialResults[i].expected, (id) => p.clauses === "all" || DATA_CLAUSES.has(id)),
+  );
 
   const ran = new Set(rawCases.map((c) => c.fixture));
   const unstamped = cases.some((c) => byId.get(c.case.fixture).operationType === "mutation" && !isStamped(c.case.trace));

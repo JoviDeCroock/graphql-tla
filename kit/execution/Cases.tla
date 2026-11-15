@@ -12,12 +12,60 @@
 (***************************************************************************)
 EXTENDS Reference, Fixtures
 
+\* Whether the position at `path` of declared type `type`, selected by
+\* `fields`, may still raise an execution error that propagates to its
+\* parent, whatever the resolvers that haven't settled produce. Only a
+\* Non-Null position propagates (§6.4.4), and only if its resolver hasn't
+\* settled, or a Non-Null position under it may still raise. A position
+\* that has completed can't raise any more.
+RECURSIVE MayRaise(_, _, _, _, _)
+MayRaise(fx, O, path, type, fields) ==
+  IF ~Propagates(fx, type) THEN FALSE
+  ELSE IF path \notin DOMAIN O THEN TRUE
+  ELSE
+    LET outcome == O[path]
+        inner == Nullable(type)
+    IN CASE outcome.kind = "list" /\ IsList(inner) ->
+              \E i \in 1..outcome.length :
+                MayRaise(fx, O, Append(path, ToString(i - 1)), OfType(inner), fields)
+         [] outcome.kind = "object" /\ Expected(fx, inner) = "object" ->
+              IF ~(outcome.type \in TypeDef(fx, inner.name).possibleTypes) THEN FALSE
+              ELSE
+                LET grouped == CollectSubfields(fx, outcome.type, fields) IN
+                \E j \in DOMAIN grouped :
+                  IF grouped[j].fields[1].name = "__typename" THEN FALSE
+                  ELSE MayRaise(fx, O, Append(path, grouped[j].key),
+                                FieldType(fx, outcome.type, grouped[j].fields[1].name),
+                                grouped[j].fields)
+         [] OTHER -> FALSE
+
+\* Whether data is null in a response sent while execution is pending,
+\* though no root field can null it any more. Reference!Clauses compares
+\* data with the pending result, whose json is null, so data null passes
+\* dataMatches there. But §6.4.4 nulls data only when an execution error
+\* propagates to the root through Non-Null positions. If no root field may
+\* still raise one (MayRaise), no outcome of the pending resolvers makes
+\* data null, so data null isn't the completed value. If one may, the
+\* response is only early (complete).
+DataNulledEarly(fx, O, data) ==
+  LET grouped == RootGroups(fx) IN
+  /\ data.kind = "null"
+  /\ ExecuteQuery(fx, O).kind = "pending"
+  /\ \A i \in DOMAIN grouped :
+       IF grouped[i].fields[1].name = "__typename" THEN TRUE
+       ELSE ~MayRaise(fx, O, <<grouped[i].key>>,
+                      FieldType(fx, RootType(fx), grouped[i].fields[1].name),
+                      grouped[i].fields)
+
 \* The clauses of Reference!Clauses a case breaks, plus "calledSerially" if
-\* a mutation's root field was called before an earlier one completed.
+\* a mutation's root field was called before an earlier one completed, and
+\* "dataMatches" if data is null though no root field can null it
+\* (DataNulledEarly).
 Failures(c) ==
   LET fx == Fixtures[c.fixture] IN
   FailedClauses(fx, c.outcomes, c.data, c.errors)
     \cup (IF CalledSerially(fx, c.trace) THEN {} ELSE {"calledSerially"})
+    \cup (IF DataNulledEarly(fx, c.outcomes, c.data) THEN {"dataMatches"} ELSE {})
 
 \* A readable rendering of json, for reports. Leaf values are abstracted
 \* away, so a leaf other than __typename's prints as <leaf>.

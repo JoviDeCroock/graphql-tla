@@ -46,7 +46,9 @@ CAPABILITIES = {
     # but floats as doubles (1e400 is inf), so not `exact-numbers`.
     "coerce": ["absent-vs-null", *([] if VALIDATING else ["unvalidated"])],
     "schema": [],
-    "introspect": [],
+    # build_schema keeps the SDL's `directive @label(...) on ...` definitions,
+    # so validate knows them and introspection lists them.
+    "introspect": ["custom-directives"],
 }
 
 GRAPHQL_DIR = os.path.dirname(sys.modules["graphql"].__file__) + os.sep
@@ -109,14 +111,14 @@ def error_json(error):
 def validate_area(request):
     """validate() with graphql-core's default rules. The schema builds and the
     document parses for every vector, so a failure there is the adapter's,
-    and raises. A GraphQLError raised from inside validate() would fail the
-    request, so it rejects the document, as in the graphql-js adapter."""
+    and raises. validate() can also raise from inside a rule (a subscription
+    with @skip(if: $v) at its root). That is a crash, not a rejection:
+    validate() returns the errors that reject a document, and graphql_sync
+    doesn't catch this one either (graphql.py:301). So it propagates, and
+    adapter.py answers `error`, as the graphql-js adapter does."""
     schema = cached_schema(request["schema"], check=True)
     document = parse(request["document"])
-    try:
-        errors = validate(schema, document)
-    except GraphQLError as error:
-        return {"valid": False, "errors": [{"message": f"validate() raised: {error.message}"}]}
+    errors = validate(schema, document)
     return {"valid": not errors, "errors": [error_json(e) for e in errors]}
 
 

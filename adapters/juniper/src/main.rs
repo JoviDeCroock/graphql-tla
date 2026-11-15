@@ -75,19 +75,31 @@ struct Sdl {
 
 // async-graphql-parser 7.0.17 doesn't read a description on a schema
 // definition, so the adapter takes it out first: a string right before the
-// `schema` keyword.
+// `schema` keyword. Its value is read by the same parser, as the
+// description of a scalar, so escapes and block strings (§2.10.4
+// BlockStringValue) come out as they would anywhere else in the SDL.
 fn schema_description(source: &str) -> Option<(String, String)> {
     let at = source.match_indices("schema").find(|(i, _)| {
         source[i + 6..].trim_start().starts_with('{') && source[..*i].trim_end().ends_with('"')
     })?.0;
     let before = source[..at].trim_end();
-    let (start, text) = if before.ends_with("\"\"\"") {
-        let start = before[..before.len() - 3].rfind("\"\"\"")?;
-        (start, before[start + 3..before.len() - 3].trim().to_string())
+    let start = if before.ends_with("\"\"\"") {
+        before[..before.len() - 3].rfind("\"\"\"")?
     } else {
-        let start = before[..before.len() - 1].rfind('"')?;
-        (start, before[start + 1..before.len() - 1].to_string())
+        // The opening quote: the last `"` before the closing one that no
+        // backslash escapes.
+        let body = &before[..before.len() - 1];
+        body.match_indices('"')
+            .map(|(i, _)| i)
+            .filter(|&i| body[..i].bytes().rev().take_while(|&b| b == b'\\').count() % 2 == 0)
+            .last()?
     };
+    let token = &before[start..];
+    let document = async_graphql_parser::parse_schema(format!("{token} scalar Description")).ok()?;
+    let text = document.definitions.into_iter().find_map(|d| match d {
+        TypeSystemDefinition::Type(ty) => ty.node.description.map(|d| d.node),
+        _ => None,
+    })?;
     Some((format!("{}{}", &source[..start], &source[at..]), text))
 }
 
@@ -540,8 +552,8 @@ enum Dyn {
     Str(String),
     Id(ID),
     // A value Juniper's leaf types don't produce themselves: an enum value
-    // (what a derived enum's `resolve` returns), a custom scalar's value, or
-    // an Int fraction.
+    // (what a derived enum's `resolve` returns for one of its values), or a
+    // custom scalar's value.
     Raw(Value<S>),
     // A list item that hasn't settled yet (`deferred-items`).
     Pending { ty: SdlType, path: Vec<Json> },
@@ -562,11 +574,16 @@ fn build(sdl: &Sdl, ty: &SdlType, path: &[Json], outcome: &Json, inline: bool) -
                 None => Dyn::Raw(Value::scalar("v")),
             },
         },
-        "uncoercible" => match name {
-            "Int" => Dyn::Raw(Value::scalar(1.2)),
-            "Float" => Dyn::Float(f64::INFINITY),
-            _ => Dyn::Raw(Value::scalar("NOT_A_VALUE")),
-        },
+        // Only for a Float (`uncoercibleTypes`): an `f64` is what a Juniper
+        // Float field returns, and it can be infinite. An `i32` can't hold
+        // 1.2, and a Rust enum can't hold a name that isn't one of its
+        // values, so a typed schema can't return those, and the kit doesn't
+        // send them.
+        "uncoercible" if name == "Float" => Dyn::Float(f64::INFINITY),
+        "uncoercible" => {
+            eprintln!("juniper adapter: an uncoercible {name}, which the adapter doesn't claim");
+            Dyn::Null
+        }
         "object" => Dyn::Obj(Obj {
             concrete: outcome["type"].as_str().unwrap_or("").into(),
             path: path.to_vec(),
@@ -826,6 +843,21 @@ fn build_schema(source: &str) -> Result<Schema, String> {
     .map_err(|e| format!("Juniper panicked building the schema: {}", panic_message(e)))
 }
 
+// A subscription event as `juniper_graphql_ws` 0.6.0 sends it: its
+// `NextPayload` (aliased `DataPayload` for graphql-ws) holds the
+// `ExecutionOutput`'s data, and its errors only if there are any
+// (`#[serde(skip_serializing_if = "Vec::is_empty")]`,
+// src/server_message.rs:13-25). Serializing `ExecutionOutput` itself would
+// always write `errors`, but no Juniper transport sends it that way.
+fn event_payload(output: &juniper::ExecutionOutput<S>) -> Result<Json, String> {
+    let mut payload = serde_json::Map::new();
+    payload.insert("data".into(), serde_json::to_value(&output.data).map_err(|e| e.to_string())?);
+    if !output.errors.is_empty() {
+        payload.insert("errors".into(), serde_json::to_value(&output.errors).map_err(|e| e.to_string())?);
+    }
+    Ok(Json::Object(payload))
+}
+
 fn start(message: &Json, pool: &LocalPool, inline_items: bool) -> Result<(Arc<Execution>, RemoteHandle<()>), String> {
     let exec = Execution::new(message["id"].clone(), inline_items);
     let schema = build_schema(message["schema"].as_str().unwrap_or(""))
@@ -844,7 +876,7 @@ fn start(message: &Json, pool: &LocalPool, inline_items: bool) -> Result<(Arc<Ex
             let subscribed = coordinator.subscribe(&request, &ctx).await;
             let response = match subscribed {
                 Ok(mut connection) => match connection.next().await {
-                    Some(output) => serde_json::to_value(&output).map_err(|e| e.to_string()),
+                    Some(output) => event_payload(&output),
                     None => Err("the response stream ended without an event".into()),
                 },
                 Err(err) => serde_json::to_value(GraphQLResponse::<S>::from_result(Err(err)))
@@ -885,10 +917,15 @@ const PARSE_SCHEMA: &str = "type Query { a: Int b: Float c: String d: Boolean e:
 // parse: Juniper's parser, as `ValidatedOperation::new` calls it. It needs a
 // schema, to read scalar literals by the type of the argument they're given
 // to; with no field of the document in this one, a literal is read by its
-// token: a String, an `i32` Int or an `f64` Float.
-fn parse(source: &str, schema: &Schema) -> bool {
-    catch_unwind(AssertUnwindSafe(|| juniper::parser::parse_document_source(source, &schema.schema).is_ok()))
-        .unwrap_or(false)
+// token: a String, an `i32` Int or an `f64` Float. A panic is a crash, not
+// a rejection: the request gets no verdict.
+fn parse(message: &Json, schema: &Schema) -> Json {
+    let id = message["id"].clone();
+    let source = message["source"].as_str().unwrap_or("");
+    match catch_unwind(AssertUnwindSafe(|| juniper::parser::parse_document_source(source, &schema.schema).is_ok())) {
+        Ok(ok) => json!({"type": "result", "id": id, "ok": ok}),
+        Err(panic) => json!({"type": "error", "id": id, "message": format!("Juniper panicked: {}", panic_message(panic))}),
+    }
 }
 
 // validate: parse, then `visit_all_rules`, as `ValidatedOperation::new` does.
@@ -914,13 +951,39 @@ fn validate(message: &Json) -> Json {
                     .map(|l| json!({"line": l.line() + 1, "column": l.column() + 1})).collect::<Vec<_>>()})
             })
             .collect();
-        (errors.is_empty(), errors)
+        if !errors.is_empty() {
+            return (false, errors);
+        }
+        // `ValidatedOperation::new` picks the document's one operation, and
+        // executing it fails before any resolver runs if the schema has no
+        // root type for it (`GraphQLError::NotSupported`,
+        // src/executor/validated_operation.rs:347-355). So Juniper doesn't
+        // execute such a document. With several operations, the kit names
+        // none, and which one runs is the client's choice.
+        let operations: Vec<_> = parsed
+            .iter()
+            .filter_map(|d| match d {
+                juniper::Definition::Operation(op) => Some(op.item.operation_type),
+                _ => None,
+            })
+            .collect();
+        if let [operation_type] = operations[..] {
+            let root = match operation_type {
+                juniper::OperationType::Query => true,
+                juniper::OperationType::Mutation => schema.schema.mutation_type().is_some(),
+                juniper::OperationType::Subscription => schema.schema.subscription_type().is_some(),
+            };
+            if !root {
+                let message = juniper::GraphQLError::NotSupported(operation_type).to_string();
+                return (false, vec![json!({"message": message})]);
+            }
+        }
+        (true, errors)
     }));
     match result {
         Ok((valid, errors)) => json!({"type": "result", "id": id, "valid": valid, "errors": errors}),
-        // A panic fails the request, so the document isn't executed.
-        Err(panic) => json!({"type": "result", "id": id, "valid": false,
-            "errors": [{"message": format!("Juniper panicked: {}", panic_message(panic))}]}),
+        // A panic is a crash: the request gets no verdict (docs/kit/validate.md).
+        Err(panic) => json!({"type": "error", "id": id, "message": format!("Juniper panicked: {}", panic_message(panic))}),
     }
 }
 
@@ -956,6 +1019,12 @@ fn main() {
         "protocol": 1,
         "name": format!("{VERSION} (GraphQLType with TypeInfo)"),
         "capabilities": capabilities,
+        // Only a Float can hold a value its type can't represent in a
+        // typed schema (an infinite `f64`).
+        "uncoercibleTypes": ["Float"],
+        // A Non-Null list item or subscription event is a non-`Option` Rust
+        // type, which has no null.
+        "nullItems": false,
     }));
 
     let parse_schema = build_schema(PARSE_SCHEMA).expect("the parse schema builds");
@@ -971,11 +1040,18 @@ fn main() {
             Ok(m) => m,
             Err(e) => {
                 // A source with a lone surrogate can't be read into a Rust
-                // string. Such a parse request never reaches Juniper.
-                if line.contains("\"type\":\"parse\"") {
+                // string, so Juniper never sees it: the adapter can't carry
+                // that input (docs/kit/parse.md).
+                // serde_json says "unexpected end of hex escape" for a lone
+                // leading surrogate and "lone leading surrogate in hex
+                // escape" for a lone trailing one. The kit's JSON has no
+                // other bad escapes.
+                let surrogate = e.to_string().contains("hex escape");
+                if surrogate && line.contains("\"type\":\"parse\"") {
                     if let Some(id) = line.split("\"id\":").nth(1).and_then(|r| r.split([',', '}']).next()) {
                         let id: Json = serde_json::from_str(id.trim()).unwrap_or(Json::Null);
-                        send(json!({"type": "result", "id": id, "ok": false}));
+                        send(json!({"type": "result", "id": id,
+                            "unsupported": format!("lone surrogate: a Rust string can't hold the source ({e})")}));
                         continue;
                     }
                 }
@@ -987,8 +1063,7 @@ fn main() {
         let key = id.to_string();
         match message["type"].as_str().unwrap_or("") {
             "parse" => {
-                let ok = parse(message["source"].as_str().unwrap_or(""), &parse_schema);
-                send(json!({"type": "result", "id": id, "ok": ok}));
+                send(parse(&message, &parse_schema));
                 continue;
             }
             "validate" => {

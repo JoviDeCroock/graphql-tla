@@ -6,6 +6,8 @@
 // only if the reference agrees: the invalid schema's verdict is exactly
 // that rule, and the sibling's is empty. Otherwise it fails, so a pair
 // can't silently test something else. graphql-js only parses the SDL.
+// Two pairs may share their invalid schema; it becomes one vector, with
+// both valid siblings in `siblings`, so it isn't graded twice.
 //
 // The schemas come from scripts/differential-type-system.mjs (its
 // hand-written cases and scenario families) and from the spec's own
@@ -158,6 +160,15 @@ const PAIRS = [
   ["implementation", "IMPLEMENTS_UNIQUE", "interface I { a: Int } type Query implements I & I { a: Int }", "interface I { a: Int } type Query implements I { a: Int }"],
   ["implementation", "IMPLEMENTS_INTERFACES", "type O { a: Int } type Query implements O { a: Int }", "interface O { a: Int } type Query implements O { a: Int }"],
   ["implementation", "IMPLEMENTS_ITSELF", "interface A implements A { x: Int } type Query { a: A }", "interface A { x: Int } type Query { a: A }"],
+  // The same with an object type that implements A, so an implementation
+  // that rejects an interface nothing implements (Hot Chocolate does) can't
+  // pass the invalid schema for that reason.
+  [
+    "implementation",
+    "IMPLEMENTS_ITSELF",
+    "interface A implements A { x: Int } type Query implements A { x: Int a: A }",
+    "interface A { x: Int } type Query implements A { x: Int a: A }",
+  ],
   [
     "implementation",
     "IMPL_TRANSITIVE",
@@ -255,6 +266,15 @@ const PAIRS = [
     "directive @invalidExample(arg: String) on ARGUMENT_DEFINITION type Query { a: Int }",
     "§3.13: @invalidExample references itself directly",
   ],
+  // The same uses, with directives also allowed on input fields, so an
+  // implementation that takes a directive's arguments for input fields
+  // (graphql-ruby does) can't reject them for the location.
+  [
+    "directive",
+    "DIRECTIVE_USES_ITSELF",
+    "directive @d(arg: String @d) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION type Query { a: Int }",
+    "directive @d(arg: String) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION type Query { a: Int }",
+  ],
   [
     "directive",
     "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
@@ -272,6 +292,12 @@ const PAIRS = [
     "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
     "directive @d(c: Color) on ENUM_VALUE enum Color { RED @d BLUE } type Query { a: Color }",
     "directive @d(c: Color) on ENUM_VALUE enum Color { RED BLUE } type Query { a: Color }",
+  ],
+  [
+    "directive",
+    "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+    "directive @d(a: Int @e) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION type Query { a: Int }",
+    "directive @d(a: Int @e) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @e(b: Int) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION type Query { a: Int }",
   ],
 ];
 
@@ -294,7 +320,19 @@ const declaresBuiltinScalar = (sdl) =>
   graphql.parse(sdl).definitions.some((d) => d.kind === "ScalarTypeDefinition" && BUILTIN_SCALARS.has(d.name.value));
 const SELF_REFERENCE_THROUGH_ARGUMENT =
   "§3.13 rule 3 forbids a directive definition to contain the use of a directive that leads back to it. This definition uses no directive: it reaches itself only through its own argument's type. The prose, \"While defining a directive, it must not reference itself directly or indirectly\", forbids it, and TypeSystem.tla follows the prose, but the formal rule doesn't.";
+// `type Query { a: Int } interface Mutation { a: Int }`: no normative
+// sentence makes a type named Mutation the mutation root of a schema that
+// omits its schema definition. §3.3.1 says the definition "can omit the
+// schema definition when each root operation type uses its respective
+// default root type name, no other type uses any default root type name,
+// and the schema does not have a description", a condition on writing the
+// SDL. Only an example says a type named Mutation "would be incorrectly
+// presumed to be the mutation root operation type", and October 2021 has
+// neither that clause nor that example.
+const PRESUMED_ROOT =
+  "No normative sentence says what the mutation root is when the schema definition is omitted and a type named Mutation isn't an object type. §3.3.1 only says the definition \"can omit the schema definition when each root operation type uses its respective default root type name, no other type uses any default root type name, and the schema does not have a description\", a condition on writing SDL. The reading that Mutation is the mutation root, an interface, and so the schema is invalid, rests on an example's \"would be incorrectly presumed to be the mutation root operation type\". October 2021 has neither the \"no other type\" clause nor that example, and its text allows reading the schema as one with no mutation root, which is valid. TypeSystem.tla follows the example.";
 const UNSPECIFIED = {
+  "type Query { a: Int } interface Mutation { a: Int }": PRESUMED_ROOT,
   "directive @d(a: In) on INPUT_FIELD_DEFINITION input In { f: Int @d } type Query { a(x: In): Int }": SELF_REFERENCE_THROUGH_ARGUMENT,
   "directive @d(c: Color) on ENUM_VALUE enum Color { RED @d BLUE } type Query { a: Color }": SELF_REFERENCE_THROUGH_ARGUMENT,
 };
@@ -348,6 +386,10 @@ ${moduleFooter}`;
   const problems = [];
   const vectors = [];
   const count = new Map();
+  // An invalid schema listed in more than one pair, with different valid
+  // siblings, is one vector: its first pair's. The later siblings name it
+  // as their pair, and it lists them all in `siblings`.
+  const invalidVector = new Map();
   PAIRS.forEach(([family, rule, invalid, valid, origin], p) => {
     const r = RULE.get(rule);
     if (!r) throw new Error(`unknown rule ${rule}`);
@@ -360,10 +402,15 @@ ${moduleFooter}`;
     const common = { spec: r.spec, family, rule, ...(origin ? { origin } : {}) };
     const why = unspecifiedOf(rule, invalid);
     const unspecified = why ? { unspecified: why } : {};
-    vectors.push(
-      { id: `${base}.invalid`, ...common, ...editionOf(r, invalid, false), ...unspecified, pair: `${base}.valid`, sdl: invalid, verdict: bad, expected: { valid: false } },
-      { id: `${base}.valid`, ...common, ...editionOf(r, valid, true), pair: `${base}.invalid`, sdl: valid, verdict: good, expected: { valid: true } },
-    );
+    const seen = invalidVector.get(`${rule}\u0000${invalid}`);
+    if (seen) {
+      seen.siblings = [...(seen.siblings ?? [seen.pair]), `${base}.valid`];
+      vectors.push({ id: `${base}.valid`, ...common, ...editionOf(r, valid, true), pair: seen.id, sdl: valid, verdict: good, expected: { valid: true } });
+      return;
+    }
+    const vector = { id: `${base}.invalid`, ...common, ...editionOf(r, invalid, false), ...unspecified, pair: `${base}.valid`, sdl: invalid, verdict: bad, expected: { valid: false } };
+    invalidVector.set(`${rule}\u0000${invalid}`, vector);
+    vectors.push(vector, { id: `${base}.valid`, ...common, ...editionOf(r, valid, true), pair: `${base}.invalid`, sdl: valid, verdict: good, expected: { valid: true } });
   });
   const unused = Object.keys(UNSPECIFIED).filter((sdl) => !PAIRS.some(([, , invalid]) => invalid === sdl));
   for (const sdl of unused) problems.push(`UNSPECIFIED names a schema no pair has:\n  ${sdl}`);
@@ -394,5 +441,6 @@ if (process.argv.includes("--check")) {
   const n = vectors.length;
   const unspecified = vectors.filter((v) => v.unspecified).length;
   const draft = vectors.filter((v) => v.edition === "draft").length;
-  console.log(`wrote ${n} vectors (${n / 2} minimal pairs) to kit/schema/vectors.json: ${unspecified} unspecified, ${draft} draft only`);
+  const pairs = vectors.filter((v) => v.expected.valid).length;
+  console.log(`wrote ${n} vectors (${pairs} minimal pairs, ${n - pairs} invalid schemas) to kit/schema/vectors.json: ${unspecified} unspecified, ${draft} draft only`);
 }

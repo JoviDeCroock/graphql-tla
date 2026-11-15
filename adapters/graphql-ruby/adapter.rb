@@ -23,8 +23,13 @@
 # graphql-ruby syncs once it has run everything it can. A list's items can
 # then be lazy too, so this mode claims `deferred-items`.
 #
-# --invalid-results turns wrong-shaped results into field errors with
-# graphql-ruby's documented hooks, and claims `invalid-results`.
+# Out of the box, graphql-ruby raises out of Schema.execute when a resolver
+# returns a value of the wrong shape or one its leaf type can't represent
+# (see README.md). A client then gets no response at all, so the adapter
+# answers `no-response`, and the kit grades it (`responds`,
+# `resultCoercion`). --invalid-results instead turns those values into field
+# errors with graphql-ruby's documented hooks. Either way the adapter claims
+# `invalid-results` and `uncoercible-results`.
 #
 # --no-idle leaves out `idle`, so the kit falls back to `--grace`.
 #
@@ -41,6 +46,10 @@ INVALID_RESULTS = ARGV.include?("--invalid-results")
 
 $stdout.sync = true
 
+# The adapter's own failures: a protocol mix-up with the kit. Answered with
+# `error`, never `no-response`, even when raised inside Schema.execute.
+class AdapterError < StandardError; end
+
 def send_message(message)
   $stdout.write("#{JSON.generate(message)}\n")
 end
@@ -52,9 +61,12 @@ def read_message
     begin
       return JSON.parse(line)
     rescue JSON::ParserError => e
-      # Ruby's JSON parser refuses an escaped lone surrogate, which some parse
-      # vectors hold. A Ruby server couldn't read such a request either.
-      return { "type" => "unreadable", "id" => line[/"id":(\d+)/, 1]&.to_i, "area" => line[/"type":"(\w+)"/, 1], "message" => e.message }
+      # Ruby's JSON parser refuses an escaped lone high surrogate, which some
+      # parse vectors hold. A Ruby server couldn't read such a request either.
+      return {
+        "type" => "unreadable", "id" => line[/"id":(\d+)/, 1]&.to_i, "area" => line[/"type":"(\w+)"/, 1],
+        "message" => e.message.lines.first&.strip, "lone_surrogate" => Areas.lone_surrogate?(line)
+      }
     end
   end
   exit 0
@@ -96,7 +108,7 @@ class Execution
       send_message(type: "idle", id: @id) if IDLE
       message = read_message
       unless message["type"] == "settle" && message["id"] == @id
-        raise "the kit sent #{message["type"]} for execution #{message["id"]} while execution #{@id} waited for call #{call}"
+        raise AdapterError, "the kit sent #{message["type"]} for execution #{message["id"]} while execution #{@id} waited for call #{call}"
       end
       settle(message)
     end
@@ -105,7 +117,7 @@ class Execution
 
   def settle(message)
     pending = @calls.delete(message["call"])
-    raise "no pending call #{message["call"]}" unless pending
+    raise AdapterError, "no pending call #{message["call"]}" unless pending
 
     @applied += 1
     @outcomes[message["call"]] = value_for(message["outcome"], pending[:path], pending[:type])
@@ -134,7 +146,7 @@ class Execution
           KitLazy.new(self, call(item_path, item_type), item_path)
         end
       end
-    else raise "unknown outcome #{outcome.inspect}"
+    else raise AdapterError, "unknown outcome #{outcome.inspect}"
     end
   end
 
@@ -260,8 +272,15 @@ end
 # schema uses the two documented hooks to turn those into field errors
 # instead: `type_error` for the errors graphql-ruby reports there, and
 # `rescue_from` for the exceptions coercion and list completion raise.
+#
+# The adapter's own AdapterError passes through `rescue_from`: it isn't a
+# result graphql-ruby coerced.
 class InvalidResultsSchema < GraphQL::Schema
-  rescue_from(StandardError) { |error| raise GraphQL::ExecutionError, error.message }
+  rescue_from(StandardError) do |error|
+    raise error if error.is_a?(AdapterError)
+
+    raise GraphQL::ExecutionError, error.message
+  end
 
   def self.type_error(error, context)
     return super if error.is_a?(GraphQL::InvalidNullError)
@@ -300,16 +319,20 @@ def execute(message)
       subscriptions.reset
       schema.execute(message["document"], **options)
       id, subscription = subscriptions.subscriptions.first
-      raise "graphql-ruby recorded no subscription" unless id
+      raise AdapterError, "graphql-ruby recorded no subscription" unless id
 
       subscriptions.execute(id, subscription[:events].first, {})
-      subscriptions.delivered or raise "graphql-ruby delivered no result for the event"
+      subscriptions.delivered or raise AdapterError, "graphql-ruby delivered no result for the event"
     else
       schema.execute(message["document"], **options)
     end
   send_message(type: "response", id: execution.id, response: result.to_h)
-rescue StandardError => e
+rescue AdapterError => e
   send_message(type: "error", id: message["id"], message: "#{e.class}: #{e.message}\n#{e.backtrace.first(8).join("\n")}")
+rescue StandardError => e
+  # graphql-ruby raised out of Schema.execute: an application's caller gets
+  # an exception, and its client no response (docs/conformance.md).
+  send_message(type: "no-response", id: message["id"], message: "#{e.class}: #{e.message.lines.first&.strip}")
 end
 
 # A request in one of the other areas. An exception out of graphql-ruby that
@@ -330,9 +353,10 @@ send_message(
   capabilities: [
     *(IDLE ? ["idle"] : []),
     *(LAZY ? ["deferred-items"] : []),
-    # An unknown enum value raises out of `execute` like the other wrong
-    # results, so uncoercible values need the same hooks.
-    *(INVALID_RESULTS ? ["invalid-results", "uncoercible-results"] : []),
+    # Out of the box both raise out of `execute` (no-response); with
+    # --invalid-results they become field errors.
+    "invalid-results",
+    "uncoercible-results",
     "mutation",
     "subscription",
     *Areas::CAPABILITIES,
@@ -351,10 +375,10 @@ loop do
     answer_area(message)
     next
   when "unreadable"
-    if message["area"] == "parse"
+    if message["area"] == "parse" && message["lone_surrogate"]
       # A source with a lone surrogate never reaches graphql-ruby, so the kit
       # doesn't grade it (docs/kit/parse.md).
-      send_message(type: "result", id: message["id"], unsupported: "Ruby's JSON parser refuses the request: #{message["message"]}")
+      send_message(type: "result", id: message["id"], unsupported: "lone surrogate: Ruby's JSON parser refuses the request (#{message["message"]})")
     else
       send_message(type: "error", id: message["id"], message: "unreadable request: #{message["message"]}")
     end

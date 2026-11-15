@@ -31,65 +31,65 @@ Read it with these limits in mind:
 Each finding is one kind of failure: the set of clauses a case broke, or a malformed case's first problem, which is the root cause when one fault shows up several ways. A case counts toward one finding only.
 
 - **[graphql-js 16.15.0](graphql-js-16.md):** 
-  - [`selectionSets`](graphql-js-16.md#parse-finding-1): rejects what §2.5 Selection Sets accepts (8 cases, `random-documents`, `parser-examples`, `field-suffixes`)
-  - [`stringValue`](graphql-js-16.md#parse-finding-2): rejects what §2.10.4 String Value accepts (2 cases, `lexer-examples`, `strings`)
+  - (draft only) [`selectionSets`](graphql-js-16.md#parse-finding-1): rejects what §2.5 Selection Sets accepts (8 cases, `random-documents`, `parser-examples`, `field-suffixes`)
+  - (draft only) [`stringValue`](graphql-js-16.md#parse-finding-2): rejects what §2.10.4 String Value accepts (2 cases, `lexer-examples`, `strings`)
   - [`fieldSelectionMerging`](graphql-js-16.md#validate-finding-1): §5.3.2 Field Selection Merging isn't enforced: accepts documents that break only this rule (22 cases, `merging`)
-  - [`operationTypeExistence`](graphql-js-16.md#validate-finding-2): §5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule; all rely on the draft (12 cases, `operations`, `spec`)
-  - [`singleRootField`](graphql-js-16.md#validate-finding-3): §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft (12 cases, `operations`, `random`)
-  - [`singleRootField`](graphql-js-16.md#validate-finding-4): crashes on documents that break only §5.2.4.1 Single Root Field, instead of rejecting them; all rely on the draft (11 cases, `operations`, `spec`)
-  - [`allVariableUsagesAreAllowed`](graphql-js-16.md#validate-finding-5): §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; all rely on the draft (2 cases, `spec`)
+  - (draft only) [`operationTypeExistence`](graphql-js-16.md#validate-finding-2): §5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule; all rely on the draft (12 cases, `operations`, `spec`)
+  - (draft only) [`singleRootField`](graphql-js-16.md#validate-finding-3): §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft (12 cases, `operations`, `random`)
+  - (draft only) [`singleRootField`](graphql-js-16.md#validate-finding-4): crashes on documents that break only §5.2.4.1 Single Root Field, instead of rejecting them; all rely on the draft (11 cases, `operations`, `spec`)
+  - (draft only) [`allVariableUsagesAreAllowed`](graphql-js-16.md#validate-finding-5): §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; all rely on the draft (2 cases, `spec`)
   - [`inputObject`](graphql-js-16.md#coerce-finding-1): accepts what §3.10 (Input Objects) rejects (4 cases, `literal`, `spec-example`)
-  - [`floatPrecision`](graphql-js-16.md#coerce-finding-2): accepts what §3.5.2 (Float) rejects (1 case, `literal`)
+  - (SHOULD) [`floatPrecision`](graphql-js-16.md#coerce-finding-2): accepts what §3.5.2 (Float) rejects (1 case, `literal`)
   - [`float`](graphql-js-16.md#coerce-finding-3): accepts what §3.5.2 (Float) rejects (1 case, `literal`)
   - [`list`](graphql-js-16.md#coerce-finding-4): accepts what §3.11 (List) rejects (1 case, `literal`)
-  - [`argDefaultCompatible`](graphql-js-16.md#schema-finding-1): ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule (10 cases, `defaults`)
-  - [`inputObjectDefaultValueCycle`](graphql-js-16.md#schema-finding-2): INPUT_OBJECT_DEFAULT_VALUE_CYCLE: crashes on a schema that breaks only this rule, instead of rejecting it (4 cases, `input`)
+  - (draft only) [`argDefaultCompatible`](graphql-js-16.md#schema-finding-1): ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule (10 cases, `defaults`)
+  - (draft only) [`inputObjectDefaultValueCycle`](graphql-js-16.md#schema-finding-2): INPUT_OBJECT_DEFAULT_VALUE_CYCLE: crashes on a schema that breaks only this rule, instead of rejecting it (4 cases, `input`)
   - [`inputObjectDefaultValueCycle`](graphql-js-16.md#schema-finding-3): INPUT_OBJECT_DEFAULT_VALUE_CYCLE: crashes on a valid schema one small edit away from one that breaks it, instead of accepting it (3 cases, `input`)
   - [`rootTypesDifferent`](graphql-js-16.md#schema-finding-4): ROOT_TYPES_DIFFERENT not enforced: accepts a schema that breaks only this rule (2 cases, `root`)
-  - [`inputObjectUnbreakableCycle`](graphql-js-16.md#schema-finding-5): INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule (2 cases, `input`)
+  - (draft only) [`inputObjectUnbreakableCycle`](graphql-js-16.md#schema-finding-5): INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule (2 cases, `input`)
   - [`typeNameNotBuiltin`](graphql-js-16.md#schema-finding-6): TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule (1 case, `names`)
-  - [`implDeprecation`](graphql-js-16.md#schema-finding-7): IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
+  - (draft only) [`implDeprecation`](graphql-js-16.md#schema-finding-7): IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
   - [`directiveUsesItself`](graphql-js-16.md#schema-finding-8): DIRECTIVE_USES_ITSELF not enforced: accepts a schema that breaks only this rule (1 case, `directive`)
   - [`directiveReferencesItselfIndirectly`](graphql-js-16.md#schema-finding-9): DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule (1 case, `directive`)
   - [`builtinDefinitions`](graphql-js-16.md#introspect-finding-1): the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Directive.args(includeDeprecated:) isn't as the spec defines it (arguments); the built-in __Field.args(includeDeprecated:) isn't as the spec defines it (arguments); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the spec defines it (arguments) (22 cases, `minimal`, `rich`, `interfaces`, `defaults`, `deprecation`, `inputDeprecation`, `roots`, `builtinScalars`, `scalars`, `oneOf`, `order`)
-  - [`executes`](graphql-js-16.md#introspect-finding-2): the schema didn't build, the query failed, or the result doesn't have the fields the query selects (3 cases, `directiveDeprecation`)
+  - (draft only) [`executes`](graphql-js-16.md#introspect-finding-2): the schema didn't build, the query failed, or the result doesn't have the fields the query selects (3 cases, `directiveDeprecation`)
 - **[graphql-js 17.1.0](graphql-js-17.md):** 
-  - [`stringValue`](graphql-js-17.md#parse-finding-1): rejects what §2.10.4 String Value accepts (2 cases, `lexer-examples`, `strings`)
+  - (draft only) [`stringValue`](graphql-js-17.md#parse-finding-1): rejects what §2.10.4 String Value accepts (2 cases, `lexer-examples`, `strings`)
   - [`fieldSelectionMerging`](graphql-js-17.md#validate-finding-1): §5.3.2 Field Selection Merging isn't enforced: accepts documents that break only this rule (22 cases, `merging`)
-  - [`allVariableUsagesAreAllowed`](graphql-js-17.md#validate-finding-2): §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; all rely on the draft (2 cases, `spec`)
-  - [`floatPrecision`](graphql-js-17.md#coerce-finding-1): accepts what §3.5.2 (Float) rejects (1 case, `literal`)
+  - (draft only) [`allVariableUsagesAreAllowed`](graphql-js-17.md#validate-finding-2): §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; all rely on the draft (2 cases, `spec`)
+  - (SHOULD) [`floatPrecision`](graphql-js-17.md#coerce-finding-1): accepts what §3.5.2 (Float) rejects (1 case, `literal`)
   - [`float`](graphql-js-17.md#coerce-finding-2): accepts what §3.5.2 (Float) rejects (1 case, `literal`)
   - [`typeNameNotBuiltin`](graphql-js-17.md#schema-finding-1): TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule (1 case, `names`)
-  - [`argDefaultCompatible`](graphql-js-17.md#schema-finding-2): ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule (1 case, `defaults`)
+  - (draft only) [`argDefaultCompatible`](graphql-js-17.md#schema-finding-2): ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule (1 case, `defaults`)
   - [`directiveUsesItself`](graphql-js-17.md#schema-finding-3): DIRECTIVE_USES_ITSELF not enforced: accepts a schema that breaks only this rule (1 case, `directive`)
   - [`directiveReferencesItselfIndirectly`](graphql-js-17.md#schema-finding-4): DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule (1 case, `directive`)
   - (informational) [`builtinAdditions`](graphql-js-17.md#introspect-finding-1): the built-in __DirectiveLocation has an enum value the spec doesn't define (24 cases, `minimal`, `rich`, `interfaces`, `defaults`, `deprecation`, `inputDeprecation`, `directiveDeprecation`, `roots`, `builtinScalars`, `scalars`, `oneOf`, `order`)
 - **[graphql-java 26.2](graphql-java.md):** 
   - [`eventYieldsResult`](graphql-java.md#execution-finding-1): the response stream failed instead of yielding the event's result: … (1338 cases, `subscription`)
-  - [`descriptions`](graphql-java.md#parse-finding-1): rejects what §2.2 Descriptions accepts (73 cases, `random-documents`, `parser-examples`, `variable-definitions`)
-  - [`selectionSets`](graphql-java.md#parse-finding-2): rejects what §2.5 Selection Sets accepts (8 cases, `random-documents`, `parser-examples`, `field-suffixes`)
+  - (draft only) [`descriptions`](graphql-java.md#parse-finding-1): rejects what §2.2 Descriptions accepts (73 cases, `random-documents`, `parser-examples`, `variable-definitions`)
+  - (draft only) [`selectionSets`](graphql-java.md#parse-finding-2): rejects what §2.5 Selection Sets accepts (8 cases, `random-documents`, `parser-examples`, `field-suffixes`)
   - [`stringValue`](graphql-java.md#parse-finding-3): accepts what §2.10.4 String Value rejects (4 cases, `lexer-examples`, `block-strings`)
   - [`lineTerminators`](graphql-java.md#parse-finding-4): accepts what §2.1.2 Line Terminators rejects (3 cases, `ignored`)
   - [`variables`](graphql-java.md#parse-finding-5): accepts what §2.11 Variables rejects (1 case, `parser-examples`)
-  - [`singleRootField`](graphql-java.md#validate-finding-1): crashes on documents that break only §5.2.4.1 Single Root Field, instead of rejecting them; all rely on the draft (22 cases, `operations`, `spec`)
+  - (draft only) [`singleRootField`](graphql-java.md#validate-finding-1): crashes on documents that break only §5.2.4.1 Single Root Field, instead of rejecting them; all rely on the draft (22 cases, `operations`, `spec`)
   - [`fieldSelectionMerging`](graphql-java.md#validate-finding-2): §5.3.2 Field Selection Merging isn't enforced: accepts documents that break only this rule (22 cases, `merging`)
-  - [`allVariableUsagesAreAllowed`](graphql-java.md#validate-finding-3): §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; all rely on the draft (4 cases, `variables`, `spec`)
-  - [`singleRootField`](graphql-java.md#validate-finding-4): §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft (1 case, `random`)
-  - [`valuesOfCorrectType`](graphql-java.md#validate-finding-5): §5.6.1 Values of Correct Type isn't enforced: accepts documents that break only this rule; all rely on the draft (1 case, `values`)
+  - (draft only) [`allVariableUsagesAreAllowed`](graphql-java.md#validate-finding-3): §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; all rely on the draft (4 cases, `variables`, `spec`)
+  - (draft only) [`singleRootField`](graphql-java.md#validate-finding-4): §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft (1 case, `random`)
+  - (draft only) [`valuesOfCorrectType`](graphql-java.md#validate-finding-5): §5.6.1 Values of Correct Type isn't enforced: accepts documents that break only this rule; all rely on the draft (1 case, `values`)
   - [`directivesAreUniquePerLocation`](graphql-java.md#validate-finding-6): §5.7.3 Directives Are Unique per Location isn't enforced: accepts documents that break only this rule (1 case, `directives`)
   - [`id`](graphql-java.md#coerce-finding-1): accepts what §3.5.5 (ID) rejects (30 cases, `variable`)
   - (informational) [`jsonNumbers`](graphql-java.md#coerce-finding-2): reads a JSON number a double can't hold in a way that neither exact nor binary64 parsing, nor a refusal, explains (1 case, `variable`)
   - [`list`](graphql-java.md#coerce-finding-3): accepts what §3.11 (List) rejects (1 case, `nested-variable`)
   - [`rootTypesAreObjects`](graphql-java.md#schema-finding-1): ROOT_TYPES_ARE_OBJECTS: crashes on a schema that breaks only this rule, instead of rejecting it (2 cases, `root`)
   - [`rootTypesDifferent`](graphql-java.md#schema-finding-2): ROOT_TYPES_DIFFERENT not enforced: accepts a schema that breaks only this rule (2 cases, `root`)
-  - [`argDefaultCompatible`](graphql-java.md#schema-finding-3): ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule (2 cases, `defaults`)
+  - (draft only) [`argDefaultCompatible`](graphql-java.md#schema-finding-3): ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule (2 cases, `defaults`)
   - [`typeNameNotBuiltin`](graphql-java.md#schema-finding-4): TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule (1 case, `names`)
   - [`typeNameReserved`](graphql-java.md#schema-finding-5): TYPE_NAME_RESERVED not enforced: accepts a schema that breaks only this rule (1 case, `names`)
   - [`argInputType`](graphql-java.md#schema-finding-6): ARG_INPUT_TYPE: crashes on a schema that breaks only this rule, instead of rejecting it (1 case, `typeUse`)
   - [`implementsUnique`](graphql-java.md#schema-finding-7): IMPLEMENTS_UNIQUE not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
-  - [`implDeprecation`](graphql-java.md#schema-finding-8): IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
+  - (draft only) [`implDeprecation`](graphql-java.md#schema-finding-8): IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
   - [`inputFieldInputType`](graphql-java.md#schema-finding-9): INPUT_FIELD_INPUT_TYPE: crashes on a schema that breaks only this rule, instead of rejecting it (1 case, `input`)
-  - [`inputObjectUnbreakableCycle`](graphql-java.md#schema-finding-10): INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule (1 case, `input`)
+  - (draft only) [`inputObjectUnbreakableCycle`](graphql-java.md#schema-finding-10): INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule (1 case, `input`)
   - [`builtinAdditions`, `builtinDefinitions`](graphql-java.md#introspect-finding-1): the built-in @deprecated isn't as October 2021 defines it (directives); the built-in @deprecated(reason:) isn't as October 2021 defines it (arguments); the built-in __Directive.args has an argument October 2021 doesn't define; the built-in __Field.args has an argument October 2021 doesn't define; the built-in __InputValue has a field October 2021 doesn't define; the built-in __Type has a field October 2021 doesn't define; the built-in __Type.inputFields has an argument October 2021 doesn't define (14 cases, `minimal`, `interfaces`, `defaults`, `deprecation`, `roots`, `builtinScalars`, `order`)
   - [`builtinAdditions`, `builtinDefinitions`, `descriptions`](graphql-java.md#introspect-finding-2): descriptions are the schema's: differs from Introspection.tla; the built-in @deprecated isn't as October 2021 defines it (directives); the built-in @deprecated(reason:) isn't as October 2021 defines it (arguments); the built-in __Directive.args has an argument October 2021 doesn't define; the built-in __Field.args has an argument October 2021 doesn't define; the built-in __InputValue has a field October 2021 doesn't define; the built-in __Type has a field October 2021 doesn't define; the built-in __Type.inputFields has an argument October 2021 doesn't define (4 cases, `rich`, `scalars`)
   - [`descriptions`](graphql-java.md#introspect-finding-3): descriptions are the schema's: differs from Introspection.tla (2 cases, `rich`, `scalars`)
@@ -103,9 +103,9 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
   - [`complete`, `errorsInsideNulls`, `errorsWereRaised`](async-graphql.md#execution-finding-7) (3 cases, `unions`)
   - [`dataMatches`, `errorsInsideNulls`, `errorsWereRaised`](async-graphql.md#execution-finding-8) (2 cases, `unions`)
 - **[Hot Chocolate 15.1.21](hotchocolate.md):** 
-  - [`intFraction`](hotchocolate.md#execution-finding-1): count is 1, though its resolver returned a value its type can't represent, which should raise an execution error (343 cases, `leaves`)
+  - (SHOULD) [`intFraction`](hotchocolate.md#execution-finding-1): count is 1, though its resolver returned a value its type can't represent, which should raise an execution error (343 cases, `leaves`)
   - [`nullsExplained`](hotchocolate.md#execution-finding-2) (94 cases, `lists`, `unions`)
-  - [`intFraction`](hotchocolate.md#execution-finding-3): … is 1, though its resolver returned a value its type can't represent, which should raise an execution error (41 cases, `unions`)
+  - (SHOULD) [`intFraction`](hotchocolate.md#execution-finding-3): … is 1, though its resolver returned a value its type can't represent, which should raise an execution error (41 cases, `unions`)
   - [`descriptions`](hotchocolate.md#parse-finding-1): rejects what §2.2 Descriptions accepts (57 cases, `random-documents`, `parser-examples`, `variable-definitions`)
   - [`inlineFragments`](hotchocolate.md#parse-finding-2): rejects what §2.9.2 Inline Fragments accepts (42 cases, `random-documents`)
   - [`inputValues`](hotchocolate.md#parse-finding-3): rejects what §2.10 Input Values accepts (36 cases, `random-documents`)
@@ -127,14 +127,14 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
   - [`stringValue`](hotchocolate.md#parse-finding-19): crashes on a source §2.10.4 String Value accepts, instead of accepting it (4 cases, `block-strings`, `lexer-examples`)
   - [`ignoredTokens`](hotchocolate.md#parse-finding-20): rejects what §2.1.6 Ignored Tokens accepts (4 cases, `ignored`)
   - [`document`](hotchocolate.md#parse-finding-21): accepts what §2.3 Document rejects (3 cases, `random-documents`, `parser-examples`)
-  - [`sourceText`](hotchocolate.md#parse-finding-22): rejects what §2.1 Source Text accepts (3 cases, `ignored`)
+  - (draft only) [`sourceText`](hotchocolate.md#parse-finding-22): rejects what §2.1 Source Text accepts (3 cases, `ignored`)
   - [`descriptions`](hotchocolate.md#parse-finding-23): accepts what §2.2 Descriptions rejects (1 case, `parser-examples`)
   - [`arguments`](hotchocolate.md#parse-finding-24): accepts what §2.7 Arguments rejects (1 case, `parser-examples`)
   - [`directives`](hotchocolate.md#parse-finding-25): accepts what §2.13 Directives rejects (1 case, `parser-examples`)
   - [`variables`](hotchocolate.md#parse-finding-26): accepts what §2.11 Variables rejects (1 case, `parser-examples`)
-  - [`whiteSpace`](hotchocolate.md#parse-finding-27): rejects what §2.1.1 White Space accepts (1 case, `ignored`)
+  - (draft only) [`whiteSpace`](hotchocolate.md#parse-finding-27): rejects what §2.1.1 White Space accepts (1 case, `ignored`)
   - [`valuesOfCorrectType`](hotchocolate.md#validate-finding-1): §5.6.1 Values of Correct Type isn't enforced: accepts documents that break only this rule; 5 of 28 rely on the draft (28 cases, `variables`, `values`, `random`)
-  - [`singleRootField`](hotchocolate.md#validate-finding-2): §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft (22 cases, `operations`, `random`, `spec`)
+  - (draft only) [`singleRootField`](hotchocolate.md#validate-finding-2): §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft (22 cases, `operations`, `random`, `spec`)
   - [`acceptsValid`](hotchocolate.md#validate-finding-3): rejects valid documents: §5.8.5 All Variable Usages Are Allowed is likely over-strict (10 valid siblings of 113 different invalid vectors rejected, 47 of the same family accepted) (10 cases, `variables`)
   - [`acceptsValid`](hotchocolate.md#validate-finding-4): rejects valid documents, each one edit from a document that breaks only §5.8.2 Variables Are Input Types; the rule it applied is a guess, since the kit doesn't read error messages (5 cases, `extra`)
   - [`fieldSelectionMerging`](hotchocolate.md#validate-finding-5): §5.3.2 Field Selection Merging isn't enforced: accepts documents that break only this rule (4 cases, `merging`)
@@ -150,32 +150,32 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
   - [`acceptsValid`](hotchocolate.md#validate-finding-15): rejects valid documents, each one edit from a document that breaks only §5.7.2 Directives Are in Valid Locations; the rule it applied is a guess, since the kit doesn't read error messages (1 case, `directives`)
   - [`acceptsValid`](hotchocolate.md#validate-finding-16): rejects valid documents, each one edit from a document that breaks only §5.8.3 All Variable Uses Defined; the rule it applied is a guess, since the kit doesn't read error messages (1 case, `random`)
   - [`invalidNotExecuted`](hotchocolate.md#coerce-finding-1): doesn't fail an invalid document without executing it, as §6.1.1 (Validating Requests) requires (58 cases, `literal`, `arguments`)
-  - [`list`](hotchocolate.md#coerce-finding-2): gives October 2021's answer where the draft changed it, under §3.11 (List) (10 cases, `literal`, `variable`)
+  - (draft only) [`list`](hotchocolate.md#coerce-finding-2): gives October 2021's answer where the draft changed it, under §3.11 (List) (10 cases, `literal`, `variable`)
   - [`list`](hotchocolate.md#coerce-finding-3): rejects what §3.11 (List) accepts (7 cases, `variable`, `nested-variable`)
   - [`variables`](hotchocolate.md#coerce-finding-4): rejects what §6.1.2 (Coercing Variable Values) accepts (7 cases, `variable-default`)
   - [`fieldErrorPath`](hotchocolate.md#coerce-finding-5): raises the field error with a path other than the field's response path, which §7.1.6 (Errors) requires (5 cases, `variable-default`, `nullable-variable`, `arguments`)
   - [`int`](hotchocolate.md#coerce-finding-6): rejects what §3.5.1 (Int) accepts (4 cases, `variable`)
-  - [`idCoerced`](hotchocolate.md#coerce-finding-7): rejects what §3.5.5 (ID) accepts (3 cases, `variable`)
+  - (SHOULD) [`idCoerced`](hotchocolate.md#coerce-finding-7): rejects what §3.5.5 (ID) accepts (3 cases, `variable`)
   - (informational) [`loneSurrogates`](hotchocolate.md#coerce-finding-8): treats a JSON string with a lone surrogate in a way that neither keeping it, replacing it with U+FFFD, nor a refusal explains (2 cases, `variable`)
   - [`arguments`](hotchocolate.md#coerce-finding-9): raises a request error where §6.4.1 (Coercing Field Arguments) requires a field error (2 cases, `variable-default`, `nested-variable`)
   - [`inputObject`](hotchocolate.md#coerce-finding-10): rejects what §3.10 (Input Objects) accepts (2 cases, `variable`)
-  - [`floatPrecision`](hotchocolate.md#coerce-finding-11): accepts what §3.5.2 (Float) rejects (1 case, `variable`)
-  - [`variables`](hotchocolate.md#coerce-finding-12): gives October 2021's answer where the draft changed it, under §6.1.2 (Coercing Variable Values) (1 case, `variable-default`)
-  - [`argDefaultCompatible`](hotchocolate.md#schema-finding-1): ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule (10 cases, `defaults`)
-  - [`inputObjectDefaultValueCycle`](hotchocolate.md#schema-finding-2): INPUT_OBJECT_DEFAULT_VALUE_CYCLE not enforced: accepts a schema that breaks only this rule (4 cases, `input`)
+  - (SHOULD) [`floatPrecision`](hotchocolate.md#coerce-finding-11): accepts what §3.5.2 (Float) rejects (1 case, `variable`)
+  - (draft only) [`variables`](hotchocolate.md#coerce-finding-12): gives October 2021's answer where the draft changed it, under §6.1.2 (Coercing Variable Values) (1 case, `variable-default`)
+  - (draft only) [`argDefaultCompatible`](hotchocolate.md#schema-finding-1): ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule (10 cases, `defaults`)
+  - (draft only) [`inputObjectDefaultValueCycle`](hotchocolate.md#schema-finding-2): INPUT_OBJECT_DEFAULT_VALUE_CYCLE not enforced: accepts a schema that breaks only this rule (4 cases, `input`)
   - [`rootTypesDifferent`](hotchocolate.md#schema-finding-3): ROOT_TYPES_DIFFERENT not enforced: accepts a schema that breaks only this rule (2 cases, `root`)
-  - [`inputObjectUnbreakableCycle`](hotchocolate.md#schema-finding-4): INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule (2 cases, `input`)
+  - (draft only) [`inputObjectUnbreakableCycle`](hotchocolate.md#schema-finding-4): INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule (2 cases, `input`)
   - [`typeNamesUnique`](hotchocolate.md#schema-finding-5): TYPE_NAMES_UNIQUE not enforced: accepts a schema that breaks only this rule (1 case, `names`)
   - [`typeNameNotBuiltin`](hotchocolate.md#schema-finding-6): TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule (1 case, `names`)
   - [`typeNameReserved`](hotchocolate.md#schema-finding-7): TYPE_NAME_RESERVED not enforced: accepts a schema that breaks only this rule (1 case, `names`)
   - [`fieldNamesUnique`](hotchocolate.md#schema-finding-8): FIELD_NAMES_UNIQUE over-strict: rejects a valid schema one small edit away from one that breaks it (1 case, `names`)
-  - [`requiredArgNotDeprecated`](hotchocolate.md#schema-finding-9): REQUIRED_ARG_NOT_DEPRECATED over-strict: rejects a valid schema one small edit away from one that breaks it (1 case, `typeUse`)
+  - (draft only) [`requiredArgNotDeprecated`](hotchocolate.md#schema-finding-9): REQUIRED_ARG_NOT_DEPRECATED over-strict: rejects a valid schema one small edit away from one that breaks it (1 case, `typeUse`)
   - [`implementsUnique`](hotchocolate.md#schema-finding-10): IMPLEMENTS_UNIQUE not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
   - [`implementsInterfaces`](hotchocolate.md#schema-finding-11): IMPLEMENTS_INTERFACES: crashes on a schema that breaks only this rule, instead of rejecting it (1 case, `implementation`)
   - [`implementsItself`](hotchocolate.md#schema-finding-12): IMPLEMENTS_ITSELF over-strict: rejects a valid schema one small edit away from one that breaks it (1 case, `implementation`)
   - [`implTransitive`](hotchocolate.md#schema-finding-13): IMPL_TRANSITIVE not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
   - [`implTransitive`](hotchocolate.md#schema-finding-14): IMPL_TRANSITIVE over-strict: rejects a valid schema one small edit away from one that breaks it (1 case, `implementation`)
-  - [`implDeprecation`](hotchocolate.md#schema-finding-15): IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
+  - (draft only) [`implDeprecation`](hotchocolate.md#schema-finding-15): IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
   - [`unionMembersUnique`](hotchocolate.md#schema-finding-16): UNION_MEMBERS_UNIQUE not enforced: accepts a schema that breaks only this rule (1 case, `union`)
   - [`enumValuesUnique`](hotchocolate.md#schema-finding-17): ENUM_VALUES_UNIQUE not enforced: accepts a schema that breaks only this rule (1 case, `enum`)
   - [`enumValueNameReserved`](hotchocolate.md#schema-finding-18): ENUM_VALUE_NAME_RESERVED not enforced: accepts a schema that breaks only this rule (1 case, `enum`)
@@ -196,32 +196,32 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
   - [`descriptions`, `specifiedByURL`](hotchocolate.md#introspect-finding-13): descriptions are the schema's: differs from Introspection.tla; specifiedByURL is a custom scalar's @specifiedBy URL, otherwise null; @specifiedBy is returned when a scalar has a URL: differs from Introspection.tla (1 case, `scalars`)
 - **[graphql-core 3.2.14](graphql-core.md):** 
   - [`calledSerially`](graphql-core.md#execution-finding-1) (510 cases, `mutation`)
-  - [`selectionSets`](graphql-core.md#parse-finding-1): rejects what §2.5 Selection Sets accepts (8 cases, `random-documents`, `parser-examples`, `field-suffixes`)
-  - [`stringValue`](graphql-core.md#parse-finding-2): rejects what §2.10.4 String Value accepts (2 cases, `lexer-examples`, `strings`)
+  - (draft only) [`selectionSets`](graphql-core.md#parse-finding-1): rejects what §2.5 Selection Sets accepts (8 cases, `random-documents`, `parser-examples`, `field-suffixes`)
+  - (draft only) [`stringValue`](graphql-core.md#parse-finding-2): rejects what §2.10.4 String Value accepts (2 cases, `lexer-examples`, `strings`)
   - [`fieldSelectionMerging`](graphql-core.md#validate-finding-1): §5.3.2 Field Selection Merging isn't enforced: accepts documents that break only this rule (22 cases, `merging`)
-  - [`operationTypeExistence`](graphql-core.md#validate-finding-2): §5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule; all rely on the draft (12 cases, `operations`, `spec`)
-  - [`singleRootField`](graphql-core.md#validate-finding-3): §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft (12 cases, `operations`, `random`)
-  - [`allVariableUsagesAreAllowed`](graphql-core.md#validate-finding-4): §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; all rely on the draft (2 cases, `spec`)
+  - (draft only) [`operationTypeExistence`](graphql-core.md#validate-finding-2): §5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule; all rely on the draft (12 cases, `operations`, `spec`)
+  - (draft only) [`singleRootField`](graphql-core.md#validate-finding-3): §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft (12 cases, `operations`, `random`)
+  - (draft only) [`allVariableUsagesAreAllowed`](graphql-core.md#validate-finding-4): §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; all rely on the draft (2 cases, `spec`)
   - [`requestErrorNoData`](graphql-core.md#coerce-finding-1): answers a request error with a "data" entry, which §7.1.3 (Request Error Result) says it must not have (790 cases, `variable`, `operation`, `nested-variable`, `variable-default`, `arguments`, `unused-variable`, `spec-example`)
   - [`inputObject`](graphql-core.md#coerce-finding-2): accepts what §3.10 (Input Objects) rejects (4 cases, `literal`, `spec-example`)
-  - [`floatPrecision`](graphql-core.md#coerce-finding-3): accepts what §3.5.2 (Float) rejects (1 case, `literal`)
+  - (SHOULD) [`floatPrecision`](graphql-core.md#coerce-finding-3): accepts what §3.5.2 (Float) rejects (1 case, `literal`)
   - [`float`](graphql-core.md#coerce-finding-4): accepts what §3.5.2 (Float) rejects (1 case, `literal`)
   - [`list`](graphql-core.md#coerce-finding-5): accepts what §3.11 (List) rejects (1 case, `literal`)
-  - [`argDefaultCompatible`](graphql-core.md#schema-finding-1): ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule (10 cases, `defaults`)
-  - [`inputObjectDefaultValueCycle`](graphql-core.md#schema-finding-2): INPUT_OBJECT_DEFAULT_VALUE_CYCLE: crashes on a schema that breaks only this rule, instead of rejecting it (4 cases, `input`)
+  - (draft only) [`argDefaultCompatible`](graphql-core.md#schema-finding-1): ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule (10 cases, `defaults`)
+  - (draft only) [`inputObjectDefaultValueCycle`](graphql-core.md#schema-finding-2): INPUT_OBJECT_DEFAULT_VALUE_CYCLE: crashes on a schema that breaks only this rule, instead of rejecting it (4 cases, `input`)
   - [`inputObjectDefaultValueCycle`](graphql-core.md#schema-finding-3): INPUT_OBJECT_DEFAULT_VALUE_CYCLE: crashes on a valid schema one small edit away from one that breaks it, instead of accepting it (3 cases, `input`)
   - [`rootTypesDifferent`](graphql-core.md#schema-finding-4): ROOT_TYPES_DIFFERENT not enforced: accepts a schema that breaks only this rule (2 cases, `root`)
-  - [`inputObjectUnbreakableCycle`](graphql-core.md#schema-finding-5): INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule (2 cases, `input`)
+  - (draft only) [`inputObjectUnbreakableCycle`](graphql-core.md#schema-finding-5): INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule (2 cases, `input`)
   - [`typeNameNotBuiltin`](graphql-core.md#schema-finding-6): TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule (1 case, `names`)
-  - [`implDeprecation`](graphql-core.md#schema-finding-7): IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
+  - (draft only) [`implDeprecation`](graphql-core.md#schema-finding-7): IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
   - [`directiveUsesItself`](graphql-core.md#schema-finding-8): DIRECTIVE_USES_ITSELF not enforced: accepts a schema that breaks only this rule (1 case, `directive`)
   - [`directiveReferencesItselfIndirectly`](graphql-core.md#schema-finding-9): DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule (1 case, `directive`)
   - [`builtinDefinitions`](graphql-core.md#introspect-finding-1): the built-in @deprecated(reason:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Directive.args(includeDeprecated:) isn't as the spec defines it (arguments); the built-in __Field.args(includeDeprecated:) isn't as the spec defines it (arguments); the built-in __Type.enumValues(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.fields(includeDeprecated:) isn't as the draft defines it, but is as October 2021 does (arguments); the built-in __Type.inputFields(includeDeprecated:) isn't as the spec defines it (arguments) (22 cases, `minimal`, `rich`, `interfaces`, `defaults`, `deprecation`, `inputDeprecation`, `roots`, `builtinScalars`, `scalars`, `oneOf`, `order`)
-  - [`executes`](graphql-core.md#introspect-finding-2): the schema didn't build, the query failed, or the result doesn't have the fields the query selects (3 cases, `directiveDeprecation`)
+  - (draft only) [`executes`](graphql-core.md#introspect-finding-2): the schema didn't build, the query failed, or the result doesn't have the fields the query selects (3 cases, `directiveDeprecation`)
 - **[graphql-ruby 2.6.15](graphql-ruby.md):** 
-  - [`intFraction`](graphql-ruby.md#execution-finding-1): count is 1, though its resolver returned a value its type can't represent, which should raise an execution error (343 cases, `leaves`)
-  - [`intFraction`](graphql-ruby.md#execution-finding-2): … is 1, though its resolver returned a value its type can't represent, which should raise an execution error (42 cases, `unions`)
-  - [`descriptions`](graphql-ruby.md#parse-finding-1): rejects what §2.2 Descriptions accepts (73 cases, `random-documents`, `parser-examples`, `variable-definitions`)
+  - (SHOULD) [`intFraction`](graphql-ruby.md#execution-finding-1): count is 1, though its resolver returned a value its type can't represent, which should raise an execution error (343 cases, `leaves`)
+  - (SHOULD) [`intFraction`](graphql-ruby.md#execution-finding-2): … is 1, though its resolver returned a value its type can't represent, which should raise an execution error (42 cases, `unions`)
+  - (draft only) [`descriptions`](graphql-ruby.md#parse-finding-1): rejects what §2.2 Descriptions accepts (73 cases, `random-documents`, `parser-examples`, `variable-definitions`)
   - [`typeReferences`](graphql-ruby.md#parse-finding-2): rejects what §2.12 Type References accepts (10 cases, `random-documents`)
   - [`floatValue`](graphql-ruby.md#parse-finding-3): accepts what §2.10.2 Float Value rejects (9 cases, `numbers`, `lexer-examples`)
   - [`intValue`](graphql-ruby.md#parse-finding-4): accepts what §2.10.1 Int Value rejects (8 cases, `numbers`, `lexer-examples`)
@@ -235,7 +235,7 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
   - [`inputValues`](graphql-ruby.md#parse-finding-12): rejects what §2.10 Input Values accepts (1 case, `random-documents`)
   - [`fieldSelectionMerging`](graphql-ruby.md#validate-finding-1): §5.3.2 Field Selection Merging isn't enforced: accepts documents that break only this rule (241 cases, `merging`, `spec`)
   - [`allVariableUsagesAreAllowed`](graphql-ruby.md#validate-finding-2): §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; 3 of 38 rely on the draft (38 cases, `variables`)
-  - [`singleRootField`](graphql-ruby.md#validate-finding-3): §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft (22 cases, `operations`, `random`, `spec`)
+  - (draft only) [`singleRootField`](graphql-ruby.md#validate-finding-3): §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft (22 cases, `operations`, `random`, `spec`)
   - [`acceptsValid`](graphql-ruby.md#validate-finding-4): rejects valid documents: §5.3.3 Leaf Field Selections is likely over-strict (5 valid siblings of 4 different invalid vectors rejected, 19 of the same family accepted) (5 cases, `random`, `leaves`)
   - [`acceptsValid`](graphql-ruby.md#validate-finding-5): rejects valid documents: §5.5.2.3 Fragment Spread Is Possible is likely over-strict (5 valid siblings of 5 different invalid vectors rejected, 12 of the same family accepted) (5 cases, `random`, `spec`)
   - [`acceptsValid`](graphql-ruby.md#validate-finding-6): rejects valid documents: §5.3.1 Field Selections is likely over-strict (3 valid siblings of 3 different invalid vectors rejected, 9 of the same family accepted) (3 cases, `random`)
@@ -255,13 +255,13 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
   - [`inputObject`](graphql-ruby.md#coerce-finding-3): produces no response where §3.10 (Input Objects) requires a request error (4 cases, `variable`)
   - [`inputObject`](graphql-ruby.md#coerce-finding-4): rejects what §3.10 (Input Objects) accepts (3 cases, `variable`)
   - [`invalidNotExecuted`](graphql-ruby.md#coerce-finding-5): doesn't fail an invalid document without executing it, as §6.1.1 (Validating Requests) requires (3 cases, `nested-variable`)
-  - [`idCoerced`](graphql-ruby.md#coerce-finding-6): rejects what §3.5.5 (ID) accepts (2 cases, `variable`)
+  - (SHOULD) [`idCoerced`](graphql-ruby.md#coerce-finding-6): rejects what §3.5.5 (ID) accepts (2 cases, `variable`)
   - [`list`](graphql-ruby.md#coerce-finding-7): produces no response where §3.11 (List) requires a request error (1 case, `variable`)
   - [`list`](graphql-ruby.md#coerce-finding-8): accepts what §3.11 (List) rejects (1 case, `nested-variable`)
   - [`inputObjectUnbreakableCycle`](graphql-ruby.md#schema-finding-1): INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule (5 cases, `input`)
-  - [`argDefaultCompatible`](graphql-ruby.md#schema-finding-2): ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule (4 cases, `defaults`)
+  - (draft only) [`argDefaultCompatible`](graphql-ruby.md#schema-finding-2): ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule (4 cases, `defaults`)
   - [`implFieldCovariant`](graphql-ruby.md#schema-finding-3): IMPL_FIELD_COVARIANT not enforced: accepts a schema that breaks only this rule (4 cases, `implementation`)
-  - [`inputObjectDefaultValueCycle`](graphql-ruby.md#schema-finding-4): INPUT_OBJECT_DEFAULT_VALUE_CYCLE not enforced: accepts a schema that breaks only this rule (4 cases, `input`)
+  - (draft only) [`inputObjectDefaultValueCycle`](graphql-ruby.md#schema-finding-4): INPUT_OBJECT_DEFAULT_VALUE_CYCLE not enforced: accepts a schema that breaks only this rule (4 cases, `input`)
   - [`rootTypesAreObjects`](graphql-ruby.md#schema-finding-5): ROOT_TYPES_ARE_OBJECTS not enforced: accepts a schema that breaks only this rule (3 cases, `root`)
   - [`rootTypesDifferent`](graphql-ruby.md#schema-finding-6): ROOT_TYPES_DIFFERENT not enforced: accepts a schema that breaks only this rule (2 cases, `root`)
   - [`fieldOutputType`](graphql-ruby.md#schema-finding-7): FIELD_OUTPUT_TYPE not enforced: accepts a schema that breaks only this rule (2 cases, `typeUse`)
@@ -275,19 +275,19 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
   - [`fieldsDefined`](graphql-ruby.md#schema-finding-15): FIELDS_DEFINED not enforced: accepts a schema that breaks only this rule (1 case, `typeUse`)
   - [`fieldNamesUnique`](graphql-ruby.md#schema-finding-16): FIELD_NAMES_UNIQUE not enforced: accepts a schema that breaks only this rule (1 case, `names`)
   - [`fieldNameReserved`](graphql-ruby.md#schema-finding-17): FIELD_NAME_RESERVED not enforced: accepts a schema that breaks only this rule (1 case, `names`)
-  - [`requiredArgNotDeprecated`](graphql-ruby.md#schema-finding-18): REQUIRED_ARG_NOT_DEPRECATED over-strict: rejects a valid schema one small edit away from one that breaks it (1 case, `typeUse`)
+  - (draft only) [`requiredArgNotDeprecated`](graphql-ruby.md#schema-finding-18): REQUIRED_ARG_NOT_DEPRECATED over-strict: rejects a valid schema one small edit away from one that breaks it (1 case, `typeUse`)
   - [`implementsUnique`](graphql-ruby.md#schema-finding-19): IMPLEMENTS_UNIQUE not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
   - [`implementsItself`](graphql-ruby.md#schema-finding-20): IMPLEMENTS_ITSELF: crashes on a schema that breaks only this rule, instead of rejecting it (1 case, `implementation`)
   - [`implFieldProvided`](graphql-ruby.md#schema-finding-21): IMPL_FIELD_PROVIDED not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
   - [`implArgProvided`](graphql-ruby.md#schema-finding-22): IMPL_ARG_PROVIDED not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
   - [`implExtraArgOptional`](graphql-ruby.md#schema-finding-23): IMPL_EXTRA_ARG_OPTIONAL not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
-  - [`implDeprecation`](graphql-ruby.md#schema-finding-24): IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
+  - (draft only) [`implDeprecation`](graphql-ruby.md#schema-finding-24): IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
   - [`unionMembersDefined`](graphql-ruby.md#schema-finding-25): UNION_MEMBERS_DEFINED not enforced: accepts a schema that breaks only this rule (1 case, `union`)
   - [`unionMembersUnique`](graphql-ruby.md#schema-finding-26): UNION_MEMBERS_UNIQUE not enforced: accepts a schema that breaks only this rule (1 case, `union`)
   - [`enumValueNameReserved`](graphql-ruby.md#schema-finding-27): ENUM_VALUE_NAME_RESERVED not enforced: accepts a schema that breaks only this rule (1 case, `enum`)
   - [`inputFieldsDefined`](graphql-ruby.md#schema-finding-28): INPUT_FIELDS_DEFINED not enforced: accepts a schema that breaks only this rule (1 case, `input`)
   - [`inputFieldNameReserved`](graphql-ruby.md#schema-finding-29): INPUT_FIELD_NAME_RESERVED not enforced: accepts a schema that breaks only this rule (1 case, `input`)
-  - [`requiredInputFieldNotDeprecated`](graphql-ruby.md#schema-finding-30): REQUIRED_INPUT_FIELD_NOT_DEPRECATED over-strict: rejects a valid schema one small edit away from one that breaks it (1 case, `input`)
+  - (draft only) [`requiredInputFieldNotDeprecated`](graphql-ruby.md#schema-finding-30): REQUIRED_INPUT_FIELD_NOT_DEPRECATED over-strict: rejects a valid schema one small edit away from one that breaks it (1 case, `input`)
   - [`directiveReferencesItselfIndirectly`](graphql-ruby.md#schema-finding-31): DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY over-strict: rejects a valid schema one small edit away from one that breaks it (1 case, `directive`)
   - [`builtinAdditions`, `builtinDefinitions`](graphql-ruby.md#introspect-finding-1): the built-in @deprecated isn't as October 2021 defines it (directives); the built-in __Directive has a field October 2021 doesn't define; the built-in __Directive.args has an argument October 2021 doesn't define; the built-in __Directive.isRepeatable isn't as October 2021 defines it (fields); the built-in __Field.args has an argument October 2021 doesn't define; the built-in __InputValue has a field October 2021 doesn't define; the built-in __Type has a field October 2021 doesn't define; the built-in __Type.inputFields has an argument October 2021 doesn't define (6 cases, `minimal`, `interfaces`, `deprecation`, `builtinScalars`, `scalars`, `order`)
   - [`builtinAdditions`, `builtinDefinitions`](graphql-ruby.md#introspect-finding-2): the built-in @deprecated isn't as October 2021 defines it (directives); the built-in __Directive.args has an argument October 2021 doesn't define; the built-in __Directive.isRepeatable isn't as October 2021 defines it (fields); the built-in __Field.args has an argument October 2021 doesn't define; the built-in __InputValue has a field October 2021 doesn't define; the built-in __Type has a field October 2021 doesn't define; the built-in __Type.inputFields has an argument October 2021 doesn't define (6 cases, `minimal`, `interfaces`, `deprecation`, `builtinScalars`, `scalars`, `order`)
@@ -300,8 +300,8 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
 - **[graphql-go/graphql 0.8.1](graphql-go.md):** 
   - [`dataMatches`](graphql-go.md#execution-finding-1) (414 cases, `fragments`, `nullPropagation`, `lists`, `unions`)
   - [`resultCoercion`](graphql-go.md#execution-finding-2): the implementation produced no response, after a resolver returned a value its type can't represent: … (309 cases, `leaves`)
-  - [`keyOrder`](graphql-go.md#execution-finding-3) (258 cases, `leaves`, `unions`, `nullPropagation`)
-  - [`intFraction`](graphql-go.md#execution-finding-4): count is 1, though its resolver returned a value its type can't represent, which should raise an execution error (234 cases, `leaves`)
+  - (SHOULD) [`keyOrder`](graphql-go.md#execution-finding-3) (258 cases, `leaves`, `unions`, `nullPropagation`)
+  - (SHOULD) [`intFraction`](graphql-go.md#execution-finding-4): count is 1, though its resolver returned a value its type can't represent, which should raise an execution error (234 cases, `leaves`)
   - [`calledSerially`](graphql-go.md#execution-finding-5) (232 cases, `mutation`)
   - [`keyOrder`, `nullsExplained`](graphql-go.md#execution-finding-6) (205 cases, `leaves`)
   - [`calledSerially`, `serialErrorsKept`](graphql-go.md#execution-finding-7) (87 cases, `mutation`)
@@ -313,24 +313,24 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
   - [`calledSerially`, `dataMatches`, `nullsExplained`, `serialErrorsKept`](graphql-go.md#execution-finding-13) (10 cases, `mutation`)
   - [`calledSerially`, `dataMatches`](graphql-go.md#execution-finding-14) (10 cases, `mutation`)
   - [`calledSerially`, `nullsExplained`](graphql-go.md#execution-finding-15) (8 cases, `mutation`)
-  - [`intFraction`](graphql-go.md#execution-finding-16): … is 1, though its resolver returned a value its type can't represent, which should raise an execution error (5 cases, `unions`)
+  - (SHOULD) [`intFraction`](graphql-go.md#execution-finding-16): … is 1, though its resolver returned a value its type can't represent, which should raise an execution error (5 cases, `unions`)
   - [`complete`, `nullsExplained`](graphql-go.md#execution-finding-17) (3 cases, `lists`)
   - [`calledSerially`, `complete`, `nullsExplained`, `serialErrorsKept`](graphql-go.md#execution-finding-18) (1 case, `mutation`)
   - [`calledSerially`, `dataMatches`, `nullsExplained`](graphql-go.md#execution-finding-19) (1 case, `mutation`)
 - **[graphql-dotnet 8.8.5](graphql-dotnet.md):** 
   - [`resultCoercion`](graphql-dotnet.md#execution-finding-1): the implementation produced no response, after a resolver returned a value its type can't represent: … threw ArgumentException: .NET number values such as positive and negative infinity cannot be written as valid JSON. To make it work when using 'JsonSerializer', consider specifying … (see … (357 cases, `leaves`)
-  - [`descriptions`](graphql-dotnet.md#parse-finding-1): rejects what §2.2 Descriptions accepts (73 cases, `random-documents`, `parser-examples`, `variable-definitions`)
-  - [`stringValue`](graphql-dotnet.md#parse-finding-2): accepts what §2.10.4 String Value rejects (9 cases, `lexer-examples`, `strings`)
+  - (draft only) [`descriptions`](graphql-dotnet.md#parse-finding-1): rejects what §2.2 Descriptions accepts (73 cases, `random-documents`, `parser-examples`, `variable-definitions`)
+  - (draft only) [`stringValue`](graphql-dotnet.md#parse-finding-2): accepts what §2.10.4 String Value rejects (9 cases, `lexer-examples`, `strings`)
   - [`intValue`](graphql-dotnet.md#parse-finding-3): accepts what §2.10.1 Int Value rejects (8 cases, `numbers`, `lexer-examples`)
-  - [`selectionSets`](graphql-dotnet.md#parse-finding-4): rejects what §2.5 Selection Sets accepts (8 cases, `random-documents`, `parser-examples`, `field-suffixes`)
-  - [`stringValue`](graphql-dotnet.md#parse-finding-5): rejects what §2.10.4 String Value accepts (6 cases, `strings`, `lexer-examples`)
+  - (draft only) [`selectionSets`](graphql-dotnet.md#parse-finding-4): rejects what §2.5 Selection Sets accepts (8 cases, `random-documents`, `parser-examples`, `field-suffixes`)
+  - (draft only) [`stringValue`](graphql-dotnet.md#parse-finding-5): rejects what §2.10.4 String Value accepts (6 cases, `strings`, `lexer-examples`)
   - [`document`](graphql-dotnet.md#parse-finding-6): accepts what §2.3 Document rejects (2 cases, `parser-examples`)
   - [`variables`](graphql-dotnet.md#parse-finding-7): accepts what §2.11 Variables rejects (1 case, `parser-examples`)
   - [`allVariableUsagesAreAllowed`](graphql-dotnet.md#validate-finding-1): §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule (71 cases, `variables`)
   - [`fieldSelectionMerging`](graphql-dotnet.md#validate-finding-2): §5.3.2 Field Selection Merging isn't enforced: accepts documents that break only this rule (22 cases, `merging`)
-  - [`singleRootField`](graphql-dotnet.md#validate-finding-3): §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft (15 cases, `operations`, `random`, `spec`)
+  - (draft only) [`singleRootField`](graphql-dotnet.md#validate-finding-3): §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; all rely on the draft (15 cases, `operations`, `random`, `spec`)
   - [`acceptsValid`](graphql-dotnet.md#validate-finding-4): rejects valid documents: §5.2.4.1 Single Root Field is likely over-strict (14 valid siblings of 16 different invalid vectors rejected, 23 of the same family accepted) (14 cases, `operations`)
-  - [`operationTypeExistence`](graphql-dotnet.md#validate-finding-5): §5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule; all rely on the draft (9 cases, `operations`, `spec`)
+  - (draft only) [`operationTypeExistence`](graphql-dotnet.md#validate-finding-5): §5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule; all rely on the draft (9 cases, `operations`, `spec`)
   - [`acceptsValid`](graphql-dotnet.md#validate-finding-6): rejects valid documents: §5.2.3.1 Lone Anonymous Operation is likely over-strict (9 valid siblings of 6 different invalid vectors rejected, 7 of the same family accepted) (9 cases, `operations`)
   - [`acceptsValid`](graphql-dotnet.md#validate-finding-7): rejects valid documents: §5.8.5 All Variable Usages Are Allowed is likely over-strict (7 valid siblings of 28 different invalid vectors rejected, 50 of the same family accepted) (7 cases, `variables`)
   - [`executableDefinitions`](graphql-dotnet.md#validate-finding-8): §5.1.1 Executable Definitions isn't enforced: accepts documents that break only this rule (4 cases, `executable`)
@@ -340,18 +340,18 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
   - [`acceptsValid`](graphql-dotnet.md#validate-finding-12): rejects valid documents, each one edit from a document that breaks §5.8.5 All Variable Usages Are Allowed and §5.6.1 Values of Correct Type; the rule it applied is a guess, since the kit doesn't read error messages (1 case, `variables`)
   - [`acceptsValid`](graphql-dotnet.md#validate-finding-13): rejects valid documents, each one edit from a document that breaks only §5.7.1 Directives Are Defined; the rule it applied is a guess, since the kit doesn't read error messages (1 case, `random`)
   - [`inputObjectUnbreakableCycle`](graphql-dotnet.md#schema-finding-1): INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule (5 cases, `input`)
-  - [`argDefaultCompatible`](graphql-dotnet.md#schema-finding-2): ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule (4 cases, `defaults`)
+  - (draft only) [`argDefaultCompatible`](graphql-dotnet.md#schema-finding-2): ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule (4 cases, `defaults`)
   - [`rootTypesAreObjects`](graphql-dotnet.md#schema-finding-3): ROOT_TYPES_ARE_OBJECTS not enforced: accepts a schema that breaks only this rule (2 cases, `root`)
   - [`implArgInvariant`](graphql-dotnet.md#schema-finding-4): IMPL_ARG_INVARIANT not enforced: accepts a schema that breaks only this rule (2 cases, `implementation`)
   - [`unionMembersObjects`](graphql-dotnet.md#schema-finding-5): UNION_MEMBERS_OBJECTS: crashes on a schema that breaks only this rule, instead of rejecting it (2 cases, `union`)
   - [`typeNameNotBuiltin`](graphql-dotnet.md#schema-finding-6): TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule (1 case, `names`)
-  - [`requiredArgNotDeprecated`](graphql-dotnet.md#schema-finding-7): REQUIRED_ARG_NOT_DEPRECATED not enforced: accepts a schema that breaks only this rule (1 case, `typeUse`)
+  - (draft only) [`requiredArgNotDeprecated`](graphql-dotnet.md#schema-finding-7): REQUIRED_ARG_NOT_DEPRECATED not enforced: accepts a schema that breaks only this rule (1 case, `typeUse`)
   - [`implementsUnique`](graphql-dotnet.md#schema-finding-8): IMPLEMENTS_UNIQUE not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
   - [`implementsInterfaces`](graphql-dotnet.md#schema-finding-9): IMPLEMENTS_INTERFACES: crashes on a schema that breaks only this rule, instead of rejecting it (1 case, `implementation`)
   - [`implementsItself`](graphql-dotnet.md#schema-finding-10): IMPLEMENTS_ITSELF not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
   - [`implTransitive`](graphql-dotnet.md#schema-finding-11): IMPL_TRANSITIVE not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
   - [`implFieldCovariant`](graphql-dotnet.md#schema-finding-12): IMPL_FIELD_COVARIANT over-strict: rejects a valid schema one small edit away from one that breaks it (1 case, `implementation`)
-  - [`implDeprecation`](graphql-dotnet.md#schema-finding-13): IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
+  - (draft only) [`implDeprecation`](graphql-dotnet.md#schema-finding-13): IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule (1 case, `implementation`)
   - [`unionMembersUnique`](graphql-dotnet.md#schema-finding-14): UNION_MEMBERS_UNIQUE not enforced: accepts a schema that breaks only this rule (1 case, `union`)
   - [`enumValuesUnique`](graphql-dotnet.md#schema-finding-15): ENUM_VALUES_UNIQUE not enforced: accepts a schema that breaks only this rule (1 case, `enum`)
   - [`directiveUsesItself`](graphql-dotnet.md#schema-finding-16): DIRECTIVE_USES_ITSELF not enforced: accepts a schema that breaks only this rule (1 case, `directive`)
@@ -373,12 +373,12 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
   - [`callsOnce`](juniper.md#execution-finding-3): the resolver at … was called twice (555 cases, `fragments`)
   - [`leafValues`](juniper.md#execution-finding-4): a leaf isn't the canonical value (403 cases, `leaves`, `unions`)
   - [`resultCoercion`](juniper.md#execution-finding-5): color is …, though its resolver returned a value its type can't represent, which must raise an execution error (402 cases, `leaves`)
-  - [`intFraction`](juniper.md#execution-finding-6): count is … though its resolver returned a value its type can't represent, which should raise an execution error (360 cases, `leaves`)
+  - (SHOULD) [`intFraction`](juniper.md#execution-finding-6): count is … though its resolver returned a value its type can't represent, which should raise an execution error (360 cases, `leaves`)
   - [`errorsInsideNulls`, `errorsWereRaised`, `nullsExplained`](juniper.md#execution-finding-7) (252 cases, `lists`, `unions`)
   - [`nullsExplained`](juniper.md#execution-finding-8) (164 cases, `lists`, `leaves`, `unions`)
   - [`errorsWereRaised`, `nullsExplained`](juniper.md#execution-finding-9) (130 cases, `lists`, `unions`)
   - [`errorPathsUnique`, `errorsInsideNulls`, `errorsWereRaised`, `nullsExplained`](juniper.md#execution-finding-10) (58 cases, `lists`)
-  - [`intFraction`](juniper.md#execution-finding-11): … is … though its resolver returned a value its type can't represent, which should raise an execution error (43 cases, `unions`)
+  - (SHOULD) [`intFraction`](juniper.md#execution-finding-11): … is … though its resolver returned a value its type can't represent, which should raise an execution error (43 cases, `unions`)
   - [`errorsWereRaised`](juniper.md#execution-finding-12) (40 cases, `lists`, `unions`)
   - [`dataMatches`, `errorsInsideNulls`, `errorsWereRaised`, `nullsExplained`](juniper.md#execution-finding-13) (28 cases, `unions`)
   - [`dataMatches`, `nullsExplained`](juniper.md#execution-finding-14) (17 cases, `unions`)
@@ -387,7 +387,7 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
   - [`errorPathsUnique`, `errorsWereRaised`](juniper.md#execution-finding-17) (4 cases, `lists`)
   - [`dataMatches`, `errorsWereRaised`, `nullsExplained`](juniper.md#execution-finding-18) (3 cases, `unions`)
   - [`intValue`](juniper.md#parse-finding-1): accepts what §2.10.1 Int Value rejects (10 cases, `lexer-examples`, `numbers`)
-  - [`selectionSets`](juniper.md#parse-finding-2): rejects what §2.5 Selection Sets accepts (8 cases, `random-documents`, `parser-examples`, `field-suffixes`)
+  - (draft only) [`selectionSets`](juniper.md#parse-finding-2): rejects what §2.5 Selection Sets accepts (8 cases, `random-documents`, `parser-examples`, `field-suffixes`)
   - [`stringValue`](juniper.md#parse-finding-3): rejects what §2.10.4 String Value accepts (4 cases, `lexer-examples`, `strings`, `block-strings`)
   - [`stringValue`](juniper.md#parse-finding-4): accepts what §2.10.4 String Value rejects (4 cases, `lexer-examples`, `block-strings`)
   - [`lexicalTokens`](juniper.md#parse-finding-5): rejects what §2.1.5 Lexical Tokens accepts (2 cases, `block-strings`)
@@ -396,7 +396,7 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
   - [`variables`](juniper.md#parse-finding-8): accepts what §2.11 Variables rejects (1 case, `parser-examples`)
   - [`floatValue`](juniper.md#parse-finding-9): rejects what §2.10.2 Float Value accepts (1 case, `numbers`)
   - [`singleRootField`](juniper.md#validate-finding-1): §5.2.4.1 Single Root Field isn't enforced: accepts documents that break only this rule; 23 of 46 rely on the draft (46 cases, `operations`, `spec`, `random`)
-  - [`operationTypeExistence`](juniper.md#validate-finding-2): §5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule; all rely on the draft (12 cases, `operations`, `spec`)
+  - (draft only) [`operationTypeExistence`](juniper.md#validate-finding-2): §5.2.1.1 Operation Type Existence isn't enforced: accepts documents that break only this rule; all rely on the draft (12 cases, `operations`, `spec`)
   - [`allVariableUsagesAreAllowed`](juniper.md#validate-finding-3): §5.8.5 All Variable Usages Are Allowed isn't enforced: accepts documents that break only this rule; 4 of 12 rely on the draft (12 cases, `variables`, `spec`)
   - [`directivesAreUniquePerLocation`](juniper.md#validate-finding-4): §5.7.3 Directives Are Unique per Location isn't enforced: accepts documents that break only this rule (7 cases, `directives`)
   - [`acceptsValid`](juniper.md#validate-finding-5): rejects valid documents: §5.3.3 Leaf Field Selections is likely over-strict (4 valid siblings of 4 different invalid vectors rejected, 6 of the same family accepted) (4 cases, `random`)
@@ -431,8 +431,8 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -473,25 +473,25 @@ Each finding is one kind of failure: the set of clauses a case broke, or a malfo
 
 ### Execution: each fixture
 
-The sections a fixture lists are the ones it exercises; its verdict is whether any of its cases failed a check.
+The sections a fixture lists are the ones it exercises; its verdict is whether any of its cases failed a check: ✗ n/N if a failing case broke a MUST, ! n/N if the failing cases broke only SHOULDs, where n counts every failing case; i n/N if they only differed on an informational check.
 
 | Fixture | Exercises | graphql-js 16.15.0 | graphql-js 17.1.0 | graphql-java 26.2 | async-graphql 7.0.17 (dynamic schema) | Hot Chocolate 15.1.21 | graphql-core 3.2.14 | graphql-ruby 2.6.15 | graphql-go/graphql 0.8.1 | graphql-dotnet 8.8.5 | juniper 0.18.0 (GraphQLType with TypeInfo) |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | [`fragments`](../fixtures/fragments.graphql) | [§6.3.2](https://spec.graphql.org/draft/#sec-Field-Collection) [§3.7](https://spec.graphql.org/draft/#sec-Interfaces) [§3.13.1](https://spec.graphql.org/draft/#sec-skip) [§3.13.2](https://spec.graphql.org/draft/#sec-include) [§6.4.3](https://spec.graphql.org/draft/#sec-Value-Completion) | ✓ 1536 | ✓ 1536 | ✓ 1576 | ✗ 819/1540 | ✓ 1576 | ✓ 1536 | ✓ 1576 | ✗ 156/1500 | ✓ 1576 | ✗ 555/1684 |
-| [`leaves`](../fixtures/leaves.graphql) | [§3.5.1](https://spec.graphql.org/draft/#sec-Int) [§3.5.2](https://spec.graphql.org/draft/#sec-Float) [§3.9](https://spec.graphql.org/draft/#sec-Enums) [§6.4.3](https://spec.graphql.org/draft/#sec-Value-Completion) | ✓ 1700 | ✓ 1700 | ✓ 1700 | ✗ 787/1539 | ✗ 343/1700 | ✓ 1700 | ✗ 343/1700 | ✗ 912/1500 | ✗ 357/1700 | ✗ 770/1628 |
+| [`leaves`](../fixtures/leaves.graphql) | [§3.5.1](https://spec.graphql.org/draft/#sec-Int) [§3.5.2](https://spec.graphql.org/draft/#sec-Float) [§3.9](https://spec.graphql.org/draft/#sec-Enums) [§6.4.3](https://spec.graphql.org/draft/#sec-Value-Completion) | ✓ 1700 | ✓ 1700 | ✓ 1700 | ✗ 787/1539 | ! 343/1700 | ✓ 1700 | ! 343/1700 | ✗ 912/1500 | ✗ 357/1700 | ✗ 770/1628 |
 | [`lists`](../fixtures/lists.graphql) | [§3.11](https://spec.graphql.org/draft/#sec-List) [§3.12.1](https://spec.graphql.org/draft/#sec-Combining-List-and-Non-Null) [§6.4.3](https://spec.graphql.org/draft/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors) | ✓ 2002 | ✓ 2002 | ✓ 1914 | ✗ 1184/1918 | ✗ 58/1878 | ✓ 2002 | ✓ 1842 | ✗ 227/1500 | ✓ 2490 | ✗ 1122/2358 |
 | [`mutation`](../fixtures/mutation.graphql) | [§6.2.2](https://spec.graphql.org/draft/#sec-Mutation) [§6.3.4](https://spec.graphql.org/draft/#sec-Normal-and-Serial-Execution) [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors) | ✓ 1590 | ✓ 1590 | ✓ 1590 | ✗ 1038/1542 | ✓ 1750 | ✗ 510/1662 | ✓ 1750 | ✗ 489/1500 | ✓ 1750 | ✓ 1590 |
 | [`noPropagation`](../fixtures/noPropagation.graphql) |  | – needs error-propagation-off | ✓ 1602 | ✓ 1602 | – needs error-propagation-off | – needs error-propagation-off | – needs error-propagation-off | – needs error-propagation-off | – needs error-propagation-off | – needs error-propagation-off | – needs error-propagation-off |
 | [`nullPropagation`](../fixtures/nullPropagation.graphql) | [§3.12](https://spec.graphql.org/draft/#sec-Non-Null) [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors) [§6.3.3](https://spec.graphql.org/draft/#sec-Executing-Collected-Fields) | ✓ 1662 | ✓ 1662 | ✓ 1782 | ✗ 898/1538 | ✓ 1782 | ✓ 1662 | ✓ 1710 | ✗ 129/1500 | ✓ 1782 | ✓ 1662 |
 | [`subscription`](../fixtures/subscription.graphql) | [§6.2.3](https://spec.graphql.org/draft/#sec-Subscription) [§6.2.3.2](https://spec.graphql.org/draft/#sec-Response-Stream) | ✓ 1518 | ✓ 1518 | ✗ 1338/1522 | ✗ 722/1522 | ✓ 1522 | ✓ 1518 | ✓ 1522 | ✓ 1500 | ✓ 1522 | ✗ 616/1518 |
-| [`unions`](../fixtures/unions.graphql) | [§3.8](https://spec.graphql.org/draft/#sec-Unions) [§3.11](https://spec.graphql.org/draft/#sec-List) [§3.5](https://spec.graphql.org/draft/#sec-Scalars) [§6.4.3](https://spec.graphql.org/draft/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors) | ✓ 1778 | ✓ 1778 | ✓ 1764 | ✗ 504/1614 | ✗ 77/1764 | ✓ 1778 | ✗ 42/1764 | ✗ 151/1500 | ✓ 1838 | ✗ 322/1720 |
+| [`unions`](../fixtures/unions.graphql) | [§3.8](https://spec.graphql.org/draft/#sec-Unions) [§3.11](https://spec.graphql.org/draft/#sec-List) [§3.5](https://spec.graphql.org/draft/#sec-Scalars) [§6.4.3](https://spec.graphql.org/draft/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors) | ✓ 1778 | ✓ 1778 | ✓ 1764 | ✗ 504/1614 | ✗ 77/1764 | ✓ 1778 | ! 42/1764 | ✗ 151/1500 | ✓ 1838 | ✗ 322/1720 |
 
 ## Parse: each check
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -535,8 +535,8 @@ The sections a fixture lists are the ones it exercises; its verdict is whether a
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -580,8 +580,8 @@ The sections a fixture lists are the ones it exercises; its verdict is whether a
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -617,8 +617,8 @@ The sections a fixture lists are the ones it exercises; its verdict is whether a
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -676,8 +676,8 @@ The sections a fixture lists are the ones it exercises; its verdict is whether a
 
 - **✓ N:** every one of the N cases it applied to satisfied it.
 - **✗ n/N:** n of N cases broke a MUST. **! n/N:** a SHOULD.
-- **(draft only):** the failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition.
 - **i n/N:** an informational check, which no spec sentence requires (for example graphql-js's experimental execution without error propagation, or how a JSON parser reads large numbers), differed in n of N cases. Never a failure.
+- **(all draft only), (k draft only):** all, or k, of the n failing cases rely on grammar or rules that are only in the draft, not in the October 2021 edition. The symbol still gives the check's level.
 - **~:** inconclusive (see the implementation's page).
 - **⊂:** subsumed: every input that breaks this rule also breaks a broader one, so a rejection can't be credited to it (accepting such an input still fails it).
 - **–:** never exercised: the adapter lacks the capability, or no case reached it.
@@ -705,14 +705,14 @@ The sections a fixture lists are the ones it exercises; its verdict is whether a
 | directives describes the schema's own directives (name, locations, isRepeatable), and any of the service's own takes input types (`directives`) | MUST | [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) [§4.2.6](https://spec.graphql.org/draft/#sec-The-Directive-Type) [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✓ 22 | ✓ 24 | ✓ 18 | n/a | ✗ 2/18 | ✓ 22 | ✓ 16 | n/a | ✗ 18/18 | ✗ 4/18 |
 | @skip and @include are provided, @specifiedBy when the schema has a custom scalar, @oneOf when it has a OneOf input object (`builtinDirectives`) | SHOULD | [§3.13](https://spec.graphql.org/draft/#sec-Directives) [§3.13.1](https://spec.graphql.org/draft/#sec-skip) [§3.13.2](https://spec.graphql.org/draft/#sec-include) [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy) [§3.13.5](https://spec.graphql.org/draft/#sec-oneOf) | ✓ 22 | ✓ 24 | ✓ 18 | n/a | ! 2/18 | ✓ 22 | ✓ 16 | n/a | ! 4/18 | ✓ 18 |
 | The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (`builtinDefinitions`) | MUST | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/draft/#sec-Directives) | ✗ 22/35 (4 draft only) | ✓ 38 | ✗ 18/28 | n/a | ✗ 18/28 | ✗ 22/35 (4 draft only) | ✗ 16/25 | n/a | ✗ 18/28 | ✗ 18/28 |
-| The introspection types have no field, argument, enum value or type the spec doesn't define (`builtinAdditions`) | INFO | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 35 | i 24/38 | i 18/28 | n/a | i 18/28 | ✓ 35 | i 16/25 | n/a | i 18/28 | i 18/28 |
+| The introspection types have no field, argument, enum value or type the spec doesn't define (`builtinAdditions`) | INFO | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 35 | i 24/38 (6 draft only) | i 18/28 | n/a | i 18/28 | ✓ 35 | i 16/25 | n/a | i 18/28 | i 18/28 |
 | __typename names the root type, and no fields list includes it (`typename`) | MUST | [§4.1](https://spec.graphql.org/draft/#sec-Type-Name-Introspection) | ✓ 35 | ✓ 38 | ✓ 28 | n/a | ✓ 28 | ✓ 35 | ✓ 25 | n/a | ✓ 28 | ✓ 28 |
 | Fields, arguments, enum values, directives, members and interfaces come in source order (`order`) | SHOULD (draft only) | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 35 | ✓ 38 | – | n/a | – | ✓ 35 | – | n/a | – | – |
 | Anything else Introspection!Matches requires (`other`) | MUST | [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) | ✓ 35 | ✓ 38 | ✓ 28 | n/a | ✓ 28 | ✓ 35 | ✓ 25 | n/a | ✓ 28 | ✓ 28 |
 
 ## By spec section
 
-A section's verdict comes from the checks that cite it, and names the ones that failed. Sections that fixtures exercise but no check targets have no verdict of their own; their fixtures' verdicts are above.
+A section's verdict comes from the checks that cite it, and names the ones that failed, worst level first: ✗ for a MUST, ! for a SHOULD, i for an informational check that differed. Within a level, **(draft only)** marks the checks whose failing cases all rely on the draft, not the October 2021 edition. With no MUST or SHOULD failing, ✓ means every check that ran passed or only differed informationally, ~ that one was inconclusive and – that none was exercised. Sections that fixtures exercise but no check targets have no verdict of their own; their fixtures' verdicts are above.
 
 | Section | graphql-js 16.15.0 | graphql-js 17.1.0 | graphql-java 26.2 | async-graphql 7.0.17 (dynamic schema) | Hot Chocolate 15.1.21 | graphql-core 3.2.14 | graphql-ruby 2.6.15 | graphql-go/graphql 0.8.1 | graphql-dotnet 8.8.5 | juniper 0.18.0 (GraphQLType with TypeInfo) |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -752,28 +752,28 @@ A section's verdict comes from the checks that cite it, and names the ones that 
 | [§3.3.1](https://spec.graphql.org/draft/#sec-Root-Operation-Types) Root Operation Types | ✗ `rootTypesDifferent` | ✓ | ✗ `rootTypesAreObjects` `rootTypesDifferent` |   | ✗ `rootTypesDifferent` | ✗ `rootTypesDifferent` | ✗ `rootTypesAreObjects` `rootTypesDifferent` |   | ✗ `rootTypesAreObjects` | ✓ |
 | [§3.4.2](https://spec.graphql.org/draft/#sec-Input-and-Output-Types) Input and Output Types | ✓ | ✓ | ✗ `argInputType` `inputFieldInputType` |   | ✓ | ✓ | ✗ `fieldOutputType` |   | ✓ |   |
 | [§3.5](https://spec.graphql.org/draft/#sec-Scalars) Scalars | ✓ | ✓ | ✓ |   | ✓ | ✓ | ✓ |   | ✓ | ✗ `builtinScalars` |
-| [§3.5.1](https://spec.graphql.org/draft/#sec-Int) Int | ✓ | ✓ | ✓ | – | ✗ `int` | ✓ | ✗ `int` | ! `intFraction` | ✓ | ! `intFraction` |
-| [§3.5.2](https://spec.graphql.org/draft/#sec-Float) Float | ✗ `float` | ✗ `float` | ✓ | – | ! `floatPrecision` | ✗ `float` | ✓ | ✗ `resultCoercion` | ✗ `resultCoercion` | ✗ `resultCoercion` |
+| [§3.5.1](https://spec.graphql.org/draft/#sec-Int) Int | ✓ | ✓ | ✓ | – | ✗ `int`; ! `intFraction` | ✓ | ✗ `int`; ! `intFraction` | ! `intFraction` | ✓ | ! `intFraction` |
+| [§3.5.2](https://spec.graphql.org/draft/#sec-Float) Float | ✗ `float`; ! `floatPrecision` | ✗ `float`; ! `floatPrecision` | ✓ | – | ! `floatPrecision` | ✗ `float`; ! `floatPrecision` | ✓ | ✗ `resultCoercion` | ✗ `resultCoercion` | ✗ `resultCoercion` |
 | [§3.5.3](https://spec.graphql.org/draft/#sec-String) String | ✓ | ✓ | ✓ |   | ✓ | ✓ | ✓ |   |   |   |
 | [§3.5.4](https://spec.graphql.org/draft/#sec-Boolean) Boolean | ✓ | ✓ | ✓ |   | ✓ | ✓ | ✓ |   |   |   |
 | [§3.5.5](https://spec.graphql.org/draft/#sec-ID) ID | ✓ | ✓ | ✗ `id` |   | ! `idCoerced` | ✓ | ! `idCoerced` |   |   |   |
-| [§3.6](https://spec.graphql.org/draft/#sec-Objects) Objects | ✗ (draft only) `argDefaultCompatible` `implDeprecation` | ✗ (draft only) `argDefaultCompatible` | ✗ `argInputType` `implementsUnique` |   | ✗ `fieldNamesUnique` `implementsUnique` `implementsInterfaces` `implTransitive` | ✗ (draft only) `argDefaultCompatible` `implDeprecation` | ✗ `fieldsDefined` `fieldNamesUnique` `fieldNameReserved` `fieldOutputType` `argNameReserved` `implementsUnique` `implFieldProvided` `implArgProvided` `implArgInvariant` `implExtraArgOptional` `implFieldCovariant` |   | ✗ `implementsUnique` `implementsInterfaces` `implTransitive` `implArgInvariant` `implFieldCovariant` |   |
+| [§3.6](https://spec.graphql.org/draft/#sec-Objects) Objects | ✗ (draft only) `argDefaultCompatible` `implDeprecation` | ✗ (draft only) `argDefaultCompatible` | ✗ `argInputType` `implementsUnique`; ✗ (draft only) `argDefaultCompatible` `implDeprecation` |   | ✗ `fieldNamesUnique` `implementsUnique` `implementsInterfaces` `implTransitive`; ✗ (draft only) `requiredArgNotDeprecated` `argDefaultCompatible` `implDeprecation` | ✗ (draft only) `argDefaultCompatible` `implDeprecation` | ✗ `fieldsDefined` `fieldNamesUnique` `fieldNameReserved` `fieldOutputType` `argNameReserved` `implementsUnique` `implFieldProvided` `implArgProvided` `implArgInvariant` `implExtraArgOptional` `implFieldCovariant`; ✗ (draft only) `requiredArgNotDeprecated` `argDefaultCompatible` `implDeprecation` |   | ✗ `implementsUnique` `implementsInterfaces` `implTransitive` `implArgInvariant` `implFieldCovariant`; ✗ (draft only) `requiredArgNotDeprecated` `argDefaultCompatible` `implDeprecation` |   |
 | [§3.7](https://spec.graphql.org/draft/#sec-Interfaces) Interfaces | ✓ | ✓ | ✗ `implementsUnique` |   | ✗ `fieldNamesUnique` `implementsUnique` `implementsInterfaces` `implementsItself` | ✓ | ✗ `fieldsDefined` `fieldNamesUnique` `fieldNameReserved` `implementsUnique` `implementsItself` |   | ✗ `implementsUnique` `implementsInterfaces` `implementsItself` |   |
 | [§3.8](https://spec.graphql.org/draft/#sec-Unions) Unions | ✓ | ✓ | ✓ |   | ✗ `unionMembersUnique` | ✓ | ✗ `unionMembersDefined` `unionMembersUnique` |   | ✗ `unionMembersUnique` `unionMembersObjects` |   |
 | [§3.9](https://spec.graphql.org/draft/#sec-Enums) Enums | ✓ | ✓ | ✓ | – | ✗ `enumValuesUnique` | ✓ | ✓ | ✗ `resultCoercion` | ✗ `resultCoercion` `enumValuesUnique` | ✗ `resultCoercion` |
-| [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) Input Objects | ✗ `inputObject` `inputObjectDefaultValueCycle` | ✓ | ✗ `inputFieldInputType` |   | ✗ `inputObject` | ✗ `inputObject` `inputObjectDefaultValueCycle` | ✗ `inputObject` `inputFieldsDefined` `inputFieldNameReserved` `inputObjectUnbreakableCycle` |   | ✗ `inputObjectUnbreakableCycle` |   |
+| [§3.10](https://spec.graphql.org/draft/#sec-Input-Objects) Input Objects | ✗ `inputObject` `inputObjectDefaultValueCycle`; ✗ (draft only) `inputObjectUnbreakableCycle` | ✓ | ✗ `inputFieldInputType`; ✗ (draft only) `inputObjectUnbreakableCycle` |   | ✗ `inputObject`; ✗ (draft only) `inputObjectUnbreakableCycle` `inputObjectDefaultValueCycle` | ✗ `inputObject` `inputObjectDefaultValueCycle`; ✗ (draft only) `inputObjectUnbreakableCycle` | ✗ `inputObject` `inputFieldsDefined` `inputFieldNameReserved` `inputObjectUnbreakableCycle`; ✗ (draft only) `requiredInputFieldNotDeprecated` `inputObjectDefaultValueCycle` |   | ✗ `inputObjectUnbreakableCycle` |   |
 | [§3.10.1](https://spec.graphql.org/draft/#sec-OneOf-Input-Objects) OneOf Input Objects | ✓ | ✓ | ✓ |   | ✓ | ✓ | ✓ |   | ✓ | – |
 | [§3.11](https://spec.graphql.org/draft/#sec-List) List | ✗ `list` | ✓ | ✗ `list` |   | ✗ `list` | ✗ `list` | ✗ `list` |   |   |   |
 | [§3.12](https://spec.graphql.org/draft/#sec-Non-Null) Non-Null | ✓ | ✓ | – |   | – | ✓ | – |   |   |   |
-| [§3.13](https://spec.graphql.org/draft/#sec-Directives) Directives | ✗ `directiveUsesItself` `directiveReferencesItselfIndirectly` `builtinDefinitions` | ✗ `directiveUsesItself` `directiveReferencesItselfIndirectly` | ✗ `builtinDefinitions` |   | ✗ `directiveUsesItself` `directiveReferencesItselfIndirectly` `deprecation` `specifiedByURL` `directives` `builtinDefinitions` | ✗ `directiveUsesItself` `directiveReferencesItselfIndirectly` `builtinDefinitions` | ✗ `argNameReserved` `directiveReferencesItselfIndirectly` `builtinDefinitions` |   | ✗ `directiveUsesItself` `directiveReferencesItselfIndirectly` `specifiedByURL` `directives` `builtinDefinitions` | ✗ `directives` `builtinDefinitions` |
+| [§3.13](https://spec.graphql.org/draft/#sec-Directives) Directives | ✗ `directiveUsesItself` `directiveReferencesItselfIndirectly` `builtinDefinitions` | ✗ `directiveUsesItself` `directiveReferencesItselfIndirectly` | ✗ `builtinDefinitions` |   | ✗ `directiveUsesItself` `directiveReferencesItselfIndirectly` `deprecation` `specifiedByURL` `directives` `builtinDefinitions`; ! `builtinDirectives` | ✗ `directiveUsesItself` `directiveReferencesItselfIndirectly` `builtinDefinitions` | ✗ `argNameReserved` `directiveReferencesItselfIndirectly` `builtinDefinitions` |   | ✗ `directiveUsesItself` `directiveReferencesItselfIndirectly` `specifiedByURL` `directives` `builtinDefinitions`; ! `builtinDirectives` | ✗ `directives` `builtinDefinitions` |
 | [§3.13.1](https://spec.graphql.org/draft/#sec-skip) @skip | ✓ | ✓ | ✓ |   | ! `builtinDirectives` | ✓ | ✓ |   | ! `builtinDirectives` | ✓ |
 | [§3.13.2](https://spec.graphql.org/draft/#sec-include) @include | ✓ | ✓ | ✓ |   | ! `builtinDirectives` | ✓ | ✓ |   | ! `builtinDirectives` | ✓ |
-| [§3.13.3](https://spec.graphql.org/draft/#sec-deprecated) @deprecated | ✓ | ✓ | ✓ |   | ✗ `deprecation` | ✓ | ✗ (draft only) `requiredArgNotDeprecated` `requiredInputFieldNotDeprecated` |   | ✗ (draft only) `requiredArgNotDeprecated` | ✓ |
-| [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy) @specifiedBy | ✓ | ✓ | ✓ |   | ✗ `specifiedByURL` | ✓ | ✓ |   | ✗ `specifiedByURL` | ✓ |
+| [§3.13.3](https://spec.graphql.org/draft/#sec-deprecated) @deprecated | ✓ | ✓ | ✓ |   | ✗ `deprecation`; ✗ (draft only) `requiredArgNotDeprecated` | ✓ | ✗ (draft only) `requiredArgNotDeprecated` `requiredInputFieldNotDeprecated` |   | ✗ (draft only) `requiredArgNotDeprecated` | ✓ |
+| [§3.13.4](https://spec.graphql.org/draft/#sec-specifiedBy) @specifiedBy | ✓ | ✓ | ✓ |   | ✗ `specifiedByURL`; ! `builtinDirectives` | ✓ | ✓ |   | ✗ `specifiedByURL`; ! `builtinDirectives` | ✓ |
 | [§3.13.5](https://spec.graphql.org/draft/#sec-oneOf) @oneOf | ✓ | ✓ | ✓ |   | ! `builtinDirectives` | ✓ | ✓ |   | ! `builtinDirectives` | ✓ |
 | [§4](https://spec.graphql.org/draft/#sec-Introspection) Introspection | ✓ | ✓ | ✓ |   | ✗ `enumValueNameReserved` | ✓ | ✗ `enumValueNameReserved` |   | ✓ |   |
 | [§4.1](https://spec.graphql.org/draft/#sec-Type-Name-Introspection) Type Name Introspection | ✓ | ✓ | ✓ |   | ✓ | ✓ | ✓ |   | ✓ | ✓ |
-| [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) Schema Introspection | ✗ `builtinDefinitions` | ✓ | ✗ `descriptions` `builtinDefinitions` |   | ✗ `descriptions` `builtinDefinitions` | ✗ `builtinDefinitions` | ✗ `executes` `typeByName` `descriptions` `builtinDefinitions` |   | ✗ `descriptions` `builtinDefinitions` | ✗ `typeByName` `builtinDefinitions` |
+| [§4.2](https://spec.graphql.org/draft/#sec-Schema-Introspection) Schema Introspection | ✗ `builtinDefinitions`; ✗ (draft only) `executes` | ✓; i `builtinAdditions` | ✗ `descriptions` `builtinDefinitions`; i `builtinAdditions` |   | ✗ `descriptions` `builtinDefinitions`; i `builtinAdditions` | ✗ `builtinDefinitions`; ✗ (draft only) `executes` | ✗ `executes` `typeByName` `descriptions` `builtinDefinitions`; i `builtinAdditions` |   | ✗ `descriptions` `builtinDefinitions`; i `builtinAdditions` | ✗ `typeByName` `builtinDefinitions`; i `builtinAdditions` |
 | [§4.2.1](https://spec.graphql.org/draft/#sec-The-Schema-Type) The \_\_Schema Type | ✓ | ✓ | ✓ |   | ✗ `directives` | ✓ | ✗ `types` |   | ✗ `directives` | ✗ `builtinScalars` `directives` |
 | [§4.2.2](https://spec.graphql.org/draft/#sec-The-Type-Type) The \_\_Type Type | ✓ | ✓ | ✓ |   | ✗ `specifiedByURL` | ✓ | ✓ |   | ✗ `specifiedByURL` | ✓ |
 | [§4.2.3](https://spec.graphql.org/draft/#sec-The-Field-Type) The \_\_Field Type | ✓ | ✓ | ✓ |   | ✗ `deprecation` | ✓ | ✓ |   | ✓ | ✓ |
@@ -821,7 +821,7 @@ A section's verdict comes from the checks that cite it, and names the ones that 
 | [§6.3.3](https://spec.graphql.org/draft/#sec-Executing-Collected-Fields) Executing Collected Fields | ✓ | ✓ | ✓ | ✗ `complete` `callsOnce` `callsReachable` | ✓ | ✓ | ✓ | ✗ `complete` | ✓ | ✗ `callsOnce` |
 | [§6.3.4](https://spec.graphql.org/draft/#sec-Normal-and-Serial-Execution) Normal and Serial Execution | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ `calledSerially` | ✓ | ✗ `serialErrorsKept` `calledSerially` | ✓ | ✓ |
 | [§6.4.1](https://spec.graphql.org/draft/#sec-Coercing-Field-Arguments) Coercing Field Arguments | ✓ | ✓ | ✓ |   | ✗ `arguments` | ✓ | ✓ |   |   |   |
-| [§6.4.3](https://spec.graphql.org/draft/#sec-Value-Completion) Value Completion | ✓ | ✓ | ✓ | ✗ `dataMatches` `callsReachable` | ! `intFraction` | ✓ | ! `intFraction` | ✗ `dataMatches` `resultCoercion` | ✗ `resultCoercion` | ✗ `dataMatches` `resultCoercion` `leafValues` |
+| [§6.4.3](https://spec.graphql.org/draft/#sec-Value-Completion) Value Completion | ✓ | ✓ | ✓ | ✗ `dataMatches` `callsReachable` | ! `intFraction` | ✓ | ! `intFraction` | ✗ `dataMatches` `resultCoercion`; ! `intFraction` | ✗ `resultCoercion` | ✗ `dataMatches` `resultCoercion` `leafValues`; ! `intFraction` |
 | [§6.4.4](https://spec.graphql.org/draft/#sec-Handling-Execution-Errors) Handling Execution Errors | ✓ | ✓ | ✓ | ✗ `dataMatches` `errorsWereRaised` `errorsInsideNulls` `nullsExplained` | ✗ `nullsExplained` | ✓ | ✓ | ✗ `dataMatches` `nullsExplained` `serialErrorsKept` | ✓ | ✗ `dataMatches` `errorsWereRaised` `errorPathsUnique` `errorsInsideNulls` `nullsExplained` |
 | [§7](https://spec.graphql.org/draft/#sec-Response) Response | ✓ | ✓ | ✓ |   | ✓ | ✓ | ✓ |   |   |   |
 | [§7.1](https://spec.graphql.org/draft/#sec-Response-Format) Response Format | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
