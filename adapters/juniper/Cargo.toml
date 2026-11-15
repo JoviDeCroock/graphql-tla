@@ -1,0 +1,16 @@
+[package]
+name = "graphql-tla-juniper"
+version = "0.1.0"
+edition = "2021"
+publish = false
+rust-version = "1.87"
+resolver = "3"
+
+[dependencies]
+juniper = { version = "=0.18.0", default-features = false }
+juniper_subscriptions = "=0.19.0"
+# Reads the kit's SDL. Juniper has no SDL reader of its own.
+async-graphql-parser = "=7.0.17"
+async-graphql-value = "=7.0.17"
+futures = "0.3"
+serde_json = { version = "1", features = ["preserve_order"] }

@@ -107,11 +107,14 @@ final class Areas {
 
     // Validated with every rule GraphQL applies to a request: Validator with
     // no rule predicate and no complexity limits, as GraphQL#validate calls it
-    // by default. The vectors' schemas are valid and their documents parse, so
-    // a failure to build or parse is the adapter's, and throws. Good Faith Introspection stays on, as it is by default; it
-    // reports by throwing GoodFaithIntrospectionExceeded, which GraphQL turns
-    // into an error response (GraphQL#parseAndValidate), so that is a
-    // rejection too.
+    // by default. The vectors' schemas are valid and their documents parse.
+    // Good Faith Introspection stays on, as it is by default; it reports by
+    // throwing GoodFaithIntrospectionExceeded, which GraphQL turns into an
+    // error response (GraphQL#parseAndValidate), so that is a rejection too.
+    // Any other exception, from building, parsing or the validator itself,
+    // propagates: the caller answers with an `error`, which the kit reports
+    // as a crash (docs/kit/validate.md). The validator throws on some
+    // subscriptions whose root field has @skip or @include (README.md).
     static Map<String, Object> validate(String sdl, String source) {
         GraphQLSchema schema = mockedSchema(sdl);
         Document document = Parser.parse(source);
@@ -122,12 +125,6 @@ final class Areas {
             }
         } catch (graphql.validation.GoodFaithIntrospectionExceeded e) {
             errors.add(error(e.toBadFaithError().getMessage(), null));
-        } catch (RuntimeException e) {
-            // The validator itself threw: a subscription whose root selection
-            // set collects no field makes validateSubscriptionUniqueRootField
-            // take item 0 of an empty list (README.md). The request fails, so
-            // the document is rejected.
-            errors.add(error("Validator threw " + e, null));
         }
         Map<String, Object> answer = new LinkedHashMap<>();
         answer.put("valid", errors.isEmpty());
@@ -217,19 +214,17 @@ final class Areas {
         calls = new ArrayList<>();
         Map<String, Object> answer = new LinkedHashMap<>();
         try {
+            // If GraphQL.execute throws instead of returning a result, the
+            // client gets no response, so the exception propagates and the
+            // caller answers with an `error`: the kit's "no response"
+            // (docs/kit/coerce.md). Unvalidated, a document with no operation
+            // and no operationName does that (README.md).
             ExecutionResult result = coerceEngine(request.get("schema").asText()).execute(input.build());
             answer.put("response", result.toSpecification());
-        } catch (RuntimeException e) {
-            // GraphQL.execute threw instead of returning a result: unvalidated,
-            // a document with no operation and no operationName makes
-            // NodeUtil.getOperation call next() on an empty iterator
-            // (README.md). The client gets no execution result, so the
-            // response is empty, which the kit counts as none of its outcomes.
-            answer.put("response", Map.of());
-            answer.put("noResponse", "GraphQL.execute threw " + e);
+            answer.put("calls", calls);
+        } finally {
+            calls = null;
         }
-        answer.put("calls", calls);
-        calls = null;
         return answer;
     }
 

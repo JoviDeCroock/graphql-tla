@@ -11,9 +11,15 @@
 // A vector whose verdict differs under the October 2021 edition carries
 // `edition: "draft"`. Findings count their draft-only vectors, and so does
 // the report.
+//
+// A crash is a third kind of failure: the adapter answered a vector with an
+// `error` (docs/kit-areas.md, "Protocol"). It fails the vector's check,
+// whatever the vector's verdict, since the implementation gave none, and
+// counts toward its own finding: "crashes on a source §X accepts" or
+// "rejects". It is never counted as an agreement.
 
 import { readFileSync } from "node:fs";
-import { ask } from "../areas.mjs";
+import { Crash, answerOrCrash, crashResponse } from "../areas.mjs";
 import { REPORT_FORMAT, provenance, section } from "../report.mjs";
 
 // One check per section of the grammar of executable documents. Every one
@@ -72,12 +78,13 @@ const quote = (source) => JSON.stringify(source);
 const shorter = (a, b) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0);
 
 // Compares answers with the vectors. answers[i] is the adapter's result
-// for vectors[i]: { ok } and anything else it sent.
+// for vectors[i]: { ok } and anything else it sent, or a Crash.
 export const judge = (vectors, answers) => {
   const byId = new Map(vectors.map((v) => [v.id, v]));
   const stats = new Map(CHECKS.map((c) => [c.number, { cases: 0, failing: 0, failingDraftOnly: 0 }]));
   const findings = new Map();
   const failed = [];
+  const crashed = [];
   const malformed = [];
   const found = (key, vector, finding) => {
     const f = findings.get(key) ?? { ...finding, cases: 0, fixtures: {}, draftOnly: 0 };
@@ -88,6 +95,7 @@ export const judge = (vectors, answers) => {
       const sibling = byId.get(vector.sibling);
       f.shortest = vector.source;
       f.fixture = vector.family;
+      if (finding.kind === "crash") f.problem = finding.problem;
       f.example = {
         input: `${vector.edition === "draft" ? "[draft] " : ""}${quote(vector.source)}`,
         response: finding.response,
@@ -100,6 +108,23 @@ export const judge = (vectors, answers) => {
   vectors.forEach((v, i) => {
     const answer = answers[i];
     for (const s of v.spec) stats.get(s).cases++;
+    if (answer instanceof Crash) {
+      crashed.push(i);
+      const check = byNumber.get(v.spec[0]);
+      stats.get(check.number).failing++;
+      if (v.edition === "draft") stats.get(check.number).failingDraftOnly++;
+      const s = section(check.number);
+      found(`crash\u0000${check.number}\u0000${v.expected.ok}`, v, {
+        checks: [check.id],
+        kind: "crash",
+        summary: v.expected.ok
+          ? `crashes on a source §${s.number} ${s.title} accepts, instead of accepting it`
+          : `crashes on a source §${s.number} ${s.title} rejects, instead of rejecting it`,
+        response: crashResponse(answer),
+        problem: answer.message,
+      });
+      return;
+    }
     if (typeof answer?.ok !== "boolean") {
       malformed.push(i);
       found("malformed", v, {
@@ -129,6 +154,7 @@ export const judge = (vectors, answers) => {
   }
   return {
     failed,
+    crashed,
     malformed,
     stats,
     findings: [...findings.values()].sort((a, b) => b.cases - a.cases).map(({ shortest: _, response: __, ...f }) => f),
@@ -153,25 +179,47 @@ export const selfTest = (vectors) => {
   if (differ === 0 || shifted.failed.length !== differ) problems.push(`flags ${shifted.failed.length} of ${differ} answers taken from the next vector`);
   const empty = judge(vectors, vectors.map(() => ({})));
   if (empty.malformed.length !== n) problems.push(`counts ${empty.malformed.length} of ${n} results without \`ok\` as malformed`);
-  return { problems, controls: 3 };
+  // Every vector crashed, though each crash carries the right verdict: all
+  // are crashes, none agrees, and every section a verdict rests on fails.
+  const crash = judge(vectors, vectors.map((v) => Object.assign(new Crash("NullPointerException"), { ok: v.expected.ok })));
+  if (crash.crashed.length !== n || crash.failed.length || crash.malformed.length) problems.push(`counts ${crash.crashed.length} of ${n} crashes as crashes`);
+  const spared = [...primaries].filter((s) => crash.stats.get(s).failing === 0);
+  if (spared.length) problems.push(`with every vector crashed, ${spared.map((s) => `§${s}`).join(", ")} still pass`);
+  if (crash.findings.some((f) => f.kind !== "crash")) problems.push("a crash counts toward a finding that isn't a crash");
+  return { problems, controls: 4 };
 };
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 export const run = async ({ adapter, strict, log }) => {
-  const vectors = loadVectors();
+  const all = loadVectors();
   const started = Date.now();
+  // An adapter whose transport can't carry a source (a JSON parser that
+  // refuses a lone surrogate) answers { unsupported: "why" }. The vector is
+  // then not graded, rather than credited with an answer the implementation
+  // never gave.
+  const vectors = [];
   const answers = [];
-  for (const v of vectors) answers.push(await ask(adapter, "parse", { source: v.source }));
+  const unsupported = [];
+  for (const v of all) {
+    const answer = await answerOrCrash(adapter, "parse", { source: v.source });
+    if (!(answer instanceof Crash) && typeof answer?.unsupported === "string") unsupported.push({ id: v.id, reason: answer.unsupported });
+    else {
+      vectors.push(v);
+      answers.push(answer);
+    }
+  }
+  if (unsupported.length) log(`- ${plural(unsupported.length, "vector")} not graded: the adapter couldn't receive the source (${unsupported[0].reason})`);
   const result = judge(vectors, answers);
-  const test = selfTest(vectors);
+  const test = selfTest(all);
 
   const draft = (f) => (f.draftOnly ? ` (${f.draftOnly === f.cases ? "all" : f.draftOnly} draft only)` : "");
   for (const f of result.findings) {
     log(`✗ ${f.summary}: ${plural(f.cases, "vector")}${draft(f)}, such as ${f.example.input} (answered ${JSON.stringify(f.example.response)})`);
   }
-  const agree = vectors.length - result.failed.length - result.malformed.length;
-  log(`${agree === vectors.length ? "✓" : "✗"} ${agree} of ${vectors.length} vectors agree with the reference (${((Date.now() - started) / 1000).toFixed(1)}s)`);
+  const agree = vectors.length - result.failed.length - result.crashed.length - result.malformed.length;
+  const crashes = result.crashed.length ? `; ${result.crashed.length} crashed` : "";
+  log(`${agree === vectors.length ? "✓" : "✗"} ${agree} of ${vectors.length} vectors agree with the reference${crashes} (${((Date.now() - started) / 1000).toFixed(1)}s)`);
   for (const p of test.problems) log(`✗ checker self-test: ${p}`);
   if (test.problems.length === 0) log(`✓ the checker catches all ${test.controls} negative controls`);
 
@@ -193,13 +241,17 @@ export const run = async ({ adapter, strict, log }) => {
     area: "parse",
     implementation: adapter.name,
     capabilities: [...adapter.capabilities].sort(),
-    provenance: provenance({ strict, vectors: vectors.length }),
+    provenance: provenance({
+      strict,
+      vectors: all.length,
+      ...(unsupported.length ? { graded: vectors.length, skipped: { "unsupported by the adapter": unsupported.length } } : {}),
+    }),
     checkerSelfTest: test.problems.length === 0 ? `passed (${test.controls} negative controls)` : "failed",
     cases: { submitted: vectors.length, distinct: new Set(vectors.map((v) => v.source)).size, malformed: result.malformed.length },
     adapterProblems: result.malformed.length,
     draftOnly: {
       vectors: vectors.filter((v) => v.edition === "draft").length,
-      failing: result.failed.filter((i) => vectors[i].edition === "draft").length,
+      failing: [...result.failed, ...result.crashed].filter((i) => vectors[i].edition === "draft").length,
     },
     checks,
     findings: result.findings,

@@ -127,6 +127,22 @@ export const CHECKS = [
       "The draft: \"The request error result map must not contain an entry with key {\"data\"}.\" October 2021 (§7.1.1): \"If an error was raised before execution begins, the data entry should not be present in the result.\" A request error with \"data\": null is still a request error for the vector's own check, and fails this one.",
   },
   {
+    id: "responds",
+    title: "A request gets a response",
+    level: "MUST",
+    spec: ["7"],
+    basis:
+      "\"When a GraphQL service receives a request, it must return a well-formed response.\" October 2021 says the same. The adapter answers with an `error` when the implementation produced no response at all, for example because it threw. Execution's check of the same name grades the same sentence. A vector whose reference answer is a request error, under a MUST check, counts that against its own check instead: a request error is a response, so no response doesn't match it. Every other vector exercises this check.",
+  },
+  {
+    id: "fieldErrorPath",
+    title: "A field error's path is the field's response path",
+    level: "MUST",
+    spec: ["7.1.6", "7.1.4"],
+    basis:
+      "§7.1.6: an error that \"can be associated to a particular field in the GraphQL result ... must contain an entry with the key {\"path\"} with a response path which describes the response position which raised the error\". §7.1.4: a response path names response positions, not arguments. A result whose data holds the field as null, with one error and no resolver call, is a field error whatever its path. If that is the answer the vector expects, a path other than the field's fails this check. Every vector that accepts a field error exercises it.",
+  },
+  {
     id: "loneSurrogates",
     title: "JSON strings with a lone surrogate: kept as sent, replaced with U+FFFD, or refused",
     level: "INFO",

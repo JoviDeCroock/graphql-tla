@@ -444,10 +444,11 @@ public final class Adapter {
             int id = message.get("id").asInt();
             if (Areas.NAMES.contains(type)) {
                 // The other areas: one request, one result, no idle. A
-                // Throwable is the adapter's failure, or in the schema area a
-                // crash of graphql-java's (docs/kit/schema.md). Only the
-                // message's first line reaches the report; the stack trace
-                // goes to stderr.
+                // Throwable is answered with an `error`. In parse, validate,
+                // coerce and schema the kit reports that as a crash of
+                // graphql-java's (docs/kit-areas.md, "Protocol"); in
+                // introspect, the adapter failed. Only the message's first
+                // line reaches the report; the stack trace goes to stderr.
                 try {
                     Map<String, Object> result = msg("type", "result", "id", id);
                     result.putAll(Areas.answer(type, message));

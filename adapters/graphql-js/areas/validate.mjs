@@ -2,9 +2,10 @@
 // against a schema, by graphql-js's validate() with its default rules.
 //
 // Every vector's schema builds and every document parses, so a failure
-// there is the adapter's, and throws. graphql-js 16 can throw from inside
-// validate() itself (a subscription with @skip(if: $v) at its root); the
-// request would fail, so that counts as rejecting the document.
+// there is the adapter's, and throws. graphql-js 16 can also throw from
+// inside validate() itself (a subscription with @skip(if: $v) at its root).
+// That is a crash, not a rejection, so it propagates: the adapter answers
+// `error`, and the kit records a crash (docs/kit/validate.md).
 //
 // A custom scalar that buildSchema makes from SDL has no parser of its own
 // and accepts every literal: the custom-scalar-literals capability.
@@ -28,12 +29,7 @@ const schemaFor = (graphql, sdl) => {
 export default (graphql, request) => {
   const schema = schemaFor(graphql, request.schema);
   const document = graphql.parse(request.document);
-  let errors;
-  try {
-    errors = graphql.validate(schema, document);
-  } catch (error) {
-    return { valid: false, errors: [{ message: `validate() threw: ${error?.message ?? error}` }] };
-  }
+  const errors = graphql.validate(schema, document);
   return {
     valid: errors.length === 0,
     errors: errors.map((e) => ({ message: e.message, ...(e.locations ? { locations: e.locations } : {}) })),

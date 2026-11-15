@@ -35,11 +35,18 @@ export const sameJson = (a, b) => {
 //                  With "data": null instead of no entry, it is still a
 //                  request error, flagged dataNull: §7.1.3 says the entry
 //                  must not be there, which requestErrorNoData grades;
-//   field-error    "data" holding only the field, null, exactly one error
-//                  whose path is that field, no resolver called;
+//   field-error    "data" holding only the field, null, exactly one error,
+//                  no resolver called. An error whose path isn't the field
+//                  (missing, or an argument's, as in ["v"]) is still a
+//                  field error, flagged wrongPath, which fieldErrorPath
+//                  grades;
 //   value          "data" holding only the field, not null, no errors, and
 //                  one resolver call at that field: its arguments;
 //   other          anything else.
+// An adapter's `error` answer isn't classified: it is the fifth outcome,
+// no-response (NO_RESPONSE).
+export const NO_RESPONSE = { outcome: "no-response" };
+
 export const classify = ({ response, calls }) => {
   const errors = response.errors ?? [];
   if (!Object.hasOwn(response, "data") || response.data === null) {
@@ -49,8 +56,8 @@ export const classify = ({ response, calls }) => {
   const { data } = response;
   if (!isMap(data) || Object.keys(data).length !== 1) return { outcome: "other" };
   const [field] = Object.keys(data);
-  if (calls.length === 0 && data[field] === null && errors.length === 1 && sameJson(errors[0]?.path, [field])) {
-    return { outcome: "field-error", field };
+  if (calls.length === 0 && data[field] === null && errors.length === 1) {
+    return sameJson(errors[0]?.path, [field]) ? { outcome: "field-error", field } : { outcome: "field-error", field, wrongPath: true, path: errors[0]?.path ?? null };
   }
   if (calls.length === 1 && errors.length === 0 && data[field] !== null && sameJson(calls[0].path, [field])) {
     return { outcome: "value", field, arguments: calls[0].arguments };
@@ -183,11 +190,25 @@ export const sameAnswer = (ctx, expected, got) => {
 // 2021's answer to a draft-only vector, which fails the vector's check but
 // is reported apart; exercises: the checks the vector counts toward. A
 // vector that accepts a request error also exercises requestErrorNoData.
+//
+// A vector that accepts a field error also exercises fieldErrorPath, and
+// one where producing no response counts against responds exercises that.
 export const planFor = (vector, capabilities) => {
   const plan = basePlan(vector, capabilities);
-  if (plan && plan.accept.some((a) => a.outcome === "request-error")) plan.exercises.push("requestErrorNoData");
+  if (!plan) return plan;
+  if (plan.accept.some((a) => a.outcome === "request-error")) plan.exercises.push("requestErrorNoData");
+  if (plan.accept.some((a) => a.outcome === "field-error")) plan.exercises.push("fieldErrorPath");
+  if (noResponseCheck(plan) === "responds") plan.exercises.push("responds");
   return plan;
 };
+
+// The check a result with no response counts against: the vector's own,
+// where the reference's answer is a request error and that check is a MUST
+// (a request error is a response, so no response still doesn't match it),
+// else responds. A SHOULD or informational check never takes it, since
+// producing no response is never permitted.
+export const noResponseCheck = (plan) =>
+  plan.accept[0].outcome === "request-error" && checkById(plan.check).level === "MUST" ? plan.check : "responds";
 
 const basePlan = (vector, capabilities) => {
   const only = (check, accept, labels) => ({ check, accept, labels, deviations: [], editions: [], exercises: [check] });
@@ -252,8 +273,14 @@ export const contextFor = (vector, inputs, capabilities) => ({
 // How a classified result fails a vector: undefined if it doesn't, or the
 // kind of failure and the check it counts against.
 export const judge = (vector, plan, got, ctx) => {
+  if (got.outcome === "no-response") {
+    const check = noResponseCheck(plan);
+    return { kind: check === "responds" ? "no-response" : "no-response-for-request-error", check };
+  }
   if (plan.accept.some((a) => sameAnswer(ctx, a, got))) {
-    return got.dataNull ? { kind: "data-with-request-error", check: "requestErrorNoData" } : undefined;
+    if (got.dataNull) return { kind: "data-with-request-error", check: "requestErrorNoData" };
+    if (got.wrongPath) return { kind: "field-error-path", check: "fieldErrorPath" };
+    return undefined;
   }
   const deviation = plan.deviations.find((d) => sameAnswer(ctx, d.answer, got));
   if (deviation) return { kind: "deviates", check: deviation.check };
@@ -287,6 +314,9 @@ export const summary = ({ kind, check }) => {
     case "deviates": return `${checkById(check).title.replace(/^./, (c) => c.toLowerCase())}: not done, though ${at} says it should be`;
     case "executes-invalid": return `doesn't fail an invalid document without executing it, as ${at} requires`;
     case "edition": return `gives October 2021's answer where the draft changed it, under ${at}`;
+    case "no-response": return `produces no response, though ${at} says every request gets one`;
+    case "no-response-for-request-error": return `produces no response where ${at} requires a request error`;
+    case "field-error-path": return `raises the field error with a path other than the field's response path, which ${at} requires`;
     case "data-with-request-error": return `answers a request error with a "data" entry, which ${at} says it must not have`;
     case "lone-surrogate": return "treats a JSON string with a lone surrogate in a way that neither keeping it, replacing it with U+FFFD, nor a refusal explains";
     case "json-number": return "reads a JSON number a double can't hold in a way that neither exact nor binary64 parsing, nor a refusal, explains";
@@ -301,6 +331,8 @@ export const describeAnswer = (answer) =>
       ? `a field error at ${answer.field}`
       : answer.outcome === "value"
         ? `${answer.field} resolved with ${JSON.stringify(answer.arguments)}`
-        : "none of the three outcomes";
+        : answer.outcome === "no-response"
+          ? "no response"
+          : "none of the three outcomes";
 
 export const describeAccepted = (plan) => plan.accept.map(describeAnswer).join(", or ");

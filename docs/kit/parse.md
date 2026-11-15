@@ -37,6 +37,8 @@ Two cases need care:
 
 Any other fields in the result are ignored.
 
+**Crashes.** If the parser crashes on a source, say with an index out of range or a null dereference, rather than accepting or rejecting it, answer `{"type":"error","id":12,"message":"…"}`. The kit reports the vector as a crash and goes on ([the protocol](../kit-areas.md#protocol)). Only the message's first line reaches the report. Answer `ok: false` only for the parser's own syntax errors: an adapter that turns every exception into `ok: false` hides its crashes, which then pass on every source the reference rejects.
+
 ## What is checked
 
 One check per section of the grammar, 31 in all, each at MUST level: §2.1 and its subsections from White Space to Names, §2.2 Descriptions, and §2.3 Document to §2.13 Directives, including each kind of input value in §2.10.1 to §2.10.8.
@@ -44,9 +46,10 @@ One check per section of the grammar, 31 in all, each at MUST level: §2.1 and i
 Each vector cites the sections it exercises. The first is the one its verdict rests on. A wrong answer counts against that section's check only, and toward one finding:
 
 - **accepts what §X rejects:** the implementation accepted a source that, by the reference, breaks a rule of §X;
-- **rejects what §X accepts:** it rejected a source that §X allows.
+- **rejects what §X accepts:** it rejected a source that §X allows;
+- **crashes on a source §X accepts**, or **rejects:** the adapter answered with an `error`. A crash fails the check like a wrong answer, whatever the vector's verdict, since the implementation gave none. Its finding has `"kind": "crash"`, and its `problem` is the adapter's message. The run's summary counts crashes apart from agreements.
 
-A check is `pass` when some vector cites its section and none of the vectors resting on it got a wrong answer. Findings count their draft-only vectors (`draftOnly`) and mark their example `[draft]`; a finding with nothing else carries `"edition": "draft"`. Each check gives `failingDraftOnly`, how many of its failing vectors are draft only, so a check whose failures are all draft only can be told apart. The report's `draftOnly` gives how many vectors are draft only and how many of those failed. Every run also checks the checker: it must flag every verdict flipped, flag exactly the vectors whose answer differs when each one gets the next vector's answer, count results without `ok` as malformed, and flag none of the reference's own answers.
+A check is `pass` when some vector cites its section and none of the vectors resting on it got a wrong answer. Findings count their draft-only vectors (`draftOnly`) and mark their example `[draft]`; a finding with nothing else carries `"edition": "draft"`. Each check gives `failingDraftOnly`, how many of its failing vectors are draft only, so a check whose failures are all draft only can be told apart. The report's `draftOnly` gives how many vectors are draft only and how many of those failed. Every run also checks the checker: it must flag every verdict flipped, flag exactly the vectors whose answer differs when each one gets the next vector's answer, count results without `ok` as malformed, count every vector as a crash when each answer is a crash, even one carrying the right `ok`, with every section a verdict rests on failing, and flag none of the reference's own answers.
 
 ## The vectors
 
@@ -93,3 +96,7 @@ graphql-js 17 fails one check and graphql-js 16 two. The differential reports bo
 
 - graphql-js 16 and 17 reject a variable-width escape with more than eight hex digits, such as `"\u{000000041}"`. EscapedUnicode :: `{` HexDigit+ `}` has no limit, so this is "rejects what §2.10.4 String Value accepts".
 - graphql-js 16 also rejects an empty selection set, such as `{}`, which the draft allows since graphql-spec#1227: "rejects what §2.5 Selection Sets accepts".
+
+## Sources an adapter can't receive
+
+A few vectors hold a raw lone surrogate, which some JSON parsers refuse, so the adapter never sees the source. Such an adapter answers `{"type":"result","id":n,"unsupported":"why"}`. The vector isn't graded, and the report's provenance counts it under `skipped`, rather than crediting the implementation with an answer it never gave.

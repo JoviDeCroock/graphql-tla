@@ -2,14 +2,19 @@
 // (docs/conformance.md, "Other areas"): the kit sends
 // {"type": <area>, "id": n, ...} and the adapter answers
 // {"type": "result", "id": n, ...}, or {"type": "error", "id": n, "message"}.
+//
+// In parse, validate, coerce and schema, an `error` answer to a vector means
+// the implementation crashed on it (docs/kit-areas.md, "Protocol"): those
+// areas ask with answerOrCrash, which turns it into a Crash. Elsewhere it
+// stops the run.
 
 export const AREAS = ["execution", "parse", "validate", "coerce", "schema", "introspect"];
 
 let nextId = 1;
 
 // Thrown when the adapter answers a request with `error`. adapterMessage is
-// the adapter's own message, so an area can treat it as an answer (schema
-// reports it as a crash) instead of stopping the run.
+// the adapter's own message, so an area can treat it as an answer (a
+// crash) instead of stopping the run.
 export class AdapterError extends Error {
   constructor(area, id, message) {
     super(`the adapter failed on ${area} request ${id}: ${message}`);
@@ -32,3 +37,26 @@ export const ask = async (adapter, area, request, timeout = 10000) => {
     return result;
   }
 };
+
+// An adapter's `error` answer to a vector: the implementation crashed. Only
+// the message's first line is kept, so that a stack trace with local paths
+// doesn't reach the report.
+export class Crash {
+  constructor(message) {
+    this.message = String(message).split("\n")[0].trim().slice(0, 200);
+  }
+}
+
+// The adapter's result for one request, or a Crash if it answered with an
+// `error`. Any other failure, such as a silent adapter, still throws.
+export const answerOrCrash = async (adapter, area, request, timeout) => {
+  try {
+    return await ask(adapter, area, request, timeout);
+  } catch (error) {
+    if (!(error instanceof AdapterError)) throw error;
+    return new Crash(error.adapterMessage);
+  }
+};
+
+// How a crash appears in a finding's example.
+export const crashResponse = (crash) => `the adapter answered with an error: ${crash.message}`;

@@ -34,7 +34,7 @@ Build a schema from it and validate it, the way your implementation does before 
 
 Any other fields, such as `errors` with the implementation's messages, are ignored, but they appear in the report's examples.
 
-**Crashes.** If the implementation crashes on a schema, say with a stack overflow or a null dereference, rather than rejecting it, answer `{"type":"error","id":12,"message":"…"}`. Unlike in other areas, the run goes on: the kit reports the vector as a crash. Only the message's first line reaches the report, so a stack trace's paths stay out of it.
+**Crashes.** If the implementation crashes on a schema, say with a stack overflow or a null dereference, rather than rejecting it, answer `{"type":"error","id":12,"message":"…"}`. The run goes on: the kit reports the vector as a crash, as it does in parse, validate and coerce ([the protocol](../kit-areas.md#protocol)). Only the message's first line reaches the report, so a stack trace's paths stay out of it.
 
 The kit can only tell a crash from a rejection by this. A `valid: false` is a rejection, whatever made it, so an adapter that turns every exception into `valid: false` hides its crashes: they pass on invalid schemas and look over-strict on valid ones. Report as a crash any failure that isn't the implementation saying the schema is invalid. A silent adapter still stops the run.
 

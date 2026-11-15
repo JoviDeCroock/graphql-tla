@@ -1,14 +1,16 @@
 // graphql-tla run coerce: asks the adapter to execute every vector in
 // kit/coerce/vectors.json, classifies each raw result, and compares it with
-// the answers Coercion.tla gave (docs/kit/coerce.md).
+// the answers Coercion.tla gave (docs/kit/coerce.md). An `error` answer
+// means the implementation produced no response: it is graded as that
+// outcome, never as an adapter failure.
 
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ask } from "../areas.mjs";
+import { Crash, answerOrCrash, crashResponse } from "../areas.mjs";
 import { REPORT_FORMAT, provenance, section } from "../report.mjs";
 import { CHECKS } from "./checks.mjs";
-import { classify, contextFor, describeAccepted, judge, malformed, planFor, sameAnswer, summary } from "./judge.mjs";
+import { NO_RESPONSE, classify, contextFor, describeAccepted, judge, malformed, noResponseCheck, planFor, sameAnswer, summary } from "./judge.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -80,15 +82,19 @@ export const selfTest = (graded, inputs, capabilities) => {
   const problems = [];
   let controls = 0;
   const run = ({ vector, plan }, raw) => {
+    if (raw instanceof Crash) return judge(vector, plan, NO_RESPONSE, contextFor(vector, inputs, capabilities));
     const problem = malformed(raw);
     if (problem) return { kind: "malformed" };
     return judge(vector, plan, classify(raw), contextFor(vector, inputs, capabilities));
   };
-  const caught = (g, raw, name, check) => {
+  // `check` is the check the failure must count against; `not`, one it
+  // must not.
+  const caught = (g, raw, name, check, not) => {
     controls++;
     const failure = run(g, raw);
     if (!failure) problems.push(`${name} wasn't caught for ${g.vector.id}`);
     else if (check && failure.check !== check) problems.push(`${name} counted against ${failure.check}, not ${check}, for ${g.vector.id}`);
+    else if (not && failure.check === not) problems.push(`${name} counted against ${not} for ${g.vector.id}`);
   };
   const accepted = (g, answer) => g.plan.accept.some((a) => sameAnswer(contextFor(g.vector, inputs, capabilities), a, answer));
   graded.forEach((g, i) => {
@@ -136,19 +142,28 @@ export const selfTest = (graded, inputs, capabilities) => {
       const nested = withUndeclaredNull(want.arguments, true);
       if (nested) caught(g, rawFor({ ...want, arguments: nested }), "an undeclared null input field");
     }
+    // No response at all, even with a response attached: the vector's
+    // check where the reference expects a request error, else responds.
+    caught(g, Object.assign(new Crash("NullPointerException"), rawFor(want, field)), "no response", noResponseCheck(plan));
     // Responses the classification must not accept.
     const raw = rawFor(want, field);
     if (want.outcome === "request-error") {
       caught(g, { ...raw, response: { ...raw.response, data: null } }, "a request error with data: null", "requestErrorNoData");
       caught(g, { ...raw, calls: [{ path: [field], arguments: {} }] }, "a request error after a resolver ran");
     } else if (want.outcome === "field-error") {
-      caught(g, { ...raw, response: { ...raw.response, errors: [{ message: "field error" }] } }, "a field error without a path");
+      caught(g, { ...raw, response: { ...raw.response, errors: [{ message: "field error" }] } }, "a field error without a path", "fieldErrorPath");
+      caught(g, { ...raw, response: { ...raw.response, errors: [{ message: "field error", path: ["v"] }] } }, "a field error at the argument's path", "fieldErrorPath");
+      caught(g, { ...raw, response: { ...raw.response, errors: [{ message: "field error", path: [field, "v"] }] } }, "a field error at a path inside the field", "fieldErrorPath");
       caught(g, { ...raw, calls: [{ path: [field], arguments: {} }] }, "a field error after the resolver ran");
     } else {
       caught(g, { ...raw, response: { ...raw.response, errors: [{ message: "extra", path: [field] }] } }, "a value with an error");
       caught(g, { ...raw, calls: [...raw.calls, ...raw.calls] }, "a value from two resolver calls");
       caught(g, { ...raw, calls: [{ ...raw.calls[0], path: ["elsewhere"] }] }, "a value from a call at another field");
     }
+    // A field error at the argument's path, where the vector doesn't accept
+    // a field error, fails as a field error would: not fieldErrorPath.
+    const fieldError = { response: { data: { [field]: null }, errors: [{ message: "field error", path: ["v"] }] }, calls: [] };
+    if (!accepted(g, { outcome: "field-error", field })) caught(g, fieldError, "an unexpected field error at the argument's path", undefined, "fieldErrorPath");
   });
   return problems.length ? problems : controls;
 };
@@ -179,14 +194,15 @@ export const run = async ({ adapter, strict, log = console.log }) => {
   const outcomes = [];
   for (const g of graded) {
     const { vector } = g;
-    const result = await ask(adapter, "coerce", {
+    const result = await answerOrCrash(adapter, "coerce", {
       schema,
       document: vector.document,
       variables: vector.variables,
       ...(vector.operationName !== undefined ? { operationName: vector.operationName } : {}),
     });
-    const problem = malformed(result);
-    const got = problem ? undefined : classify(result);
+    const crash = result instanceof Crash;
+    const problem = crash ? undefined : malformed(result);
+    const got = crash ? NO_RESPONSE : problem ? undefined : classify(result);
     const failure = problem ? undefined : judge(vector, g.plan, got, contextFor(vector, inputs, capabilities));
     outcomes.push({ ...g, result, problem, got, failure });
   }
@@ -208,13 +224,15 @@ export const run = async ({ adapter, strict, log = console.log }) => {
     if (isDraft(vector)) stats.get(failure.check).failingDraftOnly++;
     const key = `${failure.kind}\u0000${failure.check}`;
     const input = `${vector.document}  variables: ${vector.variables}${vector.operationName !== undefined ? `  operationName: ${vector.operationName}` : ""}`;
-    const f = findings.get(key) ?? { checks: [failure.check], summary: summary(failure), cases: 0, draftOnly: 0, fixtures: {} };
+    const crash = result instanceof Crash;
+    const f = findings.get(key) ?? { ...(crash ? { kind: "crash" } : {}), checks: [failure.check], summary: summary(failure), cases: 0, draftOnly: 0, fixtures: {} };
     f.cases++;
     if (isDraft(vector)) f.draftOnly++;
     f.fixtures[vector.family] = (f.fixtures[vector.family] ?? 0) + 1;
     if (!f.example || input.length < f.example.input.length) {
       f.fixture = vector.family;
-      f.example = { vector: vector.id, input: `${isDraft(vector) ? "[draft] " : ""}${input}`, response: result, outcome: got, expected: describeAccepted(plan) };
+      if (crash) f.problem = result.message;
+      f.example = { vector: vector.id, input: `${isDraft(vector) ? "[draft] " : ""}${input}`, response: crash ? crashResponse(result) : result, outcome: got, expected: describeAccepted(plan) };
     }
     findings.set(key, f);
   }
@@ -240,7 +258,8 @@ export const run = async ({ adapter, strict, log = console.log }) => {
   }
   const failing = sorted.reduce((n, f) => n + f.cases, 0);
   const wellFormed = outcomes.length - malformedResults.length;
-  log(`${failing === 0 && ok ? "✓" : "✗"} ${wellFormed - failing} of ${wellFormed} results match the reference`);
+  const crashed = outcomes.filter((o) => o.result instanceof Crash).length;
+  log(`${failing === 0 && ok ? "✓" : "✗"} ${wellFormed - failing} of ${wellFormed} results match the reference${crashed ? `; ${crashed} produced no response` : ""}`);
   const draftOnly = {
     vectors: graded.filter((g) => isDraft(g.vector)).length,
     failing: outcomes.filter((o) => !o.problem && o.failure && isDraft(o.vector)).length,

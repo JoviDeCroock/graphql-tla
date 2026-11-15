@@ -65,7 +65,8 @@
       "build": "adapters/graphql-ruby/vendor/bundle",
       "notes": [
         "The sheet runs graphql-ruby with `--invalid-results`: a schema that uses graphql-ruby's documented `type_error` and `rescue_from` hooks. Out of the box, a resolver result of the wrong shape (a non-list for a list, an object for an Int, a runtime type that isn't a possible type, an unknown enum value) raises out of `execute` instead of becoming a field error (§6.4.4), so the client gets no response at all.",
-        "The `resultCoercion` finding is graphql-ruby's Int coercion, which calls `to_i`, so `1.2` becomes `1`. Boolean is `!!value`, so `\"false\"` becomes `true`; the kit doesn't probe Boolean, since §3.5.4 leaves reasonable coercions to the service. See the [adapter's README](../adapters/graphql-ruby/README.md)."
+        "The `resultCoercion` finding is graphql-ruby's Int coercion, which calls `to_i`, so `1.2` becomes `1`. Boolean is `!!value`, so `\"false\"` becomes `true`; the kit doesn't probe Boolean, since §3.5.4 leaves reasonable coercions to the service. See the [adapter's README](../adapters/graphql-ruby/README.md).",
+        "graphql-ruby validates before executing, and documents running an invalid document with `validate: false` as undefined, so the sheet's coerce run validates first and grades invalid documents under `invalidNotExecuted` (§6.1.1). graphql-ruby's validate results use its defaults, including the `allow_legacy_*` settings that only log a warning; see the [adapter's README](../adapters/graphql-ruby/README.md)."
       ]
     },
     {
@@ -91,6 +92,15 @@
       "notes": [
         "The adapter uses graphql-dotnet's schema-first `Schema.For`, its default `DocumentExecuter` and the System.Text.Json serializer. List items are `IDataLoaderResult` values, the only kind of item graphql-dotnet waits for. `idle` holds because everything runs on one thread; the determinism replay passed.",
         "The `resultCoercion` finding: `FloatGraphType` passes a non-finite double through, and `GraphQLSerializer` then throws, so the client gets no response. graphql-dotnet rejects the kit's full introspection queries: it has no `specifiedByURL`, and `isRepeatable` and input-value deprecation are behind experimental flags that are off by default. The kit then discovers which fields exist and grades the rest under the October 2021 profile. Parse, validate, schema and introspect findings are described with source locations in the [adapter's README](../adapters/graphql-dotnet/README.md#known-graphql-dotnet-deviations)."
+      ]
+    },
+    {
+      "key": "juniper",
+      "adapter": "adapters/juniper/target/release/graphql-tla-juniper",
+      "build": "adapters/juniper/target/release/graphql-tla-juniper",
+      "notes": [
+        "Juniper builds schemas from Rust types. The adapter uses its documented dynamic route, a hand-written `GraphQLType` with `TypeInfo`, and Juniper's own code completes objects, lists and scalars. The Int fraction, unknown enum value and null list item findings need hand-written types; every other execution finding reproduces with `#[graphql_object]` (`examples/macros.rs`). See the [adapter's README](../adapters/juniper/README.md#known-juniper-deviations).",
+        "The adapter doesn't claim `invalid-results` (result shapes are fixed by Rust types) or the schema area (Juniper doesn't read SDL, so every verdict would be the adapter's)."
       ]
     }
   ]

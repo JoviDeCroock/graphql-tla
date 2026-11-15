@@ -41,13 +41,18 @@ The adapter sends back what happened, and the kit decides what it means:
   - an argument or input object field that has no value is left out;
   - a value that JSON can't represent, such as a non-finite float, as a string (`"Infinity"`).
 
-Any other fields are ignored, but appear in the report's examples. The kit classifies each result as one of four outcomes:
+Any other fields are ignored, but appear in the report's examples.
+
+**No response.** If the implementation produces no response at all, say because executing the request throws instead of returning a result, answer `{"type":"error","id":12,"message":"…"}`. The kit records the outcome "no response" and goes on ([the protocol](../kit-areas.md#protocol)). Only the message's first line reaches the report. Don't make up a response for it: an empty `response`, or a request error the implementation never produced, would be graded as something the implementation didn't do. Execution has a message of its own for this, `no-response`; the coerce area uses `error`, as parse, validate and schema do for a crash, so a `noResponse` field in a result is ignored like any other.
+
+The kit classifies each result as one of five outcomes:
 
 | Outcome | The result shows |
 | --- | --- |
 | request error (§7.1.3) | no `data` entry, at least one error, and no resolver call. A result with `"data": null` instead of no entry is also a request error, but fails `requestErrorNoData` |
-| field error | `data` holding only the field, which is null, exactly one error, whose path is that field, and no resolver call |
+| field error | `data` holding only the field, which is null, exactly one error, and no resolver call. The error's path should be the field's response path, `["int"]`. Another path, such as the argument's `["v"]`, or none, still makes a field error, but fails `fieldErrorPath` |
 | value | `data` holding only the field, which isn't null, no errors, and exactly one resolver call, at that field. Its `arguments` are the coerced arguments |
+| no response | the adapter answered with an `error`. It never matches an answer, not even a request error, since a request error is a response |
 | other | anything else, for example a request error after a resolver ran. It never matches an answer |
 
 ## Capabilities
@@ -88,6 +93,8 @@ Each check has the level of the sentence it grades. Where a section mixes MUST a
 | `getOperation` | §6.1 | MUST | The operation `operationName` names, or the only operation when there is no name; otherwise a request error. A mutation runs its mutation field, and only the selected operation's variables are coerced. |
 | `invalidNotExecuted` | §6.1.1 | MUST | For adapters without `unvalidated`: a document that Validation.tla rejects fails as a request error, with no resolver called. |
 | `requestErrorNoData` | §7.1.3 | MUST (October 2021: SHOULD) | A request error has no `data` entry. The draft: "The _request error result_ map must not contain an entry with key {"data"}." October 2021 (§7.1.1): "If an error was raised before execution begins, the `data` entry should not be present in the result." Every vector that accepts a request error exercises it. A vector that fails its own check doesn't also count here. |
+| `responds` | §7 | MUST | A request gets a response, as in execution: "When a GraphQL service receives a _request_, it must return a well-formed response." No response fails it, except on a vector whose reference answer is a request error under a MUST check: there it fails the vector's own check, as "produces no response where §X requires a request error". Every other vector exercises it. |
+| `fieldErrorPath` | §7.1.6, §7.1.4 | MUST | A field error's path is the field's response path. §7.1.6: an error associated with a field "must contain an entry with the key {"path"} with a _response path_ which describes the _response position_ which raised the error", and a response path names response positions (§7.1.4), not arguments. Every vector that accepts a field error exercises it. A field error the vector expects, but at another path, fails only this check. A field error the vector doesn't expect fails the vector's check, whatever its path. |
 | `loneSurrogates` | none | INFO | A JSON string with a lone surrogate, for String or ID: kept as sent, replaced with U+FFFD, or refused with a request error. All three pass, and the report records which happened. It never fails the run (see [Lone surrogates](#lone-surrogates)). |
 | `jsonNumbers` | none | INFO | For adapters without `exact-numbers`: a big JSON number may be read exactly, read as the nearest double, or refused with a request error (RFC 8259 §6). It never fails the run. |
 
@@ -100,10 +107,12 @@ Findings group failures by kind and check:
 - leaves a SHOULD undone (`inputFieldDefaults`);
 - gives October 2021's answer where the draft changed it (a draft-only vector, counted against its check);
 - answers a request error with a `data` entry (`requestErrorNoData`);
+- produces no response, though §7 says every request gets one (`responds`), or produces no response where §X requires a request error. Both have `"kind": "crash"` and the adapter's message as `problem`, and the summary counts them apart;
+- raises the field error with a path other than the field's response path (`fieldErrorPath`);
 - treats a lone surrogate in a way nothing explains (`loneSurrogates`);
 - doesn't fail an invalid document without executing it (§6.1.1);
 - reads a big JSON number in a way nothing explains (`jsonNumbers`);
-- answers with none of the three outcomes.
+- answers with none of the three outcomes: a request error, a field error or a value.
 
 The run fails on any failing MUST check, a failing SHOULD check with `--strict`, a result not in the format above, or a failed self-test.
 
@@ -115,7 +124,9 @@ The run fails on any failing MUST check, a failing SHOULD check with `--strict`,
 - October 2021's answer to a draft-only vector, which must count against the vector's check;
 - an undeclared null argument, and an undeclared null input field;
 - a request error with `"data": null`, which must count against `requestErrorNoData`, or a request error after a resolver ran;
-- a field error without a path, or after the resolver ran;
+- no response, which must count against the vector's check where the reference expects a request error under a MUST, and against `responds` otherwise;
+- a field error without a path, at the argument's path `["v"]`, or at a path inside the field, each of which must count against `fieldErrorPath`, or a field error after the resolver ran;
+- a field error at the argument's path where the vector doesn't accept a field error, which must not count against `fieldErrorPath`;
 - a value with an error, from two resolver calls, or from a call at another field.
 
 ## Vectors

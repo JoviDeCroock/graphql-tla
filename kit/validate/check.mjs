@@ -11,6 +11,12 @@
 //     know which rule the implementation applied, so the rule the vector is
 //     a sibling of is only a hint in the finding.
 //
+//   - a crash, an `error` answer from the adapter (docs/kit-areas.md,
+//     "Protocol"), gives no verdict. On an invalid vector it fails the rules
+//     the vector breaks, as accepting it would; on a valid one it fails
+//     acceptsValid. Crashes have their own findings, and never count as an
+//     agreement.
+//
 // A rule whose every vector also breaks another rule can't earn a pass: a
 // rejection may be the other rule's doing. Its check is "subsumed" instead.
 //
@@ -23,6 +29,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { Crash, crashResponse } from "../areas.mjs";
 import { REPORT_FORMAT, provenance, section } from "../report.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
@@ -82,10 +89,13 @@ const pairsOf = (data) => {
   return result;
 };
 
-// The verdict on one answer: "pass", "malformed", "not-enforced" or
-// "rejected-valid", and the rules it bears on (for a valid vector, the
+// The verdict on one answer: "pass", "malformed", "crash", "not-enforced"
+// or "rejected-valid", and the rules it bears on (for a valid vector, the
 // hint).
 export const verdict = (data, vector, answer) => {
+  if (answer instanceof Crash) {
+    return { status: "crash", rules: vector.expected.valid ? pairsOf(data).hints.get(vector.id) : brokenRules(vector) };
+  }
   if (answer === null || typeof answer !== "object" || typeof answer.valid !== "boolean") {
     return { status: "malformed", rules: [] };
   }
@@ -137,8 +147,8 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
   const findings = new Map();
   for (const j of judged) {
     if (j.status === "pass" || j.status === "malformed") continue;
-    const key = `${j.status}\u0000${j.rules.join(",")}`;
-    const f = findings.get(key) ?? { kind: j.status, rules: j.rules, cases: 0, draft: 0, fixtures: {}, members: [], best: j };
+    const key = `${j.status}\u0000${j.vector.expected.valid}\u0000${j.rules.join(",")}`;
+    const f = findings.get(key) ?? { kind: j.status, valid: j.vector.expected.valid, rules: j.rules, cases: 0, draft: 0, fixtures: {}, members: [], best: j };
     f.cases++;
     if (isDraft(j.vector)) f.draft++;
     f.members.push(j);
@@ -164,6 +174,11 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
   const summary = (f) => {
     const names = f.rules.map((r) => cite(r, rules));
     const draft = f.draft > 0 ? `; ${f.draft === f.cases ? "all" : `${f.draft} of ${f.cases}`} rely on the draft` : "";
+    if (f.kind === "crash") {
+      return f.valid
+        ? `crashes on valid documents instead of accepting them; hint: ${names.join(" or ")}, the rules their invalid siblings break${draft}`
+        : `crashes on documents that break ${names.length === 1 ? `only ${names[0]}` : `only ${names.join(" and ")}`}, instead of rejecting them${draft}`;
+    }
     if (f.kind === "rejected-valid") {
       const e = evidence(f);
       if (e.likely) {
@@ -240,18 +255,21 @@ export const buildReport = ({ data, judged, strict, selfTest, controls, implemen
       .sort((a, b) => b.cases - a.cases)
       .map((f) => {
         const likely = f.kind === "rejected-valid" && evidence(f).likely;
+        const crash = f.best.answer instanceof Crash;
         return {
-          checks: f.kind === "rejected-valid" ? [ACCEPTS_VALID] : f.rules.map(checkId),
+          ...(crash ? { kind: "crash" } : {}),
+          checks: f.valid ? [ACCEPTS_VALID] : f.rules.map(checkId),
           ...(f.kind === "rejected-valid" ? { hint: f.rules.map(checkId), likelyOverStrict: likely } : {}),
+          ...(crash && f.valid ? { hint: f.rules.map(checkId) } : {}),
           summary: summary(f),
           cases: f.cases,
           draftOnly: f.draft,
           fixtures: f.fixtures,
           fixture: f.best.vector.family,
-          ...(f.best.answer?.errors?.[0]?.message ? { problem: String(f.best.answer.errors[0].message) } : {}),
+          ...(crash ? { problem: f.best.answer.message } : f.best.answer?.errors?.[0]?.message ? { problem: String(f.best.answer.errors[0].message) } : {}),
           example: {
             input: `${isDraft(f.best.vector) ? "[draft] " : ""}${f.best.vector.id}: ${oneLine(f.best.vector.document)}`,
-            response: f.best.answer,
+            response: crash ? crashResponse(f.best.answer) : f.best.answer,
             expected: expected(f.best.vector),
           },
         };
@@ -308,6 +326,19 @@ export const selfTest = (data, vectors = gradedVectors(data).graded) => {
       const r = report(answers);
       const credited = r.checks.filter((c) => c.status === "pass" || c.status === "subsumed");
       if (credited.length > 0) failures.push(`${name}: the report still credits ${credited.map((c) => c.id).join(", ")}`);
+    },
+    // A crash fails its vector even with the right verdict attached, and
+    // never passes a check.
+    () => {
+      const name = "every vector crashed";
+      const answers = vectors.map((v) => Object.assign(new Crash("NullPointerException"), { valid: v.expected.valid }));
+      const judged = judge(data, vectors, answers);
+      const missed = judged.filter((j) => j.status !== "crash");
+      if (missed.length > 0) failures.push(`${name}: ${missed.length} vectors not counted as crashes, e.g. ${missed[0].vector.id}`);
+      const r = report(answers);
+      const credited = r.checks.filter((c) => c.status === "pass" || c.status === "subsumed");
+      if (credited.length > 0) failures.push(`${name}: the report still credits ${credited.map((c) => c.id).join(", ")}`);
+      if (r.findings.some((f) => f.kind !== "crash")) failures.push(`${name}: a crash counts toward a finding that isn't a crash`);
     },
     () => {
       const name = "valid as a string";
@@ -413,7 +444,8 @@ export const check = (data, vectors, answers, { strict = false, log = console.lo
     log(`✗ ${malformed} answers aren't {"valid": true|false}, e.g. ${JSON.stringify(first.answer)} for ${first.vector.id}`);
   }
   const passed = judged.filter((j) => j.status === "pass").length;
-  log(`${passed === judged.length ? "✓" : "✗"} ${passed} of ${judged.length} answers agree with the reference`);
+  const crashed = judged.filter((j) => j.status === "crash").length;
+  log(`${passed === judged.length ? "✓" : "✗"} ${passed} of ${judged.length} answers agree with the reference${crashed ? `; ${crashed} crashed` : ""}`);
   if (passed < judged.length - malformed) {
     log(`  ${report.draftOnly.failing} of the ${judged.length - malformed - passed} failing vectors rely on the draft (of ${report.draftOnly.vectors} draft-only vectors graded)`);
   }

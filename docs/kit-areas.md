@@ -19,7 +19,9 @@ The same NDJSON channel as execution. An adapter claims each area it answers in 
 {"type":"result","id":12,"ok":true}
 ```
 
-If the adapter itself fails, it answers `{"type":"error","id":12,"message":"…"}`, and the kit stops. The exception is `schema`, where an `error` answer to a vector means the implementation crashed on that schema; the kit reports it as a crash finding and goes on. An area may define capabilities of its own: `coerce` has `absent-vs-null` (the result can tell an argument that wasn't given from an explicit null), `unvalidated` (the adapter executes documents without validating them; without it, invalid documents are graded as requests that must fail without execution) and `exact-numbers` (the adapter's JSON parser reads big numbers exactly). Vectors that need a capability are skipped, or graded differently, for adapters without it. If the adapter doesn't claim the area at all, `graphql-tla run <area>` exits with code 3. A request the implementation rejects is an answer, not an adapter error. Each area's page in [`docs/kit/`](kit) gives its request and result fields.
+**Crashes.** In `parse`, `validate`, `coerce` and `schema`, an answer `{"type":"error","id":12,"message":"…"}` means the implementation crashed on that vector: it threw, or failed some other way, instead of giving a verdict or a response. The kit records it as a crash and goes on. A crash fails the vector, counts against the check the vector would fail with a wrong answer, and counts toward a finding of its own (`"kind": "crash"`). The run's summary gives the number of crashes apart, and never counts them as agreements. In `coerce` a crash is the outcome "no response" (see [its page](kit/coerce.md)). Only the message's first line reaches the report, so a stack trace's paths stay out of it. So report a crash as an `error`, never as a verdict: an adapter that answers `ok: false` or `valid: false` for every exception hides its crashes, which then pass on inputs the reference rejects. In `introspect`, and in execution, an `error` answer means the adapter itself failed, and the kit stops. A silent adapter stops the run in every area.
+
+An area may define capabilities of its own: `coerce` has `absent-vs-null` (the result can tell an argument that wasn't given from an explicit null), `unvalidated` (the adapter executes documents without validating them; without it, invalid documents are graded as requests that must fail without execution) and `exact-numbers` (the adapter's JSON parser reads big numbers exactly). Vectors that need a capability are skipped, or graded differently, for adapters without it. If the adapter doesn't claim the area at all, `graphql-tla run <area>` exits with code 3. A request the implementation rejects is an answer, not an adapter error. Each area's page in [`docs/kit/`](kit) gives its request and result fields.
 
 ## Vectors
 
@@ -49,7 +51,7 @@ Each area exports `run({ adapter, strict, option, flag, log })` from `kit/<area>
   cases: { submitted, distinct, malformed },
   adapterProblems: 0,
   checks: [{ id, title, level, spec: [section(...)], status, cases, failing, failingDraftOnly?, oct2021?, edition?, basis?, note?, observed? }],
-  findings: [{ checks: [id], summary, cases, fixtures: { family: n }, fixture, problem?,
+  findings: [{ kind?, checks: [id], summary, cases, fixtures: { family: n }, fixture, problem?,   // kind: "crash" for crashes
                example: { input: "<the vector, briefly>", response: <the answer>, expected: "<the reference's answer>" } }],
   fixtures: [],
   ok,                                                  // the run's verdict, matching its exit code
@@ -57,7 +59,7 @@ Each area exports `run({ adapter, strict, option, flag, log })` from `kit/<area>
 ```
 
 - **Checks.** One per rule or grammar section, at the level the spec text gives it. `status` is `"fail"` if any vector broke it, `"pass"` if some vector exercised it and none broke it, `"subsumed"` for a rule that can't be told apart from a broader one, and `"untested"` otherwise. `cases` is the number of vectors that exercised it.
-- **Findings.** Group failures by root cause, such as "rule R not enforced" or "rejects valid documents". A vector counts toward one finding only.
+- **Findings.** Group failures by root cause, such as "rule R not enforced" or "rejects valid documents". A vector counts toward one finding only. A crash's finding has `"kind": "crash"`, and its `problem` is the adapter's message.
 - **Self-test.** Every run also checks deliberately wrong answers against the same checker: every verdict flipped, and answers taken from a different vector. The checker must flag each of them, so a green run can't be vacuous.
 - **Exit code.** Non-zero if any MUST check fails, or a SHOULD check fails with `--strict`, or the self-test fails.
 

@@ -6,12 +6,17 @@ after each message from the kit it runs the loop until no callback is ready,
 then says `idle`, which makes runs deterministic. Nothing else can wake the
 loop, because stdin is read outside it and graphql-core sets no timers.
 
-Usage: python adapter.py [--no-idle] [--coroutine-resolvers]
+It also answers the kit's other areas (docs/kit-areas.md): parse, validate,
+coerce, schema and introspect, in areas.py.
+
+Usage: python adapter.py [--no-idle] [--coroutine-resolvers] [--validate]
 
 --no-idle leaves out `idle`, so the kit falls back to `--grace`.
 --coroutine-resolvers makes the resolver an `async def` that sends `call`
 only once graphql-core first awaits it, instead of when it is invoked. See
 README.md for why that changes the mutation result.
+--validate makes the coerce area validate before it executes, and not claim
+`unvalidated`.
 """
 
 import asyncio
@@ -34,6 +39,8 @@ from graphql import (
     subscribe,
 )
 
+from areas import AREAS, CAPABILITIES
+
 IDLE = "--no-idle" not in sys.argv[1:]
 COROUTINE_RESOLVERS = "--coroutine-resolvers" in sys.argv[1:]
 
@@ -55,6 +62,7 @@ send(
             "uncoercible-results",
             "mutation",
             "subscription",
+            *(c for area, capabilities in CAPABILITIES.items() for c in (area, *capabilities)),
         ],
     }
 )
@@ -241,6 +249,19 @@ async def flush():
         await asyncio.sleep(0)
 
 
+def crash_message(error):
+    """The kit reports only the first line, so it names the innermost cause:
+    graphql-core wraps an exception from resolving a type's fields in a
+    TypeError ("I fields cannot be resolved. ..."). The traceback follows."""
+    cause = error
+    while cause.__cause__ is not None:
+        cause = cause.__cause__
+    first = f"{type(cause).__name__}: {cause}".splitlines()[0]
+    if cause is not error:
+        first += f" (raised as {type(error).__name__})"
+    return f"{first}\n{traceback.format_exc()}"
+
+
 def main():
     while True:
         line = sys.stdin.readline()
@@ -250,6 +271,14 @@ def main():
             continue
         message = json.loads(line)
         kind = message.get("type")
+        if kind in AREAS:
+            # One request, one result; `idle` is only for execution. An
+            # exception here is a crash, or the adapter's own failure.
+            try:
+                send({"type": "result", "id": message["id"], **AREAS[kind](message)})
+            except Exception as error:
+                send({"type": "error", "id": message["id"], "message": crash_message(error)})
+            continue
         if kind == "execute":
             try:
                 start(message)

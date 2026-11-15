@@ -13,7 +13,10 @@
 # kit in Execution#await, so whenever it waits there it is blocked on the
 # kit, and the adapter says `idle`.
 #
-# Usage: ruby adapter.rb [--lazy] [--invalid-results] [--no-idle]
+# The other areas (parse, validate, coerce, schema, introspect) are in
+# areas.rb.
+#
+# Usage: ruby adapter.rb [--lazy] [--invalid-results] [--no-idle] [--unvalidated]
 #
 # --lazy waits through lazy_resolve instead, the way GraphQL::Batch and
 # other promise libraries do: a resolver returns a lazy value, which
@@ -24,10 +27,13 @@
 # graphql-ruby's documented hooks, and claims `invalid-results`.
 #
 # --no-idle leaves out `idle`, so the kit falls back to `--grace`.
+#
+# --unvalidated makes coerce execute without validating (see areas.rb).
 
 require "bundler/setup"
 require "graphql"
 require "json"
+require_relative "areas"
 
 LAZY = ARGV.include?("--lazy")
 IDLE = !ARGV.include?("--no-idle")
@@ -41,7 +47,15 @@ end
 
 def read_message
   while (line = $stdin.gets)
-    return JSON.parse(line) unless line.strip.empty?
+    next if line.strip.empty?
+
+    begin
+      return JSON.parse(line)
+    rescue JSON::ParserError => e
+      # Ruby's JSON parser refuses an escaped lone surrogate, which some parse
+      # vectors hold. A Ruby server couldn't read such a request either.
+      return { "type" => "unreadable", "id" => line[/"id":(\d+)/, 1]&.to_i, "area" => line[/"type":"(\w+)"/, 1], "message" => e.message }
+    end
   end
   exit 0
 end
@@ -298,6 +312,17 @@ rescue StandardError => e
   send_message(type: "error", id: message["id"], message: "#{e.class}: #{e.message}\n#{e.backtrace.first(8).join("\n")}")
 end
 
+# A request in one of the other areas. An exception out of graphql-ruby that
+# isn't a rejection is a crash, answered with `error` (docs/kit-areas.md).
+def answer_area(message)
+  result = Areas.public_send(message["type"], message)
+  send_message(type: "result", id: message["id"], **result)
+rescue StandardError, SystemStackError => e
+  send_message(type: "error", id: message["id"], message: "#{e.class}: #{e.message.lines.first&.strip}\n#{e.backtrace.first(8).join("\n")}")
+end
+
+AREAS = %w[parse validate coerce schema introspect].freeze
+
 send_message(
   type: "hello",
   protocol: 1,
@@ -310,6 +335,7 @@ send_message(
     *(INVALID_RESULTS ? ["invalid-results", "uncoercible-results"] : []),
     "mutation",
     "subscription",
+    *Areas::CAPABILITIES,
   ],
 )
 
@@ -319,6 +345,19 @@ loop do
   when "execute"
     execute(message)
   when "end"
+    next
+  when *AREAS
+    # Only execution uses `idle`.
+    answer_area(message)
+    next
+  when "unreadable"
+    if message["area"] == "parse"
+      # A source with a lone surrogate never reaches graphql-ruby, so the kit
+      # doesn't grade it (docs/kit/parse.md).
+      send_message(type: "result", id: message["id"], unsupported: "Ruby's JSON parser refuses the request: #{message["message"]}")
+    else
+      send_message(type: "error", id: message["id"], message: "unreadable request: #{message["message"]}")
+    end
     next
   else
     send_message(type: "error", id: message["id"], message: "unexpected #{message["type"]} with no execution running")

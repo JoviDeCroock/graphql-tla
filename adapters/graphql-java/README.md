@@ -80,6 +80,12 @@ gets no execution result, only the stream error, so the adapter reports a
 `coerce`, `schema`, `introspect`, `custom-scalar-literals`, `absent-vs-null`,
 and `unvalidated` (not with `--validate`). `exact-numbers` isn't claimed.
 
+In parse, validate, coerce and schema, an exception graphql-java throws where
+it should have given a verdict or a response is answered with an `error`. The
+kit reports that as a crash of graphql-java's on that vector
+([docs/kit-areas.md](../../docs/kit-areas.md#protocol)), and only the
+message's first line reaches the report. The stack trace goes to stderr.
+
 - **parse:** `ParseAndValidate.parse`, which is how `GraphQL` parses a
   request, with the default operation parser options. An
   `InvalidSyntaxException` is `ok: false`. The parser also reads the type
@@ -90,7 +96,8 @@ and `unvalidated` (not with `--validate`). `exact-numbers` isn't claimed.
   predicate and no limits, which is what `GraphQL` runs on a request. Good
   Faith Introspection stays on, as it is by default; it throws
   `GoodFaithIntrospectionExceeded`, which `GraphQL` turns into an error
-  response, so that is a rejection. `custom-scalar-literals`:
+  response, so that is a rejection. Any other exception, the validator's own
+  included, is a crash. `custom-scalar-literals`:
   `MockedWiringFactory#getScalar` gives a custom scalar whose `parseLiteral`
   accepts every kind of literal, variables included.
 - **coerce:** the schema has one data fetcher on every field, which reads
@@ -99,6 +106,8 @@ and `unvalidated` (not with `--validate`). `exact-numbers` isn't claimed.
   Jackson, as a Java server reads a request body: integers exactly (`Integer`,
   `Long`, `BigInteger`), other numbers as `Double`. That is why
   `exact-numbers` isn't claimed. The response is `ExecutionResult#toSpecification()`.
+  If `GraphQL.execute` throws instead, the client gets no response, and the
+  adapter answers with an `error`: the kit's "no response".
   - `absent-vs-null`: graphql-java leaves an argument or input field with no
     value out of the map (`execution/ValuesResolver.java:351-380`,
     `ValuesResolverConversion.java:801-827`), so absent and null differ.
@@ -138,8 +147,8 @@ and `unvalidated` (not with `--validate`). `exact-numbers` isn't claimed.
 | --- | --- |
 | execution | Unchanged: 2544 of 2544 distinct well-formed cases satisfy the reference (`--random 1500`). 1338 subscription cases are malformed, the deviation above. |
 | parse | 1894 of 1983 vectors agree. 5 checks fail. 81 of the 89 failing vectors are draft only. |
-| validate | 3059 of 3088 vectors agree. 5 rule checks fail, 3 of them on draft-only vectors only. `acceptsValid` passes. |
-| coerce | Unvalidated: 1977 of 2036 results match. With `--validate`: 1978 of 2010 (26 need `unvalidated`), `invalidNotExecuted` passes on all 775 invalid documents, and only `id` and `list` fail. |
+| validate | 3037 of 3088 vectors agree, and 22 crash. 5 rule checks fail, 3 of them on draft-only vectors only. `acceptsValid` passes. |
+| coerce | Unvalidated: 1977 of 2036 results match, and 1 gets no response. With `--validate`: 1978 of 2010 (26 need `unvalidated`), `invalidNotExecuted` passes on all 775 invalid documents, and only `id` and `list` fail. |
 | schema | 152 of 165 schemas agree, 4 of the failures crashes. 10 of 44 rules fail, 3 of them on draft-only vectors only. |
 | introspect | Graded against October 2021, since the draft's query is rejected. 8 of 28 results match. `builtinDefinitions` and `descriptions` fail. |
 
@@ -196,16 +205,16 @@ graphql-java's public API directly (`Parser.parse`, `SchemaGenerator`,
 - **§5.2.4.1 with `@include(if: true)` at a subscription's root (1 vector,
   draft):** accepted, since graphql-java applies the directive when it
   collects the root fields. October 2021 does the same.
-- **The validator crashes (22 draft-only vectors, counted as rejections):**
+- **The validator crashes (22 draft-only vectors):**
   for a subscription whose root field has `@skip` or `@include`,
   `validateSubscriptionUniqueRootField` collects the root fields with no
   variables (`OperationValidator.java:1817`). `@include(if: $v)` then throws
   `NullPointerException` (`execution/conditional/ConditionalNodes.java:99`),
   and `@skip(if: true)` leaves no field, so `get(0)` throws
   `ArrayIndexOutOfBoundsException` (`OperationValidator.java:1827`).
-  `GraphQL.execute` would throw rather than answer. The documents are invalid
-  under the draft, so the adapter answers `valid: false`, and these vectors
-  pass.
+  `GraphQL.execute` would throw rather than answer. The adapter answers with
+  an `error`, and the kit reports a crash on documents that break only §5.2.4.1,
+  which fails `singleRootField`.
 
 ### Coerce
 
@@ -257,8 +266,9 @@ document. `ValuesResolverConversion` says so: "no validation" (`:711`, `:729`,
   `NodeUtil.getOperation` call `next()` on an empty iterator
   (`language/NodeUtil.java:82`), and `GraphQL.execute` throws
   `NoSuchElementException` instead of returning a request error. The client
-  gets no result, so the adapter answers an empty `response`, with the
-  exception in `noResponse`. The kit counts that as none of its outcomes.
+  gets no response, so the adapter answers with an `error`, and the kit
+  reports "produces no response where §6.1 requires a request error", which
+  fails `getOperation`.
 
 A JSON string with a lone surrogate reaches String and ID as sent, which the
 informational `loneSurrogates` check records.

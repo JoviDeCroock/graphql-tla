@@ -56,8 +56,10 @@ public static class Areas
         }
         catch (Exception error)
         {
-            // In the schema area this is a crash (docs/kit/schema.md); in the
-            // others, the adapter failed. The stack trace goes to stderr.
+            // In parse, validate, coerce and schema the kit reports this as a
+            // crash of Hot Chocolate's on that vector (docs/kit-areas.md,
+            // "Protocol"); in introspect, the adapter failed. The stack trace
+            // goes to stderr.
             Console.Error.WriteLine(error);
             return new JsonObject { ["type"] = "error", ["id"] = id, ["message"] = $"{error.GetType().Name}: {error.Message}" };
         }
@@ -109,17 +111,10 @@ public static class Areas
             // Parse(string) refuses an empty source text up front.
             return new JsonObject { ["ok"] = false, ["error"] = error.Message };
         }
-        catch (Exception error)
-        {
-            // The parser throws something other than a SyntaxException on
-            // some sources (see README.md). DocumentParserMiddleware only
-            // catches SyntaxException, so the exception reaches the request
-            // pipeline's ExceptionMiddleware, which answers with a request
-            // error: the request is still refused. So the answer is
-            // `ok: false`, marked as a crash, and logged on stderr.
-            Console.Error.WriteLine($"hotchocolate adapter: parse crash: {error.GetType().Name}: {error.Message}: {JsonSerializer.Serialize(source)}");
-            return new JsonObject { ["ok"] = false, ["crash"] = $"{error.GetType().Name}: {error.Message}" };
-        }
+        // Any other exception is a crash (see README.md): the parser throws
+        // something other than a SyntaxException on some sources, and
+        // DocumentParserMiddleware only catches SyntaxException. Answer
+        // turns it into an `error`, which the kit reports as a crash.
     }
 
     // The executor validate uses. Every vector's schema is valid, but Hot

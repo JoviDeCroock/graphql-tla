@@ -17,7 +17,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { AdapterError, ask } from "../areas.mjs";
+import { Crash, answerOrCrash, crashResponse } from "../areas.mjs";
 import { REPORT_FORMAT, provenance, section } from "../report.mjs";
 import { RULE, RULES, UNWRITABLE } from "./rules.mjs";
 
@@ -34,24 +34,10 @@ export const gradedVectors = (vectors) => {
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-// An adapter's `error` answer to a vector: its message's first line, so
-// that a stack trace with local paths doesn't reach the report.
-export class Crash {
-  constructor(message) {
-    this.message = String(message).split("\n")[0].trim().slice(0, 200);
-  }
-}
+export { Crash };
 
-// The adapter's answer to one vector, or a Crash. Any other failure, such
-// as a silent adapter, still stops the run.
-const answer = async (adapter, sdl) => {
-  try {
-    return await ask(adapter, "schema", { sdl });
-  } catch (error) {
-    if (!(error instanceof AdapterError)) throw error;
-    return new Crash(error.adapterMessage);
-  }
-};
+// The adapter's answer to one vector, or a Crash.
+const answer = (adapter, sdl) => answerOrCrash(adapter, "schema", { sdl });
 
 // What one answer says about one vector: "pass", "malformed", "crash", or
 // the way it fails its rule.
@@ -131,7 +117,7 @@ export const buildReport = ({ vectors, answers, strict, implementation, capabili
     const crash = answers[i] instanceof Crash;
     const example = {
       input: `${v.edition === "draft" ? "[draft] " : ""}${v.sdl}`,
-      response: crash ? `the adapter answered with an error: ${answers[i].message}` : answers[i],
+      response: crash ? crashResponse(answers[i]) : answers[i],
       expected: v.expected.valid ? "valid (TypeSystem!Verdict is empty)" : `invalid: breaks ${v.rule} and no other rule`,
     };
     const f = findings.get(key) ?? {

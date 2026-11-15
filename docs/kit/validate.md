@@ -21,7 +21,7 @@ The area follows [the contract for areas beyond execution](../kit-areas.md).
 - **`schema`:** SDL for a valid schema. The vectors use six schemas (see [Vectors](#vectors)). Two of them declare a OneOf Input Object, and only vectors tagged draft use those.
 - **`document`:** a GraphQL document. Every document parses (§2). A few hold type system definitions, which §5.1.1 rejects. An implementation whose parser refuses those outright should answer `"valid": false` for them, since the document is still rejected.
 
-Build the schema, parse the document and validate it with every rule the implementation applies to requests. A schema that doesn't build or a document that doesn't parse is the adapter's failure. Answer `{"type":"error"}` for those.
+Build the schema, parse the document and validate it with every rule the implementation applies to requests. Every schema is valid and every document parses, so if building or parsing fails, or the validator itself crashes, answer `{"type":"error","id":12,"message":"…"}`. The kit reports the vector as a crash (see [Result](#result)).
 
 ## Capabilities
 
@@ -42,16 +42,19 @@ How a custom scalar coerces a literal is up to the service (§3.5.6), and the sp
 
 An answer whose `valid` isn't a boolean counts as malformed. Malformed answers are counted under `adapterProblems` and fail the run.
 
-The graphql-js adapter ([`adapters/graphql-js/areas/validate.mjs`](../../adapters/graphql-js/areas/validate.mjs)) uses `buildSchema`, `parse` and `validate` with the default rules, and claims `custom-scalar-literals`. graphql-js 16 can throw from inside `validate()` (a subscription with `@skip(if: $v)` at its root). The request would fail, so the adapter counts that as rejecting the document.
+**Crashes.** If the implementation crashes on a vector, say the validator throws a null dereference, answer with an `error` rather than a verdict. The kit reports the vector as a crash and goes on ([the protocol](../kit-areas.md#protocol)). Only the message's first line reaches the report. Answer `valid: false` only when the implementation reports validation errors: an adapter that turns every exception into `valid: false` hides its crashes, which then pass on invalid documents.
+
+The graphql-js adapter ([`adapters/graphql-js/areas/validate.mjs`](../../adapters/graphql-js/areas/validate.mjs)) uses `buildSchema`, `parse` and `validate` with the default rules, and claims `custom-scalar-literals`. graphql-js 16 can throw from inside `validate()` (a subscription with `@skip(if: $v)` at its root). The adapter still counts that as rejecting the document, so the throw isn't reported as a crash.
 
 ## Verdicts
 
-Each vector has the reference's answer, `expected.valid`. There are two kinds of failure, and only the first bears on a rule:
+Each vector has the reference's answer, `expected.valid`. There are three kinds of failure. Only the first bears on a rule by itself:
 
 - **Not enforced:** the implementation accepts an invalid vector. None of the rules the vector breaks caught it, so each of them fails. This is conclusive. Most invalid vectors break one rule. The 21 that break two fail both checks, never just one.
 - **A valid document rejected:** the implementation rejects a valid vector. This fails `acceptsValid`, not a rule's check. The kit doesn't read error messages, so it can't tell which rule the implementation applied. The finding names the rules the vector's invalid siblings break as a hint. A spec example that is valid has no sibling, so its hint is the example's own rule.
 
   A finding says a rule is *likely* over-strict only when the evidence points at it. At least 3 rejected valid vectors must share that hint, and they must be siblings of at least 3 different invalid vectors. A valid vector of the same family and hint must also be accepted. Otherwise the finding gives the hint and says it is a guess.
+- **A crash:** the adapter answered with an `error`. The implementation gave no verdict, so a crash counts where a wrong answer would. On an invalid vector it fails each rule the vector breaks; on a valid one, `acceptsValid`, with the hint. Crashes have their own findings, with `"kind": "crash"` and the adapter's message as `problem`. The summary counts them apart from agreements.
 
 There is one check per rule, at MUST, cited by its section, and `acceptsValid`, at MUST, cited by §5 itself:
 
@@ -98,6 +101,7 @@ No vector uses draft-only grammar. Every document parses with graphql-js 16, so 
 
 - every verdict flipped, and every answer taken from a vector with the opposite verdict: every vector must be flagged, and no check may pass or be `subsumed`;
 - `valid` sent as a string: every answer must be malformed;
+- every vector crashed, each crash carrying the right `valid`: every vector must count as a crash, every finding must be a crash, and no check may pass or be `subsumed`;
 - every document rejected: `acceptsValid` must fail, no rule's check may fail, and §5.6.2 and §5.6.4 must be `subsumed`;
 - every document accepted: every rule's check with a vector must fail;
 - one valid vector rejected: `acceptsValid` must fail, and no finding may name a rule as likely over-strict;

@@ -747,6 +747,11 @@
    "url": "https://spec.graphql.org/draft/#sec-Handling-Execution-Errors"
   },
   {
+   "number": "7",
+   "title": "Response",
+   "url": "https://spec.graphql.org/draft/#sec-Response"
+  },
+  {
    "number": "7.1",
    "title": "Response Format",
    "url": "https://spec.graphql.org/draft/#sec-Response-Format"
