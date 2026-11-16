@@ -1,11 +1,58 @@
 # Gaps in the GraphQL specification text (September 2026)
 
-Places where the September 2026 text is ambiguous, contradicts itself, or leaves out a rule, collected while extending the conformance kit (areas coordinate, parse, schema, validate, introspect, coerce, execution) and while auditing the TLA+ references against the text. Each says how the kit grades the point today; where the text allows more than one reading, the kit grades the weaker one or leaves the case `unspecified` (see [spec-comparison.md](spec-comparison.md)). Nothing here has been filed upstream.
+Places where the September 2026 text is ambiguous, contradicts itself, or leaves out a rule, collected while extending the conformance kit (areas coordinate, parse, schema, validate, introspect, coerce, execution) and while auditing the TLA+ references against the text. Each says how the kit grades the point today; where the text allows more than one reading, the kit grades the weaker one or leaves the case `unspecified` (see [spec-comparison.md](spec-comparison.md)). We have filed none of these; five turned out to be tracked upstream already (see the review below).
 
 - Section numbers are September 2026's, counted from heading order, and match `kit/spec-sections.json`.
 - Quotes are copied from the September 2026 Markdown source (`spec/*.md` at tag `September2026`), braces and underscores included; `...` marks an elision. Quotes from October 2021 say so.
 - "Kit today" says how the kit grades the point now: the check, its area and its level. INFO checks record what an implementation does and never fail a run. `unspecified` vectors are sent (or not) but never graded.
 - Items are ordered by section. Items 5 and 29 are editorial (typos). Item 30 came from the audit of the references.
+
+
+## Review
+
+An independent review tried to refute every item. It checked the quotes mechanically against each tag, searched the whole spec for text that settles the question, searched the graphql/graphql-spec tracker (all issue and PR titles, plus the review threads of the PRs that introduced the text), and ran graphql-js 16.15.0 and 17.1.0. Every quote is verbatim, and every graphql-js behaviour cited reproduces. Its verdicts:
+
+- **Real gap** (5): two readings with different observable results, nothing normative settles it, and not tracked upstream.
+- **Wording** (16): the answer can be determined (from a definition elsewhere, intent recorded upstream, or because only one reading is sane), but the sentence is loose, stale or garbled. Items 10, 14 and 15 are missing formal rules whose intent nobody disputes.
+- **Not a gap** (4): other normative text answers the question.
+- **Known** (5): tracked upstream or already fixed.
+
+| # | Short title | Verdict | Confidence | Reason |
+|---|---|---|---|---|
+| 1 | "Non-printable control characters" vs block strings | WORDING | high | The sentence sits in the escape-sequence text for quoted strings; block-string text says line terminators "may all be used unescaped". Nobody reads it the literal way. |
+| 2 | Coordinates: wrong-kind container, prose vs Assert | WORDING | medium | One Assert covers existence and kind; prose gives existence failure an error, and the PR authors meant Asserts to be the error path. Prose summary is just incomplete. |
+| 3 | "Assert" undefined in Appendix B | WORDING | medium | True that it is undefined, but everywhere an Assert can fail the prose states the consequence. The "is a within" typo is already fixed in open PR graphql/graphql-spec#1250. |
+| 4 | Unreferenced built-in scalar as a schema element | WORDING | low | §3.5 excludes unreferenced built-ins from the schema's types and TypeCoordinate returns "the type in {schema}"; leans to "does not resolve", but not stated. Tooling-only. |
+| 5 | Typo "every schema coordinates has" | WORDING | high | Real typo, still on `main`, not in any open PR. |
+| 6 | Declaring a built-in scalar or directive in SDL | REAL-GAP | medium | "must be omitted" (scalars) and "may be omitted" (directives) bind the printer only; nothing says what a reader does, or what happens if the written-out built-in differs. |
+| 7 | Roots when the schema definition is omitted | NOT-A-GAP | medium | Every reading consistent with the normative "can omit ... when ... no other type uses any default root type name" sentence rejects the cited document. Only the reason differs. |
+| 8 | §3.3.2 Note vs lookahead in the grammar | WORDING | high | Grammar is unambiguous and normative; the Note is non-normative and only loosely scoped ("to avoid parsing ambiguity" does not arise for body-less productions). |
+| 9 | `extend schema` with no schema definition | REAL-GAP | medium | "The Schema must already be defined" reads either way; graphql-js accepts, the kit's own reference rejected. |
+| 10 | `extend schema` re-adding a root operation type | WORDING | medium | Missing rule (there is not even one for `schema { query: A query: B }`), but intent is undisputed: every type-extension kind forbids re-adding, and "adds additional operation types". |
+| 11 | "Already defined" / "previous" and document order | WORDING | medium | (b) is answered by PR graphql/graphql-spec#1123, which changed "original" to "previous" to mean definition plus earlier extensions. (a) extension-before-definition is unstated but low risk. |
+| 12 | Extending a built-in scalar or directive | REAL-GAP | medium | Unstated; graphql-js itself is inconsistent (rejects `extend scalar Int`, accepts `extend directive @deprecated`). |
+| 13 | Interface extension re-adding an implemented interface | NOT-A-GAP | high | §3.7 rule 3 ("one or more unique interfaces") applies to the resulting type. The missing extension rule is an asymmetry, not a hole. |
+| 14 | Non-repeatable directive twice in SDL | WORDING | medium | Missing formal rule, intent undisputed. Same class as open issue graphql/graphql-spec#1233; raise there, not separately. |
+| 15 | Directive arguments in SDL not validated | WORDING | medium | Same as 14. A maintainer already said on graphql/graphql-spec#1233 that SDL-as-input validation as a whole is an acknowledged omission. |
+| 16 | Int range: MUST or SHOULD | WORDING | medium | The specific sentences say "should"; the "must" sentence is introduced by "As an example", which Appendix A makes non-normative. Level is SHOULD. |
+| 17 | Float: "a value outside the available precision" | REAL-GAP | medium | The phrase has no determinable meaning (underflow? integers above 2^53?) and sits behind a MUST. Narrow. |
+| 18 | "Required" vs "non-nullable" extra argument | WORDING | medium | "required" is defined twice as non-null without a default (§5.4.3, §3.13.3); the "e.g." clause is an example and predates defaults on non-null arguments. Settled the same way in closed issue graphql/graphql-spec#401. |
+| 19 | Default-value compatibility only for object field arguments | KNOWN | high | Open issue graphql/graphql-spec#1235 says exactly this; open PR graphql/graphql-spec#1248 fixes it. |
+| 20 | Directive self-reference through an argument's type | WORDING | medium | The prose "must not reference itself directly or indirectly" is normative and covers it. Rule 3 is garbled, it does not grant permission. |
+| 21 | "Identical sets of arguments" | WORDING | medium | The spec's own counter-examples (`$varOne` vs `$varTwo`, `SIT` vs omitted) rule out the coerced-value reading. Residue: `"x"` vs `"""x"""`, where over-rejecting is harmless. |
+| 22 | Fragment spread on an interface with no implementers | KNOWN | high | Open issue graphql/graphql-spec#1109, with a fix proposed by a maintainer. |
+| 23 | OneOf: nullable variable with a default | KNOWN | high | Found in the graphql/graphql-spec#825 review (June 2025), acknowledged by the author, deferred to open PR graphql/graphql-spec#1059. Implementations do diverge. |
+| 24 | Subscription root argument coercion: which error | NOT-A-GAP | medium | §6.2 defines operation execution as starting at `Subscribe()`, and §7.1.5 normatively requires a request error result before that. Only the "execution error" label in CoerceArgumentValues is off for this call site. |
+| 25 | Source stream error vs "stream of execution result" | KNOWN | high | Open issue graphql/graphql-spec#995 and open PR graphql/graphql-spec#1127. |
+| 26 | Cancelling while an event executes | WORDING | medium | The October 2021 sentence was dropped by a PR titled and reviewed as editorial (graphql/graphql-spec#1099); a completed stream emits nothing. |
+| 27 | When may a response stream complete | NOT-A-GAP | medium | "Internal user code also may cancel an event stream for any reason" plus the algorithm's "When {responseStream} is cancelled" branch already cover a service ending the stream. |
+| 28 | Overlapping event executions and result order | WORDING | medium | The stream is a "sequence" that the algorithm "maps"; order-preserving is the only sane reading, and overlap is unobservable once order holds. |
+| 29 | October 2021 circular "complete this event stream" | KNOWN | high | Fixed by graphql/graphql-spec#994 (merged 2024), in September 2025 and later. |
+| 30 | `@skip`/`@include` with an explicitly null variable | REAL-GAP | medium | CollectFields gives a definite, silent answer; §3.12 says a null into a Non-Null argument must raise an error; graphql-js raises one and returns `data: null`. |
+
+Items 6, 9 to 15 are all about validating SDL as input. On graphql/graphql-spec#1233 a maintainer wrote that the spec "mostly focuses on SDL as output" and that fixing it "would actually require resolving a much larger omission - validation of type system SDL", so expect them to be treated as one known omission.
+
+The items below are the original write-ups, unchanged; read each with its verdict above.
 
 ---
 
