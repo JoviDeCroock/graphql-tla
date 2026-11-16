@@ -243,8 +243,7 @@ The shortest case, from `subscription`:
 
 ```
 problem:  the response stream completed normally though its source hadn't completed or failed and the client hadn't cancelled it
-trace:    
-response: undefined
+stream:   one event, then the source completes: kit emits event 1; result for event 1; the source is cancelled; the response stream completes; kit completes the source
 ```
 
 <a id="execution-finding-15"></a>

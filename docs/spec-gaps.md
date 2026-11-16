@@ -573,7 +573,7 @@ October 2021, §6.2.3:
 
 **Problem:** The algorithm doesn't say what happens to an event whose ExecuteSubscriptionEvent is still running when the client cancels. Its "emit" step comes after, and "it must complete" doesn't say how soon. So the result may be dropped, or emitted before the stream completes. October 2021 forbade any further event after cancelling; September 2025 removed that sentence and put nothing in its place.
 
-**Kit today:** execution `nothingAfterCancel`, MUST in every release. graphql-js 16 and 17 both deliver the in-flight result, and fail it.
+**Kit today:** execution `nothingAfterCancel`, SHOULD (October 2021: MUST). graphql-js 16 and 17 both deliver the in-flight result.
 
 ---
 

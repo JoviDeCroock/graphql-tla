@@ -5,7 +5,8 @@
 // Implementations whose adapter isn't built are skipped (their old report
 // stays). Pass keys to run only those.
 //
-// Usage: node scripts/conformance-reports.mjs [key ...] [--random N]
+// Usage: node scripts/conformance-reports.mjs [key ...] [--random N] [--area A ...]
+// --area reruns only the named areas (repeatable), keeping the other reports.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync } from "node:fs";
@@ -19,6 +20,9 @@ const root = resolve(fileURLToPath(import.meta.url), "../..");
 const argv = process.argv.slice(2);
 const i = argv.indexOf("--random");
 const random = i === -1 ? "1500" : argv.splice(i, 2)[1];
+const only = [];
+for (let j; (j = argv.indexOf("--area")) !== -1; ) only.push(argv.splice(j, 2)[1]);
+for (const a of only) if (!AREAS.includes(a)) throw new Error(`unknown area ${a}; one of ${AREAS.join(", ")}`);
 const { implementations } = JSON.parse(readFileSync(join(root, "conformance/implementations.json"), "utf8"));
 for (const impl of implementations.filter((x) => argv.length === 0 || argv.includes(x.key))) {
   if (impl.build && !existsSync(join(root, impl.build))) {
@@ -35,7 +39,7 @@ for (const impl of implementations.filter((x) => argv.length === 0 || argv.inclu
   console.log(`- ${impl.key}`);
   // --strict, so SHOULDs count; the kit's exit code is ignored, since a
   // failing implementation is still a report.
-  for (const area of AREAS) {
+  for (const area of AREAS.filter((a) => only.length === 0 || only.includes(a))) {
     const report = `conformance/reports/${impl.key}${area === "execution" ? "" : `.${area}`}.json`;
     const args = ["kit/cli.mjs", "run", area, "--adapter", impl.adapter, "--strict", "--report", report];
     if (area === "execution") args.push("--random", random, ...(impl.executionArgs ?? []));

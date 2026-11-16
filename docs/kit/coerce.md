@@ -81,7 +81,7 @@ A request error or field error whose errors aren't all maps with a string `messa
 | --- | --- |
 | `coerce` | The adapter answers `coerce` requests. |
 | `absent-vs-null` | `arguments` tells an absent entry from a null one. Without it, null and absent count as the same at a declared argument or input field whose type is nullable, and the vectors that only that distinction can tell apart are skipped. An entry that no argument or input field declares never matches, null or not. |
-| `unvalidated` | The adapter executes a document without validating it. Without it, the kit takes the adapter to validate first, and grades the invalid documents under `invalidNotExecuted` or `onlyValidExecuted` (see [Validation](#validation)), except the 26 that are invalid only because a literal doesn't coerce (`literalOnly`): a request error passes there too. |
+| `unvalidated` | The adapter executes a document without validating it. Without it, the kit takes the adapter to validate first, and grades the invalid documents under `invalidNotExecuted` or `onlyValidExecuted` (see [Validation](#validation)), except the 27 that are invalid only because a literal doesn't coerce (`literalOnly`): a request error passes there too. |
 | `exact-numbers` | The adapter's JSON parser reads every number exactly. Without it, the vectors whose answer depends on how a parser reads big numbers are graded under the informational `jsonNumbers` check, not under Float or ID. |
 | `nested-fields` | The adapter's resolvers return objects for object fields and two objects for lists of objects, and `calls` covers every depth (see [Request](#request)). Without it, the 19 vectors on the `nested` schema aren't sent. |
 | `subscription-source` | The adapter takes `subscribe`, runs a subscription operation through its subscribe entry point with a source stream resolver it controls, and reports `sourceCalls`. Without it, the 18 vectors on the `subscription` schema aren't sent. Execution's `subscription` and `subscription-stream` are other capabilities, with another protocol. |
@@ -312,7 +312,7 @@ JSON lets a parser limit range and precision (RFC 8259 §6). `JSON.parse` rounds
 - **By default**, it runs `execute` without `validate`, and claims `unvalidated`.
 
 It also claims `nested-fields`, `subscription-source` (a subscription operation goes through `subscribe` with a `subscribeFieldResolver`) and `request-extensions` (graphql-js's `execute` takes no request extensions, so the adapter parses them and drops them), and answers a syntax error from `parse` as a request error.
-- **With `--validate`** (`node adapters/graphql-js/adapter.mjs --graphql 17 --validate`), it validates first and doesn't claim `unvalidated`, so the kit grades the invalid documents under `invalidNotExecuted`, asking graphql-js's validator through the validate area. Both versions pass all 785. The validator accepts the literals `1e400` and `1.7976931348623159e308`, which then reach the resolver as Infinity, so `float` fails as it does without validation.
+- **With `--validate`** (`node adapters/graphql-js/adapter.mjs --graphql 17 --validate`), it validates first and doesn't claim `unvalidated`, so the kit grades the invalid documents under `invalidNotExecuted`, asking graphql-js's validator through the validate area. Both versions pass all 811. The validator accepts the literals `1e400` and `1.7976931348623159e308`, which then reach the resolver as Infinity, so `float` fails as it does without validation.
 
 Unvalidated, both versions fail these checks:
 

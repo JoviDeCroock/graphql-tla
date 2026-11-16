@@ -353,8 +353,7 @@ The shortest case, from `subscription`:
 
 ```
 problem:  the source failed, and the response stream completed normally with no result carrying an error before it
-trace:    
-response: undefined
+stream:   the source fails before any event: kit fails the source; the response stream completes
 ```
 
 <a id="execution-finding-21"></a>
@@ -401,8 +400,7 @@ The shortest case, from `subscription`:
 
 ```
 problem:  a result arrived after the client cancelled the response stream
-trace:    
-response: undefined
+stream:   cancelled while an event executes: kit emits event 1; result for event 1; kit emits event 2; kit cancels the response stream; result for event 2; the response stream completes; the source is cancelled
 ```
 
 <a id="execution-finding-24"></a>
@@ -2285,7 +2283,7 @@ The shortest case, from `minimal.defaults`:
 problem:  enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated
 input:    type Query { a: Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)
 response: {"args":[{"defaultValue":"\"No longer supported\"","description":"Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formattedin [Markdown](https://daringfireball.net/projects/markdown/).","name":"reason","type":{"kind":"SCALAR","name":"String","ofType":null}}],"description":"Marks an element of a GraphQL schema as no longer supported.","locations":["FIELD_DEFINITION","ENUM_VALUE"],"name":"deprecated"}
-expected: [object Object]
+expected: {"name":"deprecated","description":null,"isRepeatable":false,"locations":["FIELD_DEFINITION","ARGUMENT_DEFINITION","INPUT_FIELD_DEFINITION","ENUM_VALUE"],"args":[{"name":"reason","description":null,"type":{"kind":"NON_NULL","name":null,"ofType":{"kind":"SCALAR","name":"String","ofType":null}},"defaultValue":"\"No longer supported\"","isDeprecated":false,"deprecationReason":null}]}
 ```
 
 <a id="introspect-finding-3"></a>
@@ -2304,7 +2302,7 @@ The shortest case, from `minimal.inc`:
 problem:  added:fields at __Directive, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated
 input:    type Query { a: Int }  (the introspection query, September 2025 profile; includeDeprecated: true)
 response: {"args":[{"defaultValue":"\"No longer supported\"","description":"Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formattedin [Markdown](https://daringfireball.net/projects/markdown/).","name":"reason","type":{"kind":"SCALAR","name":"String","ofType":null}}],"description":"Marks an element of a GraphQL schema as no longer supported.","locations":["FIELD_DEFINITION","ENUM_VALUE"],"name":"deprecated"}
-expected: [object Object]
+expected: {"name":"deprecated","description":null,"isRepeatable":false,"locations":["FIELD_DEFINITION","ARGUMENT_DEFINITION","INPUT_FIELD_DEFINITION","ENUM_VALUE"],"args":[{"name":"reason","description":null,"type":{"kind":"NON_NULL","name":null,"ofType":{"kind":"SCALAR","name":"String","ofType":null}},"defaultValue":"\"No longer supported\"","isDeprecated":false,"deprecationReason":null}]}
 ```
 
 <a id="introspect-finding-4"></a>
@@ -2321,7 +2319,7 @@ The shortest case, from `scalars.inc`:
 problem:  unsupportedDirective at @specifiedBy
 input:    "A date" scalar Date @specifiedBy(url: "https://example.com/date") scalar Plain scalar Odd @specifiedBy(url: "https://example.com/a?b=c&d=%20#x") type Query { d: Date, p: Plain, o: Odd }  (the introspection query, September 2025 profile; includeDeprecated: true)
 response: {"errors":[{"message":"graphql-go can't build the schema: graphql-go can't express @specifiedBy on the scalar Date"}]}
-expected: [object Object]
+expected: {"name":"specifiedBy","description":null,"isRepeatable":false,"locations":["SCALAR"],"args":[{"name":"url","description":null,"type":{"kind":"NON_NULL","name":null,"ofType":{"kind":"SCALAR","name":"String","ofType":null}},"defaultValue":null,"isDeprecated":false,"deprecationReason":null}]}
 ```
 
 <a id="introspect-finding-5"></a>
@@ -2338,7 +2336,7 @@ The shortest case, from `oneOf.inc`:
 problem:  unsupportedDirective at @oneOf
 input:    [since September 2025] input Pick @oneOf { id: ID, name: String } input Plain { x: Int! } type Query { a(p: Pick, q: Plain): Int }  (the introspection query, September 2025 profile; includeDeprecated: true)
 response: {"errors":[{"message":"graphql-go can't build the schema: graphql-go can't express @oneOf on the input object Pick"}]}
-expected: [object Object]
+expected: {"name":"oneOf","description":null,"isRepeatable":false,"locations":["INPUT_OBJECT"],"args":[]}
 ```
 
 <a id="introspect-finding-6"></a>
@@ -2359,7 +2357,7 @@ The shortest case, from `order.inc`:
 problem:  added:fields at __Directive, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), kind at I1, kind at I2, locations at @deprecated, order at Query
 input:    type Query { z: Int, a: Int, m(c: Int, b: Int, a: Int): O, u: U, e: E, n(v: In): Int } interface I1 { x: Int } interface I2 { x: Int } type O implements I2 & I1 { x: Int } type A2 { a: Int } type B2 { b: Int } union U = B2 | A2 enum E { Z A M } input In { z: Int, a: Int, m: Int }  (the introspection query, September 2025 profile; includeDeprecated: true)
 response: {"description":"","enumValues":null,"fields":[{"args":[],"deprecationReason":null,"description":"","isDeprecated":false,"name":"x","type":{"kind":"SCALAR","name":"Int","ofType":null}}],"inputFields":null,"interfaces":null,"kind":"INTERFACE","name":"I1","possibleTypes":[{"kind":"OBJECT","name":"O","ofType":null}]}
-expected: [object Object]
+expected: {"kind":"INTERFACE","name":"I1","description":null,"specifiedByURL":null,"isOneOf":null,"fields":[{"name":"x","description":null,"args":[],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":[{"kind":"OBJECT","name":"O","ofType":null}]}
 ```
 
 <a id="introspect-finding-7"></a>
@@ -2379,7 +2377,7 @@ The shortest case, from `order.defaults`:
 problem:  enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), kind at I1, kind at I2, locations at @deprecated, order at In, order at Query
 input:    type Query { z: Int, a: Int, m(c: Int, b: Int, a: Int): O, u: U, e: E, n(v: In): Int } interface I1 { x: Int } interface I2 { x: Int } type O implements I2 & I1 { x: Int } type A2 { a: Int } type B2 { b: Int } union U = B2 | A2 enum E { Z A M } input In { z: Int, a: Int, m: Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)
 response: {"description":"","enumValues":null,"fields":[{"args":[],"deprecationReason":null,"description":"","isDeprecated":false,"name":"x","type":{"kind":"SCALAR","name":"Int","ofType":null}}],"inputFields":null,"interfaces":null,"kind":"INTERFACE","name":"I1","possibleTypes":[{"kind":"OBJECT","name":"O","ofType":null}]}
-expected: [object Object]
+expected: {"kind":"INTERFACE","name":"I1","description":null,"specifiedByURL":null,"isOneOf":null,"fields":[{"name":"x","description":null,"args":[],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":[{"kind":"OBJECT","name":"O","ofType":null}]}
 ```
 
 <a id="introspect-finding-8"></a>
@@ -2396,7 +2394,7 @@ The shortest case, from `deprecation.lookup`:
 problem:  order at E
 input:    type Query { a: Int @deprecated, b(y: Int): Int @deprecated(reason: "Use c"), c: E, old: Old } type Old { x: Int @deprecated(reason: "All of it") } enum E { A B @deprecated(reason: "Gone") }  (__type(name:) for Query, Old, E, Unknown, September 2025 profile; includeDeprecated: true)
 response: {"__type(name: \"E\")":{"description":"","enumValues":[{"deprecationReason":"Gone","description":"","isDeprecated":true,"name":"B"},{"deprecationReason":null,"description":"","isDeprecated":false,"name":"A"}],"fields":null,"inputFields":null,"interfaces":null,"kind":"ENUM","name":"E","possibleTypes":null}}
-expected: [object Object]
+expected: {"__type(name: \"E\")":{"kind":"ENUM","name":"E","description":null,"specifiedByURL":null,"isOneOf":null,"fields":null,"inputFields":null,"interfaces":null,"enumValues":[{"name":"A","description":null,"isDeprecated":false,"deprecationReason":null},{"name":"B","description":null,"isDeprecated":true,"deprecationReason":"Gone"}],"possibleTypes":null}}
 ```
 
 <a id="introspect-finding-9"></a>
@@ -2413,7 +2411,7 @@ The shortest case, from `interfaceDeprecation.lookup`:
 problem:  kind at Gone, kind at Named
 input:    interface Named { id: ID, name: String @deprecated(reason: "Use id") } interface Gone { old: Int @deprecated } type Thing implements Named & Gone { id: ID, name: String, old: Int @deprecated(reason: "Also gone") } enum Mood { HAPPY @deprecated, SAD @deprecated(reason: "Cheer up") } type Query { thing: Thing, named: Named, gone: Gone, mood: Mood }  (__type(name:) for Named, Gone, Thing, Mood, Unknown, September 2025 profile; includeDeprecated: true)
 response: {"__type(name: \"Named\")":{"description":"","enumValues":null,"fields":[{"args":[],"deprecationReason":null,"description":"","isDeprecated":false,"name":"id","type":{"kind":"SCALAR","name":"ID","ofType":null}},{"args":[],"deprecationReason":"Use id","description":"","isDeprecated":true,"name":"name","type":{"kind":"SCALAR","name":"String","ofType":null}}],"inputFields":null,"interfaces":null,"kind":"INTERFACE","name":"Named","possibleTypes":[{"kind":"OBJECT","name":"Thing","ofType":null}]}}
-expected: [object Object]
+expected: {"__type(name: \"Named\")":{"kind":"INTERFACE","name":"Named","description":null,"specifiedByURL":null,"isOneOf":null,"fields":[{"name":"id","description":null,"args":[],"type":{"kind":"SCALAR","name":"ID","ofType":null},"isDeprecated":false,"deprecationReason":null},{"name":"name","description":null,"args":[],"type":{"kind":"SCALAR","name":"String","ofType":null},"isDeprecated":true,"deprecationReason":"Use id"}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":[{"kind":"OBJECT","name":"Thing","ofType":null}]}}
 ```
 
 <a id="introspect-finding-10"></a>
@@ -2450,7 +2448,7 @@ The shortest case, from `deprecation.inc`:
 problem:  added:fields at __Directive, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated, order at E
 input:    type Query { a: Int @deprecated, b(y: Int): Int @deprecated(reason: "Use c"), c: E, old: Old } type Old { x: Int @deprecated(reason: "All of it") } enum E { A B @deprecated(reason: "Gone") }  (the introspection query, September 2025 profile; includeDeprecated: true)
 response: {"args":[{"defaultValue":"\"No longer supported\"","description":"Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formattedin [Markdown](https://daringfireball.net/projects/markdown/).","name":"reason","type":{"kind":"SCALAR","name":"String","ofType":null}}],"description":"Marks an element of a GraphQL schema as no longer supported.","locations":["FIELD_DEFINITION","ENUM_VALUE"],"name":"deprecated"}
-expected: [object Object]
+expected: {"name":"deprecated","description":null,"isRepeatable":false,"locations":["FIELD_DEFINITION","ARGUMENT_DEFINITION","INPUT_FIELD_DEFINITION","ENUM_VALUE"],"args":[{"name":"reason","description":null,"type":{"kind":"NON_NULL","name":null,"ofType":{"kind":"SCALAR","name":"String","ofType":null}},"defaultValue":"\"No longer supported\"","isDeprecated":false,"deprecationReason":null}]}
 ```
 
 <a id="introspect-finding-12"></a>
@@ -2470,7 +2468,7 @@ The shortest case, from `builtinScalars.inc`:
 problem:  added:fields at __Directive, builtinScalars at Float, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated
 input:    directive @d(f: Float) on FIELD input In { id: ID } type Query { a(i: In): String }  (the introspection query, September 2025 profile; includeDeprecated: true)
 response: "no type Float"
-expected: [object Object]
+expected: {"kind":"SCALAR","name":"Float","description":null,"specifiedByURL":null,"isOneOf":null,"fields":null,"inputFields":null,"interfaces":null,"enumValues":null,"possibleTypes":null}
 ```
 
 <a id="introspect-finding-13"></a>
@@ -2489,7 +2487,7 @@ The shortest case, from `builtinScalars.defaults`:
 problem:  builtinScalars at Float, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated
 input:    directive @d(f: Float) on FIELD input In { id: ID } type Query { a(i: In): String }  (the introspection query, September 2025 profile; includeDeprecated: the default)
 response: "no type Float"
-expected: [object Object]
+expected: {"kind":"SCALAR","name":"Float","description":null,"specifiedByURL":null,"isOneOf":null,"fields":null,"inputFields":null,"interfaces":null,"enumValues":null,"possibleTypes":null}
 ```
 
 <a id="introspect-finding-14"></a>
@@ -2510,7 +2508,7 @@ The shortest case, from `printing.inc`:
 problem:  added:fields at __Directive, defaultValue at In.s, defaultValue at In.t, defaultValue at Query.f(c:), defaultValue at Query.f(i:), defaultValue at Query.f(l:), enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated, order at In, order at Query.f
 input:    [since September 2025] input In { s: String = "\u0003", t: [String] = ["😀"] } type Query { f(c: String = "\u0000\u0001\t\n\u001F\u007F\u0080\u0085\u009F", e: String = "😀 é", l: [String] = ["\u0002", "😀"], i: In = {s: "\u0004", t: ["\u0005😀"]}): Int }  (the introspection query, September 2025 profile; includeDeprecated: true)
 response: {"description":"","enumValues":null,"fields":[{"args":[{"defaultValue":"\"[\\x02 😀]\"","description":"","name":"l","type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"String","ofType":null}}},{"defaultValue":"\"map[s:\\x04 t:[\\x05😀]]\"","description":"","name":"i","type":{"kind":"INPUT_OBJECT","name":"In","ofType":null}},{"defaultValue":"\"\\x00\\x01\\t\\n\\x1f\\x7f\\u0080\\u0085\\u009f\"","description":"","name":"c","type":{"kind":"SCALAR","name":"String","ofType":null}},{"defaultValue":"\"😀 é\"","description":"","name":"e","type":{"kind":"SCALAR","name":"String","ofType":null}}],"deprecationReason":null,"description":"","isDeprecated":false,"name":"f","type":{"kind":"SCALAR","name":"Int","ofType":null}}],"inputFields":null,"interfaces":[],"kind":"OBJECT","name":"Query","possibleTypes":null}
-expected: [object Object]
+expected: {"kind":"OBJECT","name":"Query","description":null,"specifiedByURL":null,"isOneOf":null,"fields":[{"name":"f","description":null,"args":[{"name":"c","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"\\u0000\\u0001\\t\\n\\u001f\\u007F\\u0080\\u0085\\u009F\"","isDeprecated":false,"deprecationReason":null},{"name":"e","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"😀 é\"","isDeprecated":false,"deprecationReason":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"String","ofType":null}},"defaultValue":"[\"\\u0002\", \"😀\"]","isDeprecated":false,"deprecationReason":null},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"In","ofType":null},"defaultValue":"{s: \"\\u0004\", t: [\"\\u0005😀\"]}","isDeprecated":false,"deprecationReason":null}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}
 ```
 
 <a id="introspect-finding-15"></a>
@@ -2530,7 +2528,7 @@ The shortest case, from `printing.defaults`:
 problem:  defaultValue at In.s, defaultValue at In.t, defaultValue at Query.f(c:), defaultValue at Query.f(i:), defaultValue at Query.f(l:), enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated, order at Query.f
 input:    [since September 2025] input In { s: String = "\u0003", t: [String] = ["😀"] } type Query { f(c: String = "\u0000\u0001\t\n\u001F\u007F\u0080\u0085\u009F", e: String = "😀 é", l: [String] = ["\u0002", "😀"], i: In = {s: "\u0004", t: ["\u0005😀"]}): Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)
 response: {"description":"","enumValues":null,"fields":[{"args":[{"defaultValue":"\"[\\x02 😀]\"","description":"","name":"l","type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"String","ofType":null}}},{"defaultValue":"\"map[s:\\x04 t:[\\x05😀]]\"","description":"","name":"i","type":{"kind":"INPUT_OBJECT","name":"In","ofType":null}},{"defaultValue":"\"\\x00\\x01\\t\\n\\x1f\\x7f\\u0080\\u0085\\u009f\"","description":"","name":"c","type":{"kind":"SCALAR","name":"String","ofType":null}},{"defaultValue":"\"😀 é\"","description":"","name":"e","type":{"kind":"SCALAR","name":"String","ofType":null}}],"deprecationReason":null,"description":"","isDeprecated":false,"name":"f","type":{"kind":"SCALAR","name":"Int","ofType":null}}],"inputFields":null,"interfaces":[],"kind":"OBJECT","name":"Query","possibleTypes":null}
-expected: [object Object]
+expected: {"kind":"OBJECT","name":"Query","description":null,"specifiedByURL":null,"isOneOf":null,"fields":[{"name":"f","description":null,"args":[{"name":"c","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"\\u0000\\u0001\\t\\n\\u001f\\u007F\\u0080\\u0085\\u009F\"","isDeprecated":false,"deprecationReason":null},{"name":"e","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"😀 é\"","isDeprecated":false,"deprecationReason":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"String","ofType":null}},"defaultValue":"[\"\\u0002\", \"😀\"]","isDeprecated":false,"deprecationReason":null},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"In","ofType":null},"defaultValue":"{s: \"\\u0004\", t: [\"\\u0005😀\"]}","isDeprecated":false,"deprecationReason":null}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}
 ```
 
 <a id="introspect-finding-16"></a>
@@ -2547,7 +2545,7 @@ The shortest case, from `builtinScalars.lookup`:
 problem:  typeByName at Float
 input:    directive @d(f: Float) on FIELD input In { id: ID } type Query { a(i: In): String }  (__type(name:) for In, ID, Float, Int, Unknown, September 2025 profile; includeDeprecated: true)
 response: {"__type(name: \"Float\")":null}
-expected: [object Object]
+expected: {"__type(name: \"Float\")":{"kind":"SCALAR","name":"Float","description":null,"specifiedByURL":null,"isOneOf":null,"fields":null,"inputFields":null,"interfaces":null,"enumValues":null,"possibleTypes":null}}
 ```
 
 <a id="introspect-finding-17"></a>
@@ -2565,7 +2563,7 @@ The shortest case, from `printing.lookup`:
 problem:  defaultValue at In.s, defaultValue at In.t, defaultValue at Query.f(c:), defaultValue at Query.f(i:), defaultValue at Query.f(l:), order at Query.f
 input:    [since September 2025] input In { s: String = "\u0003", t: [String] = ["😀"] } type Query { f(c: String = "\u0000\u0001\t\n\u001F\u007F\u0080\u0085\u009F", e: String = "😀 é", l: [String] = ["\u0002", "😀"], i: In = {s: "\u0004", t: ["\u0005😀"]}): Int }  (__type(name:) for Query, In, Unknown, September 2025 profile; includeDeprecated: true)
 response: {"__type(name: \"Query\")":{"description":"","enumValues":null,"fields":[{"args":[{"defaultValue":"\"[\\x02 😀]\"","description":"","name":"l","type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"String","ofType":null}}},{"defaultValue":"\"map[s:\\x04 t:[\\x05😀]]\"","description":"","name":"i","type":{"kind":"INPUT_OBJECT","name":"In","ofType":null}},{"defaultValue":"\"\\x00\\x01\\t\\n\\x1f\\x7f\\u0080\\u0085\\u009f\"","description":"","name":"c","type":{"kind":"SCALAR","name":"String","ofType":null}},{"defaultValue":"\"😀 é\"","description":"","name":"e","type":{"kind":"SCALAR","name":"String","ofType":null}}],"deprecationReason":null,"description":"","isDeprecated":false,"name":"f","type":{"kind":"SCALAR","name":"Int","ofType":null}}],"inputFields":null,"interfaces":[],"kind":"OBJECT","name":"Query","possibleTypes":null}}
-expected: [object Object]
+expected: {"__type(name: \"Query\")":{"kind":"OBJECT","name":"Query","description":null,"specifiedByURL":null,"isOneOf":null,"fields":[{"name":"f","description":null,"args":[{"name":"c","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"\\u0000\\u0001\\t\\n\\u001f\\u007F\\u0080\\u0085\\u009F\"","isDeprecated":false,"deprecationReason":null},{"name":"e","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"😀 é\"","isDeprecated":false,"deprecationReason":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"String","ofType":null}},"defaultValue":"[\"\\u0002\", \"😀\"]","isDeprecated":false,"deprecationReason":null},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"In","ofType":null},"defaultValue":"{s: \"\\u0004\", t: [\"\\u0005😀\"]}","isDeprecated":false,"deprecationReason":null}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}}
 ```
 
 ### Every check
