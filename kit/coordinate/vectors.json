@@ -3952,6 +3952,143 @@
       "expected": {
         "ok": true
       }
+    },
+    {
+      "id": "builtinDirectives.10",
+      "family": "rootedBuiltins",
+      "spec": [
+        "2.14"
+      ],
+      "since": "September2025",
+      "schema": "rooted",
+      "coordinate": "@skip",
+      "check": "builtinDirectives",
+      "reference": {
+        "production": "directive"
+      },
+      "expected": {
+        "ok": true,
+        "resolved": {
+          "kind": "directive",
+          "path": [
+            "skip"
+          ]
+        }
+      }
+    },
+    {
+      "id": "builtinDirectives.11",
+      "family": "rootedBuiltins",
+      "spec": [
+        "2.14"
+      ],
+      "since": "September2025",
+      "schema": "rooted",
+      "coordinate": "@include(if:)",
+      "check": "builtinDirectives",
+      "reference": {
+        "production": "directiveArgument"
+      },
+      "expected": {
+        "ok": true,
+        "resolved": {
+          "kind": "directiveArgument",
+          "path": [
+            "include",
+            "if"
+          ]
+        }
+      }
+    },
+    {
+      "id": "unspecified.18",
+      "family": "rootedBuiltins",
+      "spec": [
+        "2.14"
+      ],
+      "since": "September2025",
+      "schema": "rooted",
+      "coordinate": "@deprecated",
+      "check": "grammar",
+      "unspecified": "a built-in directive the SDL doesn't define, in a schema without what it describes. §3.13 says implementations \"must provide the @deprecated directive if representing deprecated portions of the schema\", \"should provide the @specifiedBy directive if representing custom scalar definitions\" and \"should provide the @oneOf directive if representing OneOf Input Objects\"; this schema deprecates nothing, has no custom scalar, and has no OneOf input object, so the spec doesn't say whether it has the directive. (\"Any built-in directive may be omitted for brevity\" is about writing SDL.)",
+      "reference": {
+        "production": "directive"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "unspecified.19",
+      "family": "rootedBuiltins",
+      "spec": [
+        "2.14"
+      ],
+      "since": "September2025",
+      "schema": "rooted",
+      "coordinate": "@deprecated(reason:)",
+      "check": "grammar",
+      "unspecified": "a built-in directive the SDL doesn't define, in a schema without what it describes. §3.13 says implementations \"must provide the @deprecated directive if representing deprecated portions of the schema\", \"should provide the @specifiedBy directive if representing custom scalar definitions\" and \"should provide the @oneOf directive if representing OneOf Input Objects\"; this schema deprecates nothing, has no custom scalar, and has no OneOf input object, so the spec doesn't say whether it has the directive. (\"Any built-in directive may be omitted for brevity\" is about writing SDL.)",
+      "reference": {
+        "production": "directiveArgument"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "unspecified.20",
+      "family": "rootedBuiltins",
+      "spec": [
+        "2.14"
+      ],
+      "since": "September2025",
+      "schema": "rooted",
+      "coordinate": "@specifiedBy",
+      "check": "grammar",
+      "unspecified": "a built-in directive the SDL doesn't define, in a schema without what it describes. §3.13 says implementations \"must provide the @deprecated directive if representing deprecated portions of the schema\", \"should provide the @specifiedBy directive if representing custom scalar definitions\" and \"should provide the @oneOf directive if representing OneOf Input Objects\"; this schema deprecates nothing, has no custom scalar, and has no OneOf input object, so the spec doesn't say whether it has the directive. (\"Any built-in directive may be omitted for brevity\" is about writing SDL.)",
+      "reference": {
+        "production": "directive"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "unspecified.21",
+      "family": "rootedBuiltins",
+      "spec": [
+        "2.14"
+      ],
+      "since": "September2025",
+      "schema": "rooted",
+      "coordinate": "@oneOf",
+      "check": "grammar",
+      "unspecified": "a built-in directive the SDL doesn't define, in a schema without what it describes. §3.13 says implementations \"must provide the @deprecated directive if representing deprecated portions of the schema\", \"should provide the @specifiedBy directive if representing custom scalar definitions\" and \"should provide the @oneOf directive if representing OneOf Input Objects\"; this schema deprecates nothing, has no custom scalar, and has no OneOf input object, so the spec doesn't say whether it has the directive. (\"Any built-in directive may be omitted for brevity\" is about writing SDL.)",
+      "reference": {
+        "production": "directive"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "unspecified.22",
+      "family": "rootedBuiltins",
+      "spec": [
+        "2.14"
+      ],
+      "since": "September2025",
+      "schema": "rooted",
+      "coordinate": "@oneOf(x:)",
+      "check": "grammar",
+      "unspecified": "a built-in directive the SDL doesn't define, in a schema without what it describes. §3.13 says implementations \"must provide the @deprecated directive if representing deprecated portions of the schema\", \"should provide the @specifiedBy directive if representing custom scalar definitions\" and \"should provide the @oneOf directive if representing OneOf Input Objects\"; this schema deprecates nothing, has no custom scalar, and has no OneOf input object, so the spec doesn't say whether it has the directive. (\"Any built-in directive may be omitted for brevity\" is about writing SDL.)",
+      "reference": {
+        "production": "directiveArgument"
+      },
+      "expected": {
+        "ok": true
+      }
     }
   ]
 }

@@ -156,6 +156,9 @@ const EXTRA = [
   ["query($x: [Int] = 1) { ints(v: $x) }", ["{}"]],
   ["query($x: Point = { x: 1 }) { point(v: $x) }", ["{}"]],
   ["query($x: Shape = { origin: { x: 1 } }) { shape(v: $x) }", ["{}"]],
+  // An alias: an execution error's path is the response name (§7.1.4).
+  ["{ a: intNN(v: null) }", ["{}"]],
+  ["query($x: Int) { a: int(v: $x) }", ['{"x": "1"}', '{"x": 2}']],
 ];
 
 // Disagreements between graphql-js and the reference that are understood.
@@ -388,12 +391,20 @@ const operationTla = (document) => {
     defTla({ name: v.variable.name.value, type: typeRef(v.type), default: v.defaultValue }),
   );
   const args = (field.arguments ?? []).map((a) => entry(a.name.value, literal(a.value)));
-  return { field: field.name.value, tla: `Op(${seq(variables)}, ${str(field.name.value)}, ${set(args)})` };
+  const name = field.name.value;
+  const key = field.alias?.value ?? name;
+  const tla =
+    key === name
+      ? `Op(${seq(variables)}, ${str(name)}, ${set(args)})`
+      : `OpAt("query", "", ${seq(variables)}, <<>>, ${str(key)}, ${str(name)}, FALSE, ${set(args)}, <<>>)`;
+  return { field: name, tla };
 };
 
 const run = async (graphql, schema, operation) => {
   const document = graphql.parse(operation.query);
-  const field = document.definitions[0].selectionSet.selections[0].name.value;
+  const selection = document.definitions[0].selectionSet.selections[0];
+  const field = selection.name.value;
+  const key = selection.alias?.value ?? field;
   const argTypes = new Map(model.fields.get(field).map((a) => [a.name, a.type]));
   const calls = [];
   const result = await graphql.execute({
@@ -408,7 +419,7 @@ const run = async (graphql, schema, operation) => {
   if (calls.length > 1) throw new Error(`resolver called twice: ${operation.query}`);
   return {
     hasData: Object.hasOwn(result, "data"),
-    fieldIsNull: result.data == null || result.data[field] === null,
+    fieldIsNull: result.data == null || result.data[key] === null,
     errors: (result.errors ?? []).map((e) => (e.path ?? []).map(String)),
     called: calls.length === 1,
     args: calls[0] ?? "NullV",

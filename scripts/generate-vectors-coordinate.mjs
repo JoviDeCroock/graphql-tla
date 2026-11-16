@@ -32,9 +32,11 @@ const out = join(root, "kit/coordinate/vectors.json");
 // example schema, with an interface, a union, arguments with defaults, a
 // deprecated field, a custom scalar with @specifiedBy, a OneOf input object
 // and a directive without arguments added. It refers to Int, Float, String
-// and ID, but not Boolean. `rooted` has root operation types that aren't
-// named Query or Mutation, and refers to Boolean, String and no other
-// built-in scalar.
+// and ID, but not Boolean. The deprecated field, the custom scalar and the
+// OneOf input object are what make §3.13 ask for @deprecated, @specifiedBy
+// and @oneOf. `rooted` has root operation types that aren't named Query or
+// Mutation, refers to Boolean, String and no other built-in scalar, and has
+// none of those three things.
 // Characters the coordinates use, by code point, so that none is invisible
 // in this file: a byte order mark, a no-break space (not Whitespace), a line
 // separator (not a LineTerminator) and an e with an acute accent.
@@ -316,6 +318,11 @@ const COORDINATES = [
     "Change.__typename",
     "Int",
   ].map((c) => ["rooted", c, "rooted"]),
+  // Built-in directives in `rooted`, which deprecates nothing and has no
+  // custom scalar and no OneOf input object: §3.13 asks for @skip and
+  // @include in every schema, and for the other three only in a schema
+  // with what they describe, so whether `rooted` has them is unspecified.
+  ...["@skip", "@include(if:)", "@deprecated", "@deprecated(reason:)", "@specifiedBy", "@oneOf", "@oneOf(x:)"].map((c) => ["rootedBuiltins", c, "rooted"]),
 ];
 
 const BUILTIN_DIRECTIVES = ["skip", "include", "deprecated", "specifiedBy", "oneOf"];
@@ -426,6 +433,8 @@ const unspecifiedReason = (why) =>
       "a meta-field: \"Although it is syntactically possible to describe a meta-field or element of the introspection schema with a schema coordinate (e.g. Business.__typename or __Type.fields(includeDeprecated:)), they are not schema element and therefore resolving such coordinates does not have a defined behavior.\"",
     "introspection type":
       "an introspection type: \"Meta-fields are not defined within a schema, and thus are not schema element. By extension, an introspection type is not a schema element.\" Resolving it \"does not have a defined behavior\".",
+    "built-in directive not provided":
+      "a built-in directive the SDL doesn't define, in a schema without what it describes. §3.13 says implementations \"must provide the @deprecated directive if representing deprecated portions of the schema\", \"should provide the @specifiedBy directive if representing custom scalar definitions\" and \"should provide the @oneOf directive if representing OneOf Input Objects\"; this schema deprecates nothing, has no custom scalar, and has no OneOf input object, so the spec doesn't say whether it has the directive. (\"Any built-in directive may be omitted for brevity\" is about writing SDL.)",
     "unreferenced built-in scalar":
       "a built-in scalar no field, argument or input field of the schema refers to. §3.5 leaves it out of __Schema.types, but nothing says whether the schema has it; the built-in directives' arguments and the introspection types refer to String and Boolean, which leaves those two open as well.",
   })[why] ?? why;

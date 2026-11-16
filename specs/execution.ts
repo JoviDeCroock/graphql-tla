@@ -194,8 +194,13 @@ const expectedKind = (position: Position) =>
       : "object";
 
 // A result of the wrong shape: an object for a scalar (result coercion
-// fails), anything but a list for a list type ("Expected Iterable"), or an
-// object whose runtime type isn't a possible type.
+// fails), anything but a list for a list type (§6.4.3: "If result is not a
+// collection of values, raise an execution error"), or, for an interface
+// or union, an object whose runtime type isn't a possible type
+// (Reference.tla's reading, as graphql-js). An Object type has no wrong
+// shape: §6.4.3 completes whatever its resolver produced with its
+// sub-selection. choicesFor never gives an Object-typed position anything
+// but an object of that type, so this test never sees one there.
 const isWrongShape = (position: Position, outcome: Outcome) =>
   outcome.kind !== "null" &&
   outcome.kind !== "error" &&
@@ -221,7 +226,7 @@ const childrenOf = (path: Path, position: Position): Path[] =>
   childPaths(path, position, outcomes.get(path)!);
 
 // Wrong-shape results a fixture with invalidResults may also produce. An
-// object type has no runtime type to get wrong; only an abstract type does.
+// Object type has none: any value is completed as an object of that type.
 const wrongShapes = (position: Position): Set<Outcome> =>
   !fx().invalidResults
     ? new Set<Outcome>()

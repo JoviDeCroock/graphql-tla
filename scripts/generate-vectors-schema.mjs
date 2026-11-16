@@ -530,6 +530,15 @@ const PAIRS = [
     "directive @a(x: Int @b) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @b(y: In) on ARGUMENT_DEFINITION input In { f: Int @a } type Query { a: Int }",
     "directive @a(x: Int @b) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @b(y: In) on ARGUMENT_DEFINITION input In { f: Int } type Query { a: Int }",
   ],
+  // A type and a directive may share a name: input X names the type Y and
+  // uses the directive @Y, and both are references. @d uses @e, whose
+  // argument's type X names the type Y, which uses @d.
+  [
+    "directive",
+    "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+    "directive @d(arg: Int @e) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @e(arg: X) on ARGUMENT_DEFINITION directive @Y on INPUT_FIELD_DEFINITION input X { a: Y @Y } input Y { b: Int @d } type Query { a: Int }",
+    "directive @d(arg: Int @e) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @e(arg: X) on ARGUMENT_DEFINITION directive @Y on INPUT_FIELD_DEFINITION input X { a: Y @Y } input Y { b: Int } type Query { a: Int }",
+  ],
   // Directives applied in SDL that §3 has no rule about: twice to one
   // element, and arguments that don't fit the definition. Informational.
   ["directive", "DIRECTIVE_NOT_REPEATED", "directive @d on OBJECT type Query @d @d { a: Int }", "directive @d repeatable on OBJECT type Query @d @d { a: Int }"],
@@ -685,6 +694,20 @@ const PAIRS = [
     "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
     "directive @d on FIELD | INPUT_FIELD_DEFINITION directive @e(x: In) on DIRECTIVE_DEFINITION input In { f: Int @d } type Query { a(i: In): Int } extend directive @d @e",
     "directive @d on FIELD | INPUT_FIELD_DEFINITION directive @e(x: In) on DIRECTIVE_DEFINITION input In { f: Int } type Query { a(i: In): Int } extend directive @d @e",
+  ],
+  // Through the directives as extended: @d as previously extended uses @e;
+  // and @e as previously extended uses @f, whose argument's type uses @d.
+  [
+    "extension",
+    "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
+    "directive @d on FIELD | DIRECTIVE_DEFINITION directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e extend directive @e @d",
+    "directive @d on FIELD | DIRECTIVE_DEFINITION directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @e @d",
+  ],
+  [
+    "extension",
+    "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
+    "directive @d on FIELD | INPUT_FIELD_DEFINITION directive @e on DIRECTIVE_DEFINITION directive @f(x: In) on DIRECTIVE_DEFINITION input In { f: Int @d } type Query { a(i: In): Int } extend directive @e @f extend directive @d @e",
+    "directive @d on FIELD | INPUT_FIELD_DEFINITION directive @e on DIRECTIVE_DEFINITION directive @f(x: In) on DIRECTIVE_DEFINITION input In { f: Int } type Query { a(i: In): Int } extend directive @e @f extend directive @d @e",
   ],
   ["extension", "DIRECTIVE_LOCATIONS_VALID", "directive @d on FIELD directive @e on FIELD type Query { a: Int } extend directive @d @e", "directive @d on FIELD directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e"],
 ];

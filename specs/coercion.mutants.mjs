@@ -54,6 +54,24 @@ export default [
     differential: false,
   },
   {
+    name: "takes the largest double's shortest decimal, 1.7976931348623157e308, as the overflow bound",
+    file: "Coercion.tla",
+    find: "IsFiniteDouble(n) == AbsLess(n, DoubleOverflow)",
+    replace: 'IsFiniteDouble(n) == ~AbsLess(Num("number", FALSE, <<1, 7, 9, 7, 6, 9, 3, 1, 3, 4, 8, 6, 2, 3, 1, 5, 7>>, 292), n)',
+    property: "ScalarExamples",
+    // Only decimals above 1.7976931348623157e308 tell the two apart, and the
+    // differential can't use them: a decimal of more than 15 significant
+    // digits doesn't print back as itself from the double a resolver gets.
+    differential: false,
+  },
+  {
+    name: "reports a root field's execution error at its field name instead of its alias",
+    file: "Coercion.tla",
+    find: "/\\ response.errors = <<<<operation.key>>>>",
+    replace: "/\\ response.errors = <<<<operation.field>>>>",
+    property: "ResponseExamples",
+  },
+  {
     name: "forbids a path on a request error",
     file: "Coercion.tla",
     find: "/\\ Len(response.errors) > 0\n         /\\ ~response.called",

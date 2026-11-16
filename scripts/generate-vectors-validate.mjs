@@ -1523,6 +1523,9 @@ const TWINS = [
   ["differential", `{ echo(float: -1e309) }`, `{ echo(float: -1e308) }`],
   ["differential", `{ echo(float: 10e308) }`, `{ echo(float: 0.001e311) }`],
   ["differential", `{ echo(float: 1${"0".repeat(309)}) }`, `{ echo(float: 1${"0".repeat(308)}) }`],
+  // An exponent's leading zeros don't count (ExponentPart :: ExponentIndicator
+  // Sign? Digit+): 1e309, against 1e308 and 10.
+  ["differential", `{ echo(float: 1e0000309) }`, [`{ echo(float: 1e0000308) }`, `{ echo(float: 1e+0000001) }`]],
 ];
 
 // The schemas the reference evaluates every document against.

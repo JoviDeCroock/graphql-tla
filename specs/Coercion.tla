@@ -131,8 +131,22 @@ AbsLess(a, b) ==
 IsIntegral(n) == n.exp >= 0
 
 TwoTo31 == Num("number", FALSE, <<2, 1, 4, 7, 4, 8, 3, 6, 4, 8>>, 0)
-\* The largest finite IEEE 754 double, 1.7976931348623157e308.
-MaxDouble == Num("number", FALSE, <<1, 7, 9, 7, 6, 9, 3, 1, 3, 4, 8, 6, 2, 3, 1, 5, 7>>, 292)
+\* 2^1024 - 2^970, halfway between the largest finite double (2^1024 - 2^971)
+\* and 2^1024. A decimal below it rounds to a finite double; the midpoint
+\* itself rounds to even, which is 2^1024, so it overflows. The largest
+\* double's shortest decimal, 1.7976931348623157e308, is below the double's
+\* exact value, so it can't be the bound: 1.7976931348623158e308 also rounds
+\* to that double.
+DoubleOverflow == Num("number", FALSE, <<
+   1, 7, 9, 7, 6, 9, 3, 1, 3, 4, 8, 6, 2, 3, 1, 5, 8, 0, 7, 9, 3, 7, 2, 8, 9, 7, 1, 4, 0, 5, 3, 0, 3, 4, 1, 5,
+   0, 7, 9, 9, 3, 4, 1, 3, 2, 7, 1, 0, 0, 3, 7, 8, 2, 6, 9, 3, 6, 1, 7, 3, 7, 7, 8, 9, 8, 0, 4, 4, 4, 9, 6, 8,
+   2, 9, 2, 7, 6, 4, 7, 5, 0, 9, 4, 6, 6, 4, 9, 0, 1, 7, 9, 7, 7, 5, 8, 7, 2, 0, 7, 0, 9, 6, 3, 3, 0, 2, 8, 6,
+   4, 1, 6, 6, 9, 2, 8, 8, 7, 9, 1, 0, 9, 4, 6, 5, 5, 5, 5, 4, 7, 8, 5, 1, 9, 4, 0, 4, 0, 2, 6, 3, 0, 6, 5, 7,
+   4, 8, 8, 6, 7, 1, 5, 0, 5, 8, 2, 0, 6, 8, 1, 9, 0, 8, 9, 0, 2, 0, 0, 0, 7, 0, 8, 3, 8, 3, 6, 7, 6, 2, 7, 3,
+   8, 5, 4, 8, 4, 5, 8, 1, 7, 7, 1, 1, 5, 3, 1, 7, 6, 4, 4, 7, 5, 7, 3, 0, 2, 7, 0, 0, 6, 9, 8, 5, 5, 5, 7, 1,
+   3, 6, 6, 9, 5, 9, 6, 2, 2, 8, 4, 2, 9, 1, 4, 8, 1, 9, 8, 6, 0, 8, 3, 4, 9, 3, 6, 4, 7, 5, 2, 9, 2, 7, 1, 9,
+   0, 7, 4, 1, 6, 8, 4, 4, 4, 3, 6, 5, 5, 1, 0, 7, 0, 4, 3, 4, 2, 7, 1, 1, 5, 5, 9, 6, 9, 9, 5, 0, 8, 0, 9, 3,
+   0, 4, 2, 8, 8, 0, 1, 7, 7, 9, 0, 4, 1, 7, 4, 4, 9, 7, 7, 9, 2>>, 0)
 
 \* "If the integer input value represents a value less than -2^31 or greater
 \* than or equal to 2^31, a request error should be raised."
@@ -140,7 +154,8 @@ InIntRange(n) == AbsLess(n, TwoTo31) \/ (n.neg /\ n.digits = TwoTo31.digits /\ n
 
 \* "If the input value otherwise represents a value not representable by
 \* finite IEEE 754 (e.g. NaN, Infinity, ...), a request error must be raised."
-IsFiniteDouble(n) == ~AbsLess(MaxDouble, n)
+\* A number is finite when it rounds to a finite double: |n| < 2^1024 - 2^970.
+IsFiniteDouble(n) == AbsLess(n, DoubleOverflow)
 
 \* Arithmetic on natural numbers given as digit sequences, most significant
 \* first, with no leading zeros.
@@ -815,10 +830,12 @@ Valid(S, operation, request, response) ==
          /\ ~response.called
     [] outcome.kind = "fieldError" ->
          \* §6.4.4: the execution error nulls the nullable root field, and
-         \* is reported at its path.
+         \* is reported at its path, which is its response name, the alias
+         \* if it has one (§7.1.4: "If a path segment is associated with an
+         \* aliased field it must use the aliased name").
          /\ response.hasData
          /\ response.fieldIsNull
-         /\ response.errors = <<<<operation.field>>>>
+         /\ response.errors = <<<<operation.key>>>>
          /\ ~response.called
     [] OTHER ->
          /\ response.hasData
@@ -886,6 +903,17 @@ ScalarCases == <<
   Case(Lit(Named("Float"), I(1)), Ok(N(1))),
   Case(Lit(Named("Float"), Num("float", FALSE, <<1, 5>>, -1)), Ok(Num("number", FALSE, <<1, 5>>, -1))),
   Case(Lit(Named("Float"), Num("float", FALSE, <<1>>, 400)), Fail),  \* 1e400
+  \* Around the largest double, 2^1024 - 2^971 = 1.797693134862315708...e308:
+  \* its shortest decimal is below it, and everything below 2^1024 - 2^970
+  \* = 1.797693134862315807...e308 rounds to it.
+  Case(Lit(Named("Float"), Num("float", FALSE, <<1, 7, 9, 7, 6, 9, 3, 1, 3, 4, 8, 6, 2, 3, 1, 5, 7>>, 292)),
+       Ok(Num("number", FALSE, <<1, 7, 9, 7, 6, 9, 3, 1, 3, 4, 8, 6, 2, 3, 1, 5, 7>>, 292))),
+  Case(Lit(Named("Float"), Num("float", FALSE, <<1, 7, 9, 7, 6, 9, 3, 1, 3, 4, 8, 6, 2, 3, 1, 5, 7, 0, 8>>, 290)),
+       Ok(Num("number", FALSE, <<1, 7, 9, 7, 6, 9, 3, 1, 3, 4, 8, 6, 2, 3, 1, 5, 7, 0, 8>>, 290))),
+  Case(Lit(Named("Float"), Num("float", TRUE, <<1, 7, 9, 7, 6, 9, 3, 1, 3, 4, 8, 6, 2, 3, 1, 5, 8>>, 292)),
+       Ok(Num("number", TRUE, <<1, 7, 9, 7, 6, 9, 3, 1, 3, 4, 8, 6, 2, 3, 1, 5, 8>>, 292))),
+  Case(Lit(Named("Float"), Num("float", FALSE, <<1, 7, 9, 7, 6, 9, 3, 1, 3, 4, 8, 6, 2, 3, 1, 5, 9>>, 292)), Fail),
+  Case(Lit(Named("Float"), [DoubleOverflow EXCEPT !.kind = "float"]), Fail),  \* the midpoint rounds to even: 2^1024
   Case(Lit(Named("Float"), Num("int", FALSE, TwoTo53.digits, 0)), Ok(TwoTo53)),
   Case(Lit(Named("Float"), Num("int", FALSE, <<9, 0, 0, 7, 1, 9, 9, 2, 5, 4, 7, 4, 0, 9, 9, 3>>, 0)), Fail),  \* 2^53 + 1
   Case(Lit(Named("Float"), Num("float", FALSE, <<1>>, 22)), Ok(Num("number", FALSE, <<1>>, 22))),  \* 1e22 is exact
@@ -1119,6 +1147,7 @@ Response(hasData, fieldIsNull, errors, called, args) ==
 BadVariable == Op(X(IntT, FALSE, NullV), "int", {Entry("v", VarV("x"))})
 BadLiteral == Op(<<>>, "int", {Entry("v", Str("1"))})
 Fine == Op(<<>>, "int", {Entry("v", I(1))})
+Aliased == OpAt("query", "", <<>>, <<>>, "a", "intNN", FALSE, {Entry("v", NullV)}, <<>>)
 ResponseCases == <<
   Case(Valid(ExampleSchema, BadVariable, {Entry("x", Str("1"))}, Response(FALSE, FALSE, <<<<>>>>, FALSE, NullV)), TRUE),
   \* No sentence forbids a path on a request error.
@@ -1131,7 +1160,10 @@ ResponseCases == <<
   \* An execution error reported as a request error.
   Case(Valid(ExampleSchema, BadLiteral, {}, Response(FALSE, FALSE, <<<<>>>>, FALSE, NullV)), FALSE),
   Case(Valid(ExampleSchema, Fine, {}, Response(TRUE, FALSE, <<>>, TRUE, ObjV({Entry("v", N(1))}))), TRUE),
-  Case(Valid(ExampleSchema, Fine, {}, Response(TRUE, FALSE, <<>>, TRUE, ObjV({Entry("v", N(2))}))), FALSE)
+  Case(Valid(ExampleSchema, Fine, {}, Response(TRUE, FALSE, <<>>, TRUE, ObjV({Entry("v", N(2))}))), FALSE),
+  \* `{ a: intNN(v: null) }`: the error's path is the alias, not the field.
+  Case(Valid(ExampleSchema, Aliased, {}, Response(TRUE, TRUE, <<<<"a">>>>, FALSE, NullV)), TRUE),
+  Case(Valid(ExampleSchema, Aliased, {}, Response(TRUE, TRUE, <<<<"intNN">>>>, FALSE, NullV)), FALSE)
 >>
 
 \* §6.4.4 below the root: the positions and the data of a field with an

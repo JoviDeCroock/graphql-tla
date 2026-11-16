@@ -964,6 +964,16 @@ for (const [document, variables, extensions, check, operationName] of EXTENDED) 
   twinned("extensions", "requestExtensions", document, variables, { document, check }, { spec: [], extensions, operationName });
 }
 
+// §3.5.2: a Float literal "not representable by finite IEEE 754" is an
+// error. A decimal is representable when it rounds to a finite double, that
+// is when it is below 2^1024 - 2^970 (Coercion!DoubleOverflow), not below
+// the largest double's shortest decimal, 1.7976931348623157e308: the first
+// two round to the largest double, the third to Infinity. Literal vectors
+// like LITERALS', added last so the other vectors keep their ids.
+for (const literal of ["1.7976931348623158e308", "-1.7976931348623158e308", "1.7976931348623159e308"]) {
+  add("literal", "float", `{ float(v: ${literal}) }`, "{}");
+}
+
 // ---------------------------------------------------------------------------
 // TLA+ encodings for Coercion.tla (as in differential-coercion.mjs)
 

@@ -469,11 +469,14 @@ BlockStringLayout == {9, 10, 13}
 \* The StringValue that starts at i is valid and follows both SHOULDs: no
 \* code point in it, between its quotes included, is a non-printable
 \* control character (in a block string, BlockStringLayout aside), and it
-\* escapes no supplementary character with a pair.
+\* escapes no supplementary character with a pair. Valid includes that each
+\* of its code points is a SourceCharacter, which Lex checks for a whole
+\* document and StringValueAt doesn't: a raw lone surrogate isn't one.
 WellPrintedStringAt(src, i) ==
   LET scan == StringValueAt(src, i) IN
   /\ Ch(src, i) = Quote
   /\ scan.ok
+  /\ \A k \in i..(scan.end - 1) : IsSourceCharacter(src[k])
   /\ \A k \in i..(scan.end - 1) :
        ~IsNonPrintableControl(src[k]) \/ (IsBlockStringAt(src, i) /\ src[k] \in BlockStringLayout)
   /\ (~IsBlockStringAt(src, i) => ~PairEscapeFrom(src, i + 1))
@@ -712,6 +715,10 @@ PrintingVectors == <<
   W(Text("a"), Text("\"a\" "), FALSE),
   W(Text("a"), Text(" \"a\""), FALSE),
   W(Text("a"), Text("a"), FALSE),
+  \* A raw lone surrogate isn't a SourceCharacter, so neither of these is a
+  \* StringValue, in quotes or in a block string.
+  W(<<55296>>, <<Quote, 55296, Quote>>, FALSE),
+  W(<<56320>>, <<Quote, Quote, Quote, 56320, Quote, Quote, Quote>>, FALSE),
   WAll(Text("[\"a\", \"\\u{1F600}\", \"\"\"b\"\"\"]"), TRUE),
   WAll(Text("[\n  \"a\",\n  \"b\"\n]"), TRUE),
   WAll(Text("{s: \"\\uD83D\\uDE00\"}"), FALSE),

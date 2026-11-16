@@ -42,18 +42,28 @@ const typeRefOf = (node) => {
   return { name: node.name.value, wrappers };
 };
 
-// A constant literal as TypeSystem's value. Numbers are canonicalised, so
-// that 1.0 and 1 are the same value. A number too large for a double, such
-// as 1e400, becomes "Infinity", which TypeSystem's Float coercion rejects.
+// A constant literal as TypeSystem's value. An integer keeps its exact
+// digits, so that 9007199254740993 and 9007199254740992 stay two IDs (§3.5.5
+// accepts any integer for an ID) and two values of a custom scalar. A float
+// is canonicalised as the double it reads as, so that 1.0 and 1 are the
+// same value, and an integral double is written as its digits, so that an
+// integer coerced to Float (TypeSystem keeps its text) matches the same
+// double written as a float, such as 1e21 for 1000000000000000000000. An
+// integer a double can't hold exactly, such as 9007199254740993, matches
+// no float: Coercion.tla refuses it as a Float input value by default
+// (docs/kit/coerce.md, floatPrecision). A number too large for a double,
+// such as 1e400, becomes "Infinity", which TypeSystem's Float coercion
+// rejects.
+const floatText = (n) => (Number.isInteger(n) ? BigInt(n).toString() : String(n));
 export const valueOf = (node) => {
   const v = (kind, text = "", items = [], fields = []) => ({ kind, text, items, fields });
   switch (node.kind) {
     case "NullValue":
       return v("null");
     case "IntValue":
-      return v("int", String(Number(node.value)));
+      return v("int", BigInt(node.value).toString());
     case "FloatValue":
-      return v("float", String(Number(node.value)));
+      return v("float", floatText(Number(node.value)));
     case "StringValue":
       return v("string", node.value);
     case "BooleanValue":

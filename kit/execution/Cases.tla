@@ -28,14 +28,17 @@ MayRaise(fx, O, path, type, fields) ==
     IN CASE outcome.kind = "list" /\ IsList(inner) ->
               \E i \in 1..outcome.length :
                 MayRaise(fx, O, Append(path, ToString(i - 1)), OfType(inner), fields)
-         [] outcome.kind = "object" /\ Expected(fx, inner) = "object" ->
-              IF ~(outcome.type \in TypeDef(fx, inner.name).possibleTypes) THEN FALSE
+         [] outcome.kind \notin {"null", "error"} /\ Expected(fx, inner) = "object" ->
+              \* Completed with the sub-selection of ObjectTypeOf: for an
+              \* Object type, whatever the outcome.
+              LET objectType == ObjectTypeOf(fx, inner, outcome) IN
+              IF objectType = NoObjectType THEN FALSE
               ELSE
-                LET grouped == Executed(fx, outcome.type, CollectSubfields(fx, outcome.type, fields)) IN
+                LET grouped == Executed(fx, objectType, CollectSubfields(fx, objectType, fields)) IN
                 \E j \in DOMAIN grouped :
                   IF grouped[j].fields[1].name = "__typename" THEN FALSE
                   ELSE MayRaise(fx, O, Append(path, grouped[j].key),
-                                FieldType(fx, outcome.type, grouped[j].fields[1].name),
+                                FieldType(fx, objectType, grouped[j].fields[1].name),
                                 grouped[j].fields)
          [] OTHER -> FALSE
 

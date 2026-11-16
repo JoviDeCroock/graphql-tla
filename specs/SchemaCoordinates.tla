@@ -16,7 +16,8 @@
 (*   DirectiveArgumentCoordinate :: @ Name ( Name : )                      *)
 (*                                                                         *)
 (* Resolve(S, parsed) is "Resolving a Schema Coordinate", the five         *)
-(* algorithms followed literally, over TypeSystem.tla's schema data S. A   *)
+(* algorithms step by step, once the coordinates the spec gives no defined *)
+(* behaviour (below) are set aside, over TypeSystem.tla's schema data S. A *)
 (* step "Return X if it exists" gives no element when X doesn't exist; an  *)
 (* "Assert" that fails raises an error, which the prose says of a missing  *)
 (* non-leaf node ("an error will be raised if any non-leaf nodes within a  *)
@@ -25,9 +26,12 @@
 (* Where the spec gives no defined behaviour, Resolve says so              *)
 (* ("unspecified"): a meta-field or an introspection type ("they are not   *)
 (* schema element and therefore resolving such coordinates does not have a *)
-(* defined behavior"), and a built-in scalar no field, argument or input   *)
+(* defined behavior"), a built-in scalar no field, argument or input      *)
 (* field of the schema refers to, which §3.5 leaves out of the schema's    *)
-(* types in introspection but nothing says is absent from the schema.      *)
+(* types in introspection but nothing says is absent from the schema, and *)
+(* @deprecated, @specifiedBy or @oneOf in a schema that has nothing       *)
+(* deprecated, no custom scalar or no OneOf input object, where §3.13      *)
+(* doesn't ask for the directive (DirectiveExists).                        *)
 (*                                                                         *)
 (* Data shapes:                                                            *)
 (*   parsed   [ok, kind, names, reason]  kind \in {"type", "member",       *)
@@ -132,9 +136,7 @@ Parse(src) ==
 -----------------------------------------------------------------------------
 (* The schema's elements *)
 
-\* The built-in directives (§3.13.1 to §3.13.5) and their arguments, which
-\* a schema has whether or not its SDL defines them ("any built-in
-\* directive may be omitted for brevity").
+\* The built-in directives (§3.13.1 to §3.13.5) and their arguments.
 BuiltinDirectiveArgs ==
   ("skip" :> <<"if">>) @@ ("include" :> <<"if">>) @@ ("deprecated" :> <<"reason">>)
   @@ ("specifiedBy" :> <<"url">>) @@ ("oneOf" :> <<>>)
@@ -172,7 +174,52 @@ IsMetaField(S, T, name) ==
   \/ name = "__typename" /\ T.kind \in {"OBJECT", "INTERFACE", "UNION"}
   \/ name \in {"__schema", "__type"} /\ TS!RootTypeName(S, "query") = <<T.name>>
 
-DirectiveExists(S, name) == TS!DefinesDirective(S, name) \/ name \in DOMAIN BuiltinDirectiveArgs
+\* Which built-in directives a schema has that its SDL doesn't define. §3.13
+\* doesn't put them in every schema ("When representing a GraphQL schema
+\* using the type system definition language any built-in directive may be
+\* omitted for brevity" is about writing SDL); it says which ones an
+\* implementation provides:
+\*   "GraphQL implementations should provide the @skip and @include
+\*   directives."
+\*   "GraphQL implementations that support the type system definition
+\*   language must provide the @deprecated directive if representing
+\*   deprecated portions of the schema."
+\*   "... should provide the @specifiedBy directive if representing custom
+\*   scalar definitions."
+\*   "... should provide the @oneOf directive if representing OneOf Input
+\*   Objects."
+\* So @skip and @include are in every schema, and the other three in a
+\* schema that has what they describe: something deprecated, a custom
+\* scalar, a OneOf input object (the kit grades the "should"s as SHOULDs).
+\* Where that condition doesn't hold the spec doesn't say whether the schema
+\* has the directive, and resolving its coordinates has no defined
+\* behaviour here.
+IsDeprecated(x) == x.deprecated # <<>>
+HasDeprecatedArg(args) == \E k \in DOMAIN args : IsDeprecated(args[k])
+RepresentsDeprecation(S) ==
+  \/ \E T \in TS!Range(S.types) :
+       \/ \E k \in DOMAIN T.fields : IsDeprecated(T.fields[k]) \/ HasDeprecatedArg(T.fields[k].args)
+       \/ HasDeprecatedArg(T.inputFields)
+       \/ \E k \in DOMAIN T.values : IsDeprecated(T.values[k])
+  \/ \E i \in DOMAIN S.directives : IsDeprecated(S.directives[i]) \/ HasDeprecatedArg(S.directives[i].args)
+RepresentsCustomScalars(S) ==
+  \E T \in TS!Range(S.types) : T.kind = "SCALAR" /\ T.name \notin TS!BuiltinScalarNames
+RepresentsOneOf(S) == \E T \in TS!Range(S.types) : T.kind = "INPUT_OBJECT" /\ T.oneOf
+BuiltinDirectiveProvided(S, name) ==
+  CASE name \in {"skip", "include"} -> TRUE
+    [] name = "deprecated" -> RepresentsDeprecation(S)
+    [] name = "specifiedBy" -> RepresentsCustomScalars(S)
+    [] OTHER -> RepresentsOneOf(S)
+
+DirectiveExists(S, name) ==
+  \/ TS!DefinesDirective(S, name)
+  \/ name \in DOMAIN BuiltinDirectiveArgs /\ BuiltinDirectiveProvided(S, name)
+
+\* Why resolving a coordinate rooted at this directive name has no defined
+\* behaviour, or "" if it has one.
+UndefinedDirective(S, name) ==
+  IF name \in DOMAIN BuiltinDirectiveArgs /\ ~DirectiveExists(S, name)
+  THEN "built-in directive not provided" ELSE ""
 
 DirectiveArgNames(S, name) ==
   IF TS!DefinesDirective(S, name) THEN TS!Range(TS!NamesOf(TS!DirectiveNamed(S, name).args))
@@ -233,14 +280,16 @@ ResolveArgument(S, typeName, fieldName, argumentName) ==
 \* DirectiveCoordinate :: @ Name
 \*   2. Return the directive in {schema} named {directiveName} if it exists.
 ResolveDirective(S, directiveName) ==
-  IF DirectiveExists(S, directiveName) THEN Found("directive", <<directiveName>>) ELSE Nothing
+  IF UndefinedDirective(S, directiveName) # "" THEN Undefined(UndefinedDirective(S, directiveName))
+  ELSE IF DirectiveExists(S, directiveName) THEN Found("directive", <<directiveName>>) ELSE Nothing
 
 \* DirectiveArgumentCoordinate :: @ Name ( Name : )
 \*   3. Assert: {directive} must exist.
 \*   5. Return the argument of {directive} named {directiveArgumentName} if
 \*      it exists.
 ResolveDirectiveArgument(S, directiveName, argumentName) ==
-  IF ~DirectiveExists(S, directiveName) THEN Raise("directive")
+  IF UndefinedDirective(S, directiveName) # "" THEN Undefined(UndefinedDirective(S, directiveName))
+  ELSE IF ~DirectiveExists(S, directiveName) THEN Raise("directive")
   ELSE IF argumentName \in DirectiveArgNames(S, directiveName)
   THEN Found("directiveArgument", <<directiveName, argumentName>>)
   ELSE Nothing
@@ -259,6 +308,7 @@ Resolve(S, parsed) ==
 (* Every schema element, and its coordinate *)
 
 ObjectLike(S) == {T \in TS!Range(S.types) : T.kind \in {"OBJECT", "INTERFACE"}}
+DirectiveNames(S) == {n \in TS!Range(TS!NamesOf(S.directives)) \cup DOMAIN BuiltinDirectiveArgs : DirectiveExists(S, n)}
 
 \* "A schema element can be a named type, a field, an input field, an enum
 \* value, a field argument, a directive, or a directive argument defined
@@ -272,9 +322,8 @@ Elements(S) ==
                      : k \in DOMAIN T.fields} : T \in ObjectLike(S)}
   \cup UNION {{Element("inputField", <<T.name, T.inputFields[k].name>>) : k \in DOMAIN T.inputFields} : T \in TS!Range(S.types)}
   \cup UNION {{Element("enumValue", <<T.name, T.values[k].name>>) : k \in DOMAIN T.values} : T \in TS!Range(S.types)}
-  \cup {Element("directive", <<n>>) : n \in TS!Range(TS!NamesOf(S.directives)) \cup DOMAIN BuiltinDirectiveArgs}
-  \cup UNION {{Element("directiveArgument", <<n, a>>) : a \in DirectiveArgNames(S, n)}
-              : n \in TS!Range(TS!NamesOf(S.directives)) \cup DOMAIN BuiltinDirectiveArgs}
+  \cup {Element("directive", <<n>>) : n \in DirectiveNames(S)}
+  \cup UNION {{Element("directiveArgument", <<n, a>>) : a \in DirectiveArgNames(S, n)} : n \in DirectiveNames(S)}
 
 \* The schema coordinate of an element, as text.
 CoordinateText(e) ==
@@ -439,7 +488,16 @@ SyntaxVectors == <<
   RejectsText("@@a", "grammar")
 >>
 
-R(s, result) == [coordinate |-> s, expected |-> result]
+RIn(S, s, result) == [schema |-> S, coordinate |-> s, expected |-> result]
+R(s, result) == RIn(Example, s, result)
+
+\* type Query { a: Int }: nothing deprecated, no custom scalar, no OneOf
+\* input object. With a OneOf input object: OneOfSchema.
+Plain == [Example EXCEPT !.types = <<[Ty("OBJECT", "Query") EXCEPT !.fields = <<Fd("a", <<>>, "Int", <<>>)>>]>>,
+                         !.directives = <<>>]
+OneOfSchema ==
+  [Plain EXCEPT !.types = @ \o <<[Ty("INPUT_OBJECT", "W") EXCEPT !.inputFields = <<In("a", "Int", <<>>)>>, !.oneOf = TRUE]>>]
+NotProvided == Undefined("built-in directive not provided")
 
 ResolutionVectors == <<
   R("Business", Found("type", <<"Business">>)),
@@ -454,7 +512,21 @@ ResolutionVectors == <<
   R("String", Found("type", <<"String">>)),
   R("@deprecated(reason:)", Found("directiveArgument", <<"deprecated", "reason">>)),
   R("@include(if:)", Found("directiveArgument", <<"include", "if">>)),
-  R("@oneOf", Found("directive", <<"oneOf">>)),
+  R("@skip", Found("directive", <<"skip">>)),
+  \* Example deprecates a field and has the custom scalar Date, so §3.13 asks
+  \* for @deprecated and @specifiedBy; it has no OneOf input object.
+  R("@specifiedBy(url:)", Found("directiveArgument", <<"specifiedBy", "url">>)),
+  R("@oneOf", NotProvided),
+  R("@oneOf(x:)", NotProvided),
+  RIn(Plain, "@deprecated", NotProvided),
+  RIn(Plain, "@deprecated(reason:)", NotProvided),
+  RIn(Plain, "@specifiedBy", NotProvided),
+  RIn(Plain, "@oneOf", NotProvided),
+  RIn(Plain, "@skip(if:)", Found("directiveArgument", <<"skip", "if">>)),
+  RIn(Plain, "@include", Found("directive", <<"include">>)),
+  RIn(OneOfSchema, "@oneOf", Found("directive", <<"oneOf">>)),
+  RIn(OneOfSchema, "@oneOf(x:)", Nothing),
+  RIn(OneOfSchema, "@deprecated", NotProvided),
   \* Not found: no value, no error.
   R("Unknown", Nothing),
   R("business", Nothing),
@@ -463,7 +535,7 @@ ResolutionVectors == <<
   R("Query.searchBusiness(unknown:)", Nothing),
   R("@unknown", Nothing),
   R("@private(unknown:)", Nothing),
-  R("@oneOf(x:)", Nothing),
+  R("@deprecated(why:)", Nothing),
   \* A non-leaf node not found: an error.
   R("Unknown.x", Raise("type")),
   R("Unknown.x(y:)", Raise("type")),
@@ -498,5 +570,5 @@ SyntaxVectorsPass ==
 
 ResolutionVectorsPass ==
   vector > Len(SyntaxVectors) =>
-    LET v == ResolutionVectors[vector - Len(SyntaxVectors)] IN ResolveText(v.coordinate) = v.expected
+    LET v == ResolutionVectors[vector - Len(SyntaxVectors)] IN Resolve(v.schema, ParseText(v.coordinate)) = v.expected
 ====

@@ -41646,7 +41646,7 @@
    },
    "siblings": [
     "ValuesOfCorrectType-valid-59",
-    "ValuesOfCorrectType-valid-67"
+    "ValuesOfCorrectType-valid-69"
    ]
   },
   {
@@ -41807,7 +41807,7 @@
    "family": "twins",
    "rule": "ValuesOfCorrectType",
    "schema": "differential",
-   "document": "{\n  echo(float: 1.7976931348623159e308)\n}",
+   "document": "{\n  echo(float: 1e0000309)\n}",
    "expected": {
     "valid": false
    },
@@ -41829,7 +41829,7 @@
    "family": "twins",
    "rule": "ValuesOfCorrectType",
    "schema": "differential",
-   "document": "{\n  echo(float: 1.7976931348623157e308)\n}",
+   "document": "{\n  echo(float: 1e+0000001)\n}",
    "expected": {
     "valid": true
    }
@@ -41842,13 +41842,61 @@
    "family": "twins",
    "rule": "ValuesOfCorrectType",
    "schema": "differential",
-   "document": "{\n  echo(float: 1.7976931348623158e308)\n}",
+   "document": "{\n  echo(float: 1e0000308)\n}",
    "expected": {
     "valid": true
    }
   },
   {
    "id": "ValuesOfCorrectType-267",
+   "spec": [
+    "5.6.1"
+   ],
+   "family": "twins",
+   "rule": "ValuesOfCorrectType",
+   "schema": "differential",
+   "document": "{\n  echo(float: 1.7976931348623159e308)\n}",
+   "expected": {
+    "valid": false
+   },
+   "violations": {
+    "ValuesOfCorrectType": [
+     "value"
+    ]
+   },
+   "siblings": [
+    "ValuesOfCorrectType-valid-66",
+    "ValuesOfCorrectType-valid-67"
+   ]
+  },
+  {
+   "id": "ValuesOfCorrectType-valid-66",
+   "spec": [
+    "5.6.1"
+   ],
+   "family": "twins",
+   "rule": "ValuesOfCorrectType",
+   "schema": "differential",
+   "document": "{\n  echo(float: 1.7976931348623157e308)\n}",
+   "expected": {
+    "valid": true
+   }
+  },
+  {
+   "id": "ValuesOfCorrectType-valid-67",
+   "spec": [
+    "5.6.1"
+   ],
+   "family": "twins",
+   "rule": "ValuesOfCorrectType",
+   "schema": "differential",
+   "document": "{\n  echo(float: 1.7976931348623158e308)\n}",
+   "expected": {
+    "valid": true
+   }
+  },
+  {
+   "id": "ValuesOfCorrectType-268",
    "spec": [
     "5.6.1"
    ],
@@ -41865,11 +41913,11 @@
     ]
    },
    "siblings": [
-    "ValuesOfCorrectType-valid-66"
+    "ValuesOfCorrectType-valid-68"
    ]
   },
   {
-   "id": "ValuesOfCorrectType-valid-66",
+   "id": "ValuesOfCorrectType-valid-68",
    "spec": [
     "5.6.1"
    ],
@@ -41882,7 +41930,7 @@
    }
   },
   {
-   "id": "ValuesOfCorrectType-valid-67",
+   "id": "ValuesOfCorrectType-valid-69",
    "spec": [
     "5.6.1"
    ],

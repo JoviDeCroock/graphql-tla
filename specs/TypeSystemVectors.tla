@@ -382,6 +382,16 @@ DirectiveRulesHold == ~done =>
   \* Using a directive that doesn't lead back is fine.
   /\ Is(WithDirectives(With(<<Using(Input("In", <<Arg("f", R("Int"))>>), {"e"})>>),
                        <<Dir("d", <<Arg("a", R("In"))>>, {}), Dir("e", <<>>, {})>>), {})
+  \* A type and a directive may share a name, and both are references:
+  \* directive @d(arg: Int @e), directive @e(arg: X), directive @Y,
+  \* input X { a: Y @Y }, input Y { b: Int @d }. @d uses @e, whose
+  \* argument's type X names the type Y, which uses @d.
+  /\ LET X == Using(Input("X", <<Arg("a", R("Y"))>>), {"Y"})
+         Y == Using(Input("Y", <<Arg("b", R("Int"))>>), {"d"})
+         dirs(y) == <<Dir("d", <<Arg("arg", R("Int"))>>, {"e"}), Dir("e", <<Arg("arg", R("X"))>>, {}), Dir(y, <<>>, {})>>
+     IN /\ Is(WithDirectives(With(<<X, Y>>), dirs("Y")), {"DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY"})
+        \* Without the type Y's use of @d, nothing leads back.
+        /\ Is(WithDirectives(With(<<X, Using(Y, {})>>), dirs("Y")), {})
 
 \* "Directives must only be used in the locations they are declared to belong
 \* in."
@@ -596,12 +606,31 @@ DirectiveExtensionsAreChecked == ~done =>
      \* previous directive directly."
      /\ Is(Doc(S(<<OnDefinitions(Dir("d", <<>>, {}))>>), <<Ext("DIRECTIVE", "d")>>, <<DirAt("d", 1)>>),
            {"DIRECTIVE_EXTENSION_USES_PREVIOUS"})
-     \* "... nor indirectly by referencing a Type or Directive which
-     \* transitively includes a reference to the previous Directive":
+     \* "... which references the previous directive indirectly by
+     \* referencing a Type or Directive which transitively includes a
+     \* reference to the previous Directive":
      \* @e's definition uses @d; or @e's argument's type uses @d.
      /\ Is(Doc(S(<<OnDefinitions(Dir("d", <<>>, {})), OnDefinitions(Dir("e", <<>>, {"d"}))>>), <<Ext("DIRECTIVE", "d")>>,
                <<DirAt("e", 1)>>), {"DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS"})
      /\ Is(Doc(WithDirectives(With(<<Using(Input("In", <<Arg("f", R("Int"))>>), {"d"})>>),
                               <<OnDefinitions(Dir("d", <<>>, {})), OnDefinitions(Dir("e", <<Arg("x", R("In"))>>, {}))>>),
                <<Ext("DIRECTIVE", "d")>>, <<DirAt("e", 1)>>), {"DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS"})
+  \* The directives as extended: extend directive @d @e, then extend
+  \* directive @e @d, where @d as previously extended uses @e.
+  /\ LET DirExt(name, uses) == [Ext("DIRECTIVE", name) EXCEPT !.directives = uses]
+         OnE(name, extension) == UseAt(name, "DIRECTIVE_DEFINITION", <<"DIRECTIVE", "e">>, extension, <<>>)
+         de == <<OnDefinitions(Dir("d", <<>>, {})), OnDefinitions(Dir("e", <<>>, {}))>>
+     IN /\ Is(Doc(WithDirectives(With(<<>>), de), <<DirExt("d", {"e"}), DirExt("e", {"d"})>>,
+                  <<DirAt("e", 1), OnE("d", 2)>>), {"DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS"})
+        \* extend directive @e @f, then extend directive @d @e, where
+        \* directive @f(x: In) and input In { f: Int @d }: @e as previously
+        \* extended uses @f, whose argument's type uses @d.
+        /\ Is(Doc(WithDirectives(With(<<Using(Input("In", <<Arg("f", R("Int"))>>), {"d"})>>),
+                                 de \o <<OnDefinitions(Dir("f", <<Arg("x", R("In"))>>, {}))>>),
+                  <<DirExt("e", {"f"}), DirExt("d", {"e"})>>, <<OnE("f", 1), DirAt("e", 2)>>),
+              {"DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS"})
+        \* A chain that doesn't lead back: extend directive @d @e, then
+        \* extend directive @e @f.
+        /\ Is(Doc(WithDirectives(With(<<>>), de \o <<OnDefinitions(Dir("f", <<>>, {}))>>),
+                  <<DirExt("d", {"e"}), DirExt("e", {"f"})>>, <<DirAt("e", 1), OnE("f", 2)>>), {})
 ====

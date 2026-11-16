@@ -91,6 +91,9 @@ const BROKEN = [
   ["rich.inc", "changes a default value", "defaultValue", (s) => (field(s, "Q", "a").args[0].defaultValue = "4"), { only: true }],
   ["defaults.inc", "gives a default to an input value without one", "defaultValue", (s) => (type(s, "I").inputFields.find((x) => x.name === "b").defaultValue = "0"), { only: true }],
   // §4.2.4: "defaultValue may return a String encoding"
+  ["defaults.inc", "prints an ID default beyond 2^53 as the nearest double", "defaultValue", (s) => (field(s, "Query", "f").args.find((x) => x.name === "big").defaultValue = "9007199254740992"), { only: true }],
+  ["defaults.inc", "prints a control character unescaped", "defaultValuePrinting", (s) => (field(s, "Query", "f").args.find((x) => x.name === "bell").defaultValue = '"\u0007"'), { only: true, since: "September2025" }],
+  ["defaults.inc", "prints a Float default written as an integer in exponent form", "pass", (s) => (field(s, "Query", "f").args.find((x) => x.name === "huge").defaultValue = "1e21")],
   ["defaults.inc", "returns null for a default of null", "defaultValueOmitted", (s) => (field(s, "Query", "f").args.find((x) => x.name === "n").defaultValue = null), { only: true }],
   ["rich.inc", "returns null for a default of 3", "defaultValueOmitted", (s) => (field(s, "Q", "a").args[0].defaultValue = null), { only: true }],
   ["order.inc", "reorders a type's interfaces", "order", (s) => type(s, "O").interfaces.reverse()],
@@ -598,9 +601,10 @@ const BROKEN = [
     ["wrappers", "gives a List type a specifiedByURL", "typeKinds", (s, d) => (wrapperOf(d, "types").ofType.specifiedByURL = "u"), { only: true }],
     ["rich.lookup", "answers null for a type the schema has", "typeByName", (s, d) => (d.t1 = null)],
     ["deprecation.lookup.defaults", "returns a deprecated value when includeDeprecated is false", "deprecation", (s, d) => d.t2.enumValues.push({ name: "B", description: null, isDeprecated: true, deprecationReason: "Gone" })],
-    // October 2021 has no rule on producing a StringValue.
-    ["printing.inc", "prints a control character unescaped, which October 2021 doesn't grade", "pass", (s) => (field(s, "Query", "f").args[0].defaultValue = field(s, "Query", "f").args[0].defaultValue.replace("\\u0001", "\u0001"))],
-    ["printing.inc", "escapes a supplementary character as a surrogate pair, which October 2021 doesn't grade", "pass", (s) => (field(s, "Query", "f").args[1].defaultValue = '"\\uD83D\\uDE00 \u00e9"')],
+    // October 2021 has no rule on producing a StringValue. The printing
+    // vectors are September 2025's (a raw supplementary character), so
+    // `defaults` has the control character.
+    ["defaults.inc", "prints a control character unescaped, which October 2021 doesn't grade", "pass", (s) => (field(s, "Query", "f").args.find((x) => x.name === "bell").defaultValue = '"\u0007"')],
     ["probe.skip", "rejects a request that uses @skip", "builtinDirectives", rejected, { only: true }],
     ["probe.include", "honours @include but doesn't return it", "directives", (s) => (s.directives = s.directives.filter((x) => x.name !== "include")), { only: true }],
     ["interfaceDeprecation.inc", "reports an interface's deprecated field as not deprecated", "deprecation", (s) => Object.assign(field(s, "Named", "name"), { isDeprecated: false, deprecationReason: null })],

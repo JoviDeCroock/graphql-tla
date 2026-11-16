@@ -76,6 +76,10 @@ const raises = (schema, type, outcome) => {
   if (outcome.kind === "null") return graphql.isNonNullType(type);
   const named = graphql.getNamedType(type);
   const expected = graphql.isListType(nullable(type)) ? "list" : graphql.isLeafType(named) ? "leaf" : "object";
+  // An Object type completes whatever its resolver produced with its
+  // sub-selection (§6.4.3: "Let objectType be fieldType"), as
+  // Reference!ObjectTypeOf has it.
+  if (expected === "object" && graphql.isObjectType(named)) return false;
   if (outcome.kind !== expected) return true;
   if (expected !== "object") return false;
   const runtime = schema.getType(outcome.type ?? "");
@@ -144,12 +148,14 @@ const callProblems = (fixture, trace, at, add) => {
 };
 
 // Causality: a resolver below the root is called only once its parent
-// position has settled to a value that contains it (an object, or a list
-// long enough for the index), and an `after` stamp is a count of settles the
-// adapter had been sent by then. Inline item events (a list settled with
-// its items, for adapters without deferred-items) come with their list and
-// aren't counted as settles the adapter was sent.
-const causalProblems = (trace, add) => {
+// position has settled to a value that contains it (an object, any value
+// but null or an error at an Object-typed position, which §6.4.3 completes
+// with its sub-selection whatever it is, or a list long enough for the
+// index), and an `after` stamp is a count of settles the adapter had been
+// sent by then. Inline item events (a list settled with its items, for
+// adapters without deferred-items) come with their list and aren't counted
+// as settles the adapter was sent.
+const causalProblems = (trace, at, add) => {
   const settled = new Map();
   let sent = 0;
   for (const event of trace) {
@@ -167,8 +173,13 @@ const causalProblems = (trace, add) => {
     const parent = settled.get(pathKey(path.slice(0, -1)));
     const last = path[path.length - 1];
     const index = /^(0|[1-9]\d*)$/.test(last) ? Number(last) : null;
+    const parentType = at(path.slice(0, -1))?.type;
+    const objectTyped =
+      index === null && parentType && !graphql.isListType(nullable(parentType)) && graphql.isObjectType(graphql.getNamedType(parentType));
     const reachable =
-      parent?.kind === "object" || (parent?.kind === "list" && index !== null && index < Number(parent.length ?? 0));
+      parent?.kind === "object" ||
+      (objectTyped && parent !== undefined && parent.kind !== "null" && parent.kind !== "error") ||
+      (parent?.kind === "list" && index !== null && index < Number(parent.length ?? 0));
     if (!reachable) {
       add(
         "callsReachable",
@@ -357,7 +368,7 @@ export const normalize = (fixture, c) => {
   // doesn't select, or with the wrong type, is the root cause of whatever
   // follows from it, so it must not be blamed on the response.
   const consistent = traceProblems(fixture, c.trace, add);
-  causalProblems(c.trace, add);
+  causalProblems(c.trace, at, add);
   callProblems(fixture, c.trace, at, add);
   parentProblems(fixture, c, add);
   // A subscription whose response stream failed instead of yielding the

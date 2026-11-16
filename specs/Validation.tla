@@ -1122,8 +1122,11 @@ OverflowDigits ==
 \* digit that isn't 0, the leading digit's place is E = point - k + exp
 \* (value = dk.dk+1... x 10^E). Every value below 10^308 is finite, every
 \* value from 10^309 on isn't, and between them the digits from dk on are
-\* compared with OverflowDigits. An exponent of more than 6 digits is read
-\* as +-1000000, which decides the same.
+\* compared with OverflowDigits. The exponent may have leading zeros
+\* (ExponentPart :: ExponentIndicator Sign? Digit+), which don't count: an
+\* exponent whose value has more than 6 digits, leading zeros aside, is read
+\* as +-1000000, which decides the same as its value for any literal of
+\* fewer than 999000 digits.
 FloatLiteralFinite(text) ==
   LET u == Unsigned(text)
       e == FirstIndexOf(u, {"e", "E"}, 1)
@@ -1134,7 +1137,8 @@ FloatLiteralFinite(text) ==
       expText == IF e > Len(u) THEN "" ELSE SubSeq(u, e + 1, Len(u))
       negative == expText # "" /\ LiteralChar(expText, 1) = "-"
       expDigits == IF expText # "" /\ LiteralChar(expText, 1) \in {"-", "+"} THEN SubSeq(expText, 2, Len(expText)) ELSE expText
-      magnitude == IF Len(expDigits) > 6 THEN 1000000 ELSE DigitsValue(expDigits, 1, 0)
+      significant == SubSeq(expDigits, FirstIndexOf(expDigits, DigitChars \ {"0"}, 1), Len(expDigits))
+      magnitude == IF Len(significant) > 6 THEN 1000000 ELSE DigitsValue(significant, 1, 0)
       exp == IF negative THEN -magnitude ELSE magnitude
       k == FirstIndexOf(digits, DigitChars \ {"0"}, 1)
       place == Len(intPart) - k + exp
@@ -1747,6 +1751,10 @@ RangeVectors == <<
   Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("0.0")), TRUE),
   Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("1e-400")), TRUE),
   Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("1E+1234567")), FALSE),
+  \* An exponent's leading zeros don't count: 1e308, 10 and 1e309.
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("1e0000308")), TRUE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("1e+0000001")), TRUE),
+  Added("ValuesOfCorrectType", Examples, FloatArg(FloatV("1e0000309")), FALSE),
   Added("ValuesOfCorrectType", Examples, FloatArg(IntV(E308)), TRUE),
   Added("ValuesOfCorrectType", Examples, FloatArg(IntV(E308 \o "0")), FALSE),
   Added("ValuesOfCorrectType", Examples, FloatArg(FloatV(OverflowDigits \o ".0")), FALSE)

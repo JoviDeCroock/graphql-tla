@@ -5765,6 +5765,36 @@
       }
     },
     {
+      "id": "directiveReferencesItselfIndirectly.7.invalid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+      "pair": "directiveReferencesItselfIndirectly.7.valid",
+      "sdl": "directive @d(arg: Int @e) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @e(arg: X) on ARGUMENT_DEFINITION directive @Y on INPUT_FIELD_DEFINITION input X { a: Y @Y } input Y { b: Int @d } type Query { a: Int }",
+      "verdict": [
+        "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveReferencesItselfIndirectly.7.valid",
+      "spec": [
+        "3.13"
+      ],
+      "family": "directive",
+      "rule": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY",
+      "pair": "directiveReferencesItselfIndirectly.7.invalid",
+      "sdl": "directive @d(arg: Int @e) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @e(arg: X) on ARGUMENT_DEFINITION directive @Y on INPUT_FIELD_DEFINITION input X { a: Y @Y } input Y { b: Int } type Query { a: Int }",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
       "id": "directiveNotRepeated.1.invalid",
       "spec": [
         "3.13",
@@ -8835,6 +8865,86 @@
       ],
       "pair": "directiveExtensionReferencesPrevious.2.invalid",
       "sdl": "directive @d on FIELD | INPUT_FIELD_DEFINITION directive @e(x: In) on DIRECTIVE_DEFINITION input In { f: Int } type Query { a(i: In): Int } extend directive @d @e",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveExtensionReferencesPrevious.3.invalid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions, the DIRECTIVE_DEFINITION location",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionReferencesPrevious.3.valid",
+      "sdl": "directive @d on FIELD | DIRECTIVE_DEFINITION directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e extend directive @e @d",
+      "verdict": [
+        "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveExtensionReferencesPrevious.3.valid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions, the DIRECTIVE_DEFINITION location",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionReferencesPrevious.3.invalid",
+      "sdl": "directive @d on FIELD | DIRECTIVE_DEFINITION directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @e @d",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "directiveExtensionReferencesPrevious.4.invalid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions, the DIRECTIVE_DEFINITION location",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionReferencesPrevious.4.valid",
+      "sdl": "directive @d on FIELD | INPUT_FIELD_DEFINITION directive @e on DIRECTIVE_DEFINITION directive @f(x: In) on DIRECTIVE_DEFINITION input In { f: Int @d } type Query { a(i: In): Int } extend directive @e @f extend directive @d @e",
+      "verdict": [
+        "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "directiveExtensionReferencesPrevious.4.valid",
+      "spec": [
+        "3.13.6"
+      ],
+      "family": "extension",
+      "rule": "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS",
+      "since": "September2026",
+      "editionNote": "new in September 2026: directive extensions, the DIRECTIVE_DEFINITION location",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "directiveExtensionReferencesPrevious.4.invalid",
+      "sdl": "directive @d on FIELD | INPUT_FIELD_DEFINITION directive @e on DIRECTIVE_DEFINITION directive @f(x: In) on DIRECTIVE_DEFINITION input In { f: Int } type Query { a(i: In): Int } extend directive @e @f extend directive @d @e",
       "verdict": [],
       "expected": {
         "valid": true

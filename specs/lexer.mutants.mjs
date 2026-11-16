@@ -148,4 +148,11 @@ export default [
     file,
     property: "StringsPrintWell",
   },
+  {
+    name: "a printed string may hold a raw lone surrogate, which isn't a SourceCharacter",
+    find: "  /\\ \\A k \\in i..(scan.end - 1) : IsSourceCharacter(src[k])\n",
+    replace: "",
+    file,
+    property: "StringsPrintWell",
+  },
 ];

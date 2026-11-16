@@ -87,11 +87,11 @@ The kit has seven areas. Each checks one part of the spec against its TLA+ refer
 | --- | --- | --- | --- | --- |
 | [`execution`](docs/conformance.md) | §6, §7, and §3's result coercion | `Reference.tla` | drives your resolvers through 19 fixtures, every outcome and schedule, and checks each response against every response the spec allows; with capabilities, also subscription streams (§6.2.3), the value each resolver was called on, and custom scalar and ID results | 47 |
 | [`parse`](docs/kit/parse.md) | §2, and §3's type system grammar | `Lexer.tla`, `Parser.tla` | accept or reject 2,847 source texts, mostly in minimal pairs; 713 of them type system documents (capability `parse-sdl`), and 20 crash probes | 51 |
-| [`validate`](docs/kit/validate.md) | §5, §2.2 | `Validation.tla` | 3,367 documents, each breaking one rule (two in 27 documented cases) or none, so each rule gets its own verdict, plus copies with descriptions and comments that must get the same verdict | 36 |
-| [`coerce`](docs/kit/coerce.md) | §2.10.4, §3.5, §3.9–§3.12, §6.1, §6.2.3.1, §6.4.1, §7.1 | `Coercion.tla` | 2,219 requests with variables and literals: a request error, a field error, or the coerced arguments; also operation selection, a subscription's source stream, and the shape of every response | 42 |
-| [`schema`](docs/kit/schema.md) | §3 | `TypeSystem.tla` | 495 SDL schemas in 250 minimal pairs, one or more per type-system rule; 127 with type system extensions (capability `schema-extensions`) | 64 |
+| [`validate`](docs/kit/validate.md) | §5, §2.2 | `Validation.tla` | 3,370 documents, each breaking one rule (two in 27 documented cases) or none, so each rule gets its own verdict, plus copies with descriptions and comments that must get the same verdict | 36 |
+| [`coerce`](docs/kit/coerce.md) | §2.10.4, §3.5, §3.9–§3.12, §6.1, §6.2.3.1, §6.4.1, §7.1 | `Coercion.tla` | 2,222 requests with variables and literals: a request error, a field error, or the coerced arguments; also operation selection, a subscription's source stream, and the shape of every response | 42 |
+| [`schema`](docs/kit/schema.md) | §3 | `TypeSystem.tla` | 501 SDL schemas in 253 minimal pairs, one or more per type-system rule; 131 with type system extensions (capability `schema-extensions`) | 64 |
 | [`introspect`](docs/kit/introspect.md) | §4 | `Introspection.tla` | 71 introspection queries over 21 schemas, with the variation the spec allows, answered under the September 2026, September 2025 or October 2021 profile | 31 |
-| [`coordinate`](docs/kit/coordinate.md) | §2.14 | `SchemaCoordinates.tla` | 203 schema coordinates over two schemas: whether each parses, and what it resolves to | 11 |
+| [`coordinate`](docs/kit/coordinate.md) | §2.14 | `SchemaCoordinates.tla` | 210 schema coordinates over two schemas: whether each parses, and what it resolves to | 11 |
 
 Outside execution, every expected answer comes from evaluating the reference with tla-ts, never from graphql-js. [`docs/kit-areas.md`](docs/kit-areas.md) describes how those areas work.
 

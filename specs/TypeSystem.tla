@@ -715,11 +715,14 @@ HasLocations(D) == D.locations # <<>>
 
 \* What a definition references: the directives used inside it and the
 \* types it names. A type's fields, arguments, input fields, interfaces and
-\* members name types; a directive's arguments do.
+\* members name types; a directive's arguments do. TypeReferences(T) is the
+\* names of the types T names, and T.directives those of the directives
+\* used inside it: two name spaces, kept apart, since a type and a
+\* directive may share a name (`input X { a: Y @Y }` references the type Y
+\* and the directive @Y).
 ArgTypeNames(args) == {args[k].type.name : k \in DOMAIN args}
 TypeReferences(T) ==
-  T.directives
-  \cup {T.fields[k].type.name : k \in DOMAIN T.fields}
+  {T.fields[k].type.name : k \in DOMAIN T.fields}
   \cup UNION {ArgTypeNames(T.fields[k].args) : k \in DOMAIN T.fields}
   \cup ArgTypeNames(T.inputFields)
   \cup Range(T.interfaces) \cup Range(T.members)
@@ -735,7 +738,7 @@ References(S, node) ==
        ELSE {}
   ELSE LET T == TypeNamed(S, node[2]) IN
        {<<"directive", d>> : d \in T.directives}
-       \cup {<<"type", t>> : t \in TypeReferences(T) \ T.directives}
+       \cup {<<"type", t>> : t \in TypeReferences(T)}
 
 \* The built-in directives (§3.13.1 to §3.13.5) and their locations, which a
 \* document may use without defining: "any built-in directive may be
@@ -989,16 +992,47 @@ DirectiveExtensionUsesPrevious(S) ==
     LET u == DirectiveUses(S)[k] IN
     u.extension > 0 /\ IsDirectiveSite(u.site) /\ u.name = u.site[2]
 
+\* The directives as the document's directive extensions extend them: each
+\* directive with the directives every `extend directive` of it applies,
+\* and a built-in directive an extension extends with its built-in
+\* arguments (only References reads these records). Extended(S) leaves the
+\* directives as defined, so that the definitions' rules
+\* (DIRECTIVE_USES_ITSELF, DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY) see the
+\* definitions only, and a cycle an extension closes breaks the
+\* extension's rule alone.
+DirectiveExtensions(S, name) ==
+  {k \in DOMAIN Extensions(S) : Extensions(S)[k].kind = "DIRECTIVE" /\ Extensions(S)[k].name = name}
+AppliedByDirectiveExtensions(S, name) ==
+  UNION {Extensions(S)[k].directives : k \in DirectiveExtensions(S, name)}
+ExtendedBuiltinDirectives(S) ==
+  SelectSeq(<<"skip", "include", "deprecated", "specifiedBy", "oneOf">>,
+            LAMBDA n : ~DefinesDirective(S, n) /\ DirectiveExtensions(S, n) # {})
+DirectivesExtended(S) ==
+  LET builtins == ExtendedBuiltinDirectives(S) IN
+  [S EXCEPT !.directives =
+     [i \in DOMAIN S.directives |->
+        [S.directives[i] EXCEPT !.directives = @ \cup AppliedByDirectiveExtensions(S, S.directives[i].name)]]
+     \o [j \in DOMAIN builtins |->
+          [name |-> builtins[j], args |-> BuiltinDirectiveArgs[builtins[j]],
+           directives |-> AppliedByDirectiveExtensions(S, builtins[j])]]]
+
 \* "Any directives provided must not contain the use of a Directive which
 \* references the previous directive indirectly by referencing a Type or
 \* Directive which transitively includes a reference to the previous
-\* Directive." The extension of @d applies @e, and @e's definition reaches
-\* @d through the types and directives it references, in the extended
-\* schema.
+\* Directive." The extension of @d applies @e, and @e reaches @d through
+\* the types and directives it references, in the extended schema with its
+\* directives as extended: `extend directive @d @e` then `extend directive
+\* @e @d` is a cycle as much as `directive @d @e` and `directive @e @d` are.
+\*
+\* "The previous directive" is the directive as extended by the extensions
+\* before this one; the search follows every extension instead. The verdict
+\* is the same: if a cycle runs through some extensions' uses, the last of
+\* them in the document closes it, with every other edge already there, so
+\* the rule is broken either way.
 DirectiveExtensionReferencesPrevious(S) ==
   \E k \in DOMAIN DirectiveUses(S) :
     LET u == DirectiveUses(S)[k]
-        E == Extended(S)
+        E == DirectivesExtended(Extended(S))
         start == References(E, <<"directive", u.name>>)
     IN /\ u.extension > 0 /\ IsDirectiveSite(u.site) /\ u.name # u.site[2]
        /\ <<"directive", u.site[2]>> \in Reachable(E, start, start)

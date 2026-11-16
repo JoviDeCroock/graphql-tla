@@ -97,6 +97,8 @@ The kit checks leaf values in the response against the same table, because the r
 - a leaf for a list type;
 - an object for an Int, Float or Boolean. Not for String or ID, which §3.5 lets a service coerce from other values "where reasonable".
 
+An Object type has no wrong shape. §6.4.3's CompleteValue says "If {fieldType} is an Object type." and "Let {objectType} be {fieldType}.", and completes whatever the resolver produced with the sub-selection, so `Reference.tla` completes a leaf, a list or an object of another type there as an object of that type, with no error. The kit only sends objects of the type itself there.
+
 The kit doesn't send a runtime type that isn't one of an abstract type's possible types. `ResolveAbstractType` (§6.4.3) is "the internal method provided by the type system", and no release says what an executor does when it returns a type that isn't a member. §3 says such a field "will return a valid implementing Object type", with no key word, and no sentence says the executor must raise an execution error, which is what graphql-js and `Reference.tla` do. So no response to such an outcome could be graded against the spec.
 
 ### Capabilities

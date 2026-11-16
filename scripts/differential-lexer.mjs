@@ -394,7 +394,7 @@ const sdlInputs = () => {
 // plausible printers, each judged independently of Lexer.tla against §2.10.4
 // "When producing a StringValue" (see IsWellPrintedString there).
 
-const PRINT_ATOMS = ["a", " ", '"', "\\", "\n", "\t", "\r", "\u0000", "\u001F", "\u007F", "\u0085", "\u009F", " ", "é", " ", "￿", "\u{1F600}", "\u{10FFFF}"];
+const PRINT_ATOMS = ["a", " ", '"', "\\", "\n", "\t", "\r", "\u0000", "\u001F", "\u007F", "\u0085", "\u009F", " ", "é", " ", "￿", "\u{1F600}", "\u{10FFFF}", "\uD800"];
 
 // The printers: graphql-js's print as a "..." string and as a block string,
 // JSON.stringify, and two ASCII-only printers that escape every other code

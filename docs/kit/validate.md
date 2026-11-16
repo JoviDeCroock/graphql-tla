@@ -91,7 +91,7 @@ There is one check per rule, at MUST, cited by its section; `intInputRange`, at 
 | `descriptionsInert` | §2.2, §2.1.4 | `fragmentSpreadReading` (INFO) | §5.5.2.3 |
 | `identicalArgumentsReading` (INFO) | §5.3.2 | `oneOfVariableReading` (INFO) | §5.8.5 |
 
-`valuesOfCorrectType` also cites §3.5.2. Its literals are coercible by kind, as before, and since a Float literal must be finite ("If the input value otherwise represents a value not representable by finite IEEE 754 (e.g. NaN, Infinity, or a value outside the available precision), a request error must be raised"), one too large for binary64 isn't: `1e400`, `10e308`, `1.7976931348623159e308`, and an integer of 310 digits given to a Float. `1.7976931348623158e308`, which rounds to the largest double, and `0.001e311` are valid. A literal too small (`1e-400`) isn't graded, since the spec doesn't say whether rounding it to 0 is "outside the available precision". `intInputRange` is §3.5.1's SHOULD: "If the integer input value represents a value less than -2^31 or greater than or equal to 2^31, a request error should be raised." Its vectors give `2147483648` and `-2147483649` to Int (in an argument, a list item and a variable's default value); their valid siblings give `2147483647` and `-2147483648`, and `2147483648` to ID and to Float. Every release says the same for both scalars. `Validation.tla` models both (`FloatLiteralFinite`, `IntLiteralFits`), apart from its `Rules` (see [Limits](#limits)).
+`valuesOfCorrectType` also cites §3.5.2. Its literals are coercible by kind, as before, and since a Float literal must be finite ("If the input value otherwise represents a value not representable by finite IEEE 754 (e.g. NaN, Infinity, or a value outside the available precision), a request error must be raised"), one too large for binary64 isn't: `1e400`, `10e308`, `1.7976931348623159e308`, and an integer of 310 digits given to a Float. `1.7976931348623158e308`, which rounds to the largest double, and `0.001e311` are valid. An exponent's leading zeros don't count (`ExponentPart :: ExponentIndicator Sign? Digit+`): `1e0000308` and `1e+0000001` are valid, `1e0000309` isn't. A literal too small (`1e-400`) isn't graded, since the spec doesn't say whether rounding it to 0 is "outside the available precision". `intInputRange` is §3.5.1's SHOULD: "If the integer input value represents a value less than -2^31 or greater than or equal to 2^31, a request error should be raised." Its vectors give `2147483648` and `-2147483649` to Int (in an argument, a list item and a variable's default value); their valid siblings give `2147483647` and `-2147483648`, and `2147483648` to ID and to Float. Every release says the same for both scalars. `Validation.tla` models both (`FloatLiteralFinite`, `IntLiteralFits`), apart from its `Rules` (see [Limits](#limits)).
 
 A rule's check has one of four statuses:
 
@@ -138,7 +138,7 @@ The reference's own answers must also come out clean, with §5.6.2 and §5.6.4 `
 
 ## Vectors
 
-[`kit/validate/vectors.json`](../../kit/validate/vectors.json) holds 3,367 vectors, 2,265 invalid and 1,102 valid. `schemas` holds the SDL they refer to by name. [`scripts/generate-vectors-validate.mjs`](../../scripts/generate-vectors-validate.mjs) writes it. tla-ts evaluates every rule of `Validation.tla` on every candidate document, and the vectors are chosen from those verdicts. `--check` regenerates the file and fails if it differs.
+[`kit/validate/vectors.json`](../../kit/validate/vectors.json) holds 3,370 vectors, 2,266 invalid and 1,104 valid. `schemas` holds the SDL they refer to by name. [`scripts/generate-vectors-validate.mjs`](../../scripts/generate-vectors-validate.mjs) writes it. tla-ts evaluates every rule of `Validation.tla` on every candidate document, and the vectors are chosen from those verdicts. `--check` regenerates the file and fails if it differs.
 
 Each invalid vector records the rules it breaks and the subjects each rule reports (`"violations": {"FieldSelectionMerging": ["conflict"]}`), and `siblings` lists its valid siblings. A vector may also carry:
 
@@ -150,7 +150,7 @@ Each invalid vector records the rules it breaks and the subjects each rule repor
 - **`twinOf`:** on a description or comment twin, the vector it copies (see [Descriptions and comments](#descriptions-and-comments));
 - **`example`:** for a vector of family `spec`, the name of the spec's example; **`origin`:** for a document `Validation.tla` adds beside the spec's examples, that it isn't one of them.
 
-13 vectors are `unspecified`, all with `readings`. An adapter with every capability is graded on 3,354 vectors, 251 of them with `since` (248 September 2025, 61 of those twins, and 3 September 2026). One without `custom-scalar-literals` is graded on 3,334, one without `custom-directives` on 3,282, and one without either on 3,262.
+13 vectors are `unspecified`, all with `readings`. An adapter with every capability is graded on 3,357 vectors, 251 of them with `since` (248 September 2025, 61 of those twins, and 3 September 2026). One without `custom-scalar-literals` is graded on 3,337, one without `custom-directives` on 3,285, and one without either on 3,265.
 
 **Where the documents come from:**
 

@@ -87,12 +87,16 @@ type Image implements Resource & Node { id: ID! url: [[String!]]! }
 type User implements Node { id: ID! friends: [User!] }
 type Query { node(id: ID!): Node, resource: Resource }`,
   ],
+  // `big` is an ID beyond 2^53, which only its digits encode; `huge` is a
+  // Float default written as an integer, which a service may print as 1e21;
+  // `bell` has a control character, escaped, which October 2021's grammar
+  // has too (printing's other strings are September 2025's).
   [
     "defaults",
     ["4.2.4"],
     `enum E { X Y }
 input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 }
-type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = "say \\"hi\\"", n: Int = null, l: [E!] = [X, Y]): Int }`,
+type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = "say \\"hi\\"", n: Int = null, l: [E!] = [X, Y], big: ID = 9007199254740993, huge: Float = 1000000000000000000000, bell: String = "\\u0007"): Int }`,
   ],
   [
     "deprecation",
@@ -295,11 +299,14 @@ type Query {
   ],
   // Default values whose strings have control characters and supplementary
   // characters, to see how a service prints them (defaultValuePrinting).
+  // The raw U+1F600 is outside October 2021's SourceCharacter (U+0020 to
+  // U+FFFF), so the schema is September 2025's, like descriptionText.
   [
     "printing",
     ["4.2.4", "2.10.4"],
     `input In { s: String = "\\u0003", t: [String] = ["\u{1F600}"] }
 type Query { f(c: String = "\\u0000\\u0001\\t\\n\\u001F\\u007F\\u0080\\u0085\\u009F", e: String = "\u{1F600} \u00e9", l: [String] = ["\\u0002", "\u{1F600}"], i: In = {s: "\\u0004", t: ["\\u0005\u{1F600}"]}): Int }`,
+    { since: "September2025", syntax: "the schema's strings have a raw supplementary character, which only September 2025's lexical grammar has (§2.1 SourceCharacter)" },
   ],
 ];
 
@@ -440,10 +447,15 @@ ${moduleFooter}`;
     if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${family}: ${what} under ${profile} isn't September 2026's without the fields its query doesn't select`);
   };
   // Why a schema that doesn't build isn't graded: each form only a later
-  // release's grammar has.
+  // release's grammar has. Only directives on a directive definition itself
+  // are new in September 2026: the schema data's `directives` also holds
+  // those on its arguments, which October 2021's InputValueDefinition
+  // already allows, so the parsed document is asked.
+  const appliesToDirectiveDefinition = (sdl) =>
+    graphql.parse(sdl).definitions.some((def) => def.kind === "DirectiveDefinition" && (def.directives ?? []).length > 0);
   const syntaxOf = (i) => {
     const reasons = [
-      ...(data[i].directives.some((d) => d.directives.size > 0) ? [DIRECTIVE_DEFINITION_DIRECTIVES] : []),
+      ...(appliesToDirectiveDefinition(SCHEMAS[i][2]) ? [DIRECTIVE_DEFINITION_DIRECTIVES] : []),
       ...(data[i].directives.some((d) => d.locations.includes("DIRECTIVE_DEFINITION")) ? [DIRECTIVE_DEFINITION_LOCATION] : []),
       ...(SCHEMAS[i][3]?.syntax ? [SCHEMAS[i][3].syntax] : []),
     ];

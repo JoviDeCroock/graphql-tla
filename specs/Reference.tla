@@ -179,16 +179,33 @@ Result(kind, json, raised, cause, nulls) ==
 
 Pending == Result("pending", NullJson, {}, {}, {})
 
-\* The outcome a resolver must produce for a nullable type: a list for a
-\* list type, a leaf for a scalar, an object otherwise. Anything else, such
-\* as an object for a list type, is a field error. So is a runtime type
-\* that isn't one of the possible types, as in graphql-js: no sentence in
-\* any release says what happens when ResolveAbstractType (§6.4.3)
-\* returns one, so the kit never sends that outcome (kit/execution/drive.mjs).
+\* The kind of value a nullable type completes from, by §6.4.3
+\* CompleteValue: a list for a list type ("If result is not a collection of
+\* values, raise an execution error"), a leaf for a scalar or enum (an
+\* object is one CoerceResult can't represent), an object otherwise.
+\* Anything else for a list, scalar or enum type is an execution error.
+\* An Object type has no such step: see ObjectTypeOf.
 Expected(fx, type) ==
   IF IsList(type) THEN "list"
   ELSE IF TypeDef(fx, type.name).kind = "scalar" THEN "leaf"
   ELSE "object"
+
+\* The objectType CompleteValue executes the sub-selection of an Object,
+\* Interface or Union type on, or NoObjectType where an execution error is
+\* raised instead. For an Object type it is the type itself, whatever the
+\* resolver produced: "If fieldType is an Object type. Let objectType be
+\* fieldType." So a leaf, a list, or an object outcome of another type is
+\* completed with the sub-selection like any object. For an Interface or
+\* Union type it is ResolveAbstractType's answer, the outcome's runtime
+\* type. A runtime type that isn't one of the possible types, or a value
+\* that isn't an object, is an execution error here, as in graphql-js: no
+\* sentence in any release says what happens when ResolveAbstractType
+\* returns one, so the kit never sends that outcome (kit/execution/drive.mjs).
+NoObjectType == ""
+ObjectTypeOf(fx, type, outcome) ==
+  IF TypeDef(fx, type.name).kind = "object" THEN type.name
+  ELSE IF outcome.kind = "object" /\ outcome.type \in TypeDef(fx, type.name).possibleTypes THEN outcome.type
+  ELSE NoObjectType
 
 UnionOf(results) == UNION {results[i].raised : i \in DOMAIN results}
 
@@ -254,10 +271,10 @@ CompleteNullable(fx, O, path, type, fields) ==
            \* The resolver raised an execution error.
            Result("error", NullJson, {path}, {path}, {})
       [] outcome.kind = "null" -> Result("null", NullJson, {}, {}, {})
-      [] outcome.kind # Expected(fx, type) ->
+      [] Expected(fx, type) # "object" /\ outcome.kind # Expected(fx, type) ->
            Result("error", NullJson, {path}, {path}, {})
-      [] outcome.kind = "leaf" -> Result("value", LeafJson, {}, {}, {})
-      [] outcome.kind = "list" ->
+      [] Expected(fx, type) = "leaf" -> Result("value", LeafJson, {}, {}, {})
+      [] Expected(fx, type) = "list" ->
            \* CompleteValue for a list: complete each item with the
            \* item type, in parallel.
            LET items == [i \in 1..outcome.length |->
@@ -266,13 +283,14 @@ CompleteNullable(fx, O, path, type, fields) ==
            IN Combine(path, items,
                       [kind |-> "list", value |-> "", entries |-> <<>>,
                        items |-> [i \in DOMAIN items |-> items[i].json]])
-      [] ~(outcome.type \in TypeDef(fx, type.name).possibleTypes) ->
+      [] ObjectTypeOf(fx, type, outcome) = NoObjectType ->
            Result("error", NullJson, {path}, {path}, {})
       [] OTHER ->
-           \* CompleteValue for an object: collect the subfields for the
-           \* runtime type and execute them (ExecuteCollectedFields).
-           LET grouped == Executed(fx, outcome.type, CollectSubfields(fx, outcome.type, fields))
-               children == CompleteFields(fx, O, path, outcome.type, grouped)
+           \* CompleteValue for an object: collect the subfields for
+           \* objectType and execute them (ExecuteCollectedFields).
+           LET objectType == ObjectTypeOf(fx, type, outcome)
+               grouped == Executed(fx, objectType, CollectSubfields(fx, objectType, fields))
+               children == CompleteFields(fx, O, path, objectType, grouped)
            IN Combine(path, children, ObjectJson(grouped, children))
 
 \* §6.2 ExecuteQuery, ExecuteMutation, and ExecuteSubscriptionEvent for one

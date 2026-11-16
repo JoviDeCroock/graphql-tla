@@ -5009,7 +5009,7 @@
       ],
       "family": "defaults",
       "includeDeprecated": true,
-      "sdl": "enum E { X Y }\ninput I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 }\ntype Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }",
+      "sdl": "enum E { X Y }\ninput I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 }\ntype Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y], big: ID = 9007199254740993, huge: Float = 1000000000000000000000, bell: String = \"\\u0007\"): Int }",
       "queries": {
         "September2026": "query IntrospectionQuery {\n  __typename\n  __schema {\n    description\n    queryType { kind name }\n    mutationType { kind name }\n    subscriptionType { kind name }\n    types { ...FullType }\n    directives(includeDeprecated: true) {\n      name\n      description\n      isRepeatable\n      locations\n      args(includeDeprecated: true) { ...InputValue }\n      isDeprecated\n      deprecationReason\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields(includeDeprecated: true) {\n    name\n    description\n    args(includeDeprecated: true) { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields(includeDeprecated: true) { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n",
         "September2025": "query IntrospectionQuery {\n  __typename\n  __schema {\n    description\n    queryType { kind name }\n    mutationType { kind name }\n    subscriptionType { kind name }\n    types { ...FullType }\n    directives {\n      name\n      description\n      isRepeatable\n      locations\n      args(includeDeprecated: true) { ...InputValue }\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields(includeDeprecated: true) {\n    name\n    description\n    args(includeDeprecated: true) { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields(includeDeprecated: true) { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n",
@@ -5304,6 +5304,42 @@
                           "defaultValue": "[X, Y]",
                           "isDeprecated": false,
                           "deprecationReason": null
+                        },
+                        {
+                          "name": "big",
+                          "description": null,
+                          "type": {
+                            "kind": "SCALAR",
+                            "name": "ID",
+                            "ofType": null
+                          },
+                          "defaultValue": "9007199254740993",
+                          "isDeprecated": false,
+                          "deprecationReason": null
+                        },
+                        {
+                          "name": "huge",
+                          "description": null,
+                          "type": {
+                            "kind": "SCALAR",
+                            "name": "Float",
+                            "ofType": null
+                          },
+                          "defaultValue": "1000000000000000000000",
+                          "isDeprecated": false,
+                          "deprecationReason": null
+                        },
+                        {
+                          "name": "bell",
+                          "description": null,
+                          "type": {
+                            "kind": "SCALAR",
+                            "name": "String",
+                            "ofType": null
+                          },
+                          "defaultValue": "\"\\u0007\"",
+                          "isDeprecated": false,
+                          "deprecationReason": null
                         }
                       ],
                       "type": {
@@ -5346,7 +5382,7 @@
       ],
       "family": "defaults",
       "includeDeprecated": false,
-      "sdl": "enum E { X Y }\ninput I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 }\ntype Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }",
+      "sdl": "enum E { X Y }\ninput I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 }\ntype Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y], big: ID = 9007199254740993, huge: Float = 1000000000000000000000, bell: String = \"\\u0007\"): Int }",
       "queries": {
         "September2026": "query IntrospectionQuery {\n  __typename\n  __schema {\n    description\n    queryType { kind name }\n    mutationType { kind name }\n    subscriptionType { kind name }\n    types { ...FullType }\n    directives {\n      name\n      description\n      isRepeatable\n      locations\n      args { ...InputValue }\n      isDeprecated\n      deprecationReason\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields {\n    name\n    description\n    args { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n",
         "September2025": "query IntrospectionQuery {\n  __typename\n  __schema {\n    description\n    queryType { kind name }\n    mutationType { kind name }\n    subscriptionType { kind name }\n    types { ...FullType }\n    directives {\n      name\n      description\n      isRepeatable\n      locations\n      args { ...InputValue }\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields {\n    name\n    description\n    args { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n",
@@ -5639,6 +5675,42 @@
                             }
                           },
                           "defaultValue": "[X, Y]",
+                          "isDeprecated": false,
+                          "deprecationReason": null
+                        },
+                        {
+                          "name": "big",
+                          "description": null,
+                          "type": {
+                            "kind": "SCALAR",
+                            "name": "ID",
+                            "ofType": null
+                          },
+                          "defaultValue": "9007199254740993",
+                          "isDeprecated": false,
+                          "deprecationReason": null
+                        },
+                        {
+                          "name": "huge",
+                          "description": null,
+                          "type": {
+                            "kind": "SCALAR",
+                            "name": "Float",
+                            "ofType": null
+                          },
+                          "defaultValue": "1000000000000000000000",
+                          "isDeprecated": false,
+                          "deprecationReason": null
+                        },
+                        {
+                          "name": "bell",
+                          "description": null,
+                          "type": {
+                            "kind": "SCALAR",
+                            "name": "String",
+                            "ofType": null
+                          },
+                          "defaultValue": "\"\\u0007\"",
                           "isDeprecated": false,
                           "deprecationReason": null
                         }
@@ -10230,7 +10302,6 @@
       "requires": [
         "custom-directives"
       ],
-      "syntax": "the schema applies a directive to a directive definition, which only September 2026's grammar has (§3.13 DirectiveDefinition)",
       "includeDeprecated": true,
       "sdl": "directive @d(a: Int @deprecated(reason: \"Use b\"), b: Int) on FIELD\ndirective @e(x: Int @deprecated) repeatable on QUERY | FIELD\ntype Query { a: Int }",
       "queries": {
@@ -10392,7 +10463,6 @@
       "requires": [
         "custom-directives"
       ],
-      "syntax": "the schema applies a directive to a directive definition, which only September 2026's grammar has (§3.13 DirectiveDefinition)",
       "includeDeprecated": false,
       "sdl": "directive @d(a: Int @deprecated(reason: \"Use b\"), b: Int) on FIELD\ndirective @e(x: Int @deprecated) repeatable on QUERY | FIELD\ntype Query { a: Int }",
       "queries": {
@@ -12154,12 +12224,13 @@
         "2.10.4"
       ],
       "family": "printing",
+      "since": "September2025",
+      "syntax": "the schema's strings have a raw supplementary character, which only September 2025's lexical grammar has (§2.1 SourceCharacter)",
       "includeDeprecated": true,
       "sdl": "input In { s: String = \"\\u0003\", t: [String] = [\"😀\"] }\ntype Query { f(c: String = \"\\u0000\\u0001\\t\\n\\u001F\\u007F\\u0080\\u0085\\u009F\", e: String = \"😀 é\", l: [String] = [\"\\u0002\", \"😀\"], i: In = {s: \"\\u0004\", t: [\"\\u0005😀\"]}): Int }",
       "queries": {
         "September2026": "query IntrospectionQuery {\n  __typename\n  __schema {\n    description\n    queryType { kind name }\n    mutationType { kind name }\n    subscriptionType { kind name }\n    types { ...FullType }\n    directives(includeDeprecated: true) {\n      name\n      description\n      isRepeatable\n      locations\n      args(includeDeprecated: true) { ...InputValue }\n      isDeprecated\n      deprecationReason\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields(includeDeprecated: true) {\n    name\n    description\n    args(includeDeprecated: true) { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields(includeDeprecated: true) { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n",
-        "September2025": "query IntrospectionQuery {\n  __typename\n  __schema {\n    description\n    queryType { kind name }\n    mutationType { kind name }\n    subscriptionType { kind name }\n    types { ...FullType }\n    directives {\n      name\n      description\n      isRepeatable\n      locations\n      args(includeDeprecated: true) { ...InputValue }\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields(includeDeprecated: true) {\n    name\n    description\n    args(includeDeprecated: true) { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields(includeDeprecated: true) { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n",
-        "October2021": "query IntrospectionQuery {\n  __typename\n  __schema {\n    description\n    queryType { kind name }\n    mutationType { kind name }\n    subscriptionType { kind name }\n    types { ...FullType }\n    directives {\n      name\n      description\n      isRepeatable\n      locations\n      args { ...InputValue }\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  fields(includeDeprecated: true) {\n    name\n    description\n    args { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n"
+        "September2025": "query IntrospectionQuery {\n  __typename\n  __schema {\n    description\n    queryType { kind name }\n    mutationType { kind name }\n    subscriptionType { kind name }\n    types { ...FullType }\n    directives {\n      name\n      description\n      isRepeatable\n      locations\n      args(includeDeprecated: true) { ...InputValue }\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields(includeDeprecated: true) {\n    name\n    description\n    args(includeDeprecated: true) { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields(includeDeprecated: true) { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n"
       },
       "expected": {
         "response": {
@@ -12343,12 +12414,13 @@
         "2.10.4"
       ],
       "family": "printing",
+      "since": "September2025",
+      "syntax": "the schema's strings have a raw supplementary character, which only September 2025's lexical grammar has (§2.1 SourceCharacter)",
       "includeDeprecated": false,
       "sdl": "input In { s: String = \"\\u0003\", t: [String] = [\"😀\"] }\ntype Query { f(c: String = \"\\u0000\\u0001\\t\\n\\u001F\\u007F\\u0080\\u0085\\u009F\", e: String = \"😀 é\", l: [String] = [\"\\u0002\", \"😀\"], i: In = {s: \"\\u0004\", t: [\"\\u0005😀\"]}): Int }",
       "queries": {
         "September2026": "query IntrospectionQuery {\n  __typename\n  __schema {\n    description\n    queryType { kind name }\n    mutationType { kind name }\n    subscriptionType { kind name }\n    types { ...FullType }\n    directives {\n      name\n      description\n      isRepeatable\n      locations\n      args { ...InputValue }\n      isDeprecated\n      deprecationReason\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields {\n    name\n    description\n    args { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n",
-        "September2025": "query IntrospectionQuery {\n  __typename\n  __schema {\n    description\n    queryType { kind name }\n    mutationType { kind name }\n    subscriptionType { kind name }\n    types { ...FullType }\n    directives {\n      name\n      description\n      isRepeatable\n      locations\n      args { ...InputValue }\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields {\n    name\n    description\n    args { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n",
-        "October2021": "query IntrospectionQuery {\n  __typename\n  __schema {\n    description\n    queryType { kind name }\n    mutationType { kind name }\n    subscriptionType { kind name }\n    types { ...FullType }\n    directives {\n      name\n      description\n      isRepeatable\n      locations\n      args { ...InputValue }\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  fields {\n    name\n    description\n    args { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n"
+        "September2025": "query IntrospectionQuery {\n  __typename\n  __schema {\n    description\n    queryType { kind name }\n    mutationType { kind name }\n    subscriptionType { kind name }\n    types { ...FullType }\n    directives {\n      name\n      description\n      isRepeatable\n      locations\n      args { ...InputValue }\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields {\n    name\n    description\n    args { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n"
       },
       "expected": {
         "response": {
@@ -13192,7 +13264,7 @@
       ],
       "family": "defaults",
       "includeDeprecated": true,
-      "sdl": "enum E { X Y }\ninput I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 }\ntype Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }",
+      "sdl": "enum E { X Y }\ninput I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 }\ntype Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y], big: ID = 9007199254740993, huge: Float = 1000000000000000000000, bell: String = \"\\u0007\"): Int }",
       "queries": {
         "September2026": "query TypeLookup {\n  t0: __type(name: \"Query\") { ...FullType }\n  t1: __type(name: \"I\") { ...FullType }\n  t2: __type(name: \"Unknown\") { ...FullType }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields(includeDeprecated: true) {\n    name\n    description\n    args(includeDeprecated: true) { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields(includeDeprecated: true) { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n",
         "September2025": "query TypeLookup {\n  t0: __type(name: \"Query\") { ...FullType }\n  t1: __type(name: \"I\") { ...FullType }\n  t2: __type(name: \"Unknown\") { ...FullType }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields(includeDeprecated: true) {\n    name\n    description\n    args(includeDeprecated: true) { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields(includeDeprecated: true) { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n",
@@ -13339,6 +13411,42 @@
                         }
                       },
                       "defaultValue": "[X, Y]",
+                      "isDeprecated": false,
+                      "deprecationReason": null
+                    },
+                    {
+                      "name": "big",
+                      "description": null,
+                      "type": {
+                        "kind": "SCALAR",
+                        "name": "ID",
+                        "ofType": null
+                      },
+                      "defaultValue": "9007199254740993",
+                      "isDeprecated": false,
+                      "deprecationReason": null
+                    },
+                    {
+                      "name": "huge",
+                      "description": null,
+                      "type": {
+                        "kind": "SCALAR",
+                        "name": "Float",
+                        "ofType": null
+                      },
+                      "defaultValue": "1000000000000000000000",
+                      "isDeprecated": false,
+                      "deprecationReason": null
+                    },
+                    {
+                      "name": "bell",
+                      "description": null,
+                      "type": {
+                        "kind": "SCALAR",
+                        "name": "String",
+                        "ofType": null
+                      },
+                      "defaultValue": "\"\\u0007\"",
                       "isDeprecated": false,
                       "deprecationReason": null
                     }
@@ -16182,12 +16290,13 @@
         "4.2"
       ],
       "family": "printing",
+      "since": "September2025",
+      "syntax": "the schema's strings have a raw supplementary character, which only September 2025's lexical grammar has (§2.1 SourceCharacter)",
       "includeDeprecated": true,
       "sdl": "input In { s: String = \"\\u0003\", t: [String] = [\"😀\"] }\ntype Query { f(c: String = \"\\u0000\\u0001\\t\\n\\u001F\\u007F\\u0080\\u0085\\u009F\", e: String = \"😀 é\", l: [String] = [\"\\u0002\", \"😀\"], i: In = {s: \"\\u0004\", t: [\"\\u0005😀\"]}): Int }",
       "queries": {
         "September2026": "query TypeLookup {\n  t0: __type(name: \"Query\") { ...FullType }\n  t1: __type(name: \"In\") { ...FullType }\n  t2: __type(name: \"Unknown\") { ...FullType }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields(includeDeprecated: true) {\n    name\n    description\n    args(includeDeprecated: true) { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields(includeDeprecated: true) { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n",
-        "September2025": "query TypeLookup {\n  t0: __type(name: \"Query\") { ...FullType }\n  t1: __type(name: \"In\") { ...FullType }\n  t2: __type(name: \"Unknown\") { ...FullType }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields(includeDeprecated: true) {\n    name\n    description\n    args(includeDeprecated: true) { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields(includeDeprecated: true) { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n",
-        "October2021": "query TypeLookup {\n  t0: __type(name: \"Query\") { ...FullType }\n  t1: __type(name: \"In\") { ...FullType }\n  t2: __type(name: \"Unknown\") { ...FullType }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  fields(includeDeprecated: true) {\n    name\n    description\n    args { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n"
+        "September2025": "query TypeLookup {\n  t0: __type(name: \"Query\") { ...FullType }\n  t1: __type(name: \"In\") { ...FullType }\n  t2: __type(name: \"Unknown\") { ...FullType }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  isOneOf\n  fields(includeDeprecated: true) {\n    name\n    description\n    args(includeDeprecated: true) { ...InputValue }\n    type { ...TypeRef }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields(includeDeprecated: true) { ...InputValue }\n  interfaces { ...TypeRef }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes { ...TypeRef }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type { ...TypeRef }\n  defaultValue\n  isDeprecated\n  deprecationReason\n}\n\nfragment TypeRef on __Type {\n  kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } } }\n}\n"
       },
       "lookups": [
         {

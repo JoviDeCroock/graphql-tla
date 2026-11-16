@@ -43,6 +43,13 @@ export default [
     property: "RangeExamplesHold",
   },
   {
+    name: "a Float literal's exponent counts its leading zeros toward its size",
+    find: "magnitude == IF Len(significant) > 6 THEN 1000000 ELSE DigitsValue(significant, 1, 0)",
+    replace: "magnitude == IF Len(expDigits) > 6 THEN 1000000 ELSE DigitsValue(expDigits, 1, 0)",
+    file,
+    property: "RangeExamplesHold",
+  },
+  {
     name: "every Float literal of 10^308 or more overflows",
     find: "\\/ place = 308 /\\ DecimalLess(SubSeq(digits, k, Len(digits)), OverflowDigits, 1)",
     replace: "\\/ FALSE",

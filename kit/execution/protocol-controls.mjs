@@ -14,7 +14,8 @@
 // their own (SCALAR_FIXTURE), which only these controls see: they're
 // malformed cases, which never reach the reference.
 
-import { Kind, buildASTSchema, parse, print } from "graphql17";
+import { Kind, buildASTSchema, getNamedType, isListType, isNonNullType, isObjectType, parse, print } from "graphql17";
+import { positions } from "./positions.mjs";
 
 const isIndex = (segment) => /^(0|[1-9]\d*)$/.test(segment ?? "");
 const errorsOf = (c) => (Array.isArray(c.response?.errors) ? c.response.errors : []);
@@ -163,6 +164,40 @@ export const protocolControls = (corpus, fixtures) => {
     const base = withParents(subscription, byId.get(subscription.fixture));
     bases.push({ case: base });
     malformed("gives a subscription's root field the initial value instead of the event's", "parentValue", reparent(base, (p) => p.length === 1, "root"));
+  }
+
+  // Object types (§6.4.3): "If fieldType is an Object type. Let objectType
+  // be fieldType." CompleteValue completes whatever the resolver produced
+  // with the sub-selection, so a base whose Object-typed position settled to
+  // an object, its subfields called, still passes with a leaf, an empty
+  // list, or an object of another type there. The kit never sends these
+  // (drive.mjs); the bases keep the reference (Reference!ObjectTypeOf) and
+  // the checker's own reading of outcomes (causalProblems) to the spec.
+  const objectBases = recorded
+    .filter((b) => byId.get(b.fixture).operationType === "query")
+    .flatMap((b) => {
+      const fixture = byId.get(b.fixture);
+      const at = positions(fixture, b.trace);
+      const i = b.trace.findIndex((e) => {
+        if (!Array.isArray(e.settle) || e.outcome?.kind !== "object") return false;
+        const type = at(e.settle.map(String))?.type;
+        const inner = type && (isNonNullType(type) ? type.ofType : type);
+        return (
+          inner && !isListType(inner) && isObjectType(getNamedType(inner)) &&
+          b.trace.some((c) => Array.isArray(c.call) && c.call.length > e.settle.length && e.settle.every((s, k) => String(c.call[k]) === String(s)))
+        );
+      });
+      return i === -1 ? [] : [{ b, i, fixture }];
+    })
+    .sort((x, y) => x.b.trace.length - y.b.trace.length);
+  if (objectBases.length > 0) {
+    const { b, i, fixture } = objectBases[0];
+    const declared = b.trace[i].outcome.type;
+    const other = Object.values(fixture.schema.getTypeMap()).find((t) => isObjectType(t) && !t.name.startsWith("__") && t.name !== declared);
+    const replaced = (outcome) => ({ ...b, trace: b.trace.map((e, k) => (k === i ? { ...e, outcome } : e)) });
+    bases.push({ case: replaced({ kind: "leaf" }) });
+    bases.push({ case: replaced({ kind: "list", length: 0 }) });
+    if (other) bases.push({ case: replaced({ ...b.trace[i].outcome, type: other.name }) });
   }
 
   // Streams (§6.2.3): lifecycle logs on a subscription fixture.
