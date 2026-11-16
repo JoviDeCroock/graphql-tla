@@ -16,7 +16,7 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 - **Cases:** 31183 submitted, 5916 distinct, 1349 malformed
 - **Adapter problems:** none
 - **Checker self-test:** passed (87 negative controls)
-- **Run:** kit c28a56e3d22f, 2026-11-16, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
+- **Run:** kit 0625b35d64dd, 2026-11-16, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
 
 ### Findings
 
@@ -134,7 +134,7 @@ expected: data {"liked": null}
 | When the source stream fails, the response stream completes with an error (`failsWithSource`) | MUST (since September 2025) | [§6.2.3](https://spec.graphql.org/September2026/#sec-Subscription) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) | ✓ 8 |
 | A cancelled response stream completes normally (`cancelCompletes`) | MUST (since September 2025) | [§6.2.3](https://spec.graphql.org/September2026/#sec-Subscription) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§6.2.3.3](https://spec.graphql.org/September2026/#sec-Unsubscribe) | ✓ 12 |
 | Cancelling the response stream cancels the source stream (`cancelCancelsSource`) | MUST (since September 2025) | [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§6.2.3.3](https://spec.graphql.org/September2026/#sec-Unsubscribe) | ✓ 12 |
-| No result arrives after the client cancels the response stream (`nothingAfterCancel`) | SHOULD (MUST in October 2021) | [§6.2.3](https://spec.graphql.org/September2026/#sec-Subscription) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) | ✓ 12 |
+| No result arrives after the client cancels the response stream (`nothingAfterCancel`) | MUST | [§6.2.3](https://spec.graphql.org/September2026/#sec-Subscription) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) | ✓ 12 |
 | data holds only positions the operation selects (`dataShape`) | MUST | [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data) | ✓ 24000 |
 | A non-finite Float, an unknown enum value or a value a custom scalar rejects raises an execution error instead of being passed through (`resultCoercion`) | MUST | [§3.5](https://spec.graphql.org/September2026/#sec-Scalars) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) [§3.9](https://spec.graphql.org/September2026/#sec-Enums) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✓ 1112 |
 | A fraction returned for an Int (1.2) raises an execution error instead of being truncated (`intFraction`) | MUST | [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✓ 317 |
@@ -182,7 +182,7 @@ expected: data {"liked": null}
 - **Basis for `failsWithSource`:** §6.2.3 (Event Streams): "If an event stream encounters an error, it must complete with that error." MapSourceToResponseEvent (§6.2.3.2): "When {sourceStream} completes with {error}: Complete {responseStream} with {error}." A response stream that completes normally, or doesn't complete, fails. The kit doesn't compare error messages: an implementation may wrap the source's error. A stream whose last item after the source failed is a result with errors, followed by normal completion, passes: that is how an implementation whose streams can't end with an error (a stream of results, as in Rust) ends one with an error. The text doesn't say how "complete with that error" appears to a client: §6.2.3 says "GraphQL specifies algorithms for ... the closing of that stream", but leaves "serialization format or transport mechanism" to the service (Delivery Agnostic). §7.1.2's "A response stream must be a stream of execution result" argues against an error-only item, but with the text in doubt the kit takes the weaker reading. A result without errors there, then normal completion, fails. New in September 2025; October 2021 says only "Event streams may complete in response to an error".
 - **Basis for `cancelCompletes`:** §6.2.3 (Event Streams): "When an event stream is cancelled, it must complete." MapSourceToResponseEvent (§6.2.3.2): "When {responseStream} is cancelled: Cancel {sourceStream}. Complete {responseStream} normally." Unsubscribe (§6.2.3.3): "Cancel {responseStream}." A response stream that completes with an error after the client cancelled it, or doesn't complete, fails. New in September 2025; October 2021 says only that after cancelling, an observer "must receive no more events from that event stream" (nothingAfterCancel).
 - **Basis for `cancelCancelsSource`:** MapSourceToResponseEvent (§6.2.3.2): "When {responseStream} is cancelled: Cancel {sourceStream}." §6.2.3.3: "Unsubscribe cancels the response stream when a client no longer wishes to receive payloads for a subscription. This in turn also cancels the Source Stream". Algorithm steps have the algorithm's level (Appendix A). The adapter reports the source being cancelled (`source-cancelled`); a cancelled stream whose source never is fails. September 2025 says the same. October 2021: "This may in turn also cancel the Source Stream", a may.
-- **Basis for `nothingAfterCancel`:** MapSourceToResponseEvent (§6.2.3.2): "When {responseStream} is cancelled: Cancel {sourceStream}. Complete {responseStream} normally", and a completed stream emits nothing more. But the algorithm doesn't say what happens to an event whose ExecuteSubscriptionEvent was already running when the stream was cancelled, whose step "emit {executionResult} on {responseStream}" comes after, and §6.2.3's "When an event stream is cancelled, it must complete" doesn't say how soon. With the level in doubt the kit takes the weaker one. The kit's scenario cancels the stream while an event's resolvers are pending, then settles them; a result for that event after the cancel fails here (graphql-js 17 delivers it, then completes). September 2025 says the same. October 2021's §6.2.3: after cancelling, an observer "must receive no more events from that event stream", a must.
+- **Basis for `nothingAfterCancel`:** §6.2.3 (Event Streams): "An observer may at any point decide to stop observing an event stream by cancelling it. When an event stream is cancelled, it must complete." MapSourceToResponseEvent (§6.2.3.2): "When {responseStream} is cancelled: Cancel {sourceStream}. Complete {responseStream} normally." A completed stream emits nothing more, so a result for an event whose ExecuteSubscriptionEvent was still running when the client cancelled must not be emitted: the algorithm's step "emit {executionResult} on {responseStream}" comes after the stream completed. October 2021's §6.2.3 said so outright: "An observer may at any point decide to stop observing an event stream by cancelling it, after which it must receive no more events from that event stream." September 2025 dropped that sentence in graphql/graphql-spec#1099, "Editorial changes for Event Streams", which its description calls a rewrite of the Event Streams definition "to be more clear", so the kit reads the requirement as unchanged: a MUST in every release. The kit's scenario cancels the stream while an event's resolvers are pending, then settles them; a result for that event after the cancel fails here (graphql-js 16 and 17 deliver it, then complete).
 - **Basis for `dataShape`:** ExecuteCollectedFields (§6.3.3) sets an entry in the result map only for each entry of the collected fields map, and §7.1.5 says "The response data is the result of accumulating the resolved result of all response positions during execution." A value at a position the operation doesn't select isn't the completed value, as for dataMatches. September 2025 has the same algorithm and sentence, and October 2021's algorithms are the same.
 - **Basis for `resultCoercion`:** §3.5.2: "Non-finite floating-point internal values ({NaN} and {Infinity}) cannot be coerced to {Float} and must raise an execution error." §3.5, for every scalar, custom ones included: a service "must uphold the contract the scalar type describes, either by coercing the value or producing an execution error if a value cannot be coerced" (custom scalars with custom-scalar-results, whose resolver returns a value the scalar's result coercion rejects). §3.9: "GraphQL services must return one of the defined set of possible values. If a reasonable coercion is not possible they must raise an execution error." CoerceResult (§6.4.3): the internal method "must return a valid value for the type and not {null}. Otherwise raise an execution error." September 2025 says the same, and October 2021 too, with "field error". A value passed through fails here, as does no response at all after such a value, whose root cause it is. A null without an error is coercionErrorReported.
 - **Basis for `intFraction`:** §3.5.1: "GraphQL services may coerce non-integer internal values to integers when reasonable without losing information, otherwise they must raise an execution error." Truncating 1.2 to 1 loses information, so the must applies. The sentence after it, "For example, a floating-point number 1.2 should raise an execution error instead of being truncated to 1", is an example, which Appendix A makes non-normative, so its should doesn't set the level. September 2025 has the same sentences, and October 2021 too, with "field error". A value passed through fails here, as does no response at all after such a value. A null without an error is coercionErrorReported.
@@ -240,7 +240,7 @@ expected: data {"liked": null}
 - **Vectors relying on rules after October 2021:** since September 2025, 85 of 130 vectors failing; new in September 2026, 30 of 31 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (10 negative controls)
-- **Run:** kit c28a56e3d22f, 2026-11-16, strict
+- **Run:** kit 0625b35d64dd, 2026-11-16, strict
 
 ### Findings
 
@@ -628,7 +628,7 @@ expected: {"ok":false}
 - **Vectors relying on rules after October 2021:** since September 2025, 70 of 248 vectors failing; new in September 2026, 5 of 3 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (15 negative controls)
-- **Run:** kit c28a56e3d22f, 2026-11-16, strict
+- **Run:** kit 0625b35d64dd, 2026-11-16, strict
 
 ### Findings
 
@@ -911,8 +911,8 @@ expected: invalid: DirectivesAreUniquePerLocation ["once"]
 - **Cases:** 2222 submitted, 2222 distinct, 0 malformed
 - **Vectors relying on rules after October 2021:** since September 2025, 11 of 57 vectors failing; new in September 2026, 5 of 9 vectors failing
 - **Adapter problems:** none
-- **Checker self-test:** passed (37839 negative controls)
-- **Run:** kit c28a56e3d22f, 2026-11-16, strict
+- **Checker self-test:** passed (37841 negative controls)
+- **Run:** kit 0625b35d64dd, 2026-11-16, strict
 
 ### Findings
 
@@ -1082,7 +1082,7 @@ expected: a request error
 | An argument error below the root nulls the field's position and propagates (`argumentsBelowRoot`) | MUST | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 5 |
 | CreateSourceEventStream: the source stream's resolver gets the field's coerced arguments (`sourceStream`) | MUST | [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) | ✓ 5 |
 | An error while establishing a subscription's source stream is a request error (`sourceStreamError`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) | ✓ 4 |
-| A subscription root field's argument that can't be coerced: request error or execution error (`sourceStreamArguments`) | INFO | [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) | ✓ 1 |
+| A subscription root field's argument that can't be coerced is a request error (`sourceStreamArguments`) | MUST | [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data) | ✓ 1 |
 | Selections only an invalid document has: a missing fragment and an undefined field are skipped, a second subscription root field is a request error (`unvalidatedBranches`) | MUST | [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) | – needs `unvalidated` |
 | GetOperation: the operation operationName names, or the only one, else a request error (`getOperation`) | MUST | [§6.1](https://spec.graphql.org/September2026/#sec-Executing-Requests) | ✓ 25 |
 | A document with a type system definition isn't executed (`notExecutable`) | MUST | [§2.3](https://spec.graphql.org/September2026/#sec-Document) | ✓ 6 |
@@ -1092,7 +1092,7 @@ expected: a request error
 | A valid document isn't rejected at validation (`acceptsValid`) | MUST | [§5](https://spec.graphql.org/September2026/#sec-Validation) | ✓ 1362 |
 | A request error result has no data entry (`requestErrorNoData`) | MUST | [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✗ 5/1674 (all new in September 2026) |
 | A request gets a response (`responds`) | MUST | [§7](https://spec.graphql.org/September2026/#sec-Response) | ✗ 1/2222 |
-| A field error's path is the field's response path (`fieldErrorPath`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 38 |
+| A field error's path is the field's response path (`fieldErrorPath`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 37 |
 | Every error is a map with a string message (`errorFormat`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 2222 |
 | errors, when present, is a non-empty list (`errorsList`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 2222 |
 | The response is a map (`resultMap`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✓ 2222 |
@@ -1125,7 +1125,7 @@ expected: a request error
 - **Basis for `argumentsBelowRoot`:** For the vectors with fields below the root (capability nested-fields). CoerceArgumentValues raises an execution error, and §6.4.4: "If an execution error is raised while resolving a field (either directly or nested inside any lists), it is handled as though the response position at which the error occurred resolved to null, and the error must be added to the errors list"; "Since Non-Null response positions cannot be null, execution errors are propagated to be handled by the parent response position"; "If a List type wraps a Non-Null type, and one of the response position elements of that list resolves to null, then the entire list response position must resolve to null." So the data must show null at the field's position, or at its nearest nullable parent's, one error per position (each item of a list is one), and no call of the field's resolver. Where every position up to the root is Non-Null, "the data entry in the execution result should be null": the reference gives null there, and no other data can be right. The error's path is fieldErrorPath's (§7.1.6), including list indices and aliases (§7.1.4: "If a path segment is associated with an aliased field it must use the aliased name"). A value below the root is graded the same way: one call at each position, with the coerced arguments. October 2021 says the same with "field error".
 - **Basis for `sourceStream`:** For the subscription vectors (capability subscription-source). CreateSourceEventStream: "Let fieldName be the name of the first entry in fields. Note: This value is unaffected if an alias is used.", "Let argumentValues be the result of CoerceArgumentValues(subscriptionType, field, variableValues)", and ResolveFieldEventStream: "Return the result of calling resolver, providing rootValue and argumentValues." Then each event executes the root selection set (§6.2.3.2), so the response stream's first result holds the field under its response name, and the field's resolver gets the same coerced arguments. Algorithm steps have the algorithm's level (Appendix A). October 2021 says the same.
 - **Basis for `sourceStreamError`:** New in September 2026. §6.2: "Operation execution begins when the execution algorithm for the operation type is invoked: ExecuteQuery() for query operations, ExecuteMutation() for mutation operations, and Subscribe() for subscription operations." ExecuteRequest runs CreateSourceEventStream before Subscribe, and §7.1.5: "If an error was raised before operation execution begins, the response must be a request error result which will result in no response data." §7.1.6 lists among request errors a "failure to establish a source event stream for a subscription operation", and §6.2.3.1's Note says "an error raised here will be a request error". The vectors have the source stream's resolver raise (`subscribe: "raise"`). September 2025 runs CreateSourceEventStream inside Subscribe and doesn't list it, so these vectors have `since` September 2026.
-- **Basis for `sourceStreamArguments`:** The text contradicts itself here. CoerceArgumentValues, which CreateSourceEventStream calls, says "raise an execution error", and §6.4.1: "Any request error raised as a result of input coercion during CoerceArgumentValues() should be treated instead as an execution error." But it runs before operation execution begins, and §7.1.5 says "If an error was raised before operation execution begins, the response must be a request error result"; §6.2.3.1's Note: "The call to CreateSourceEventStream() occurs before operation execution begins, and thus an error raised here will be a request error." Coercion.tla gives the request error by default and the execution error under its sourceArgumentsFieldError reading; both pass, and the report records which happened. Accepting the value fails the type's own check (`nonNull`, `int`). New in September 2026 (`since`).
+- **Basis for `sourceStreamArguments`:** §6.2: "Operation execution begins when the execution algorithm for the operation type is invoked: ExecuteQuery() for query operations, ExecuteMutation() for mutation operations, and Subscribe() for subscription operations." ExecuteRequest runs CreateSourceEventStream before Subscribe, and CreateSourceEventStream: "Let argumentValues be the result of CoerceArgumentValues(subscriptionType, field, variableValues)." §7.1.5: "If an error was raised before operation execution begins, the response must be a request error result which will result in no response data." So an argument of the subscription root field that can't be coerced must give a request error result. CoerceArgumentValues calls the error it raises an execution error, and §6.4.1 says "Any request error raised as a result of input coercion during CoerceArgumentValues() should be treated instead as an execution error"; those name the error, while §7.1.5 says what the response must be when it is raised before operation execution, and §6.2.3.1's Note agrees: "The call to CreateSourceEventStream() occurs before operation execution begins, and thus an error raised here will be a request error." An execution error (a result with data) fails here, and accepting the value fails the type's own check (`nonNull`, `int`). September 2025 runs CreateSourceEventStream inside Subscribe, after operation execution begins, so these vectors have `since` September 2026.
 - **Basis for `unvalidatedBranches`:** For adapters with `unvalidated` (others get these as invalid documents, under invalidNotExecuted or onlyValidExecuted). CollectFields: "If no such fragment exists, continue with the next selection in selectionSet." ExecuteCollectedFields: "Let fieldType be the return type defined for the field fieldName of objectType. If fieldType is defined: ...", so a field the type doesn't define has no entry in the result. CreateSourceEventStream: "If collectedFieldsMap does not have exactly one entry, raise a request error." CollectFields collects every field selection, defined or not. Algorithm steps have the algorithm's level (Appendix A). October 2021 has the same steps.
 - **Basis for `getOperation`:** GetOperation: "If operationName is null: If document contains exactly one operation. Return the Operation contained in the document. Otherwise raise a request error requiring operationName." and "Let operation be the Operation named operationName in document. If operation was not found, raise a request error." Includes a mutation running on the mutation root type, and only the selected operation's variables being coerced. Algorithm steps have the algorithm's level (Appendix A). October 2021 says the same.
 - **Basis for `notExecutable`:** §2.3: "Documents are only executable by a GraphQL service if they are ExecutableDocument and contain at least one OperationDefinition. A Document which contains TypeSystemDefinitionOrExtension must not be executed; GraphQL execution services which receive a Document containing these should return a descriptive error." and "GraphQL services which only seek to execute GraphQL requests and not construct a new GraphQL schema may choose to only permit ExecutableDocument." So the answer is a request error, whether the service refuses the document at parsing, at validation (§5.1.1 Executable Definitions) or before executing it, and even where it also holds an operation that would run. Graded under this check for every adapter, validating or not: the sentence doesn't depend on validation. October 2021 says the same.
@@ -1148,12 +1148,12 @@ expected: a request error
 ## Schema
 
 - **Capabilities:** absent-vs-null, coerce, custom-directives, custom-scalar-literals, custom-scalar-results, error-propagation-off, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, validate
-- **Cases:** 496 submitted, 496 distinct, 0 malformed
-- **Vectors:** 496 of 501 graded (not graded: 5 unspecified)
-- **Vectors relying on rules after October 2021:** since September 2025, 7 of 66 vectors failing; new in September 2026, 16 of 31 vectors failing
+- **Cases:** 501 submitted, 501 distinct, 0 malformed
+- **Vectors:** 501 of 505 graded (not graded: 4 unspecified)
+- **Vectors relying on rules after October 2021:** since September 2025, 7 of 67 vectors failing; new in September 2026, 16 of 31 vectors failing
 - **Adapter problems:** none
-- **Checker self-test:** passed (1004 negative controls)
-- **Run:** kit c28a56e3d22f, 2026-11-16, strict
+- **Checker self-test:** passed (1015 negative controls)
+- **Run:** kit 0625b35d64dd, 2026-11-16, strict
 
 ### Findings
 
@@ -1264,7 +1264,24 @@ expected: invalid: breaks TYPE_NAME_NOT_BUILTIN and no other rule
 
 <a id="schema-finding-7"></a>
 
-#### 7. `argInputType`: ARG_INPUT_TYPE: crashes on a schema that breaks only this rule, instead of rejecting it
+#### 7. `rootTypesAreObjects`: ROOT_TYPES_ARE_OBJECTS: crashes on a schema that breaks only this rule, instead of rejecting it
+
+2 cases, in `root` (2).
+
+- Root operation types are object types (MUST, [§3.3.1](https://spec.graphql.org/September2026/#sec-Root-Operation-Types))
+
+The shortest case, from `rootTypesAreObjects.1.invalid`:
+
+```
+problem:  java.lang.ClassCastException: class graphql.schema.GraphQLInterfaceType cannot be cast to class graphql.schema.GraphQLObjectType (graphql.schema.GraphQLInterfaceType and graphql.schema.GraphQLObjectTy
+input:    interface Query { a: Int }
+response: "the adapter answered with an error: java.lang.ClassCastException: class graphql.schema.GraphQLInterfaceType cannot be cast to class graphql.schema.GraphQLObjectType (graphql.schema.GraphQLInterfaceType and graphql.schema.GraphQLObjectTy"
+expected: invalid: breaks ROOT_TYPES_ARE_OBJECTS and no other rule
+```
+
+<a id="schema-finding-8"></a>
+
+#### 8. `argInputType`: ARG_INPUT_TYPE: crashes on a schema that breaks only this rule, instead of rejecting it
 
 2 cases, in `typeUse` (2).
 
@@ -1279,9 +1296,9 @@ response: "the adapter answered with an error: java.lang.ClassCastException: cla
 expected: invalid: breaks ARG_INPUT_TYPE and no other rule
 ```
 
-<a id="schema-finding-8"></a>
+<a id="schema-finding-9"></a>
 
-#### 8. `argDefaultCompatible`: ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule
+#### 9. `argDefaultCompatible`: ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule
 
 2 cases, in `defaults` (2). All rely on grammar or rules introduced in September 2025, not in October 2021.
 
@@ -1295,13 +1312,13 @@ response: {"valid":true}
 expected: invalid: breaks ARG_DEFAULT_COMPATIBLE and no other rule
 ```
 
-<a id="schema-finding-9"></a>
+<a id="schema-finding-10"></a>
 
-#### 9. `implementsUnique`: IMPLEMENTS_UNIQUE not enforced: accepts a schema that breaks only this rule
+#### 10. `implementsUnique`: IMPLEMENTS_UNIQUE not enforced: accepts a schema that breaks only this rule
 
 2 cases, in `implementation` (2).
 
-- A type implements each interface once (MUST, [§3.6](https://spec.graphql.org/September2026/#sec-Objects) [§3.7](https://spec.graphql.org/September2026/#sec-Interfaces))
+- A type implements each interface once (MUST, [§3.6](https://spec.graphql.org/September2026/#sec-Objects) [§3.7](https://spec.graphql.org/September2026/#sec-Interfaces) [§3.7.1](https://spec.graphql.org/September2026/#sec-Interface-Extensions))
 
 The shortest case, from `implementsUnique.1.invalid`:
 
@@ -1311,9 +1328,9 @@ response: {"valid":true}
 expected: invalid: breaks IMPLEMENTS_UNIQUE and no other rule
 ```
 
-<a id="schema-finding-10"></a>
+<a id="schema-finding-11"></a>
 
-#### 10. `implDeprecation`: IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule
+#### 11. `implDeprecation`: IMPL_DEPRECATION not enforced: accepts a schema that breaks only this rule
 
 2 cases, in `implementation` (2). All rely on grammar or rules introduced in September 2025, not in October 2021.
 
@@ -1327,9 +1344,9 @@ response: {"valid":true}
 expected: invalid: breaks IMPL_DEPRECATION and no other rule
 ```
 
-<a id="schema-finding-11"></a>
+<a id="schema-finding-12"></a>
 
-#### 11. `inputObjectUnbreakableCycle`: INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule
+#### 12. `inputObjectUnbreakableCycle`: INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule
 
 2 cases, in `input` (1), `extension` (1). All rely on grammar or rules introduced in September 2026, not in October 2021.
 
@@ -1343,9 +1360,9 @@ response: {"valid":true}
 expected: invalid: breaks INPUT_OBJECT_UNBREAKABLE_CYCLE and no other rule
 ```
 
-<a id="schema-finding-12"></a>
+<a id="schema-finding-13"></a>
 
-#### 12. `directiveReferencesItselfIndirectly`: DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule
+#### 13. `directiveReferencesItselfIndirectly`: DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule
 
 2 cases, in `directive` (2).
 
@@ -1359,9 +1376,9 @@ response: {"valid":true}
 expected: invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule
 ```
 
-<a id="schema-finding-13"></a>
+<a id="schema-finding-14"></a>
 
-#### 13. `extensionOneOf`: EXTENSION_ONEOF not enforced: accepts a schema that breaks only this rule
+#### 14. `extensionOneOf`: EXTENSION_ONEOF not enforced: accepts a schema that breaks only this rule
 
 2 cases, in `extension` (2). All rely on grammar or rules introduced in September 2025, not in October 2021.
 
@@ -1375,9 +1392,9 @@ response: {"valid":true}
 expected: invalid: breaks EXTENSION_ONEOF and no other rule
 ```
 
-<a id="schema-finding-14"></a>
+<a id="schema-finding-15"></a>
 
-#### 14. `specifiedByNotBuiltin`: SPECIFIED_BY_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule
+#### 15. `specifiedByNotBuiltin`: SPECIFIED_BY_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule
 
 2 cases, in `extension` (2).
 
@@ -1389,23 +1406,6 @@ The shortest case, from `specifiedByNotBuiltin.1.invalid`:
 input:    type Query { a: Int } extend scalar Int @specifiedBy(url: "https://example.com/int")
 response: {"valid":true}
 expected: invalid: breaks SPECIFIED_BY_NOT_BUILTIN and no other rule
-```
-
-<a id="schema-finding-15"></a>
-
-#### 15. `rootTypesAreObjects`: ROOT_TYPES_ARE_OBJECTS: crashes on a schema that breaks only this rule, instead of rejecting it
-
-1 case, in `root` (1).
-
-- Root operation types are object types (MUST, [§3.3.1](https://spec.graphql.org/September2026/#sec-Root-Operation-Types))
-
-The shortest case, from `rootTypesAreObjects.1.invalid`:
-
-```
-problem:  java.lang.ClassCastException: class graphql.schema.GraphQLInterfaceType cannot be cast to class graphql.schema.GraphQLObjectType (graphql.schema.GraphQLInterfaceType and graphql.schema.GraphQLObjectTy
-input:    interface Query { a: Int }
-response: "the adapter answered with an error: java.lang.ClassCastException: class graphql.schema.GraphQLInterfaceType cannot be cast to class graphql.schema.GraphQLObjectType (graphql.schema.GraphQLInterfaceType and graphql.schema.GraphQLObjectTy"
-expected: invalid: breaks ROOT_TYPES_ARE_OBJECTS and no other rule
 ```
 
 <a id="schema-finding-16"></a>
@@ -1550,7 +1550,7 @@ expected: invalid: breaks EXTENSION_DIRECTIVES_NOT_REAPPLIED and no other rule
 | No directive name begins with __ (`directiveNameReserved`) | MUST | [§3.3](https://spec.graphql.org/September2026/#sec-Schema) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ✓ 1 |
 | A document has at most one schema definition (`schemaDefinitionUnique`) | MUST | [§3.3](https://spec.graphql.org/September2026/#sec-Schema) | ✓ 2 |
 | The query root operation type is provided (`queryRootProvided`) | MUST | [§3.3.1](https://spec.graphql.org/September2026/#sec-Root-Operation-Types) | ✓ 2 |
-| Root operation types are object types (`rootTypesAreObjects`) | MUST | [§3.3.1](https://spec.graphql.org/September2026/#sec-Root-Operation-Types) | ✗ 1/6 |
+| Root operation types are object types (`rootTypesAreObjects`) | MUST | [§3.3.1](https://spec.graphql.org/September2026/#sec-Root-Operation-Types) | ✗ 2/7 |
 | Root operation types are all different (`rootTypesDifferent`) | MUST | [§3.3.1](https://spec.graphql.org/September2026/#sec-Root-Operation-Types) | ✗ 4/4 |
 | An object or interface type defines one or more fields (`fieldsDefined`) | MUST | [§3.6](https://spec.graphql.org/September2026/#sec-Objects) [§3.7](https://spec.graphql.org/September2026/#sec-Interfaces) | ✓ 2 |
 | Field names are unique within a type (`fieldNamesUnique`) | MUST | [§3.6](https://spec.graphql.org/September2026/#sec-Objects) [§3.7](https://spec.graphql.org/September2026/#sec-Interfaces) | ✓ 3 |
@@ -1561,7 +1561,7 @@ expected: invalid: breaks EXTENSION_DIRECTIVES_NOT_REAPPLIED and no other rule
 | Arguments accept input types (`argInputType`) | MUST | [§3.6](https://spec.graphql.org/September2026/#sec-Objects) [§3.7](https://spec.graphql.org/September2026/#sec-Interfaces) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) [§3.4.2](https://spec.graphql.org/September2026/#sec-Input-and-Output-Types) | ✗ 2/6 |
 | A required argument isn't deprecated (`requiredArgNotDeprecated`). New in September 2025: October 2021 doesn't have deprecated arguments | MUST (since September 2025) | [§3.6](https://spec.graphql.org/September2026/#sec-Objects) [§3.13.3](https://spec.graphql.org/September2026/#sec--deprecated) | ✓ 4 |
 | An object field argument's default value coerces to its type (`argDefaultCompatible`). New in September 2025: October 2021 doesn't have default value validation | MUST (since September 2025) | [§3.6](https://spec.graphql.org/September2026/#sec-Objects) [§3.5](https://spec.graphql.org/September2026/#sec-Scalars) [§3.9](https://spec.graphql.org/September2026/#sec-Enums) [§3.10](https://spec.graphql.org/September2026/#sec-Input-Objects) [§3.10.1](https://spec.graphql.org/September2026/#sec-OneOf-Input-Objects) [§3.11](https://spec.graphql.org/September2026/#sec-List) [§3.12](https://spec.graphql.org/September2026/#sec-Non-Null) | ✗ 2/14 (all since September 2025) |
-| A type implements each interface once (`implementsUnique`) | MUST | [§3.6](https://spec.graphql.org/September2026/#sec-Objects) [§3.7](https://spec.graphql.org/September2026/#sec-Interfaces) | ✗ 2/2 |
+| A type implements each interface once (`implementsUnique`) | MUST | [§3.6](https://spec.graphql.org/September2026/#sec-Objects) [§3.7](https://spec.graphql.org/September2026/#sec-Interfaces) [§3.7.1](https://spec.graphql.org/September2026/#sec-Interface-Extensions) | ✗ 2/4 |
 | A type implements only interface types (`implementsInterfaces`) | MUST | [§3.6](https://spec.graphql.org/September2026/#sec-Objects) [§3.7](https://spec.graphql.org/September2026/#sec-Interfaces) | ✓ 3 |
 | An interface doesn't implement itself (`implementsItself`) | MUST | [§3.7](https://spec.graphql.org/September2026/#sec-Interfaces) | ✓ 2 |
 | A type also implements the interfaces its interfaces implement (`implTransitive`) | MUST | [§3.6](https://spec.graphql.org/September2026/#sec-Objects) [§3.7](https://spec.graphql.org/September2026/#sec-Interfaces) | ✓ 3 |
@@ -1606,7 +1606,7 @@ expected: invalid: breaks EXTENSION_DIRECTIVES_NOT_REAPPLIED and no other rule
 | A directive extension doesn't reference the directive it extends through a type or directive (`directiveExtensionReferencesPrevious`). New in September 2026: October 2021 doesn't have directive extensions | MUST (new in September 2026) | [§3.13.6](https://spec.graphql.org/September2026/#sec-Directive-Extensions) | ✓ 4 |
 | A definition doesn't apply a non-repeatable directive twice to one element (`directiveNotRepeated`) | INFO | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) [§5.7.3](https://spec.graphql.org/September2026/#sec-Directives-Are-Unique-per-Location) | ✓ 3 |
 | A directive applied in SDL has the arguments its definition gives it (`appliedDirectiveArguments`) | INFO | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) [§2.13](https://spec.graphql.org/September2026/#sec-Language.Directives) [§5.4](https://spec.graphql.org/September2026/#sec-Validation.Arguments) | ✓ 9 |
-| Valid schemas are accepted (`acceptsValid`) | MUST | [§3](https://spec.graphql.org/September2026/#sec-Type-System) | ✗ 16/253 (1 since September 2025, 14 new in September 2026) |
+| Valid schemas are accepted (`acceptsValid`) | MUST | [§3](https://spec.graphql.org/September2026/#sec-Type-System) | ✗ 16/255 (1 since September 2025, 14 new in September 2026) |
 
 - **Basis for `typeNamesUnique`:** §3.3: "All types within a GraphQL schema must have unique names. No two provided types may have the same name."
 - **Basis for `typeNameNotBuiltin`:** §3.3: "No provided type may have a name which conflicts with any built in types (including Scalar and Introspection types)."
@@ -1615,7 +1615,7 @@ expected: invalid: breaks EXTENSION_DIRECTIVES_NOT_REAPPLIED and no other rule
 - **Basis for `directiveNameReserved`:** §3.3: "All types and directives defined within a schema must not have a name which begins with "__" (two underscores)", and §3.13 Type Validation: "The Directive must not have a name which begins with the characters "__" (two underscores)."
 - **Basis for `schemaDefinitionUnique`:** §3.3: "When using the type system definition language, a document must include at most one schema definition." The same sentence is in October 2021.
 - **Basis for `queryRootProvided`:** §3.3.1: "The query root operation type must be provided and must be an Object type."
-- **Basis for `rootTypesAreObjects`:** §3.3.1: "The query root operation type must be provided and must be an Object type." For mutation: "If it is provided, it must be an Object type", and "Similarly" for subscription. A root operation type the document names but doesn't define isn't an Object type.
+- **Basis for `rootTypesAreObjects`:** §3.3.1: "The query root operation type must be provided and must be an Object type." For mutation: "If it is provided, it must be an Object type", and "Similarly" for subscription. A root operation type the document names but doesn't define isn't an Object type. Without a schema definition, a type named Mutation is the mutation root ("would be incorrectly presumed to be the mutation root operation type", in an example), so one that isn't an Object type breaks this rule. Reading it as no mutation root rejects the document too: "The type system definition language can omit the schema definition when each root operation type uses its respective default root type name, no other type uses any default root type name, and the schema does not have a description", and such a Mutation would be another type that uses a default root type name. That clause is new in September 2025, so `rootTypesAreObjects.2.invalid` has `since` September 2025: October 2021 says only "can omit the schema definition when the query, mutation, and subscription root types are named "Query", "Mutation", and "Subscription" respectively".
 - **Basis for `rootTypesDifferent`:** §3.3.1: "The query, mutation, and subscription root types must all be different types if provided."
 - **Basis for `fieldsDefined`:** §3.6 Type Validation: "An Object type must define one or more fields." §3.7: "An Interface type must define one or more fields."
 - **Basis for `fieldNamesUnique`:** §3.6 Type Validation (and the same item of §3.7 for interfaces): "The field must have a unique name within that Object type; no two fields may share the same name."
@@ -1626,7 +1626,7 @@ expected: invalid: breaks EXTENSION_DIRECTIVES_NOT_REAPPLIED and no other rule
 - **Basis for `argInputType`:** §3.6, §3.7 and §3.13 Type Validation, for each argument of a field or directive: "The argument must accept a type where IsInputType(argumentType) returns true." §3.4.2's IsInputType returns true only for a Scalar, Enum or Input Object type, and otherwise "Return false", so a type the document doesn't define fails it too.
 - **Basis for `requiredArgNotDeprecated`:** §3.6 Type Validation: "If argument type is Non-Null and a default value is not defined: The @deprecated directive must not be applied to this argument." §3.13.3 states it for every argument, interface and directive arguments included: "The @deprecated directive must not appear on required (non-null without a default) arguments or input object field definitions."
 - **Basis for `argDefaultCompatible`:** §3.6 Type Validation: "If the argument has a default value it must be compatible with argumentType as per the coercion rules for that type." The coercion rules are each type's Input Coercion: §3.5 ("If an input value does not match a coercion rule, a request error must be raised"), §3.9, §3.10 ("must not contain any entries with names not defined by a field of this input object type, otherwise a request error must be raised"), §3.10.1 ("must contain exactly one entry and that entry must not be null"), §3.11 and §3.12. A required input field the default leaves out is incompatible by §3.12: "If an argument or input-object field of a Non-Null type is not provided, is provided with the literal value null, ... then a request error must be raised." (§3.10's own sentence for that case says only "an error should be raised".)
-- **Basis for `implementsUnique`:** §3.6 Type Validation, a list "This set of rules must be adhered to by every Object type": "An object type may declare that it implements one or more unique interfaces." §3.7: "An interface type may declare that it implements one or more unique interfaces, but may not implement itself."
+- **Basis for `implementsUnique`:** §3.6 Type Validation, a list "This set of rules must be adhered to by every Object type": "An object type may declare that it implements one or more unique interfaces." §3.7: "An interface type may declare that it implements one or more unique interfaces, but may not implement itself." For extended interface types (tagged `schema-extensions`): §3.7.1 has no rule like §3.6.3's "Any interfaces provided must not be already implemented by the previous Object type", but its extensions add to the interface type ("Interface type extensions are used to represent an interface which has been extended from some previous interface"), so one that adds an interface the type already implements leaves the resulting type implementing it twice, which §3.7's rule forbids. October 2021 says the same.
 - **Basis for `implementsInterfaces`:** §3.6 Type Validation: "An object type may declare that it implements one or more unique interfaces" and "For each interface declared implemented as interfaceType, IsValidImplementation(objectType, interfaceType) must be true"; §3.7 says the same of interfaces. A type that isn't an interface, or isn't defined, can't be implemented.
 - **Basis for `implementsItself`:** §3.7 Type Validation: "An interface type may declare that it implements one or more unique interfaces, but may not implement itself." The prose: "Interface definitions must not contain cyclic references nor implement themselves."
 - **Basis for `implTransitive`:** §3.6 IsValidImplementation(type, implementedType), applied by "For each interface declared implemented as interfaceType, IsValidImplementation(objectType, interfaceType) must be true" (§3.6) and "IsValidImplementation(implementingType, implementedType) must be true" (§3.7): "If implementedType declares it implements any interfaces, type must also declare it implements those interfaces." A cycle of interfaces breaks it, and §3.7's "Interface definitions must not contain cyclic references nor implement themselves".
@@ -1660,7 +1660,7 @@ expected: invalid: breaks EXTENSION_DIRECTIVES_NOT_REAPPLIED and no other rule
 - **Basis for `extensionTargetKind`:** Each kind of type extension's Type Validation, item 1: "The named type must already be defined and must be a Scalar type" (§3.5.6), "... an Object type" (§3.6.3), "... an Interface type" (§3.7.1), "... a Union type" (§3.8.1), "... an Enum type" (§3.9.1), "... a Input Object type" (§3.10.2).
 - **Basis for `extensionItemsUnique`:** §3.6.3: "The fields of an Object type extension must have unique names; no two fields may share the same name." §3.7.1 says the same of an Interface type extension. §3.8.1: "All member types of a Union type extension must be unique." §3.9.1: "All values of an Enum type extension must be unique." §3.10.2: "All fields of an Input Object type extension must have unique names."
 - **Basis for `extensionItemsNew`:** §3.6.3: "Any fields of an Object type extension must not be already defined on the previous Object type." §3.7.1 says the same of an Interface type extension. §3.8.1: "All member types of a Union type extension must not already be a member of the previous Union type." §3.9.1: "All values of an Enum type extension must not already be a value of the previous Enum." §3.10.2: "All fields of an Input Object type extension must not already be a field of the previous Input Object." The previous type is the type as extended so far. October 2021 says "the original" type instead of "the previous" one; a vector whose item an earlier extension adds is tagged since September 2025.
-- **Basis for `extensionInterfacesNew`:** §3.6.3: "Any interfaces provided must not be already implemented by the previous Object type." §3.7.1 has no such rule for interface type extensions.
+- **Basis for `extensionInterfacesNew`:** §3.6.3: "Any interfaces provided must not be already implemented by the previous Object type." §3.7.1 has no such rule for interface type extensions; an interface type extension that adds an interface the type already implements is graded under implementsUnique, on the resulting type.
 - **Basis for `extensionDirectivesNotReapplied`:** Every kind of extension's Type Validation: "Any non-repeatable directives provided must not already apply to the previous Schema" (§3.3.2), "... the previous Scalar type" (§3.5.6), "... the previous Object type" (§3.6.3), "... the previous Interface type" (§3.7.1), "... the previous Union type" (§3.8.1), "... the previous Enum type" (§3.9.1), "... the previous Input Object type" (§3.10.2). A directive applied by the definition or by an earlier extension already applies. October 2021 says "the original" instead of "the previous"; a vector whose directive only an earlier extension applies is tagged since September 2025.
 - **Basis for `extensionOneOf`:** §3.10.2: "The @oneOf directive must not be provided by an Input Object type extension."
 - **Basis for `schemaExtensionDefined`:** §3.3.2 Schema Validation: "The Schema must already be defined." Whether a document with no schema definition, whose root operation types have the default names, has a schema that is "already defined", the spec doesn't say, so no vector is graded.
@@ -1682,7 +1682,7 @@ expected: invalid: breaks EXTENSION_DIRECTIVES_NOT_REAPPLIED and no other rule
 - **Vectors relying on rules after October 2021:** since September 2025, 13 of 19 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (353 negative controls)
-- **Run:** kit c28a56e3d22f, 2026-11-16, strict
+- **Run:** kit 0625b35d64dd, 2026-11-16, strict
 
 ### Findings
 

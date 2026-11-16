@@ -21,7 +21,7 @@
     "uncoercible-results"
   ],
   "provenance": {
-    "kit": "c28a56e3d22f",
+    "kit": "0625b35d64dd",
     "date": "2026-11-16",
     "strict": true,
     "vectors": 71,
@@ -706,9 +706,9 @@
       ],
       "status": "fail",
       "cases": 27,
-      "failing": 9,
+      "failing": 10,
       "failingSince": {
-        "September2025": 9
+        "September2025": 10
       },
       "since": "September2025",
       "basis": "§4 \"Stable Ordering\": \"When a schema is produced from a TypeSystemDocument, introspection should return items in the same source order for each element list: object fields, input object fields, arguments, enum values, directives, union member types, and implemented interfaces.\" September 2025 introduced this paragraph.",
@@ -770,11 +770,10 @@
     },
     {
       "checks": [
-        "builtinAdditions",
         "builtinDefinitions",
         "builtinNullability"
       ],
-      "summary": "the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Directive has a field September 2025 doesn't define; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it",
+      "summary": "the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it",
       "cases": 4,
       "fixtures": {
         "minimal": 1,
@@ -782,10 +781,10 @@
         "roots": 1,
         "unreferenced": 1
       },
-      "fixture": "minimal.inc",
-      "problem": "added:fields at __Directive, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated",
+      "fixture": "minimal.defaults",
+      "problem": "enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated",
       "example": {
-        "input": "type Query { a: Int }  (the introspection query, September 2025 profile; includeDeprecated: true)",
+        "input": "type Query { a: Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)",
         "response": {
           "args": [
             {
@@ -839,21 +838,21 @@
     },
     {
       "checks": [
+        "builtinAdditions",
         "builtinDefinitions",
         "builtinNullability"
       ],
-      "summary": "the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it",
-      "cases": 4,
+      "summary": "the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Directive has a field September 2025 doesn't define; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it",
+      "cases": 3,
       "fixtures": {
         "minimal": 1,
-        "deprecation": 1,
         "roots": 1,
         "unreferenced": 1
       },
-      "fixture": "minimal.defaults",
-      "problem": "enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated",
+      "fixture": "minimal.inc",
+      "problem": "added:fields at __Directive, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated",
       "example": {
-        "input": "type Query { a: Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)",
+        "input": "type Query { a: Int }  (the introspection query, September 2025 profile; includeDeprecated: true)",
         "response": {
           "args": [
             {
@@ -1002,7 +1001,7 @@
         "interfaceDeprecation": 1
       },
       "fixture": "order.inc",
-      "problem": "added:fields at __Directive, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), kind at I1, kind at I2, locations at @deprecated, order at In, order at Query, order at Query.m",
+      "problem": "added:fields at __Directive, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), kind at I1, kind at I2, locations at @deprecated, order at Query",
       "example": {
         "input": "type Query { z: Int, a: Int, m(c: Int, b: Int, a: Int): O, u: U, e: E, n(v: In): Int } interface I1 { x: Int } interface I2 { x: Int } type O implements I2 & I1 { x: Int } type A2 { a: Int } type B2 { b: Int } union U = B2 | A2 enum E { Z A M } input In { z: Int, a: Int, m: Int }  (the introspection query, September 2025 profile; includeDeprecated: true)",
         "response": {
@@ -1081,7 +1080,7 @@
         "interfaceDeprecation": 1
       },
       "fixture": "order.defaults",
-      "problem": "enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), kind at I1, kind at I2, locations at @deprecated, order at In, order at Query, order at Query.m",
+      "problem": "enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), kind at I1, kind at I2, locations at @deprecated, order at In, order at Query",
       "example": {
         "input": "type Query { z: Int, a: Int, m(c: Int, b: Int, a: Int): O, u: U, e: E, n(v: In): Int } interface I1 { x: Int } interface I2 { x: Int } type O implements I2 & I1 { x: Int } type A2 { a: Int } type B2 { b: Int } union U = B2 | A2 enum E { Z A M } input In { z: Int, a: Int, m: Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)",
         "response": {
@@ -1143,6 +1142,180 @@
               "ofType": null
             }
           ]
+        }
+      }
+    },
+    {
+      "checks": [
+        "order"
+      ],
+      "summary": "fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla",
+      "cases": 2,
+      "fixtures": {
+        "deprecation": 1,
+        "order": 1
+      },
+      "fixture": "deprecation.lookup",
+      "problem": "order at E",
+      "since": {
+        "September2025": 2
+      },
+      "example": {
+        "input": "type Query { a: Int @deprecated, b(y: Int): Int @deprecated(reason: \"Use c\"), c: E, old: Old } type Old { x: Int @deprecated(reason: \"All of it\") } enum E { A B @deprecated(reason: \"Gone\") }  (__type(name:) for Query, Old, E, Unknown, September 2025 profile; includeDeprecated: true)",
+        "response": {
+          "__type(name: \"E\")": {
+            "description": "",
+            "enumValues": [
+              {
+                "deprecationReason": "Gone",
+                "description": "",
+                "isDeprecated": true,
+                "name": "B"
+              },
+              {
+                "deprecationReason": null,
+                "description": "",
+                "isDeprecated": false,
+                "name": "A"
+              }
+            ],
+            "fields": null,
+            "inputFields": null,
+            "interfaces": null,
+            "kind": "ENUM",
+            "name": "E",
+            "possibleTypes": null
+          }
+        },
+        "expected": {
+          "__type(name: \"E\")": {
+            "kind": "ENUM",
+            "name": "E",
+            "description": null,
+            "specifiedByURL": null,
+            "isOneOf": null,
+            "fields": null,
+            "inputFields": null,
+            "interfaces": null,
+            "enumValues": [
+              {
+                "name": "A",
+                "description": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "B",
+                "description": null,
+                "isDeprecated": true,
+                "deprecationReason": "Gone"
+              }
+            ],
+            "possibleTypes": null
+          }
+        }
+      }
+    },
+    {
+      "checks": [
+        "typeKinds"
+      ],
+      "summary": "each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included: differs from Introspection.tla",
+      "cases": 2,
+      "fixtures": {
+        "interfaceDeprecation": 2
+      },
+      "fixture": "interfaceDeprecation.lookup",
+      "problem": "kind at Gone, kind at Named",
+      "example": {
+        "input": "interface Named { id: ID, name: String @deprecated(reason: \"Use id\") } interface Gone { old: Int @deprecated } type Thing implements Named & Gone { id: ID, name: String, old: Int @deprecated(reason: \"Also gone\") } enum Mood { HAPPY @deprecated, SAD @deprecated(reason: \"Cheer up\") } type Query { thing: Thing, named: Named, gone: Gone, mood: Mood }  (__type(name:) for Named, Gone, Thing, Mood, Unknown, September 2025 profile; includeDeprecated: true)",
+        "response": {
+          "__type(name: \"Named\")": {
+            "description": "",
+            "enumValues": null,
+            "fields": [
+              {
+                "args": [],
+                "deprecationReason": null,
+                "description": "",
+                "isDeprecated": false,
+                "name": "id",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              {
+                "args": [],
+                "deprecationReason": "Use id",
+                "description": "",
+                "isDeprecated": true,
+                "name": "name",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              }
+            ],
+            "inputFields": null,
+            "interfaces": null,
+            "kind": "INTERFACE",
+            "name": "Named",
+            "possibleTypes": [
+              {
+                "kind": "OBJECT",
+                "name": "Thing",
+                "ofType": null
+              }
+            ]
+          }
+        },
+        "expected": {
+          "__type(name: \"Named\")": {
+            "kind": "INTERFACE",
+            "name": "Named",
+            "description": null,
+            "specifiedByURL": null,
+            "isOneOf": null,
+            "fields": [
+              {
+                "name": "id",
+                "description": null,
+                "args": [],
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                },
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "name",
+                "description": null,
+                "args": [],
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                },
+                "isDeprecated": true,
+                "deprecationReason": "Use id"
+              }
+            ],
+            "inputFields": null,
+            "interfaces": [],
+            "enumValues": null,
+            "possibleTypes": [
+              {
+                "kind": "OBJECT",
+                "name": "Thing",
+                "ofType": null
+              }
+            ]
+          }
         }
       }
     },
@@ -1324,6 +1497,73 @@
           }
         },
         "expected": "the fields and arguments September 2025 defines, including __Schema.description, __Type.specifiedByURL, __Type.isOneOf, __InputValue.isDeprecated, __InputValue.deprecationReason, __Directive.isRepeatable, __Type.inputFields(includeDeprecated:), __Field.args(includeDeprecated:) and __Directive.args(includeDeprecated:)"
+      }
+    },
+    {
+      "checks": [
+        "builtinAdditions",
+        "builtinDefinitions",
+        "builtinNullability",
+        "order"
+      ],
+      "summary": "fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla; the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Directive has a field September 2025 doesn't define; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it",
+      "cases": 1,
+      "fixtures": {
+        "deprecation": 1
+      },
+      "fixture": "deprecation.inc",
+      "problem": "added:fields at __Directive, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated, order at E",
+      "example": {
+        "input": "type Query { a: Int @deprecated, b(y: Int): Int @deprecated(reason: \"Use c\"), c: E, old: Old } type Old { x: Int @deprecated(reason: \"All of it\") } enum E { A B @deprecated(reason: \"Gone\") }  (the introspection query, September 2025 profile; includeDeprecated: true)",
+        "response": {
+          "args": [
+            {
+              "defaultValue": "\"No longer supported\"",
+              "description": "Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formattedin [Markdown](https://daringfireball.net/projects/markdown/).",
+              "name": "reason",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            }
+          ],
+          "description": "Marks an element of a GraphQL schema as no longer supported.",
+          "locations": [
+            "FIELD_DEFINITION",
+            "ENUM_VALUE"
+          ],
+          "name": "deprecated"
+        },
+        "expected": {
+          "name": "deprecated",
+          "description": null,
+          "isRepeatable": false,
+          "locations": [
+            "FIELD_DEFINITION",
+            "ARGUMENT_DEFINITION",
+            "INPUT_FIELD_DEFINITION",
+            "ENUM_VALUE"
+          ],
+          "args": [
+            {
+              "name": "reason",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": "\"No longer supported\"",
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        }
       }
     },
     {
@@ -1756,471 +1996,6 @@
     },
     {
       "checks": [
-        "order"
-      ],
-      "summary": "fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla",
-      "cases": 1,
-      "fixtures": {
-        "order": 1
-      },
-      "fixture": "order.lookup",
-      "problem": "order at Query, order at Query.m",
-      "since": {
-        "September2025": 1
-      },
-      "example": {
-        "input": "type Query { z: Int, a: Int, m(c: Int, b: Int, a: Int): O, u: U, e: E, n(v: In): Int } interface I1 { x: Int } interface I2 { x: Int } type O implements I2 & I1 { x: Int } type A2 { a: Int } type B2 { b: Int } union U = B2 | A2 enum E { Z A M } input In { z: Int, a: Int, m: Int }  (__type(name:) for Query, O, U, E, In, Unknown, September 2025 profile; includeDeprecated: true)",
-        "response": {
-          "__type(name: \"Query\")": {
-            "description": "",
-            "enumValues": null,
-            "fields": [
-              {
-                "args": [],
-                "deprecationReason": null,
-                "description": "",
-                "isDeprecated": false,
-                "name": "a",
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "Int",
-                  "ofType": null
-                }
-              },
-              {
-                "args": [],
-                "deprecationReason": null,
-                "description": "",
-                "isDeprecated": false,
-                "name": "e",
-                "type": {
-                  "kind": "ENUM",
-                  "name": "E",
-                  "ofType": null
-                }
-              },
-              {
-                "args": [
-                  {
-                    "defaultValue": null,
-                    "description": "",
-                    "name": "a",
-                    "type": {
-                      "kind": "SCALAR",
-                      "name": "Int",
-                      "ofType": null
-                    }
-                  },
-                  {
-                    "defaultValue": null,
-                    "description": "",
-                    "name": "c",
-                    "type": {
-                      "kind": "SCALAR",
-                      "name": "Int",
-                      "ofType": null
-                    }
-                  },
-                  {
-                    "defaultValue": null,
-                    "description": "",
-                    "name": "b",
-                    "type": {
-                      "kind": "SCALAR",
-                      "name": "Int",
-                      "ofType": null
-                    }
-                  }
-                ],
-                "deprecationReason": null,
-                "description": "",
-                "isDeprecated": false,
-                "name": "m",
-                "type": {
-                  "kind": "OBJECT",
-                  "name": "O",
-                  "ofType": null
-                }
-              },
-              {
-                "args": [
-                  {
-                    "defaultValue": null,
-                    "description": "",
-                    "name": "v",
-                    "type": {
-                      "kind": "INPUT_OBJECT",
-                      "name": "In",
-                      "ofType": null
-                    }
-                  }
-                ],
-                "deprecationReason": null,
-                "description": "",
-                "isDeprecated": false,
-                "name": "n",
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "Int",
-                  "ofType": null
-                }
-              },
-              {
-                "args": [],
-                "deprecationReason": null,
-                "description": "",
-                "isDeprecated": false,
-                "name": "u",
-                "type": {
-                  "kind": "UNION",
-                  "name": "U",
-                  "ofType": null
-                }
-              },
-              {
-                "args": [],
-                "deprecationReason": null,
-                "description": "",
-                "isDeprecated": false,
-                "name": "z",
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "Int",
-                  "ofType": null
-                }
-              }
-            ],
-            "inputFields": null,
-            "interfaces": [],
-            "kind": "OBJECT",
-            "name": "Query",
-            "possibleTypes": null
-          }
-        },
-        "expected": {
-          "__type(name: \"Query\")": {
-            "kind": "OBJECT",
-            "name": "Query",
-            "description": null,
-            "specifiedByURL": null,
-            "isOneOf": null,
-            "fields": [
-              {
-                "name": "z",
-                "description": null,
-                "args": [],
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "Int",
-                  "ofType": null
-                },
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "a",
-                "description": null,
-                "args": [],
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "Int",
-                  "ofType": null
-                },
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "m",
-                "description": null,
-                "args": [
-                  {
-                    "name": "c",
-                    "description": null,
-                    "type": {
-                      "kind": "SCALAR",
-                      "name": "Int",
-                      "ofType": null
-                    },
-                    "defaultValue": null,
-                    "isDeprecated": false,
-                    "deprecationReason": null
-                  },
-                  {
-                    "name": "b",
-                    "description": null,
-                    "type": {
-                      "kind": "SCALAR",
-                      "name": "Int",
-                      "ofType": null
-                    },
-                    "defaultValue": null,
-                    "isDeprecated": false,
-                    "deprecationReason": null
-                  },
-                  {
-                    "name": "a",
-                    "description": null,
-                    "type": {
-                      "kind": "SCALAR",
-                      "name": "Int",
-                      "ofType": null
-                    },
-                    "defaultValue": null,
-                    "isDeprecated": false,
-                    "deprecationReason": null
-                  }
-                ],
-                "type": {
-                  "kind": "OBJECT",
-                  "name": "O",
-                  "ofType": null
-                },
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "u",
-                "description": null,
-                "args": [],
-                "type": {
-                  "kind": "UNION",
-                  "name": "U",
-                  "ofType": null
-                },
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "e",
-                "description": null,
-                "args": [],
-                "type": {
-                  "kind": "ENUM",
-                  "name": "E",
-                  "ofType": null
-                },
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "n",
-                "description": null,
-                "args": [
-                  {
-                    "name": "v",
-                    "description": null,
-                    "type": {
-                      "kind": "INPUT_OBJECT",
-                      "name": "In",
-                      "ofType": null
-                    },
-                    "defaultValue": null,
-                    "isDeprecated": false,
-                    "deprecationReason": null
-                  }
-                ],
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "Int",
-                  "ofType": null
-                },
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "inputFields": null,
-            "interfaces": [],
-            "enumValues": null,
-            "possibleTypes": null
-          }
-        }
-      }
-    },
-    {
-      "checks": [
-        "order",
-        "typeKinds"
-      ],
-      "summary": "each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included: differs from Introspection.tla; fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla",
-      "cases": 1,
-      "fixtures": {
-        "interfaceDeprecation": 1
-      },
-      "fixture": "interfaceDeprecation.lookup",
-      "problem": "kind at Gone, kind at Named, order at Mood",
-      "example": {
-        "input": "interface Named { id: ID, name: String @deprecated(reason: \"Use id\") } interface Gone { old: Int @deprecated } type Thing implements Named & Gone { id: ID, name: String, old: Int @deprecated(reason: \"Also gone\") } enum Mood { HAPPY @deprecated, SAD @deprecated(reason: \"Cheer up\") } type Query { thing: Thing, named: Named, gone: Gone, mood: Mood }  (__type(name:) for Named, Gone, Thing, Mood, Unknown, September 2025 profile; includeDeprecated: true)",
-        "response": {
-          "__type(name: \"Named\")": {
-            "description": "",
-            "enumValues": null,
-            "fields": [
-              {
-                "args": [],
-                "deprecationReason": null,
-                "description": "",
-                "isDeprecated": false,
-                "name": "id",
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "ID",
-                  "ofType": null
-                }
-              },
-              {
-                "args": [],
-                "deprecationReason": "Use id",
-                "description": "",
-                "isDeprecated": true,
-                "name": "name",
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              }
-            ],
-            "inputFields": null,
-            "interfaces": null,
-            "kind": "INTERFACE",
-            "name": "Named",
-            "possibleTypes": [
-              {
-                "kind": "OBJECT",
-                "name": "Thing",
-                "ofType": null
-              }
-            ]
-          }
-        },
-        "expected": {
-          "__type(name: \"Named\")": {
-            "kind": "INTERFACE",
-            "name": "Named",
-            "description": null,
-            "specifiedByURL": null,
-            "isOneOf": null,
-            "fields": [
-              {
-                "name": "id",
-                "description": null,
-                "args": [],
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "ID",
-                  "ofType": null
-                },
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "name",
-                "description": null,
-                "args": [],
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                },
-                "isDeprecated": true,
-                "deprecationReason": "Use id"
-              }
-            ],
-            "inputFields": null,
-            "interfaces": [],
-            "enumValues": null,
-            "possibleTypes": [
-              {
-                "kind": "OBJECT",
-                "name": "Thing",
-                "ofType": null
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "checks": [
-        "typeKinds"
-      ],
-      "summary": "each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included: differs from Introspection.tla",
-      "cases": 1,
-      "fixtures": {
-        "interfaceDeprecation": 1
-      },
-      "fixture": "interfaceDeprecation.lookup.defaults",
-      "problem": "kind at Gone, kind at Named",
-      "example": {
-        "input": "interface Named { id: ID, name: String @deprecated(reason: \"Use id\") } interface Gone { old: Int @deprecated } type Thing implements Named & Gone { id: ID, name: String, old: Int @deprecated(reason: \"Also gone\") } enum Mood { HAPPY @deprecated, SAD @deprecated(reason: \"Cheer up\") } type Query { thing: Thing, named: Named, gone: Gone, mood: Mood }  (__type(name:) for Named, Gone, Thing, Mood, Unknown, September 2025 profile; includeDeprecated: the default)",
-        "response": {
-          "__type(name: \"Named\")": {
-            "description": "",
-            "enumValues": null,
-            "fields": [
-              {
-                "args": [],
-                "deprecationReason": null,
-                "description": "",
-                "isDeprecated": false,
-                "name": "id",
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "ID",
-                  "ofType": null
-                }
-              }
-            ],
-            "inputFields": null,
-            "interfaces": null,
-            "kind": "INTERFACE",
-            "name": "Named",
-            "possibleTypes": [
-              {
-                "kind": "OBJECT",
-                "name": "Thing",
-                "ofType": null
-              }
-            ]
-          }
-        },
-        "expected": {
-          "__type(name: \"Named\")": {
-            "kind": "INTERFACE",
-            "name": "Named",
-            "description": null,
-            "specifiedByURL": null,
-            "isOneOf": null,
-            "fields": [
-              {
-                "name": "id",
-                "description": null,
-                "args": [],
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "ID",
-                  "ofType": null
-                },
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "inputFields": null,
-            "interfaces": [],
-            "enumValues": null,
-            "possibleTypes": [
-              {
-                "kind": "OBJECT",
-                "name": "Thing",
-                "ofType": null
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "checks": [
         "defaultValue",
         "order"
       ],
@@ -2230,7 +2005,7 @@
         "printing": 1
       },
       "fixture": "printing.lookup",
-      "problem": "defaultValue at In.s, defaultValue at In.t, defaultValue at Query.f(c:), defaultValue at Query.f(i:), defaultValue at Query.f(l:), order at In, order at Query.f",
+      "problem": "defaultValue at In.s, defaultValue at In.t, defaultValue at Query.f(c:), defaultValue at Query.f(i:), defaultValue at Query.f(l:), order at Query.f",
       "since": {
         "September2025": 1
       },

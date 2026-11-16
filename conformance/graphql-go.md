@@ -12,10 +12,10 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 ## Execution
 
 - **Capabilities:** coerce, custom-directives, deferred-items, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, subscription, subscription-source, subscription-stream, uncoercible-results
-- **Cases:** 27080 submitted, 5414 distinct, 922 malformed
+- **Cases:** 27080 submitted, 5376 distinct, 917 malformed
 - **Adapter problems:** none
 - **Checker self-test:** passed (87 negative controls)
-- **Run:** kit c28a56e3d22f, 2026-11-16, strict, 1500 random runs per fixture (seed 1), exhaustive runs off
+- **Run:** kit 0625b35d64dd, 2026-11-16, strict, 1500 random runs per fixture (seed 1), exhaustive runs off
 
 ### Findings
 
@@ -23,7 +23,7 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 
 #### 1. `keyOrder`
 
-1805 cases, in `ordering` (1133), `leaves` (275), `aliases` (252), `unions` (78), `abstract` (30), `scalars` (20), `nullPropagation` (11), `subscriptionAlias` (6).
+1786 cases, in `ordering` (1111), `leaves` (276), `aliases` (257), `unions` (78), `abstract` (27), `scalars` (20), `nullPropagation` (11), `subscriptionAlias` (6).
 
 - Response keys are in collected field order (SHOULD, [§7.2.2](https://spec.graphql.org/September2026/#sec-Serialized-Map-Ordering))
 
@@ -39,14 +39,14 @@ expected: data {"second": null, "first": null}
 
 #### 2. `dataMatches`
 
-596 cases, in `fragments` (156), `lists` (121), `nullPropagation` (109), `merging` (93), `abstract` (46), `unions` (31), `aliases` (26), `subscriptionAlias` (14).
+550 cases, in `fragments` (145), `nullPropagation` (110), `lists` (103), `merging` (78), `abstract` (47), `unions` (29), `aliases` (24), `subscriptionAlias` (14).
 
 - data is the completed value: field collection, value completion and null propagation (MUST, [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors))
 
 The shortest case, from `fragments`:
 
 ```
-trace:    call node; settle node = object(Bot); call node.id; call node.nodeId; settle node.nodeId = null
+trace:    call node; settle node = object(Bot); call node.nodeId; call node.id; settle node.nodeId = null
 response: {"data":null,"errors":[{"message":"Cannot return null for non-nullable field Bot.id.","locations":[{"line":12,"column":7}],"path":["node","nodeId"]}]}
 expected: data {"node": null}
 ```
@@ -55,7 +55,7 @@ expected: data {"node": null}
 
 #### 3. `calledSerially`
 
-320 cases, in `mutation` (320).
+319 cases, in `mutation` (319).
 
 - A mutation's root fields execute one after another (SHOULD, [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution))
 
@@ -71,7 +71,7 @@ expected: data null
 
 #### 4. `resultCoercion`: the implementation produced no response, after a resolver returned a value its type can't represent: …
 
-307 cases, in `leaves` (307).
+311 cases, in `leaves` (311).
 
 - A non-finite Float, an unknown enum value or a value a custom scalar rejects raises an execution error instead of being passed through (MUST, [§3.5](https://spec.graphql.org/September2026/#sec-Scalars) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) [§3.9](https://spec.graphql.org/September2026/#sec-Enums) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion))
 
@@ -79,7 +79,7 @@ The shortest case, from `leaves`:
 
 ```
 problem:  the implementation produced no response, after a resolver returned a value its type can't represent: "can't serialize the result: json: unsupported value: +Inf"
-trace:    call ratio; call color; call count; settle count = error; settle color = error; settle ratio = uncoercible
+trace:    call count; call ratio; call color; settle ratio = uncoercible; settle count = leaf; settle color = error
 response: none: can't serialize the result: json: unsupported value: +Inf
 ```
 
@@ -87,7 +87,7 @@ response: none: can't serialize the result: json: unsupported value: +Inf
 
 #### 5. `coercionErrorReported`: color is null without an error, though its resolver returned a value its type can't represent, which must raise an execution error
 
-300 cases, in `leaves` (300).
+293 cases, in `leaves` (293).
 
 - A position whose resolver returned a value its type can't represent isn't null without an error (MUST, [§3.5](https://spec.graphql.org/September2026/#sec-Scalars) [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) [§3.9](https://spec.graphql.org/September2026/#sec-Enums) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors))
 
@@ -103,7 +103,7 @@ response: {"data":{"color":null,"count":null,"ratio":null},"errors":[{"message":
 
 #### 6. `calledSerially`, `keyOrder`
 
-270 cases, in `mutationRoot` (270).
+250 cases, in `mutationRoot` (250).
 
 - A mutation's root fields execute one after another (SHOULD, [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution))
 - Response keys are in collected field order (SHOULD, [§7.2.2](https://spec.graphql.org/September2026/#sec-Serialized-Map-Ordering))
@@ -120,7 +120,7 @@ expected: data {"a": null, "b": null, "__typename": "Mutation", "root": "Mutatio
 
 #### 7. `dataMatches`, `nullsExplained`
 
-196 cases, in `lists` (60), `merging` (45), `abstract` (42), `aliases` (27), `unions` (22).
+199 cases, in `lists` (51), `abstract` (46), `merging` (46), `aliases` (36), `unions` (20).
 
 - data is the completed value: field collection, value completion and null propagation (MUST, [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors))
 - Every null an error caused comes with an error from one of its causes (MUST, [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result))
@@ -128,8 +128,8 @@ expected: data {"a": null, "b": null, "__typename": "Mutation", "root": "Mutatio
 The shortest case, from `merging`:
 
 ```
-trace:    call a; call b; settle a = object(A); call a.subfield2; call a.subfield1; settle b = error; settle a.subfield2 = error
-response: {"data":null,"errors":[{"message":"resolver at a.subfield2 failed","locations":[{"line":10,"column":5}],"path":["a","subfield2"]}]}
+trace:    call a; call b; settle a = object(A); call a.subfield1; call a.subfield2; settle b = error; settle a.subfield2 = null
+response: {"data":null,"errors":[{"message":"Cannot return null for non-nullable field A.subfield2.","locations":[{"line":10,"column":5}],"path":["a","subfield2"]}]}
 expected: data {"a": null, "b": null}
 ```
 
@@ -137,7 +137,7 @@ expected: data {"a": null, "b": null}
 
 #### 8. `intFraction`: count is 1, though its resolver returned a value its type can't represent, which must raise an execution error
 
-182 cases, in `leaves` (182).
+176 cases, in `leaves` (176).
 
 - A fraction returned for an Int (1.2) raises an execution error instead of being truncated (MUST, [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion))
 
@@ -145,15 +145,15 @@ The shortest case, from `leaves`:
 
 ```
 problem:  count is 1, though its resolver returned a value its type can't represent, which must raise an execution error
-trace:    call color; call count; call ratio; settle count = uncoercible; settle color = null; settle ratio = leaf
-response: {"data":{"color":null,"count":1,"ratio":1.5}}
+trace:    call count; call ratio; call color; settle count = uncoercible; settle ratio = error; settle color = null
+response: {"data":{"color":null,"count":1,"ratio":null},"errors":[{"message":"resolver at ratio failed","locations":[{"line":3,"column":3}],"path":["ratio"]}]}
 ```
 
 <a id="execution-finding-9"></a>
 
 #### 9. `calledSerially`, `dataMatches`, `nullsExplained`
 
-177 cases, in `mutationRoot` (165), `mutation` (12).
+174 cases, in `mutationRoot` (165), `mutation` (9).
 
 - A mutation's root fields execute one after another (SHOULD, [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution))
 - data is the completed value: field collection, value completion and null propagation (MUST, [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors))
@@ -162,8 +162,8 @@ response: {"data":{"color":null,"count":1,"ratio":1.5}}
 The shortest case, from `mutationRoot`:
 
 ```
-trace:    call a; call b; call likeAll; settle b = object(Payload); settle a = error; settle likeAll = error; call b.likes; settle b.likes = null
-response: {"data":null,"errors":[{"message":"Cannot return null for non-nullable field Payload.likes.","locations":[{"line":6,"column":5}],"path":["b","likes"]}]}
+trace:    call a; call b; call likeAll; settle a = error; settle likeAll = list(1); settle b = null; call likeAll.0; settle likeAll.0 = error
+response: {"data":null,"errors":[{"message":"resolver at likeAll.0 failed","locations":[{"line":21,"column":3}],"path":["likeAll",0]}]}
 expected: data {"a": null, "b": null, "__typename": "Mutation", "root": "Mutation", "likeAll": null}
 ```
 
@@ -171,7 +171,7 @@ expected: data {"a": null, "b": null, "__typename": "Mutation", "root": "Mutatio
 
 #### 10. `keyOrder`, `nullsExplained`
 
-170 cases, in `leaves` (170).
+169 cases, in `leaves` (169).
 
 - Response keys are in collected field order (SHOULD, [§7.2.2](https://spec.graphql.org/September2026/#sec-Serialized-Map-Ordering))
 - Every null an error caused comes with an error from one of its causes (MUST, [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result))
@@ -179,8 +179,8 @@ expected: data {"a": null, "b": null, "__typename": "Mutation", "root": "Mutatio
 The shortest case, from `leaves`:
 
 ```
-trace:    call ratio; call color; call count; settle count = object(); settle color = leaf; settle ratio = object()
-response: {"data":{"color":"RED","count":null,"ratio":null}}
+trace:    call count; call ratio; call color; settle ratio = object(); settle count = error; settle color = leaf
+response: {"data":{"color":"RED","count":null,"ratio":null},"errors":[{"message":"resolver at count failed","locations":[{"line":2,"column":3}],"path":["count"]}]}
 expected: data {"count": null, "ratio": null, "color": <leaf>}
 ```
 
@@ -204,7 +204,7 @@ response: {"data":{"color":null,"count":null,"ratio":null},"errors":[{"message":
 
 #### 12. `calledSerially`, `complete`, `dataMatches`
 
-116 cases, in `mutationRoot` (114), `mutation` (2).
+120 cases, in `mutationRoot` (119), `mutation` (1).
 
 - A mutation's root fields execute one after another (SHOULD, [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution))
 - The response is sent only once execution is complete (MUST, [§6.3.1](https://spec.graphql.org/September2026/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data))
@@ -222,7 +222,7 @@ expected: data (incomplete)
 
 #### 13. `calledSerially`, `dataMatches`
 
-109 cases, in `mutationRoot` (98), `mutation` (11).
+102 cases, in `mutationRoot` (92), `mutation` (10).
 
 - A mutation's root fields execute one after another (SHOULD, [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution))
 - data is the completed value: field collection, value completion and null propagation (MUST, [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors))
@@ -230,8 +230,8 @@ expected: data (incomplete)
 The shortest case, from `mutationRoot`:
 
 ```
-trace:    call a; call b; call likeAll; settle b = null; settle a = object(Payload); call a.likes; settle likeAll = null; settle a.likes = error
-response: {"data":null,"errors":[{"message":"resolver at a.likes failed","locations":[{"line":3,"column":5},{"line":19,"column":5}],"path":["a","likes"]}]}
+trace:    call a; call b; call likeAll; settle a = null; settle b = null; settle likeAll = list(1); call likeAll.0; settle likeAll.0 = null
+response: {"data":null,"errors":[{"message":"Cannot return null for non-nullable field Mutation.likeAll.","locations":[{"line":21,"column":3}],"path":["likeAll",0]}]}
 expected: data {"a": null, "b": null, "__typename": "Mutation", "root": "Mutation", "likeAll": null}
 ```
 
@@ -239,7 +239,7 @@ expected: data {"a": null, "b": null, "__typename": "Mutation", "root": "Mutatio
 
 #### 14. `complete`, `dataMatches`
 
-91 cases, in `lists` (55), `abstract` (23), `unions` (12), `subscriptionAlias` (1).
+95 cases, in `lists` (58), `abstract` (26), `unions` (10), `subscriptionAlias` (1).
 
 - The response is sent only once execution is complete (MUST, [§6.3.1](https://spec.graphql.org/September2026/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data))
 - data is the completed value: field collection, value completion and null propagation (MUST, [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors))
@@ -256,7 +256,7 @@ expected: data (incomplete)
 
 #### 15. `calledSerially`, `nullsExplained`
 
-81 cases, in `mutation` (81).
+82 cases, in `mutation` (82).
 
 - A mutation's root fields execute one after another (SHOULD, [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution))
 - Every null an error caused comes with an error from one of its causes (MUST, [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result))
@@ -264,8 +264,8 @@ expected: data (incomplete)
 The shortest case, from `mutation`:
 
 ```
-trace:    call first; call second; call third; settle second = null; settle third = object(Payload); call third.likes; settle third.likes = null
-response: {"data":null,"errors":[{"message":"Cannot return null for non-nullable field Payload.likes.","locations":[{"line":9,"column":5}],"path":["third","likes"]}]}
+trace:    call first; call second; call third; settle second = null; settle first = object(Payload); call first.likes; settle first.likes = null
+response: {"data":null,"errors":[{"message":"Cannot return null for non-nullable field Payload.likes.","locations":[{"line":3,"column":5}],"path":["first","likes"]}]}
 expected: data null
 ```
 
@@ -273,7 +273,7 @@ expected: data null
 
 #### 16. `calledSerially`, `complete`, `dataMatches`, `nullsExplained`
 
-56 cases, in `mutationRoot` (56).
+72 cases, in `mutationRoot` (72).
 
 - A mutation's root fields execute one after another (SHOULD, [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution))
 - The response is sent only once execution is complete (MUST, [§6.3.1](https://spec.graphql.org/September2026/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data))
@@ -283,8 +283,8 @@ expected: data null
 The shortest case, from `mutationRoot`:
 
 ```
-trace:    call a; call b; call likeAll; settle b = error; settle likeAll = list(1); call likeAll.0; settle likeAll.0 = error
-response: {"data":null,"errors":[{"message":"resolver at likeAll.0 failed","locations":[{"line":21,"column":3}],"path":["likeAll",0]}]}
+trace:    call a; call b; call likeAll; settle b = error; settle a = object(Payload); call a.likes; settle a.likes = error
+response: {"data":null,"errors":[{"message":"resolver at a.likes failed","locations":[{"line":3,"column":5},{"line":19,"column":5}],"path":["a","likes"]}]}
 expected: data (incomplete)
 ```
 
@@ -292,7 +292,7 @@ expected: data (incomplete)
 
 #### 17. `calledSerially`, `complete`
 
-45 cases, in `mutation` (45).
+47 cases, in `mutation` (47).
 
 - A mutation's root fields execute one after another (SHOULD, [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution))
 - The response is sent only once execution is complete (MUST, [§6.3.1](https://spec.graphql.org/September2026/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data))
@@ -309,7 +309,7 @@ expected: data (incomplete)
 
 #### 18. `calledSerially`, `complete`, `nullsExplained`
 
-15 cases, in `mutation` (15).
+22 cases, in `mutation` (22).
 
 - A mutation's root fields execute one after another (SHOULD, [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution))
 - The response is sent only once execution is complete (MUST, [§6.3.1](https://spec.graphql.org/September2026/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data))
@@ -318,14 +318,32 @@ expected: data (incomplete)
 The shortest case, from `mutation`:
 
 ```
-trace:    call first; call second; call third; settle first = object(Payload); call first.likes; settle third = error; settle first.likes = error
+trace:    call first; call second; call third; settle third = error; settle first = object(Payload); call first.likes; settle first.likes = error
 response: {"data":null,"errors":[{"message":"resolver at first.likes failed","locations":[{"line":3,"column":5}],"path":["first","likes"]}]}
 expected: data (incomplete)
 ```
 
 <a id="execution-finding-19"></a>
 
-#### 19. `failsWithSource`: the source failed, and the response stream completed normally with no result carrying an error before it
+#### 19. `complete`, `dataMatches`, `nullsExplained`
+
+11 cases, in `lists` (11).
+
+- The response is sent only once execution is complete (MUST, [§6.3.1](https://spec.graphql.org/September2026/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data))
+- data is the completed value: field collection, value completion and null propagation (MUST, [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors))
+- Every null an error caused comes with an error from one of its causes (MUST, [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result))
+
+The shortest case, from `lists`:
+
+```
+trace:    call posts; call tags; settle tags = list(2); settle posts = list(1); call posts.0; call tags.0; call tags.1; settle tags.0 = error; settle posts.0 = null
+response: {"data":null,"errors":[{"message":"Cannot return null for non-nullable field Query.posts.","locations":[{"line":2,"column":3}],"path":["posts",0]}]}
+expected: data (incomplete)
+```
+
+<a id="execution-finding-20"></a>
+
+#### 20. `failsWithSource`: the source failed, and the response stream completed normally with no result carrying an error before it
 
 8 cases, in `subscription` (4), `subscriptionAlias` (4).
 
@@ -339,11 +357,11 @@ trace:
 response: undefined
 ```
 
-<a id="execution-finding-20"></a>
+<a id="execution-finding-21"></a>
 
-#### 20. `intFraction`: … is 1, though its resolver returned a value its type can't represent, which must raise an execution error
+#### 21. `intFraction`: … is 1, though its resolver returned a value its type can't represent, which must raise an execution error
 
-6 cases, in `unions` (6).
+5 cases, in `unions` (5).
 
 - A fraction returned for an Int (1.2) raises an execution error instead of being truncated (MUST, [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion))
 
@@ -351,26 +369,8 @@ The shortest case, from `unions`:
 
 ```
 problem:  matrix.0.0 is 1, though its resolver returned a value its type can't represent, which must raise an execution error
-trace:    call search; call matrix; settle matrix = list(1); settle search = leaf; call matrix.0; settle matrix.0 = list(1); call matrix.0.0; settle matrix.0.0 = uncoercible
-response: {"data":{"matrix":[[1]],"search":null},"errors":[{"message":"User Error: expected iterable, but did not find one for field Query.search.","locations":[{"line":2,"column":3}],"path":["search"]}]}
-```
-
-<a id="execution-finding-21"></a>
-
-#### 21. `complete`, `dataMatches`, `nullsExplained`
-
-5 cases, in `lists` (5).
-
-- The response is sent only once execution is complete (MUST, [§6.3.1](https://spec.graphql.org/September2026/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data))
-- data is the completed value: field collection, value completion and null propagation (MUST, [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors))
-- Every null an error caused comes with an error from one of its causes (MUST, [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result))
-
-The shortest case, from `lists`:
-
-```
-trace:    call posts; call tags; settle tags = list(2); settle posts = list(1); call posts.0; call tags.0; call tags.1; settle tags.0 = error; settle posts.0 = null
-response: {"data":null,"errors":[{"message":"Cannot return null for non-nullable field Query.posts.","locations":[{"line":2,"column":3}],"path":["posts",0]}]}
-expected: data (incomplete)
+trace:    call search; call matrix; settle search = error; settle matrix = list(1); call matrix.0; settle matrix.0 = list(1); call matrix.0.0; settle matrix.0.0 = uncoercible
+response: {"data":{"matrix":[[1]],"search":null},"errors":[{"message":"resolver at search failed","locations":[{"line":2,"column":3}],"path":["search"]}]}
 ```
 
 <a id="execution-finding-22"></a>
@@ -395,7 +395,7 @@ response: {"data":null,"errors":[{"message":"context canceled","locations":[]}]}
 
 4 cases, in `subscription` (2), `subscriptionAlias` (2).
 
-- No result arrives after the client cancels the response stream (SHOULD, [§6.2.3](https://spec.graphql.org/September2026/#sec-Subscription) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream))
+- No result arrives after the client cancels the response stream (MUST, [§6.2.3](https://spec.graphql.org/September2026/#sec-Subscription) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream))
 
 The shortest case, from `subscription`:
 
@@ -434,15 +434,15 @@ expected: data (incomplete)
 
 | Check | Level | Spec | Result |
 | --- | :---: | :---: | :---: |
-| The response is sent only once execution is complete (`complete`) | MUST | [§6.3.1](https://spec.graphql.org/September2026/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data) | ✗ 329/5601 |
-| data is the completed value: field collection, value completion and null propagation (`dataMatches`) | MUST | [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) | ✗ 1346/5601 |
-| Response keys are in collected field order (`keyOrder`) | SHOULD | [§7.2.2](https://spec.graphql.org/September2026/#sec-Serialized-Map-Ordering) | ! 2245/5601 |
-| Every error was raised, at the path where it was raised (`errorsWereRaised`) | MUST | [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 5599 |
-| No two errors share a response path (`errorPathsUnique`) | MUST (SHOULD in September 2025 and October 2021) | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) | ✓ 5599 |
-| Every error is inside a null in data (`errorsInsideNulls`) | MUST | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 5599 |
-| Every null an error caused comes with an error from one of its causes (`nullsExplained`) | MUST (SHOULD in October 2021) | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✗ 700/5599 |
+| The response is sent only once execution is complete (`complete`) | MUST | [§6.3.1](https://spec.graphql.org/September2026/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data) | ✗ 368/5561 |
+| data is the completed value: field collection, value completion and null propagation (`dataMatches`) | MUST | [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) | ✗ 1323/5561 |
+| Response keys are in collected field order (`keyOrder`) | SHOULD | [§7.2.2](https://spec.graphql.org/September2026/#sec-Serialized-Map-Ordering) | ! 2205/5561 |
+| Every error was raised, at the path where it was raised (`errorsWereRaised`) | MUST | [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 5559 |
+| No two errors share a response path (`errorPathsUnique`) | MUST (SHOULD in September 2025 and October 2021) | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) | ✓ 5559 |
+| Every error is inside a null in data (`errorsInsideNulls`) | MUST | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 5559 |
+| Every null an error caused comes with an error from one of its causes (`nullsExplained`) | MUST (SHOULD in October 2021) | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✗ 729/5559 |
 | A mutation that ran its root fields serially reports every error its earlier root fields raised (`serialErrorsKept`) | MUST (SHOULD in October 2021) | [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) | – |
-| A mutation's root fields execute one after another (`calledSerially`) | SHOULD | [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution) | ! 1189/1189 |
+| A mutation's root fields execute one after another (`calledSerially`) | SHOULD | [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution) | ! 1188/1188 |
 | Each mutation root field the operation selects executes once, and no other mutation root field executes (`mutationFieldsOnce`) | MUST | [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution) | ✓ 3000 |
 | Each field is executed once, merged selections included (mutation root fields: mutationFieldsOnce) (`callsOnce`) | INFO | — | ✓ 27044 |
 | Only fields the operation selects are executed (mutation root fields: mutationFieldsOnce) (`callsSelected`) | INFO | — | ✓ 27044 |
@@ -455,29 +455,29 @@ expected: data (incomplete)
 | When the source stream fails, the response stream completes with an error (`failsWithSource`) | MUST (since September 2025) | [§6.2.3](https://spec.graphql.org/September2026/#sec-Subscription) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) | ✗ 8/8 |
 | A cancelled response stream completes normally (`cancelCompletes`) | MUST (since September 2025) | [§6.2.3](https://spec.graphql.org/September2026/#sec-Subscription) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§6.2.3.3](https://spec.graphql.org/September2026/#sec-Unsubscribe) | ✓ 12 |
 | Cancelling the response stream cancels the source stream (`cancelCancelsSource`) | MUST (since September 2025) | [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§6.2.3.3](https://spec.graphql.org/September2026/#sec-Unsubscribe) | ✓ 12 |
-| No result arrives after the client cancels the response stream (`nothingAfterCancel`) | SHOULD (MUST in October 2021) | [§6.2.3](https://spec.graphql.org/September2026/#sec-Subscription) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) | ! 4/12 |
-| data holds only positions the operation selects (`dataShape`) | MUST | [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data) | ✓ 18513 |
-| A non-finite Float, an unknown enum value or a value a custom scalar rejects raises an execution error instead of being passed through (`resultCoercion`) | MUST | [§3.5](https://spec.graphql.org/September2026/#sec-Scalars) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) [§3.9](https://spec.graphql.org/September2026/#sec-Enums) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✗ 307/607 |
-| A fraction returned for an Int (1.2) raises an execution error instead of being truncated (`intFraction`) | MUST | [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✗ 188/234 |
-| A position whose resolver returned a value its type can't represent isn't null without an error (`coercionErrorReported`) | MUST (SHOULD in October 2021) | [§3.5](https://spec.graphql.org/September2026/#sec-Scalars) [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) [§3.9](https://spec.graphql.org/September2026/#sec-Enums) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) | ✗ 455/1008 |
-| An Int outside 32 bits returned by a resolver (2147483648) raises an execution error instead of being passed through (`intRange`) | SHOULD | [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) | ✓ 215 |
-| An ID whose resolver returned an integer (4) is serialized as a String ("4") (`idAsString`) | MUST (SHOULD in October 2021) | [§3.5.5](https://spec.graphql.org/September2026/#sec-ID) | ✓ 401 |
-| Leaf values are the resolver's canonical value (Int 1, Float 1.5, Boolean true, an enum's first value, "v") (`leafValues`) | MUST | [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✓ 18513 |
-| Leaf values use the JSON type §7.2.1 gives their GraphQL type (a number for Int 1, not "1") (`leafEncoding`) | SHOULD | [§7.2.1](https://spec.graphql.org/September2026/#sec-JSON-Serialization) | ✓ 18513 |
-| The execution result is a map (`resultMap`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 26737 |
-| An execution result has a data entry (`dataPresent`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 26737 |
-| errors, when present, is a non-empty list (`errorsList`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 26737 |
-| The response has no entries besides data, errors and extensions (`additionalEntries`) | MUST | [§7.1.8](https://spec.graphql.org/September2026/#sec-Additional-Entries) | ✓ 26737 |
+| No result arrives after the client cancels the response stream (`nothingAfterCancel`) | MUST | [§6.2.3](https://spec.graphql.org/September2026/#sec-Subscription) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) | ✗ 4/12 |
+| data holds only positions the operation selects (`dataShape`) | MUST | [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data) | ✓ 18457 |
+| A non-finite Float, an unknown enum value or a value a custom scalar rejects raises an execution error instead of being passed through (`resultCoercion`) | MUST | [§3.5](https://spec.graphql.org/September2026/#sec-Scalars) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) [§3.9](https://spec.graphql.org/September2026/#sec-Enums) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✗ 311/604 |
+| A fraction returned for an Int (1.2) raises an execution error instead of being truncated (`intFraction`) | MUST | [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✗ 181/234 |
+| A position whose resolver returned a value its type can't represent isn't null without an error (`coercionErrorReported`) | MUST (SHOULD in October 2021) | [§3.5](https://spec.graphql.org/September2026/#sec-Scalars) [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) [§3.9](https://spec.graphql.org/September2026/#sec-Enums) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) | ✗ 448/982 |
+| An Int outside 32 bits returned by a resolver (2147483648) raises an execution error instead of being passed through (`intRange`) | SHOULD | [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) | ✓ 218 |
+| An ID whose resolver returned an integer (4) is serialized as a String ("4") (`idAsString`) | MUST (SHOULD in October 2021) | [§3.5.5](https://spec.graphql.org/September2026/#sec-ID) | ✓ 383 |
+| Leaf values are the resolver's canonical value (Int 1, Float 1.5, Boolean true, an enum's first value, "v") (`leafValues`) | MUST | [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✓ 18457 |
+| Leaf values use the JSON type §7.2.1 gives their GraphQL type (a number for Int 1, not "1") (`leafEncoding`) | SHOULD | [§7.2.1](https://spec.graphql.org/September2026/#sec-JSON-Serialization) | ✓ 18457 |
+| The execution result is a map (`resultMap`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 26733 |
+| An execution result has a data entry (`dataPresent`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 26733 |
+| errors, when present, is a non-empty list (`errorsList`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 26733 |
+| The response has no entries besides data, errors and extensions (`additionalEntries`) | MUST | [§7.1.8](https://spec.graphql.org/September2026/#sec-Additional-Entries) | ✓ 26733 |
 | extensions is a map (`extensions`). no response had an extensions entry, so there was nothing to grade (§7.1.7: the entry is a may) | MUST | [§7.1.7](https://spec.graphql.org/September2026/#sec-Extensions) | – |
-| Errors are maps with a message, and extensions, if present, is a map (`errorFormat`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 17735 |
-| An error's locations, if present, is a list of maps with line and column, both positive integers (`errorLocations`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 17735 |
-| An execution error raised at a field has locations (`errorLocationsPresent`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 17735 |
-| An execution error's locations point at the field it was raised at (`errorLocationsAccurate`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 17731 |
-| Execution errors have a path to a position the operation selects (`errorPath`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✗ 4/17735 |
-| Paths are lists of response names (aliases, not field names) and integer list indices, none left out (`responsePosition`) | MUST (SHOULD in October 2021) | [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 17735 |
-| An error that propagated to a nullable parent keeps the full path to where it was raised (`errorPathFull`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 17735 |
-| Errors have no entries besides message, locations, path and extensions (`errorEntries`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 17735 |
-| No map in the serialized response repeats a key (`uniqueKeys`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.2.1](https://spec.graphql.org/September2026/#sec-JSON-Serialization) [Appendix B](https://spec.graphql.org/September2026/#sec-Appendix-Notation-Conventions) | ✓ 26737 |
+| Errors are maps with a message, and extensions, if present, is a map (`errorFormat`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 17736 |
+| An error's locations, if present, is a list of maps with line and column, both positive integers (`errorLocations`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 17736 |
+| An execution error raised at a field has locations (`errorLocationsPresent`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 17736 |
+| An execution error's locations point at the field it was raised at (`errorLocationsAccurate`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 17732 |
+| Execution errors have a path to a position the operation selects (`errorPath`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✗ 4/17736 |
+| Paths are lists of response names (aliases, not field names) and integer list indices, none left out (`responsePosition`) | MUST (SHOULD in October 2021) | [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 17736 |
+| An error that propagated to a nullable parent keeps the full path to where it was raised (`errorPathFull`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 17736 |
+| Errors have no entries besides message, locations, path and extensions (`errorEntries`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 17736 |
+| No map in the serialized response repeats a key (`uniqueKeys`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.2.1](https://spec.graphql.org/September2026/#sec-JSON-Serialization) [Appendix B](https://spec.graphql.org/September2026/#sec-Appendix-Notation-Conventions) | ✓ 26733 |
 | Each field's resolver is given its parent's value: the initial value at the root, a subscription event's value at its root (`parentValue`) | MUST | [§6.2.1](https://spec.graphql.org/September2026/#sec-Query) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§6.4.2](https://spec.graphql.org/September2026/#sec-Value-Resolution) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✓ 27044 |
 | The adapter follows the kit's protocol (call types, settles) (`protocol`) | ADAPTER | — | ✓ 27044 |
 | With error propagation off, an error nulls the position where it happened (graphql-js 17's @experimental_disableErrorPropagation) (`disabledPropagation`) | INFO | — | – |
@@ -503,7 +503,7 @@ expected: data (incomplete)
 - **Basis for `failsWithSource`:** §6.2.3 (Event Streams): "If an event stream encounters an error, it must complete with that error." MapSourceToResponseEvent (§6.2.3.2): "When {sourceStream} completes with {error}: Complete {responseStream} with {error}." A response stream that completes normally, or doesn't complete, fails. The kit doesn't compare error messages: an implementation may wrap the source's error. A stream whose last item after the source failed is a result with errors, followed by normal completion, passes: that is how an implementation whose streams can't end with an error (a stream of results, as in Rust) ends one with an error. The text doesn't say how "complete with that error" appears to a client: §6.2.3 says "GraphQL specifies algorithms for ... the closing of that stream", but leaves "serialization format or transport mechanism" to the service (Delivery Agnostic). §7.1.2's "A response stream must be a stream of execution result" argues against an error-only item, but with the text in doubt the kit takes the weaker reading. A result without errors there, then normal completion, fails. New in September 2025; October 2021 says only "Event streams may complete in response to an error".
 - **Basis for `cancelCompletes`:** §6.2.3 (Event Streams): "When an event stream is cancelled, it must complete." MapSourceToResponseEvent (§6.2.3.2): "When {responseStream} is cancelled: Cancel {sourceStream}. Complete {responseStream} normally." Unsubscribe (§6.2.3.3): "Cancel {responseStream}." A response stream that completes with an error after the client cancelled it, or doesn't complete, fails. New in September 2025; October 2021 says only that after cancelling, an observer "must receive no more events from that event stream" (nothingAfterCancel).
 - **Basis for `cancelCancelsSource`:** MapSourceToResponseEvent (§6.2.3.2): "When {responseStream} is cancelled: Cancel {sourceStream}." §6.2.3.3: "Unsubscribe cancels the response stream when a client no longer wishes to receive payloads for a subscription. This in turn also cancels the Source Stream". Algorithm steps have the algorithm's level (Appendix A). The adapter reports the source being cancelled (`source-cancelled`); a cancelled stream whose source never is fails. September 2025 says the same. October 2021: "This may in turn also cancel the Source Stream", a may.
-- **Basis for `nothingAfterCancel`:** MapSourceToResponseEvent (§6.2.3.2): "When {responseStream} is cancelled: Cancel {sourceStream}. Complete {responseStream} normally", and a completed stream emits nothing more. But the algorithm doesn't say what happens to an event whose ExecuteSubscriptionEvent was already running when the stream was cancelled, whose step "emit {executionResult} on {responseStream}" comes after, and §6.2.3's "When an event stream is cancelled, it must complete" doesn't say how soon. With the level in doubt the kit takes the weaker one. The kit's scenario cancels the stream while an event's resolvers are pending, then settles them; a result for that event after the cancel fails here (graphql-js 17 delivers it, then completes). September 2025 says the same. October 2021's §6.2.3: after cancelling, an observer "must receive no more events from that event stream", a must.
+- **Basis for `nothingAfterCancel`:** §6.2.3 (Event Streams): "An observer may at any point decide to stop observing an event stream by cancelling it. When an event stream is cancelled, it must complete." MapSourceToResponseEvent (§6.2.3.2): "When {responseStream} is cancelled: Cancel {sourceStream}. Complete {responseStream} normally." A completed stream emits nothing more, so a result for an event whose ExecuteSubscriptionEvent was still running when the client cancelled must not be emitted: the algorithm's step "emit {executionResult} on {responseStream}" comes after the stream completed. October 2021's §6.2.3 said so outright: "An observer may at any point decide to stop observing an event stream by cancelling it, after which it must receive no more events from that event stream." September 2025 dropped that sentence in graphql/graphql-spec#1099, "Editorial changes for Event Streams", which its description calls a rewrite of the Event Streams definition "to be more clear", so the kit reads the requirement as unchanged: a MUST in every release. The kit's scenario cancels the stream while an event's resolvers are pending, then settles them; a result for that event after the cancel fails here (graphql-js 16 and 17 deliver it, then complete).
 - **Basis for `dataShape`:** ExecuteCollectedFields (§6.3.3) sets an entry in the result map only for each entry of the collected fields map, and §7.1.5 says "The response data is the result of accumulating the resolved result of all response positions during execution." A value at a position the operation doesn't select isn't the completed value, as for dataMatches. September 2025 has the same algorithm and sentence, and October 2021's algorithms are the same.
 - **Basis for `resultCoercion`:** §3.5.2: "Non-finite floating-point internal values ({NaN} and {Infinity}) cannot be coerced to {Float} and must raise an execution error." §3.5, for every scalar, custom ones included: a service "must uphold the contract the scalar type describes, either by coercing the value or producing an execution error if a value cannot be coerced" (custom scalars with custom-scalar-results, whose resolver returns a value the scalar's result coercion rejects). §3.9: "GraphQL services must return one of the defined set of possible values. If a reasonable coercion is not possible they must raise an execution error." CoerceResult (§6.4.3): the internal method "must return a valid value for the type and not {null}. Otherwise raise an execution error." September 2025 says the same, and October 2021 too, with "field error". A value passed through fails here, as does no response at all after such a value, whose root cause it is. A null without an error is coercionErrorReported.
 - **Basis for `intFraction`:** §3.5.1: "GraphQL services may coerce non-integer internal values to integers when reasonable without losing information, otherwise they must raise an execution error." Truncating 1.2 to 1 loses information, so the must applies. The sentence after it, "For example, a floating-point number 1.2 should raise an execution error instead of being truncated to 1", is an example, which Appendix A makes non-normative, so its should doesn't set the level. September 2025 has the same sentences, and October 2021 too, with "field error". A value passed through fails here, as does no response at all after such a value. A null without an error is coercionErrorReported.
@@ -534,25 +534,25 @@ expected: data (incomplete)
 
 | Fixture | Result | Note |
 | --- | :---: | :---: |
-| [`abstract`](../fixtures/abstract.graphql) | ✗ 141/1500 |  |
-| [`aliases`](../fixtures/aliases.graphql) | ✗ 305/1500 |  |
+| [`abstract`](../fixtures/abstract.graphql) | ✗ 146/1500 |  |
+| [`aliases`](../fixtures/aliases.graphql) | ✗ 317/1500 |  |
 | [`directives_kept`](../fixtures/directives_kept.graphql) | ✓ 1500 |  |
 | [`directives_skipped`](../fixtures/directives_skipped.graphql) | ✓ 1500 |  |
 | [`directives_excluded`](../fixtures/directives_excluded.graphql) | ✓ 1500 |  |
 | [`directives_dropped`](../fixtures/directives_dropped.graphql) | ✓ 1500 |  |
-| [`fragments`](../fixtures/fragments.graphql) | ✗ 156/1500 |  |
-| [`leaves`](../fixtures/leaves.graphql) | ✗ 1165/1500 |  |
-| [`lists`](../fixtures/lists.graphql) | ✗ 241/1500 |  |
-| [`merging`](../fixtures/merging.graphql) | ✗ 138/1500 |  |
-| [`mutation`](../fixtures/mutation.graphql) | ✗ 486/1500 |  |
-| [`mutationRoot`](../fixtures/mutationRoot.graphql) | ✗ 703/1500 |  |
+| [`fragments`](../fixtures/fragments.graphql) | ✗ 145/1500 |  |
+| [`leaves`](../fixtures/leaves.graphql) | ✗ 1163/1500 |  |
+| [`lists`](../fixtures/lists.graphql) | ✗ 223/1500 |  |
+| [`merging`](../fixtures/merging.graphql) | ✗ 124/1500 |  |
+| [`mutation`](../fixtures/mutation.graphql) | ✗ 490/1500 |  |
+| [`mutationRoot`](../fixtures/mutationRoot.graphql) | ✗ 698/1500 |  |
 | [`noPropagation`](../fixtures/noPropagation.graphql) | – | needs error-propagation-off |
-| [`nullPropagation`](../fixtures/nullPropagation.graphql) | ✗ 120/1500 |  |
-| [`ordering`](../fixtures/ordering.graphql) | ! 1133/1500 |  |
+| [`nullPropagation`](../fixtures/nullPropagation.graphql) | ✗ 121/1500 |  |
+| [`ordering`](../fixtures/ordering.graphql) | ! 1111/1500 |  |
 | [`scalars`](../fixtures/scalars.graphql) | ! 20/1500 |  |
 | [`subscription`](../fixtures/subscription.graphql) | ✗ 8/1540 |  |
 | [`subscriptionAlias`](../fixtures/subscriptionAlias.graphql) | ✗ 28/1540 |  |
-| [`unions`](../fixtures/unions.graphql) | ✗ 144/1500 |  |
+| [`unions`](../fixtures/unions.graphql) | ✗ 137/1500 |  |
 
 ## Parse
 
@@ -562,7 +562,7 @@ expected: data (incomplete)
 - **Vectors relying on rules after October 2021:** since September 2025, 122 of 127 vectors failing; new in September 2026, 30 of 31 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (10 negative controls)
-- **Run:** kit c28a56e3d22f, 2026-11-16, strict
+- **Run:** kit 0625b35d64dd, 2026-11-16, strict
 
 ### Findings
 
@@ -1561,8 +1561,8 @@ expected: {"ok":true}
 - **Cases:** 2142 submitted, 2142 distinct, 0 malformed
 - **Vectors relying on rules after October 2021:** since September 2025, 32 of 56 vectors failing; new in September 2026, 9 of 9 vectors failing
 - **Adapter problems:** none
-- **Checker self-test:** passed (36378 negative controls)
-- **Run:** kit c28a56e3d22f, 2026-11-16, strict
+- **Checker self-test:** passed (36380 negative controls)
+- **Run:** kit 0625b35d64dd, 2026-11-16, strict
 
 ### Findings
 
@@ -2118,7 +2118,7 @@ The shortest case, from `subscription`:
 ```
 input:    [since September 2026] subscription($x: Int = 1) { eventNN(v: $x) }  variables: {"x": null}  subscribe: stream
 response: {"calls":[{"arguments":{"v":1},"path":["eventNN"]}],"response":{"data":{"eventNN":"ok"}},"sourceCalls":[{"arguments":{"v":1},"field":"eventNN"}]}
-expected: a request error, or a field error at eventNN
+expected: a request error
 ```
 
 <a id="coerce-finding-35"></a>
@@ -2173,7 +2173,7 @@ expected: a request error
 | An argument error below the root nulls the field's position and propagates (`argumentsBelowRoot`) | MUST | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✗ 2/5 |
 | CreateSourceEventStream: the source stream's resolver gets the field's coerced arguments (`sourceStream`) | MUST | [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) | ✓ 5 |
 | An error while establishing a subscription's source stream is a request error (`sourceStreamError`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) | ✓ 4 |
-| A subscription root field's argument that can't be coerced: request error or execution error (`sourceStreamArguments`) | INFO | [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) | ✓ 1 |
+| A subscription root field's argument that can't be coerced is a request error (`sourceStreamArguments`) | MUST | [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data) | ✓ 1 |
 | Selections only an invalid document has: a missing fragment and an undefined field are skipped, a second subscription root field is a request error (`unvalidatedBranches`) | MUST | [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) | – needs `unvalidated` |
 | GetOperation: the operation operationName names, or the only one, else a request error (`getOperation`) | MUST | [§6.1](https://spec.graphql.org/September2026/#sec-Executing-Requests) | ✓ 25 |
 | A document with a type system definition isn't executed (`notExecutable`) | MUST | [§2.3](https://spec.graphql.org/September2026/#sec-Document) | ✓ 6 |
@@ -2183,7 +2183,7 @@ expected: a request error
 | A valid document isn't rejected at validation (`acceptsValid`) | MUST | [§5](https://spec.graphql.org/September2026/#sec-Validation) | – |
 | A request error result has no data entry (`requestErrorNoData`) | MUST | [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✗ 1449/1674 (1 since September 2025, 8 new in September 2026) |
 | A request gets a response (`responds`) | MUST | [§7](https://spec.graphql.org/September2026/#sec-Response) | ✗ 39/2142 (20 since September 2025) |
-| A field error's path is the field's response path (`fieldErrorPath`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 38 |
+| A field error's path is the field's response path (`fieldErrorPath`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 37 |
 | Every error is a map with a string message (`errorFormat`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 2142 |
 | errors, when present, is a non-empty list (`errorsList`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 2142 |
 | The response is a map (`resultMap`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✓ 2142 |
@@ -2216,7 +2216,7 @@ expected: a request error
 - **Basis for `argumentsBelowRoot`:** For the vectors with fields below the root (capability nested-fields). CoerceArgumentValues raises an execution error, and §6.4.4: "If an execution error is raised while resolving a field (either directly or nested inside any lists), it is handled as though the response position at which the error occurred resolved to null, and the error must be added to the errors list"; "Since Non-Null response positions cannot be null, execution errors are propagated to be handled by the parent response position"; "If a List type wraps a Non-Null type, and one of the response position elements of that list resolves to null, then the entire list response position must resolve to null." So the data must show null at the field's position, or at its nearest nullable parent's, one error per position (each item of a list is one), and no call of the field's resolver. Where every position up to the root is Non-Null, "the data entry in the execution result should be null": the reference gives null there, and no other data can be right. The error's path is fieldErrorPath's (§7.1.6), including list indices and aliases (§7.1.4: "If a path segment is associated with an aliased field it must use the aliased name"). A value below the root is graded the same way: one call at each position, with the coerced arguments. October 2021 says the same with "field error".
 - **Basis for `sourceStream`:** For the subscription vectors (capability subscription-source). CreateSourceEventStream: "Let fieldName be the name of the first entry in fields. Note: This value is unaffected if an alias is used.", "Let argumentValues be the result of CoerceArgumentValues(subscriptionType, field, variableValues)", and ResolveFieldEventStream: "Return the result of calling resolver, providing rootValue and argumentValues." Then each event executes the root selection set (§6.2.3.2), so the response stream's first result holds the field under its response name, and the field's resolver gets the same coerced arguments. Algorithm steps have the algorithm's level (Appendix A). October 2021 says the same.
 - **Basis for `sourceStreamError`:** New in September 2026. §6.2: "Operation execution begins when the execution algorithm for the operation type is invoked: ExecuteQuery() for query operations, ExecuteMutation() for mutation operations, and Subscribe() for subscription operations." ExecuteRequest runs CreateSourceEventStream before Subscribe, and §7.1.5: "If an error was raised before operation execution begins, the response must be a request error result which will result in no response data." §7.1.6 lists among request errors a "failure to establish a source event stream for a subscription operation", and §6.2.3.1's Note says "an error raised here will be a request error". The vectors have the source stream's resolver raise (`subscribe: "raise"`). September 2025 runs CreateSourceEventStream inside Subscribe and doesn't list it, so these vectors have `since` September 2026.
-- **Basis for `sourceStreamArguments`:** The text contradicts itself here. CoerceArgumentValues, which CreateSourceEventStream calls, says "raise an execution error", and §6.4.1: "Any request error raised as a result of input coercion during CoerceArgumentValues() should be treated instead as an execution error." But it runs before operation execution begins, and §7.1.5 says "If an error was raised before operation execution begins, the response must be a request error result"; §6.2.3.1's Note: "The call to CreateSourceEventStream() occurs before operation execution begins, and thus an error raised here will be a request error." Coercion.tla gives the request error by default and the execution error under its sourceArgumentsFieldError reading; both pass, and the report records which happened. Accepting the value fails the type's own check (`nonNull`, `int`). New in September 2026 (`since`).
+- **Basis for `sourceStreamArguments`:** §6.2: "Operation execution begins when the execution algorithm for the operation type is invoked: ExecuteQuery() for query operations, ExecuteMutation() for mutation operations, and Subscribe() for subscription operations." ExecuteRequest runs CreateSourceEventStream before Subscribe, and CreateSourceEventStream: "Let argumentValues be the result of CoerceArgumentValues(subscriptionType, field, variableValues)." §7.1.5: "If an error was raised before operation execution begins, the response must be a request error result which will result in no response data." So an argument of the subscription root field that can't be coerced must give a request error result. CoerceArgumentValues calls the error it raises an execution error, and §6.4.1 says "Any request error raised as a result of input coercion during CoerceArgumentValues() should be treated instead as an execution error"; those name the error, while §7.1.5 says what the response must be when it is raised before operation execution, and §6.2.3.1's Note agrees: "The call to CreateSourceEventStream() occurs before operation execution begins, and thus an error raised here will be a request error." An execution error (a result with data) fails here, and accepting the value fails the type's own check (`nonNull`, `int`). September 2025 runs CreateSourceEventStream inside Subscribe, after operation execution begins, so these vectors have `since` September 2026.
 - **Basis for `unvalidatedBranches`:** For adapters with `unvalidated` (others get these as invalid documents, under invalidNotExecuted or onlyValidExecuted). CollectFields: "If no such fragment exists, continue with the next selection in selectionSet." ExecuteCollectedFields: "Let fieldType be the return type defined for the field fieldName of objectType. If fieldType is defined: ...", so a field the type doesn't define has no entry in the result. CreateSourceEventStream: "If collectedFieldsMap does not have exactly one entry, raise a request error." CollectFields collects every field selection, defined or not. Algorithm steps have the algorithm's level (Appendix A). October 2021 has the same steps.
 - **Basis for `getOperation`:** GetOperation: "If operationName is null: If document contains exactly one operation. Return the Operation contained in the document. Otherwise raise a request error requiring operationName." and "Let operation be the Operation named operationName in document. If operation was not found, raise a request error." Includes a mutation running on the mutation root type, and only the selected operation's variables being coerced. Algorithm steps have the algorithm's level (Appendix A). October 2021 says the same.
 - **Basis for `notExecutable`:** §2.3: "Documents are only executable by a GraphQL service if they are ExecutableDocument and contain at least one OperationDefinition. A Document which contains TypeSystemDefinitionOrExtension must not be executed; GraphQL execution services which receive a Document containing these should return a descriptive error." and "GraphQL services which only seek to execute GraphQL requests and not construct a new GraphQL schema may choose to only permit ExecutableDocument." So the answer is a request error, whether the service refuses the document at parsing, at validation (§5.1.1 Executable Definitions) or before executing it, and even where it also holds an operation that would run. Graded under this check for every adapter, validating or not: the sentence doesn't depend on validation. October 2021 says the same.
@@ -2245,7 +2245,7 @@ expected: a request error
 - **Vectors relying on rules after October 2021:** since September 2025, 16 of 19 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (353 negative controls)
-- **Run:** kit c28a56e3d22f, 2026-11-16, strict
+- **Run:** kit 0625b35d64dd, 2026-11-16, strict
 
 ### Findings
 
@@ -2272,26 +2272,7 @@ expected: a well-formed execution result with exactly the fields the query selec
 
 <a id="introspect-finding-2"></a>
 
-#### 2. `builtinAdditions`, `builtinDefinitions`, `builtinNullability`: the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Directive has a field September 2025 doesn't define; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it
-
-4 cases, in `minimal` (1), `deprecation` (1), `roots` (1), `unreferenced` (1).
-
-- The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection))
-- The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (MUST, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
-- The fields and arguments of the introspection types and built-in directives have the Non-Null wrapping the spec gives them (SHOULD, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
-
-The shortest case, from `minimal.inc`:
-
-```
-problem:  added:fields at __Directive, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated
-input:    type Query { a: Int }  (the introspection query, September 2025 profile; includeDeprecated: true)
-response: {"args":[{"defaultValue":"\"No longer supported\"","description":"Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formattedin [Markdown](https://daringfireball.net/projects/markdown/).","name":"reason","type":{"kind":"SCALAR","name":"String","ofType":null}}],"description":"Marks an element of a GraphQL schema as no longer supported.","locations":["FIELD_DEFINITION","ENUM_VALUE"],"name":"deprecated"}
-expected: [object Object]
-```
-
-<a id="introspect-finding-3"></a>
-
-#### 3. `builtinDefinitions`, `builtinNullability`: the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it
+#### 2. `builtinDefinitions`, `builtinNullability`: the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it
 
 4 cases, in `minimal` (1), `deprecation` (1), `roots` (1), `unreferenced` (1).
 
@@ -2303,6 +2284,25 @@ The shortest case, from `minimal.defaults`:
 ```
 problem:  enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated
 input:    type Query { a: Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)
+response: {"args":[{"defaultValue":"\"No longer supported\"","description":"Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formattedin [Markdown](https://daringfireball.net/projects/markdown/).","name":"reason","type":{"kind":"SCALAR","name":"String","ofType":null}}],"description":"Marks an element of a GraphQL schema as no longer supported.","locations":["FIELD_DEFINITION","ENUM_VALUE"],"name":"deprecated"}
+expected: [object Object]
+```
+
+<a id="introspect-finding-3"></a>
+
+#### 3. `builtinAdditions`, `builtinDefinitions`, `builtinNullability`: the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Directive has a field September 2025 doesn't define; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it
+
+3 cases, in `minimal` (1), `roots` (1), `unreferenced` (1).
+
+- The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection))
+- The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (MUST, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
+- The fields and arguments of the introspection types and built-in directives have the Non-Null wrapping the spec gives them (SHOULD, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
+
+The shortest case, from `minimal.inc`:
+
+```
+problem:  added:fields at __Directive, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated
+input:    type Query { a: Int }  (the introspection query, September 2025 profile; includeDeprecated: true)
 response: {"args":[{"defaultValue":"\"No longer supported\"","description":"Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formattedin [Markdown](https://daringfireball.net/projects/markdown/).","name":"reason","type":{"kind":"SCALAR","name":"String","ofType":null}}],"description":"Marks an element of a GraphQL schema as no longer supported.","locations":["FIELD_DEFINITION","ENUM_VALUE"],"name":"deprecated"}
 expected: [object Object]
 ```
@@ -2356,7 +2356,7 @@ expected: [object Object]
 The shortest case, from `order.inc`:
 
 ```
-problem:  added:fields at __Directive, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), kind at I1, kind at I2, locations at @deprecated, order at In, order at Query, order at Query.m
+problem:  added:fields at __Directive, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), kind at I1, kind at I2, locations at @deprecated, order at Query
 input:    type Query { z: Int, a: Int, m(c: Int, b: Int, a: Int): O, u: U, e: E, n(v: In): Int } interface I1 { x: Int } interface I2 { x: Int } type O implements I2 & I1 { x: Int } type A2 { a: Int } type B2 { b: Int } union U = B2 | A2 enum E { Z A M } input In { z: Int, a: Int, m: Int }  (the introspection query, September 2025 profile; includeDeprecated: true)
 response: {"description":"","enumValues":null,"fields":[{"args":[],"deprecationReason":null,"description":"","isDeprecated":false,"name":"x","type":{"kind":"SCALAR","name":"Int","ofType":null}}],"inputFields":null,"interfaces":null,"kind":"INTERFACE","name":"I1","possibleTypes":[{"kind":"OBJECT","name":"O","ofType":null}]}
 expected: [object Object]
@@ -2376,7 +2376,7 @@ expected: [object Object]
 The shortest case, from `order.defaults`:
 
 ```
-problem:  enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), kind at I1, kind at I2, locations at @deprecated, order at In, order at Query, order at Query.m
+problem:  enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), kind at I1, kind at I2, locations at @deprecated, order at In, order at Query
 input:    type Query { z: Int, a: Int, m(c: Int, b: Int, a: Int): O, u: U, e: E, n(v: In): Int } interface I1 { x: Int } interface I2 { x: Int } type O implements I2 & I1 { x: Int } type A2 { a: Int } type B2 { b: Int } union U = B2 | A2 enum E { Z A M } input In { z: Int, a: Int, m: Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)
 response: {"description":"","enumValues":null,"fields":[{"args":[],"deprecationReason":null,"description":"","isDeprecated":false,"name":"x","type":{"kind":"SCALAR","name":"Int","ofType":null}}],"inputFields":null,"interfaces":null,"kind":"INTERFACE","name":"I1","possibleTypes":[{"kind":"OBJECT","name":"O","ofType":null}]}
 expected: [object Object]
@@ -2384,7 +2384,41 @@ expected: [object Object]
 
 <a id="introspect-finding-8"></a>
 
-#### 8. `builtinDefinitions`: the introspection types lack __Schema.description, __Type.specifiedByURL, __Type.isOneOf, __InputValue.isDeprecated, __InputValue.deprecationReason, __Directive.isRepeatable, __Type.inputFields(includeDeprecated:), __Field.args(includeDeprecated:) and __Directive.args(includeDeprecated:), so the kit leaves them out of every query, and grades what it can see without them
+#### 8. `order`: fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla
+
+2 cases, in `deprecation` (1), `order` (1). All rely on grammar or rules introduced in September 2025, not in October 2021.
+
+- Fields, arguments, enum values, directives, members and interfaces come in source order (SHOULD, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection))
+
+The shortest case, from `deprecation.lookup`:
+
+```
+problem:  order at E
+input:    type Query { a: Int @deprecated, b(y: Int): Int @deprecated(reason: "Use c"), c: E, old: Old } type Old { x: Int @deprecated(reason: "All of it") } enum E { A B @deprecated(reason: "Gone") }  (__type(name:) for Query, Old, E, Unknown, September 2025 profile; includeDeprecated: true)
+response: {"__type(name: \"E\")":{"description":"","enumValues":[{"deprecationReason":"Gone","description":"","isDeprecated":true,"name":"B"},{"deprecationReason":null,"description":"","isDeprecated":false,"name":"A"}],"fields":null,"inputFields":null,"interfaces":null,"kind":"ENUM","name":"E","possibleTypes":null}}
+expected: [object Object]
+```
+
+<a id="introspect-finding-9"></a>
+
+#### 9. `typeKinds`: each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included: differs from Introspection.tla
+
+2 cases, in `interfaceDeprecation` (2).
+
+- Each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included (MUST, [§4.2.2](https://spec.graphql.org/September2026/#sec-The-__Type-Type))
+
+The shortest case, from `interfaceDeprecation.lookup`:
+
+```
+problem:  kind at Gone, kind at Named
+input:    interface Named { id: ID, name: String @deprecated(reason: "Use id") } interface Gone { old: Int @deprecated } type Thing implements Named & Gone { id: ID, name: String, old: Int @deprecated(reason: "Also gone") } enum Mood { HAPPY @deprecated, SAD @deprecated(reason: "Cheer up") } type Query { thing: Thing, named: Named, gone: Gone, mood: Mood }  (__type(name:) for Named, Gone, Thing, Mood, Unknown, September 2025 profile; includeDeprecated: true)
+response: {"__type(name: \"Named\")":{"description":"","enumValues":null,"fields":[{"args":[],"deprecationReason":null,"description":"","isDeprecated":false,"name":"id","type":{"kind":"SCALAR","name":"ID","ofType":null}},{"args":[],"deprecationReason":"Use id","description":"","isDeprecated":true,"name":"name","type":{"kind":"SCALAR","name":"String","ofType":null}}],"inputFields":null,"interfaces":null,"kind":"INTERFACE","name":"Named","possibleTypes":[{"kind":"OBJECT","name":"Thing","ofType":null}]}}
+expected: [object Object]
+```
+
+<a id="introspect-finding-10"></a>
+
+#### 10. `builtinDefinitions`: the introspection types lack __Schema.description, __Type.specifiedByURL, __Type.isOneOf, __InputValue.isDeprecated, __InputValue.deprecationReason, __Directive.isRepeatable, __Type.inputFields(includeDeprecated:), __Field.args(includeDeprecated:) and __Directive.args(includeDeprecated:), so the kit leaves them out of every query, and grades what it can see without them
 
 1 case, in `discovery` (1).
 
@@ -2399,9 +2433,29 @@ response: {"data":{"a":{"fields":[{"args":[],"name":"directives"},{"args":[],"na
 expected: the fields and arguments September 2025 defines, including __Schema.description, __Type.specifiedByURL, __Type.isOneOf, __InputValue.isDeprecated, __InputValue.deprecationReason, __Directive.isRepeatable, __Type.inputFields(includeDeprecated:), __Field.args(includeDeprecated:) and __Directive.args(includeDeprecated:)
 ```
 
-<a id="introspect-finding-9"></a>
+<a id="introspect-finding-11"></a>
 
-#### 9. `builtinAdditions`, `builtinDefinitions`, `builtinNullability`, `builtinScalars`: leaves out Float, a built-in scalar the schema references; the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Directive has a field September 2025 doesn't define; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it
+#### 11. `builtinAdditions`, `builtinDefinitions`, `builtinNullability`, `order`: fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla; the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Directive has a field September 2025 doesn't define; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it
+
+1 case, in `deprecation` (1).
+
+- The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection))
+- The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (MUST, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
+- The fields and arguments of the introspection types and built-in directives have the Non-Null wrapping the spec gives them (SHOULD, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
+- Fields, arguments, enum values, directives, members and interfaces come in source order (SHOULD, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection))
+
+The shortest case, from `deprecation.inc`:
+
+```
+problem:  added:fields at __Directive, enumValues at __DirectiveLocation, inputNullability at @deprecated(reason:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), locations at @deprecated, order at E
+input:    type Query { a: Int @deprecated, b(y: Int): Int @deprecated(reason: "Use c"), c: E, old: Old } type Old { x: Int @deprecated(reason: "All of it") } enum E { A B @deprecated(reason: "Gone") }  (the introspection query, September 2025 profile; includeDeprecated: true)
+response: {"args":[{"defaultValue":"\"No longer supported\"","description":"Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formattedin [Markdown](https://daringfireball.net/projects/markdown/).","name":"reason","type":{"kind":"SCALAR","name":"String","ofType":null}}],"description":"Marks an element of a GraphQL schema as no longer supported.","locations":["FIELD_DEFINITION","ENUM_VALUE"],"name":"deprecated"}
+expected: [object Object]
+```
+
+<a id="introspect-finding-12"></a>
+
+#### 12. `builtinAdditions`, `builtinDefinitions`, `builtinNullability`, `builtinScalars`: leaves out Float, a built-in scalar the schema references; the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Directive has a field September 2025 doesn't define; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it
 
 1 case, in `builtinScalars` (1).
 
@@ -2419,9 +2473,9 @@ response: "no type Float"
 expected: [object Object]
 ```
 
-<a id="introspect-finding-10"></a>
+<a id="introspect-finding-13"></a>
 
-#### 10. `builtinDefinitions`, `builtinNullability`, `builtinScalars`: leaves out Float, a built-in scalar the schema references; the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it
+#### 13. `builtinDefinitions`, `builtinNullability`, `builtinScalars`: leaves out Float, a built-in scalar the schema references; the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it
 
 1 case, in `builtinScalars` (1).
 
@@ -2438,9 +2492,9 @@ response: "no type Float"
 expected: [object Object]
 ```
 
-<a id="introspect-finding-11"></a>
+<a id="introspect-finding-14"></a>
 
-#### 11. `builtinAdditions`, `builtinDefinitions`, `builtinNullability`, `defaultValue`, `order`: defaultValue is null for an input value without a default, and otherwise null or an encoding of the default: differs from Introspection.tla; fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla; the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Directive has a field September 2025 doesn't define; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it
+#### 14. `builtinAdditions`, `builtinDefinitions`, `builtinNullability`, `defaultValue`, `order`: defaultValue is null for an input value without a default, and otherwise null or an encoding of the default: differs from Introspection.tla; fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla; the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Directive has a field September 2025 doesn't define; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it
 
 1 case, in `printing` (1). All rely on grammar or rules introduced in September 2025, not in October 2021.
 
@@ -2459,9 +2513,9 @@ response: {"description":"","enumValues":null,"fields":[{"args":[{"defaultValue"
 expected: [object Object]
 ```
 
-<a id="introspect-finding-12"></a>
+<a id="introspect-finding-15"></a>
 
-#### 12. `builtinDefinitions`, `builtinNullability`, `defaultValue`, `order`: defaultValue is null for an input value without a default, and otherwise null or an encoding of the default: differs from Introspection.tla; fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla; the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it
+#### 15. `builtinDefinitions`, `builtinNullability`, `defaultValue`, `order`: defaultValue is null for an input value without a default, and otherwise null or an encoding of the default: differs from Introspection.tla; fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla; the built-in @deprecated lacks only locations October 2021 doesn't define (locations); the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __DirectiveLocation isn't as September 2025 defines it (enumValues); the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it
 
 1 case, in `printing` (1). All rely on grammar or rules introduced in September 2025, not in October 2021.
 
@@ -2479,9 +2533,9 @@ response: {"description":"","enumValues":null,"fields":[{"args":[{"defaultValue"
 expected: [object Object]
 ```
 
-<a id="introspect-finding-13"></a>
+<a id="introspect-finding-16"></a>
 
-#### 13. `typeByName`: __type(name:) doesn't return a type the schema has
+#### 16. `typeByName`: __type(name:) doesn't return a type the schema has
 
 1 case, in `builtinScalars` (1).
 
@@ -2493,58 +2547,6 @@ The shortest case, from `builtinScalars.lookup`:
 problem:  typeByName at Float
 input:    directive @d(f: Float) on FIELD input In { id: ID } type Query { a(i: In): String }  (__type(name:) for In, ID, Float, Int, Unknown, September 2025 profile; includeDeprecated: true)
 response: {"__type(name: \"Float\")":null}
-expected: [object Object]
-```
-
-<a id="introspect-finding-14"></a>
-
-#### 14. `order`: fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla
-
-1 case, in `order` (1). All rely on grammar or rules introduced in September 2025, not in October 2021.
-
-- Fields, arguments, enum values, directives, members and interfaces come in source order (SHOULD, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection))
-
-The shortest case, from `order.lookup`:
-
-```
-problem:  order at Query, order at Query.m
-input:    type Query { z: Int, a: Int, m(c: Int, b: Int, a: Int): O, u: U, e: E, n(v: In): Int } interface I1 { x: Int } interface I2 { x: Int } type O implements I2 & I1 { x: Int } type A2 { a: Int } type B2 { b: Int } union U = B2 | A2 enum E { Z A M } input In { z: Int, a: Int, m: Int }  (__type(name:) for Query, O, U, E, In, Unknown, September 2025 profile; includeDeprecated: true)
-response: {"__type(name: \"Query\")":{"description":"","enumValues":null,"fields":[{"args":[],"deprecationReason":null,"description":"","isDeprecated":false,"name":"a","type":{"kind":"SCALAR","name":"Int","ofType":null}},{"args":[],"deprecationReason":null,"description":"","isDeprecated":false,"name":"e","type":{"kind":"ENUM","name":"E","ofType":null}},{"args":[{"defaultValue":null,"description":"","name":"a","type":{"kind":"SCALAR","name":"Int","ofType":null}},{"defaultValue":null,"description":"","name":"c","type":{"kind":"SCALAR","name":"Int","ofType":null}},{"defaultValue":null,"description":"","name":"b","type":{"kind":"SCALAR","name":"Int","ofType":null}}],"deprecationReason":null,"description":"","isDeprecated":false,"name":"m","type":{"kind":"OBJECT","name":"O","ofType":null}},{"args":[{"defaultValue":null,"description":"","name":"v","type":{"kind":"INPUT_OBJECT","name":"In","ofType":null}}],"deprecationReason":null,"description":"","isDeprecated":false,"name":"n","type":{"kind":"SCALAR","name":"Int","ofType":null}},{"args":[],"deprecationReason":null,"description":"","isDeprecated":false,"name":"u","type":{"kind":"UNION","name":"U","ofType":null}},{"args":[],"deprecationReason":null,"description":"","isDeprecated":false,"name":"z","type":{"kind":"SCALAR","name":"Int","ofType":null}}],"inputFields":null,"interfaces":[],"kind":"OBJECT","name":"Query","possibleTypes":null}}
-expected: [object Object]
-```
-
-<a id="introspect-finding-15"></a>
-
-#### 15. `order`, `typeKinds`: each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included: differs from Introspection.tla; fields, arguments, enum values, directives, members and interfaces come in source order: differs from Introspection.tla
-
-1 case, in `interfaceDeprecation` (1).
-
-- Fields, arguments, enum values, directives, members and interfaces come in source order (SHOULD, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection))
-- Each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included (MUST, [§4.2.2](https://spec.graphql.org/September2026/#sec-The-__Type-Type))
-
-The shortest case, from `interfaceDeprecation.lookup`:
-
-```
-problem:  kind at Gone, kind at Named, order at Mood
-input:    interface Named { id: ID, name: String @deprecated(reason: "Use id") } interface Gone { old: Int @deprecated } type Thing implements Named & Gone { id: ID, name: String, old: Int @deprecated(reason: "Also gone") } enum Mood { HAPPY @deprecated, SAD @deprecated(reason: "Cheer up") } type Query { thing: Thing, named: Named, gone: Gone, mood: Mood }  (__type(name:) for Named, Gone, Thing, Mood, Unknown, September 2025 profile; includeDeprecated: true)
-response: {"__type(name: \"Named\")":{"description":"","enumValues":null,"fields":[{"args":[],"deprecationReason":null,"description":"","isDeprecated":false,"name":"id","type":{"kind":"SCALAR","name":"ID","ofType":null}},{"args":[],"deprecationReason":"Use id","description":"","isDeprecated":true,"name":"name","type":{"kind":"SCALAR","name":"String","ofType":null}}],"inputFields":null,"interfaces":null,"kind":"INTERFACE","name":"Named","possibleTypes":[{"kind":"OBJECT","name":"Thing","ofType":null}]}}
-expected: [object Object]
-```
-
-<a id="introspect-finding-16"></a>
-
-#### 16. `typeKinds`: each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included: differs from Introspection.tla
-
-1 case, in `interfaceDeprecation` (1).
-
-- Each __Type has its type's kind, and its fields are null exactly where that kind requires, List and Non-Null included (MUST, [§4.2.2](https://spec.graphql.org/September2026/#sec-The-__Type-Type))
-
-The shortest case, from `interfaceDeprecation.lookup.defaults`:
-
-```
-problem:  kind at Gone, kind at Named
-input:    interface Named { id: ID, name: String @deprecated(reason: "Use id") } interface Gone { old: Int @deprecated } type Thing implements Named & Gone { id: ID, name: String, old: Int @deprecated(reason: "Also gone") } enum Mood { HAPPY @deprecated, SAD @deprecated(reason: "Cheer up") } type Query { thing: Thing, named: Named, gone: Gone, mood: Mood }  (__type(name:) for Named, Gone, Thing, Mood, Unknown, September 2025 profile; includeDeprecated: the default)
-response: {"__type(name: \"Named\")":{"description":"","enumValues":null,"fields":[{"args":[],"deprecationReason":null,"description":"","isDeprecated":false,"name":"id","type":{"kind":"SCALAR","name":"ID","ofType":null}}],"inputFields":null,"interfaces":null,"kind":"INTERFACE","name":"Named","possibleTypes":[{"kind":"OBJECT","name":"Thing","ofType":null}]}}
 expected: [object Object]
 ```
 
@@ -2560,7 +2562,7 @@ expected: [object Object]
 The shortest case, from `printing.lookup`:
 
 ```
-problem:  defaultValue at In.s, defaultValue at In.t, defaultValue at Query.f(c:), defaultValue at Query.f(i:), defaultValue at Query.f(l:), order at In, order at Query.f
+problem:  defaultValue at In.s, defaultValue at In.t, defaultValue at Query.f(c:), defaultValue at Query.f(i:), defaultValue at Query.f(l:), order at Query.f
 input:    [since September 2025] input In { s: String = "\u0003", t: [String] = ["😀"] } type Query { f(c: String = "\u0000\u0001\t\n\u001F\u007F\u0080\u0085\u009F", e: String = "😀 é", l: [String] = ["\u0002", "😀"], i: In = {s: "\u0004", t: ["\u0005😀"]}): Int }  (__type(name:) for Query, In, Unknown, September 2025 profile; includeDeprecated: true)
 response: {"__type(name: \"Query\")":{"description":"","enumValues":null,"fields":[{"args":[{"defaultValue":"\"[\\x02 😀]\"","description":"","name":"l","type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"String","ofType":null}}},{"defaultValue":"\"map[s:\\x04 t:[\\x05😀]]\"","description":"","name":"i","type":{"kind":"INPUT_OBJECT","name":"In","ofType":null}},{"defaultValue":"\"\\x00\\x01\\t\\n\\x1f\\x7f\\u0080\\u0085\\u009f\"","description":"","name":"c","type":{"kind":"SCALAR","name":"String","ofType":null}},{"defaultValue":"\"😀 é\"","description":"","name":"e","type":{"kind":"SCALAR","name":"String","ofType":null}}],"deprecationReason":null,"description":"","isDeprecated":false,"name":"f","type":{"kind":"SCALAR","name":"Int","ofType":null}}],"inputFields":null,"interfaces":[],"kind":"OBJECT","name":"Query","possibleTypes":null}}
 expected: [object Object]
@@ -2608,7 +2610,7 @@ expected: [object Object]
 | The introspection types have no field, argument, enum value or type the spec doesn't define (`builtinAdditions`) | INFO | [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) | i 8/27 (1 since September 2025) |
 | Under an older release's profile, a built-in definition that differs from that release's is as a later release defines it (`builtinEdition`) | INFO | [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ✓ 27 |
 | __typename names the root type, and no fields list includes it (`typename`) | MUST | [§4.1](https://spec.graphql.org/September2026/#sec-Type-Name-Introspection) | ✓ 27 |
-| Fields, arguments, enum values, directives, members and interfaces come in source order (`order`). Since September 2025: October 2021 has no Stable Ordering. | SHOULD (since September 2025) | [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) | ! 9/27 (all since September 2025) |
+| Fields, arguments, enum values, directives, members and interfaces come in source order (`order`). Since September 2025: October 2021 has no Stable Ordering. | SHOULD (since September 2025) | [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) | ! 10/27 (all since September 2025) |
 | Anything else Introspection!Matches requires (`other`) | MUST | [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) | ✓ 27 |
 
 - **Basis for `envelope`:** §7.1: "An execution result must be a map." "If any errors are raised during operation execution, the execution result must contain an entry with key errors. The value of this entry must be a non-empty list". "The extensions entry in an execution result or request error result, if set, must have a map as its value." "the execution result and request error result maps must not contain any entries other than those described above."

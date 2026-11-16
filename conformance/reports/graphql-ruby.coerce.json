@@ -25,7 +25,7 @@
     "validate"
   ],
   "provenance": {
-    "kit": "c28a56e3d22f",
+    "kit": "0625b35d64dd",
     "date": "2026-11-16",
     "strict": true,
     "vectors": 2222,
@@ -40,7 +40,7 @@
       "big JSON numbers graded under jsonNumbers"
     ]
   },
-  "checkerSelfTest": "passed (37516 negative controls)",
+  "checkerSelfTest": "passed (37518 negative controls)",
   "cases": {
     "submitted": 2203,
     "distinct": 2203,
@@ -54,7 +54,7 @@
     },
     "September2026": {
       "vectors": 9,
-      "failing": 4
+      "failing": 5
     }
   },
   "checks": [
@@ -493,8 +493,8 @@
     },
     {
       "id": "sourceStreamArguments",
-      "title": "A subscription root field's argument that can't be coerced: request error or execution error",
-      "level": "INFO",
+      "title": "A subscription root field's argument that can't be coerced is a request error",
+      "level": "MUST",
       "spec": [
         {
           "number": "6.2.3.1",
@@ -505,20 +505,23 @@
           "number": "6.4.1",
           "title": "Coercing Field Arguments",
           "url": "https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments"
+        },
+        {
+          "number": "7.1.5",
+          "title": "Data",
+          "url": "https://spec.graphql.org/September2026/#sec-Data"
         }
       ],
-      "basis": "The text contradicts itself here. CoerceArgumentValues, which CreateSourceEventStream calls, says \"raise an execution error\", and §6.4.1: \"Any request error raised as a result of input coercion during CoerceArgumentValues() should be treated instead as an execution error.\" But it runs before operation execution begins, and §7.1.5 says \"If an error was raised before operation execution begins, the response must be a request error result\"; §6.2.3.1's Note: \"The call to CreateSourceEventStream() occurs before operation execution begins, and thus an error raised here will be a request error.\" Coercion.tla gives the request error by default and the execution error under its sourceArgumentsFieldError reading; both pass, and the report records which happened. Accepting the value fails the type's own check (`nonNull`, `int`). New in September 2026 (`since`).",
+      "basis": "§6.2: \"Operation execution begins when the execution algorithm for the operation type is invoked: ExecuteQuery() for query operations, ExecuteMutation() for mutation operations, and Subscribe() for subscription operations.\" ExecuteRequest runs CreateSourceEventStream before Subscribe, and CreateSourceEventStream: \"Let argumentValues be the result of CoerceArgumentValues(subscriptionType, field, variableValues).\" §7.1.5: \"If an error was raised before operation execution begins, the response must be a request error result which will result in no response data.\" So an argument of the subscription root field that can't be coerced must give a request error result. CoerceArgumentValues calls the error it raises an execution error, and §6.4.1 says \"Any request error raised as a result of input coercion during CoerceArgumentValues() should be treated instead as an execution error\"; those name the error, while §7.1.5 says what the response must be when it is raised before operation execution, and §6.2.3.1's Note agrees: \"The call to CreateSourceEventStream() occurs before operation execution begins, and thus an error raised here will be a request error.\" An execution error (a result with data) fails here, and accepting the value fails the type's own check (`nonNull`, `int`). September 2025 runs CreateSourceEventStream inside Subscribe, after operation execution begins, so these vectors have `since` September 2026.",
       "requires": [
         "subscription-source"
       ],
-      "status": "pass",
+      "status": "fail",
       "cases": 1,
-      "failing": 0,
-      "failingSince": {},
-      "observed": {
-        "execution error": 1
-      },
-      "note": "execution error: 1"
+      "failing": 1,
+      "failingSince": {
+        "September2026": 1
+      }
     },
     {
       "id": "unvalidatedBranches",
@@ -714,7 +717,7 @@
       ],
       "basis": "§7.1.6: an error that \"can be associated to a particular field in the GraphQL result ... must contain an entry with the key {\"path\"} with a response path which describes the response position which raised the error\". §7.1.4: a response path names response positions, not arguments. A result whose data holds the field as null, with one error and no resolver call, is a field error whatever its path. If that is the answer the vector expects, a path other than the field's fails this check. Every vector that accepts a field error exercises it. October 2021's §7.1.2 keeps the must: the error \"must contain an entry with the key path that details the path of the response field which experienced the error\". Its shoulds there are about the path's form (\"should be a list of path segments\", indices \"should be 0-indexed integers\"), not about which field it names, so a path to the argument (`[\"v\"]`) fails a MUST in every edition. September 2025 and September 2026 have the same §7.1.6 sentence.",
       "status": "fail",
-      "cases": 38,
+      "cases": 37,
       "failing": 1,
       "failingSince": {}
     },
@@ -1218,6 +1221,52 @@
           }
         },
         "expected": "a field error at intsNN"
+      }
+    },
+    {
+      "checks": [
+        "sourceStreamArguments"
+      ],
+      "summary": "raises a field error where §6.2.3.1 (Source Stream) requires a request error",
+      "cases": 1,
+      "since": {
+        "September2026": 1
+      },
+      "fixtures": {
+        "subscription": 1
+      },
+      "fixture": "subscription",
+      "example": {
+        "vector": "coerce-2186",
+        "input": "[since September 2026] subscription($x: Int = 1) { eventNN(v: $x) }  variables: {\"x\": null}  subscribe: stream",
+        "response": {
+          "response": {
+            "errors": [
+              {
+                "message": "`null` is not a valid input for `Int!`, please provide a value for this argument.",
+                "locations": [
+                  {
+                    "line": 1,
+                    "column": 29
+                  }
+                ],
+                "path": [
+                  "eventNN"
+                ]
+              }
+            ],
+            "data": {
+              "eventNN": null
+            }
+          },
+          "calls": [],
+          "sourceCalls": []
+        },
+        "outcome": {
+          "outcome": "field-error",
+          "field": "eventNN"
+        },
+        "expected": "a request error"
       }
     },
     {

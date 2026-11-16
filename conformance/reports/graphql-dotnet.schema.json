@@ -22,26 +22,26 @@
     "validate"
   ],
   "provenance": {
-    "kit": "c28a56e3d22f",
+    "kit": "0625b35d64dd",
     "date": "2026-11-16",
     "strict": true,
-    "vectors": 501,
-    "graded": 496,
+    "vectors": 505,
+    "graded": 501,
     "skipped": {
-      "unspecified": 5
+      "unspecified": 4
     }
   },
-  "checkerSelfTest": "passed (1004 negative controls)",
+  "checkerSelfTest": "passed (1015 negative controls)",
   "cases": {
-    "submitted": 496,
-    "distinct": 496,
+    "submitted": 501,
+    "distinct": 501,
     "malformed": 0
   },
   "adapterProblems": 0,
   "since": {
     "September2025": {
-      "vectors": 66,
-      "failing": 15
+      "vectors": 67,
+      "failing": 16
     },
     "September2026": {
       "vectors": 31,
@@ -178,9 +178,12 @@
         }
       ],
       "status": "fail",
-      "cases": 6,
-      "failing": 3,
-      "basis": "§3.3.1: \"The query root operation type must be provided and must be an Object type.\" For mutation: \"If it is provided, it must be an Object type\", and \"Similarly\" for subscription. A root operation type the document names but doesn't define isn't an Object type."
+      "cases": 7,
+      "failing": 4,
+      "failingSince": {
+        "September2025": 1
+      },
+      "basis": "§3.3.1: \"The query root operation type must be provided and must be an Object type.\" For mutation: \"If it is provided, it must be an Object type\", and \"Similarly\" for subscription. A root operation type the document names but doesn't define isn't an Object type. Without a schema definition, a type named Mutation is the mutation root (\"would be incorrectly presumed to be the mutation root operation type\", in an example), so one that isn't an Object type breaks this rule. Reading it as no mutation root rejects the document too: \"The type system definition language can omit the schema definition when each root operation type uses its respective default root type name, no other type uses any default root type name, and the schema does not have a description\", and such a Mutation would be another type that uses a default root type name. That clause is new in September 2025, so `rootTypesAreObjects.2.invalid` has `since` September 2025: October 2021 says only \"can omit the schema definition when the query, mutation, and subscription root types are named \"Query\", \"Mutation\", and \"Subscription\" respectively\"."
     },
     {
       "id": "rootTypesDifferent",
@@ -463,12 +466,17 @@
           "number": "3.7",
           "title": "Interfaces",
           "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
+        },
+        {
+          "number": "3.7.1",
+          "title": "Interface Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Interface-Extensions"
         }
       ],
       "status": "fail",
-      "cases": 2,
-      "failing": 2,
-      "basis": "§3.6 Type Validation, a list \"This set of rules must be adhered to by every Object type\": \"An object type may declare that it implements one or more unique interfaces.\" §3.7: \"An interface type may declare that it implements one or more unique interfaces, but may not implement itself.\""
+      "cases": 4,
+      "failing": 4,
+      "basis": "§3.6 Type Validation, a list \"This set of rules must be adhered to by every Object type\": \"An object type may declare that it implements one or more unique interfaces.\" §3.7: \"An interface type may declare that it implements one or more unique interfaces, but may not implement itself.\" For extended interface types (tagged `schema-extensions`): §3.7.1 has no rule like §3.6.3's \"Any interfaces provided must not be already implemented by the previous Object type\", but its extensions add to the interface type (\"Interface type extensions are used to represent an interface which has been extended from some previous interface\"), so one that adds an interface the type already implements leaves the resulting type implementing it twice, which §3.7's rule forbids. October 2021 says the same."
     },
     {
       "id": "implementsInterfaces",
@@ -1229,7 +1237,7 @@
       "failingSince": {
         "September2025": 1
       },
-      "basis": "§3.6.3: \"Any interfaces provided must not be already implemented by the previous Object type.\" §3.7.1 has no such rule for interface type extensions.",
+      "basis": "§3.6.3: \"Any interfaces provided must not be already implemented by the previous Object type.\" §3.7.1 has no such rule for interface type extensions; an interface type extension that adds an interface the type already implements is graded under implementsUnique, on the resulting type.",
       "requires": [
         "schema-extensions"
       ]
@@ -1507,7 +1515,7 @@
         }
       ],
       "status": "fail",
-      "cases": 253,
+      "cases": 255,
       "failing": 16,
       "failingSince": {
         "September2026": 14
@@ -1698,6 +1706,29 @@
     {
       "kind": "not enforced",
       "checks": [
+        "rootTypesAreObjects"
+      ],
+      "summary": "ROOT_TYPES_ARE_OBJECTS not enforced: accepts a schema that breaks only this rule",
+      "cases": 4,
+      "fixtures": {
+        "root": 3,
+        "extension": 1
+      },
+      "fixture": "rootTypesAreObjects.2.invalid",
+      "example": {
+        "input": "[since September 2025] type Query { a: Int } interface Mutation { a: Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks ROOT_TYPES_ARE_OBJECTS and no other rule"
+      },
+      "since": {
+        "September2025": 1
+      }
+    },
+    {
+      "kind": "not enforced",
+      "checks": [
         "argDefaultCompatible"
       ],
       "summary": "ARG_DEFAULT_COMPATIBLE not enforced: accepts a schema that breaks only this rule",
@@ -1720,6 +1751,26 @@
     {
       "kind": "not enforced",
       "checks": [
+        "implementsUnique"
+      ],
+      "summary": "IMPLEMENTS_UNIQUE not enforced: accepts a schema that breaks only this rule",
+      "cases": 4,
+      "fixtures": {
+        "implementation": 2,
+        "extension": 2
+      },
+      "fixture": "implementsUnique.1.invalid",
+      "example": {
+        "input": "interface I { a: Int } type Query implements I & I { a: Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks IMPLEMENTS_UNIQUE and no other rule"
+      }
+    },
+    {
+      "kind": "not enforced",
+      "checks": [
         "extensionItemsUnique"
       ],
       "summary": "EXTENSION_ITEMS_UNIQUE not enforced: accepts a schema that breaks only this rule",
@@ -1734,26 +1785,6 @@
           "valid": true
         },
         "expected": "invalid: breaks EXTENSION_ITEMS_UNIQUE and no other rule"
-      }
-    },
-    {
-      "kind": "not enforced",
-      "checks": [
-        "rootTypesAreObjects"
-      ],
-      "summary": "ROOT_TYPES_ARE_OBJECTS not enforced: accepts a schema that breaks only this rule",
-      "cases": 3,
-      "fixtures": {
-        "root": 2,
-        "extension": 1
-      },
-      "fixture": "rootTypesAreObjects.3.invalid",
-      "example": {
-        "input": "schema { query: Q mutation: In } type Q { a: Int } input In { a: Int }",
-        "response": {
-          "valid": true
-        },
-        "expected": "invalid: breaks ROOT_TYPES_ARE_OBJECTS and no other rule"
       }
     },
     {
@@ -1867,25 +1898,6 @@
           "valid": true
         },
         "expected": "invalid: breaks SCHEMA_DEFINITION_UNIQUE and no other rule"
-      }
-    },
-    {
-      "kind": "not enforced",
-      "checks": [
-        "implementsUnique"
-      ],
-      "summary": "IMPLEMENTS_UNIQUE not enforced: accepts a schema that breaks only this rule",
-      "cases": 2,
-      "fixtures": {
-        "implementation": 2
-      },
-      "fixture": "implementsUnique.1.invalid",
-      "example": {
-        "input": "interface I { a: Int } type Query implements I & I { a: Int }",
-        "response": {
-          "valid": true
-        },
-        "expected": "invalid: breaks IMPLEMENTS_UNIQUE and no other rule"
       }
     },
     {

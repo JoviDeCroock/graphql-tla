@@ -1,0 +1,1114 @@
+{
+  "format": 2,
+  "area": "parse",
+  "implementation": "apollo-kotlin apollo-execution 5.2.0",
+  "capabilities": [
+    "absent-vs-null",
+    "coerce",
+    "coordinate",
+    "custom-directives",
+    "custom-scalar-literals",
+    "custom-scalar-results",
+    "error-propagation-off",
+    "idle",
+    "introspect",
+    "invalid-results",
+    "mutation",
+    "nested-fields",
+    "parent-values",
+    "parse",
+    "parse-sdl",
+    "request-extensions",
+    "scalar-results",
+    "schema",
+    "schema-extensions",
+    "subscription",
+    "subscription-source",
+    "subscription-stream",
+    "uncoercible-results",
+    "validate"
+  ],
+  "provenance": {
+    "kit": "0625b35d64dd",
+    "date": "2026-11-16",
+    "strict": true,
+    "vectors": 2847
+  },
+  "checkerSelfTest": "passed (10 negative controls)",
+  "cases": {
+    "submitted": 2847,
+    "distinct": 2819,
+    "malformed": 0
+  },
+  "adapterProblems": 0,
+  "since": {
+    "September2025": {
+      "vectors": 130,
+      "failing": 4
+    },
+    "September2026": {
+      "vectors": 31,
+      "failing": 0
+    }
+  },
+  "checks": [
+    {
+      "id": "sourceText",
+      "title": "Source text is a sequence of SourceCharacter",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1",
+          "title": "Source Text",
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Source-Text"
+        }
+      ],
+      "basis": "SourceCharacter :: \"Any Unicode scalar value\"; \"The source text of a GraphQL document must be a sequence of {SourceCharacter}.\"",
+      "status": "fail",
+      "cases": 91,
+      "failing": 2,
+      "failingSince": {
+        "September2025": 2
+      }
+    },
+    {
+      "id": "whiteSpace",
+      "title": "White space is tab and space only",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.1",
+          "title": "White Space",
+          "url": "https://spec.graphql.org/September2026/#sec-White-Space"
+        }
+      ],
+      "basis": "Whitespace :: \"Horizontal Tab (U+0009)\" | \"Space (U+0020)\"",
+      "status": "pass",
+      "cases": 27,
+      "failing": 0
+    },
+    {
+      "id": "lineTerminators",
+      "title": "Line terminators are LF, CR and CR LF only",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.2",
+          "title": "Line Terminators",
+          "url": "https://spec.graphql.org/September2026/#sec-Line-Terminators"
+        }
+      ],
+      "basis": "LineTerminator :: \"New Line (U+000A)\" | \"Carriage Return (U+000D)\" [lookahead != \"New Line (U+000A)\"] | \"Carriage Return (U+000D)\" \"New Line (U+000A)\"",
+      "status": "pass",
+      "cases": 31,
+      "failing": 0
+    },
+    {
+      "id": "comments",
+      "title": "A comment runs to the end of its line",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.3",
+          "title": "Comments",
+          "url": "https://spec.graphql.org/September2026/#sec-Comments"
+        }
+      ],
+      "basis": "Comment :: `#` CommentChar* [lookahead != CommentChar]; CommentChar :: SourceCharacter but not LineTerminator",
+      "status": "fail",
+      "cases": 46,
+      "failing": 1
+    },
+    {
+      "id": "insignificantCommas",
+      "title": "Commas are insignificant",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.4",
+          "title": "Insignificant Commas",
+          "url": "https://spec.graphql.org/September2026/#sec-Insignificant-Commas"
+        }
+      ],
+      "basis": "Comma :: ,; commas \"are used to improve the legibility of source text and separate lexical tokens but are otherwise syntactically and semantically insignificant within GraphQL documents.\"",
+      "status": "fail",
+      "cases": 14,
+      "failing": 1
+    },
+    {
+      "id": "lexicalTokens",
+      "title": "Every character outside ignored tokens is part of a token",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.5",
+          "title": "Lexical Tokens",
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Source-Text.Lexical-Tokens"
+        }
+      ],
+      "basis": "Token :: Punctuator | Name | IntValue | FloatValue | StringValue; \"The character sequence must be described by a sequence of {Token} and {Ignored} lexical grammars.\"",
+      "status": "pass",
+      "cases": 61,
+      "failing": 0
+    },
+    {
+      "id": "ignoredTokens",
+      "title": "Ignored tokens may appear before and after every token",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.6",
+          "title": "Ignored Tokens",
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Source-Text.Ignored-Tokens"
+        }
+      ],
+      "basis": "Ignored :: UnicodeBOM | Whitespace | LineTerminator | Comment | Comma; \"Any amount of {Ignored} may appear before and after every lexical token.\"",
+      "status": "pass",
+      "cases": 434,
+      "failing": 0
+    },
+    {
+      "id": "punctuators",
+      "title": "Punctuators, and `...` only as a whole",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.7",
+          "title": "Punctuators",
+          "url": "https://spec.graphql.org/September2026/#sec-Punctuators"
+        }
+      ],
+      "basis": "Punctuator :: one of ! $ & ( ) ... : = @ [ ] { | }",
+      "status": "pass",
+      "cases": 40,
+      "failing": 0
+    },
+    {
+      "id": "names",
+      "title": "Names",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.1.8",
+          "title": "Names",
+          "url": "https://spec.graphql.org/September2026/#sec-Names"
+        }
+      ],
+      "basis": "Name :: NameStart NameContinue* [lookahead != NameContinue]; NameStart :: Letter | `_`; NameContinue :: Letter | Digit | `_`",
+      "status": "pass",
+      "cases": 15,
+      "failing": 0
+    },
+    {
+      "id": "descriptions",
+      "title": "Descriptions on operations, fragments and variables, not on the query shorthand",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.2",
+          "title": "Descriptions",
+          "url": "https://spec.graphql.org/September2026/#sec-Descriptions"
+        }
+      ],
+      "basis": "Description : StringValue; OperationDefinition : Description? OperationType Name? VariablesDefinition? Directives? SelectionSet | SelectionSet; FragmentDefinition : Description? fragment …; VariableDefinition : Description? Variable : …",
+      "status": "fail",
+      "cases": 122,
+      "failing": 3
+    },
+    {
+      "id": "document",
+      "title": "A document is one or more definitions of the kinds its grammar allows",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.3",
+          "title": "Document",
+          "url": "https://spec.graphql.org/September2026/#sec-Document"
+        }
+      ],
+      "basis": "Document : Definition+; Definition : ExecutableDefinition | TypeSystemDefinitionOrExtension; ExecutableDocument : ExecutableDefinition+; ExecutableDefinition : OperationDefinition | FragmentDefinition",
+      "status": "fail",
+      "cases": 127,
+      "failing": 5
+    },
+    {
+      "id": "operations",
+      "title": "Operation definitions and the query shorthand",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.4",
+          "title": "Operations",
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Operations"
+        }
+      ],
+      "basis": "OperationDefinition : Description? OperationType Name? VariablesDefinition? Directives? SelectionSet | SelectionSet; OperationType : one of `query` `mutation` `subscription`",
+      "status": "fail",
+      "cases": 114,
+      "failing": 1
+    },
+    {
+      "id": "selectionSets",
+      "title": "Selection sets, including empty ones",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.5",
+          "title": "Selection Sets",
+          "url": "https://spec.graphql.org/September2026/#sec-Selection-Sets"
+        }
+      ],
+      "basis": "SelectionSet : { Selection* }; Selection : Field | FragmentSpread | InlineFragment",
+      "status": "pass",
+      "cases": 109,
+      "failing": 0
+    },
+    {
+      "id": "fields",
+      "title": "Fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.6",
+          "title": "Fields",
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Fields"
+        }
+      ],
+      "basis": "Field : Alias? Name Arguments? Directives? SelectionSet?",
+      "status": "pass",
+      "cases": 97,
+      "failing": 0
+    },
+    {
+      "id": "arguments",
+      "title": "Arguments",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.7",
+          "title": "Arguments",
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Arguments"
+        }
+      ],
+      "basis": "Arguments[Const] : ( Argument[?Const]+ ); Argument[Const] : Name : Value[?Const]",
+      "status": "pass",
+      "cases": 123,
+      "failing": 0
+    },
+    {
+      "id": "fieldAlias",
+      "title": "Field aliases",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.8",
+          "title": "Field Alias",
+          "url": "https://spec.graphql.org/September2026/#sec-Field-Alias"
+        }
+      ],
+      "basis": "Alias : Name :",
+      "status": "pass",
+      "cases": 94,
+      "failing": 0
+    },
+    {
+      "id": "fragments",
+      "title": "Fragment definitions and fragment spreads",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.9",
+          "title": "Fragments",
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Fragments"
+        }
+      ],
+      "basis": "FragmentSpread : ... FragmentName Directives?; FragmentDefinition : Description? fragment FragmentName TypeCondition Directives? SelectionSet; FragmentName : Name but not `on`",
+      "status": "fail",
+      "cases": 129,
+      "failing": 3
+    },
+    {
+      "id": "typeConditions",
+      "title": "Type conditions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.9.1",
+          "title": "Type Conditions",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-Conditions"
+        }
+      ],
+      "basis": "TypeCondition : on NamedType",
+      "status": "pass",
+      "cases": 123,
+      "failing": 0
+    },
+    {
+      "id": "inlineFragments",
+      "title": "Inline fragments",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.9.2",
+          "title": "Inline Fragments",
+          "url": "https://spec.graphql.org/September2026/#sec-Inline-Fragments"
+        }
+      ],
+      "basis": "InlineFragment : ... TypeCondition? Directives? SelectionSet",
+      "status": "pass",
+      "cases": 101,
+      "failing": 0
+    },
+    {
+      "id": "inputValues",
+      "title": "Input values, and no variables in constant values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10",
+          "title": "Input Values",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Values"
+        }
+      ],
+      "basis": "Value[Const] : [~Const] Variable | IntValue | FloatValue | StringValue | BooleanValue | NullValue | EnumValue | ListValue[?Const] | ObjectValue[?Const]",
+      "status": "pass",
+      "cases": 144,
+      "failing": 0
+    },
+    {
+      "id": "intValue",
+      "title": "Int values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.1",
+          "title": "Int Value",
+          "url": "https://spec.graphql.org/September2026/#sec-Int-Value"
+        }
+      ],
+      "basis": "IntValue :: IntegerPart [lookahead != {Digit, `.`, NameStart}]; IntegerPart :: NegativeSign? 0 | NegativeSign? NonZeroDigit Digit*; \"It must not have any leading {0}.\"",
+      "status": "pass",
+      "cases": 47,
+      "failing": 0
+    },
+    {
+      "id": "floatValue",
+      "title": "Float values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.2",
+          "title": "Float Value",
+          "url": "https://spec.graphql.org/September2026/#sec-Float-Value"
+        }
+      ],
+      "basis": "FloatValue :: IntegerPart FractionalPart ExponentPart | IntegerPart FractionalPart | IntegerPart ExponentPart, each [lookahead != {Digit, `.`, NameStart}]",
+      "status": "pass",
+      "cases": 36,
+      "failing": 0
+    },
+    {
+      "id": "booleanValue",
+      "title": "Boolean values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.3",
+          "title": "Boolean Value",
+          "url": "https://spec.graphql.org/September2026/#sec-Boolean-Value"
+        }
+      ],
+      "basis": "BooleanValue : one of `true` `false`",
+      "status": "pass",
+      "cases": 6,
+      "failing": 0
+    },
+    {
+      "id": "stringValue",
+      "title": "String values and block strings",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.4",
+          "title": "String Value",
+          "url": "https://spec.graphql.org/September2026/#sec-String-Value"
+        }
+      ],
+      "basis": "StringValue :: `\"\"` [lookahead != `\"`] | `\"` StringCharacter+ `\"` | BlockString; \"The hexadecimal number encoded by a Unicode escape sequence must describe a _Unicode scalar value_, otherwise must result in a parse error.\"",
+      "status": "fail",
+      "cases": 195,
+      "failing": 2,
+      "failingSince": {
+        "September2025": 2
+      }
+    },
+    {
+      "id": "nullValue",
+      "title": "Null value",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.5",
+          "title": "Null Value",
+          "url": "https://spec.graphql.org/September2026/#sec-Null-Value"
+        }
+      ],
+      "basis": "NullValue : `null`",
+      "status": "pass",
+      "cases": 4,
+      "failing": 0
+    },
+    {
+      "id": "enumValue",
+      "title": "Enum values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.6",
+          "title": "Enum Value",
+          "url": "https://spec.graphql.org/September2026/#sec-Enum-Value"
+        }
+      ],
+      "basis": "EnumValue : Name but not `true`, `false` or `null`",
+      "status": "pass",
+      "cases": 39,
+      "failing": 0
+    },
+    {
+      "id": "listValue",
+      "title": "List values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.7",
+          "title": "List Value",
+          "url": "https://spec.graphql.org/September2026/#sec-List-Value"
+        }
+      ],
+      "basis": "ListValue[Const] : [ ] | [ Value[?Const]+ ]",
+      "status": "pass",
+      "cases": 115,
+      "failing": 0
+    },
+    {
+      "id": "inputObjectValues",
+      "title": "Input object values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.10.8",
+          "title": "Input Object Values",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Values"
+        }
+      ],
+      "basis": "ObjectValue[Const] : { } | { ObjectField[?Const]+ }; ObjectField[Const] : Name : Value[?Const]",
+      "status": "pass",
+      "cases": 120,
+      "failing": 0
+    },
+    {
+      "id": "variables",
+      "title": "Variables and variable definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.11",
+          "title": "Variables",
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Variables"
+        }
+      ],
+      "basis": "Variable : $ Name; VariablesDefinition : ( VariableDefinition+ ); VariableDefinition : Description? Variable : Type DefaultValue? Directives[Const]?; DefaultValue : = Value[Const]",
+      "status": "fail",
+      "cases": 159,
+      "failing": 1
+    },
+    {
+      "id": "typeReferences",
+      "title": "Type references",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.12",
+          "title": "Type References",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-References"
+        }
+      ],
+      "basis": "Type : NamedType | ListType | NonNullType; NamedType : Name; ListType : [ Type ]; NonNullType : NamedType ! | ListType !",
+      "status": "pass",
+      "cases": 128,
+      "failing": 0
+    },
+    {
+      "id": "directives",
+      "title": "Directives",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "2.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/September2026/#sec-Language.Directives"
+        }
+      ],
+      "basis": "Directives[Const] : Directive[?Const]+; Directive[Const] : @ Name Arguments[?Const]?",
+      "status": "pass",
+      "cases": 150,
+      "failing": 0
+    },
+    {
+      "id": "typeSystemDocuments",
+      "title": "Type system documents hold type system definitions, and extension documents extensions too",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.1",
+          "title": "Type System Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System-Extensions"
+        }
+      ],
+      "basis": "TypeSystemDocument : TypeSystemDefinition+ (§3); TypeSystemExtensionDocument : TypeSystemDefinitionOrExtension+; TypeSystemDefinitionOrExtension : TypeSystemDefinition | TypeSystemExtension (§3.1)",
+      "status": "fail",
+      "cases": 33,
+      "failing": 3
+    },
+    {
+      "id": "typeSystemDescriptions",
+      "title": "Descriptions on type system definitions and their parts, not on extensions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.2",
+          "title": "Type System Descriptions",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System-Descriptions"
+        }
+      ],
+      "basis": "Description : StringValue, where a production allows one: every type system definition, FieldDefinition, InputValueDefinition and EnumValueDefinition starts with Description?, and no extension does",
+      "status": "pass",
+      "cases": 25,
+      "failing": 0
+    },
+    {
+      "id": "schemaDefinition",
+      "title": "Schema definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3",
+          "title": "Schema",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema"
+        }
+      ],
+      "basis": "SchemaDefinition : Description? schema Directives[Const]? { RootOperationTypeDefinition+ }; RootOperationTypeDefinition : OperationType : NamedType",
+      "status": "fail",
+      "cases": 23,
+      "failing": 1
+    },
+    {
+      "id": "schemaExtension",
+      "title": "Schema extensions add directives or root operation types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.3.2",
+          "title": "Schema Extension",
+          "url": "https://spec.graphql.org/September2026/#sec-Schema-Extension"
+        }
+      ],
+      "basis": "SchemaExtension : extend schema Directives[Const]? { RootOperationTypeDefinition+ } | extend schema Directives[Const] [lookahead != `{`]",
+      "status": "pass",
+      "cases": 26,
+      "failing": 0
+    },
+    {
+      "id": "typeExtensions",
+      "title": "A type extension names a kind of type",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.4.3",
+          "title": "Type Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-Extensions"
+        }
+      ],
+      "basis": "TypeExtension : ScalarTypeExtension | ObjectTypeExtension | InterfaceTypeExtension | UnionTypeExtension | EnumTypeExtension | InputObjectTypeExtension",
+      "status": "pass",
+      "cases": 15,
+      "failing": 0
+    },
+    {
+      "id": "scalarDefinition",
+      "title": "Scalar definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5",
+          "title": "Scalars",
+          "url": "https://spec.graphql.org/September2026/#sec-Scalars"
+        }
+      ],
+      "basis": "ScalarTypeDefinition : Description? scalar Name Directives[Const]?",
+      "status": "pass",
+      "cases": 17,
+      "failing": 0
+    },
+    {
+      "id": "scalarExtension",
+      "title": "Scalar extensions add directives",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.5.6",
+          "title": "Scalar Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Scalar-Extensions"
+        }
+      ],
+      "basis": "ScalarTypeExtension : extend scalar Name Directives[Const]",
+      "status": "pass",
+      "cases": 15,
+      "failing": 0
+    },
+    {
+      "id": "objectDefinition",
+      "title": "Object definitions, implemented interfaces and field definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6",
+          "title": "Objects",
+          "url": "https://spec.graphql.org/September2026/#sec-Objects"
+        }
+      ],
+      "basis": "ObjectTypeDefinition : Description? type Name ImplementsInterfaces? Directives[Const]? FieldsDefinition | Description? type Name ImplementsInterfaces? Directives[Const]? [lookahead != `{`]; ImplementsInterfaces : ImplementsInterfaces & NamedType | implements `&`? NamedType; FieldsDefinition : { FieldDefinition+ }; FieldDefinition : Description? Name ArgumentsDefinition? : Type Directives[Const]?",
+      "status": "pass",
+      "cases": 55,
+      "failing": 0
+    },
+    {
+      "id": "argumentsDefinition",
+      "title": "Argument definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6.1",
+          "title": "Field Arguments",
+          "url": "https://spec.graphql.org/September2026/#sec-Field-Arguments"
+        }
+      ],
+      "basis": "ArgumentsDefinition : ( InputValueDefinition+ ); InputValueDefinition : Description? Name : Type DefaultValue? Directives[Const]?",
+      "status": "pass",
+      "cases": 16,
+      "failing": 0
+    },
+    {
+      "id": "objectExtension",
+      "title": "Object extensions add interfaces, directives or fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.6.3",
+          "title": "Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Object-Extensions"
+        }
+      ],
+      "basis": "ObjectTypeExtension : extend type Name ImplementsInterfaces? Directives[Const]? FieldsDefinition | extend type Name ImplementsInterfaces? Directives[Const] [lookahead != `{`] | extend type Name ImplementsInterfaces [lookahead != `{`]",
+      "status": "pass",
+      "cases": 32,
+      "failing": 0
+    },
+    {
+      "id": "interfaceDefinition",
+      "title": "Interface definitions",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
+        }
+      ],
+      "basis": "InterfaceTypeDefinition : Description? interface Name ImplementsInterfaces? Directives[Const]? FieldsDefinition | Description? interface Name ImplementsInterfaces? Directives[Const]? [lookahead != `{`]",
+      "status": "pass",
+      "cases": 16,
+      "failing": 0
+    },
+    {
+      "id": "interfaceExtension",
+      "title": "Interface extensions add interfaces, directives or fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.7.1",
+          "title": "Interface Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Interface-Extensions"
+        }
+      ],
+      "basis": "InterfaceTypeExtension : extend interface Name ImplementsInterfaces? Directives[Const]? FieldsDefinition | extend interface Name ImplementsInterfaces? Directives[Const] [lookahead != `{`] | extend interface Name ImplementsInterfaces [lookahead != `{`]",
+      "status": "pass",
+      "cases": 17,
+      "failing": 0
+    },
+    {
+      "id": "unionDefinition",
+      "title": "Union definitions and their member types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.8",
+          "title": "Unions",
+          "url": "https://spec.graphql.org/September2026/#sec-Unions"
+        }
+      ],
+      "basis": "UnionTypeDefinition : Description? union Name Directives[Const]? UnionMemberTypes?; UnionMemberTypes : UnionMemberTypes | NamedType | = `|`? NamedType",
+      "status": "pass",
+      "cases": 44,
+      "failing": 0
+    },
+    {
+      "id": "unionExtension",
+      "title": "Union extensions add directives or member types",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.8.1",
+          "title": "Union Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Union-Extensions"
+        }
+      ],
+      "basis": "UnionTypeExtension : extend union Name Directives[Const]? UnionMemberTypes | extend union Name Directives[Const]",
+      "status": "pass",
+      "cases": 30,
+      "failing": 0
+    },
+    {
+      "id": "enumDefinition",
+      "title": "Enum definitions and their values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.9",
+          "title": "Enums",
+          "url": "https://spec.graphql.org/September2026/#sec-Enums"
+        }
+      ],
+      "basis": "EnumTypeDefinition : Description? enum Name Directives[Const]? EnumValuesDefinition | Description? enum Name Directives[Const]? [lookahead != `{`]; EnumValuesDefinition : { EnumValueDefinition+ }; EnumValueDefinition : Description? EnumValue Directives[Const]?",
+      "status": "pass",
+      "cases": 34,
+      "failing": 0
+    },
+    {
+      "id": "enumExtension",
+      "title": "Enum extensions add directives or values",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.9.1",
+          "title": "Enum Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Enum-Extensions"
+        }
+      ],
+      "basis": "EnumTypeExtension : extend enum Name Directives[Const]? EnumValuesDefinition | extend enum Name Directives[Const] [lookahead != `{`]",
+      "status": "pass",
+      "cases": 15,
+      "failing": 0
+    },
+    {
+      "id": "inputObjectDefinition",
+      "title": "Input object definitions and their fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10",
+          "title": "Input Objects",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Objects"
+        }
+      ],
+      "basis": "InputObjectTypeDefinition : Description? input Name Directives[Const]? InputFieldsDefinition | Description? input Name Directives[Const]? [lookahead != `{`]; InputFieldsDefinition : { InputValueDefinition+ }",
+      "status": "pass",
+      "cases": 20,
+      "failing": 0
+    },
+    {
+      "id": "inputObjectExtension",
+      "title": "Input object extensions add directives or fields",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.10.2",
+          "title": "Input Object Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Input-Object-Extensions"
+        }
+      ],
+      "basis": "InputObjectTypeExtension : extend input Name Directives[Const]? InputFieldsDefinition | extend input Name Directives[Const] [lookahead != `{`]",
+      "status": "pass",
+      "cases": 15,
+      "failing": 0
+    },
+    {
+      "id": "directiveDefinition",
+      "title": "Directive definitions and their locations",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.13",
+          "title": "Directives",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-System.Directives"
+        }
+      ],
+      "basis": "DirectiveDefinition : Description? directive @ Name ArgumentsDefinition? Directives[Const]? `repeatable`? on DirectiveLocations; DirectiveLocations : DirectiveLocations | DirectiveLocation | `|`? DirectiveLocation; DirectiveLocation : ExecutableDirectiveLocation | TypeSystemDirectiveLocation, each one of a list of names",
+      "status": "pass",
+      "cases": 72,
+      "failing": 0
+    },
+    {
+      "id": "directiveExtension",
+      "title": "Directive extensions add directives",
+      "level": "MUST",
+      "spec": [
+        {
+          "number": "3.13.6",
+          "title": "Directive Extensions",
+          "url": "https://spec.graphql.org/September2026/#sec-Directive-Extensions"
+        }
+      ],
+      "basis": "DirectiveExtension : extend directive @ Name Directives[Const]",
+      "since": "September2026",
+      "status": "pass",
+      "cases": 37,
+      "failing": 0
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "document"
+      ],
+      "summary": "accepts what §2.3 Document rejects",
+      "cases": 4,
+      "fixtures": {
+        "parser-examples": 2,
+        "byte-order-marks": 1,
+        "grammar-examples": 1
+      },
+      "fixture": "grammar-examples",
+      "example": {
+        "input": "\"\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}"
+      }
+    },
+    {
+      "checks": [
+        "descriptions"
+      ],
+      "summary": "accepts what §2.2 Descriptions rejects",
+      "cases": 3,
+      "fixtures": {
+        "parser-examples": 1,
+        "random-documents": 2
+      },
+      "fixture": "parser-examples",
+      "example": {
+        "input": "\"\\\"d\\\" {a}\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}"
+      }
+    },
+    {
+      "checks": [
+        "fragments"
+      ],
+      "kind": "crash",
+      "summary": "crashes on a source §2.9 Fragments rejects, instead of rejecting it",
+      "problem": "java.lang.ClassCastException: class com.apollographql.apollo.ast.internal.Token$Dollar cannot be cast to class com.apollographql.apollo.ast.internal.Token$Name (com.apollographql.apollo.ast.internal.T",
+      "cases": 3,
+      "fixtures": {
+        "fragment-definitions": 3
+      },
+      "fixture": "fragment-definitions",
+      "example": {
+        "input": "\"fragment $ on F {a}\"",
+        "response": "the adapter answered with an error: java.lang.ClassCastException: class com.apollographql.apollo.ast.internal.Token$Dollar cannot be cast to class com.apollographql.apollo.ast.internal.Token$Name (com.apollographql.apollo.ast.internal.T",
+        "expected": "{\"ok\":false}",
+        "sibling": "\"fragment F on F {a}\", which the reference accepts"
+      }
+    },
+    {
+      "checks": [
+        "typeSystemDocuments"
+      ],
+      "summary": "accepts what §3.1 Type System Extensions rejects",
+      "cases": 3,
+      "fixtures": {
+        "grammar-examples": 3
+      },
+      "fixture": "grammar-examples",
+      "example": {
+        "input": "\"\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}"
+      }
+    },
+    {
+      "checks": [
+        "stringValue"
+      ],
+      "summary": "rejects what §2.10.4 String Value accepts",
+      "cases": 2,
+      "fixtures": {
+        "lexer-examples": 1,
+        "strings": 1
+      },
+      "since": {
+        "September2025": 2
+      },
+      "fixture": "lexer-examples",
+      "example": {
+        "input": "[since September 2025] \"{a(x: \\\"\\\\u{000000041}\\\")}\"",
+        "response": {
+          "ok": false,
+          "error": "Invalid Unicode escape '\\u{000000041'"
+        },
+        "expected": "{\"ok\":true}"
+      }
+    },
+    {
+      "checks": [
+        "sourceText"
+      ],
+      "summary": "accepts what §2.1 Source Text rejects",
+      "cases": 2,
+      "fixtures": {
+        "strings": 2
+      },
+      "since": {
+        "September2025": 2
+      },
+      "fixture": "strings",
+      "example": {
+        "input": "[since September 2025] \"{a(x: \\\"\\udc00\\\")}\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}",
+        "sibling": "\"{a(x: \\\"\\\")}\", which the reference accepts"
+      }
+    },
+    {
+      "checks": [
+        "variables"
+      ],
+      "summary": "accepts what §2.11 Variables rejects",
+      "cases": 1,
+      "fixtures": {
+        "parser-examples": 1
+      },
+      "fixture": "parser-examples",
+      "example": {
+        "input": "\"query () {a}\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}"
+      }
+    },
+    {
+      "checks": [
+        "operations"
+      ],
+      "kind": "crash",
+      "summary": "crashes on a source §2.4 Operations rejects, instead of rejecting it",
+      "problem": "java.lang.ClassCastException: class com.apollographql.apollo.ast.internal.Token$LeftBrace cannot be cast to class com.apollographql.apollo.ast.internal.Token$Name (com.apollographql.apollo.ast.interna",
+      "cases": 1,
+      "fixtures": {
+        "random-documents": 1
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"fragment {,Foo :,a\\t}\"",
+        "response": "the adapter answered with an error: java.lang.ClassCastException: class com.apollographql.apollo.ast.internal.Token$LeftBrace cannot be cast to class com.apollographql.apollo.ast.internal.Token$Name (com.apollographql.apollo.ast.interna",
+        "expected": "{\"ok\":false}",
+        "sibling": "\"mutation {,Foo :,a\\t}\", which the reference accepts"
+      }
+    },
+    {
+      "checks": [
+        "document"
+      ],
+      "kind": "crash",
+      "summary": "crashes on a source §2.3 Document rejects, instead of rejecting it",
+      "problem": "java.lang.ClassCastException: class com.apollographql.apollo.ast.internal.Token$LeftBrace cannot be cast to class com.apollographql.apollo.ast.internal.Token$Name (com.apollographql.apollo.ast.interna",
+      "cases": 1,
+      "fixtures": {
+        "random-documents": 1
+      },
+      "fixture": "random-documents",
+      "example": {
+        "input": "\"fragment { ... _x﻿}\"",
+        "response": "the adapter answered with an error: java.lang.ClassCastException: class com.apollographql.apollo.ast.internal.Token$LeftBrace cannot be cast to class com.apollographql.apollo.ast.internal.Token$Name (com.apollographql.apollo.ast.interna",
+        "expected": "{\"ok\":false}",
+        "sibling": "\"{ ... _x﻿}\", which the reference accepts"
+      }
+    },
+    {
+      "checks": [
+        "insignificantCommas"
+      ],
+      "summary": "accepts what §2.1.4 Insignificant Commas rejects",
+      "cases": 1,
+      "fixtures": {
+        "parser-examples": 1
+      },
+      "fixture": "parser-examples",
+      "example": {
+        "input": "\"query (,) {a}\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}"
+      }
+    },
+    {
+      "checks": [
+        "comments"
+      ],
+      "summary": "accepts what §2.1.3 Comments rejects",
+      "cases": 1,
+      "fixtures": {
+        "byte-order-marks": 1
+      },
+      "fixture": "byte-order-marks",
+      "example": {
+        "input": "\"﻿#{a}\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}"
+      }
+    },
+    {
+      "checks": [
+        "schemaDefinition"
+      ],
+      "summary": "accepts what §3.3 Schema rejects",
+      "cases": 1,
+      "fixtures": {
+        "grammar-examples": 1
+      },
+      "fixture": "grammar-examples",
+      "example": {
+        "input": "\"schema { Query: Q }\"",
+        "response": {
+          "ok": true
+        },
+        "expected": "{\"ok\":false}"
+      }
+    }
+  ],
+  "fixtures": [],
+  "ok": false
+}
