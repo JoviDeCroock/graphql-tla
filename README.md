@@ -296,7 +296,7 @@ Outside the kit's fixtures, reading and running graphql-js 16.15.0 and 17.1.0 wh
 - **Adapters:** every adapter answers execution, but only some answer the other areas (see the sheet). The references themselves were checked differentially against graphql-js only, so a bug they share with graphql-js shows up as a pass everywhere.
 - **Scenario specs:** the `@defer`, `@stream`, mutation and subscription specs each model one fixed operation.
 
-[docs/spec-comparison.md](docs/spec-comparison.md) compares the references with the spec chapter by chapter: what each covers, the readings they take where the spec is ambiguous, and what they don't model.
+[docs/spec-comparison.md](docs/spec-comparison.md) compares the references with the spec chapter by chapter: what each covers, the readings they take where the spec is ambiguous, and what they don't model. [docs/spec-gaps.md](docs/spec-gaps.md) lists the places where the spec text itself is ambiguous, contradicts itself or leaves a rule out, with quotes and how the kit grades each.
 
 ## Writing specs
 
