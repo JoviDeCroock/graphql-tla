@@ -30,19 +30,19 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f437858e472b",
-    "date": "2026-11-15",
+    "kit": "c28a56e3d22f",
+    "date": "2026-11-16",
     "strict": true,
-    "vectors": 3367,
-    "graded": 3354,
+    "vectors": 3370,
+    "graded": 3357,
     "skipped": {
       "unspecified": 13
     }
   },
   "checkerSelfTest": "passed (15 negative controls)",
   "cases": {
-    "submitted": 3354,
-    "distinct": 3354,
+    "submitted": 3357,
+    "distinct": 3357,
     "malformed": 0
   },
   "adapterProblems": 0,
@@ -375,8 +375,8 @@
         }
       ],
       "status": "fail",
-      "cases": 295,
-      "failing": 5,
+      "cases": 296,
+      "failing": 6,
       "basis": "Formal Specification: \"For each literal Input Value value in the document: Let type be the type expected in the position value is found. value must be coercible to type\" For a Float, §3.5.2 (the same in every release): \"If the input value otherwise represents a value not representable by finite IEEE 754 (e.g. NaN, Infinity, or a value outside the available precision), a request error must be raised.\" A literal too large for binary64, which rounds to Infinity (1e400), isn't coercible. A literal too small (1e-400) isn't graded: whether rounding it to 0 is \"outside the available precision\" the spec doesn't say."
     },
     {
@@ -603,7 +603,7 @@
         }
       ],
       "status": "fail",
-      "cases": 1045,
+      "cases": 1047,
       "failing": 1,
       "failingSince": {
         "September2026": 1
@@ -787,9 +787,9 @@
         "valuesOfCorrectType"
       ],
       "summary": "§5.6.1 Values of Correct Type isn't enforced: accepts documents that break only this rule",
-      "cases": 5,
+      "cases": 6,
       "fixtures": {
-        "twins": 5
+        "twins": 6
       },
       "fixture": "twins",
       "example": {

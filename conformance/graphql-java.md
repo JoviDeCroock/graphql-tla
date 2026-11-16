@@ -16,7 +16,7 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 - **Cases:** 31183 submitted, 5916 distinct, 1349 malformed
 - **Adapter problems:** none
 - **Checker self-test:** passed (87 negative controls)
-- **Run:** kit f437858e472b, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
+- **Run:** kit c28a56e3d22f, 2026-11-16, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
 
 ### Findings
 
@@ -240,7 +240,7 @@ expected: data {"liked": null}
 - **Vectors relying on rules after October 2021:** since September 2025, 85 of 130 vectors failing; new in September 2026, 30 of 31 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (10 negative controls)
-- **Run:** kit f437858e472b, 2026-11-15, strict
+- **Run:** kit c28a56e3d22f, 2026-11-16, strict
 
 ### Findings
 
@@ -623,12 +623,12 @@ expected: {"ok":false}
 ## Validate
 
 - **Capabilities:** absent-vs-null, coerce, custom-directives, custom-scalar-literals, custom-scalar-results, error-propagation-off, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, validate
-- **Cases:** 3354 submitted, 3354 distinct, 0 malformed
-- **Vectors:** 3354 of 3367 graded (not graded: 13 unspecified)
+- **Cases:** 3357 submitted, 3357 distinct, 0 malformed
+- **Vectors:** 3357 of 3370 graded (not graded: 13 unspecified)
 - **Vectors relying on rules after October 2021:** since September 2025, 70 of 248 vectors failing; new in September 2026, 5 of 3 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (15 negative controls)
-- **Run:** kit f437858e472b, 2026-11-15, strict
+- **Run:** kit c28a56e3d22f, 2026-11-16, strict
 
 ### Findings
 
@@ -700,9 +700,9 @@ expected: invalid: SingleRootField [""]
 
 <a id="validate-finding-5"></a>
 
-#### 5. `valuesOfCorrectType`: §5.6.1 Values of Correct Type isn't enforced: accepts documents that break only this rule; 1 of 5 rely on rules since September 2025
+#### 5. `valuesOfCorrectType`: §5.6.1 Values of Correct Type isn't enforced: accepts documents that break only this rule; 1 of 6 rely on rules since September 2025
 
-5 cases, in `twins` (4), `values` (1). 1 of them rely on grammar or rules introduced in September 2025, not in October 2021.
+6 cases, in `twins` (5), `values` (1). 1 of them rely on grammar or rules introduced in September 2025, not in October 2021.
 
 - Values of Correct Type (MUST, [§5.6.1](https://spec.graphql.org/September2026/#sec-Values-of-Correct-Type) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float))
 
@@ -797,7 +797,7 @@ The shortest case, from `twins`:
 
 ```
 problem:  A numeric literal with more than 100 characters has been presented. To prevent Denial Of Service attacks, parsing has been cancelled.
-input:    ValuesOfCorrectType-valid-66: { echo( float: 100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 ) }
+input:    ValuesOfCorrectType-valid-68: { echo( float: 100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 ) }
 response: {"errors":[{"message":"A numeric literal with more than 100 characters has been presented. To prevent Denial Of Service attacks, parsing has been cancelled."}],"valid":false}
 expected: valid
 ```
@@ -849,7 +849,7 @@ expected: invalid: DirectivesAreUniquePerLocation ["once"]
 | Fragment Spread Target Defined (`fragmentSpreadTargetDefined`) | MUST | [§5.5.2.1](https://spec.graphql.org/September2026/#sec-Fragment-Spread-Target-Defined) | ✓ 9 |
 | Fragment Spreads Must Not Form Cycles (`fragmentSpreadsMustNotFormCycles`) | MUST | [§5.5.2.2](https://spec.graphql.org/September2026/#sec-Fragment-Spreads-Must-Not-Form-Cycles) | ✓ 54 |
 | Fragment Spread Is Possible (`fragmentSpreadIsPossible`) | MUST | [§5.5.2.3](https://spec.graphql.org/September2026/#sec-Fragment-Spread-Is-Possible) | ✓ 38 |
-| Values of Correct Type (`valuesOfCorrectType`) | MUST | [§5.6.1](https://spec.graphql.org/September2026/#sec-Values-of-Correct-Type) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) | ✗ 5/295 (1 since September 2025) |
+| Values of Correct Type (`valuesOfCorrectType`) | MUST | [§5.6.1](https://spec.graphql.org/September2026/#sec-Values-of-Correct-Type) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) | ✗ 6/296 (1 since September 2025) |
 | Int literals out of 32-bit range are rejected (`intInputRange`) | SHOULD | [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) [§5.6.1](https://spec.graphql.org/September2026/#sec-Values-of-Correct-Type) | ✓ 4 |
 | Input Object Field Names (`inputObjectFieldNames`). every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it, so a rejection can't be credited to this rule; accepting one fails both | MUST | [§5.6.2](https://spec.graphql.org/September2026/#sec-Input-Object-Field-Names) | ⊂ |
 | Input Object Field Uniqueness (`inputObjectFieldUniqueness`) | MUST | [§5.6.3](https://spec.graphql.org/September2026/#sec-Input-Object-Field-Uniqueness) | ✓ 9 |
@@ -862,7 +862,7 @@ expected: invalid: DirectivesAreUniquePerLocation ["once"]
 | All Variable Uses Defined (`allVariableUsesDefined`) | MUST | [§5.8.3](https://spec.graphql.org/September2026/#sec-All-Variable-Uses-Defined) | ✓ 15 |
 | All Variables Used (`allVariablesUsed`) | MUST | [§5.8.4](https://spec.graphql.org/September2026/#sec-All-Variables-Used) | ✓ 18 |
 | All Variable Usages Are Allowed (`allVariableUsagesAreAllowed`) | MUST | [§5.8.5](https://spec.graphql.org/September2026/#sec-All-Variable-Usages-Are-Allowed) | ✗ 5/638 (all since September 2025) |
-| Valid documents are accepted (`acceptsValid`) | MUST | [§5](https://spec.graphql.org/September2026/#sec-Validation) [§6.1](https://spec.graphql.org/September2026/#sec-Executing-Requests) [§6.1.1](https://spec.graphql.org/September2026/#sec-Validating-Requests) | ✗ 2/1045 (1 new in September 2026) |
+| Valid documents are accepted (`acceptsValid`) | MUST | [§5](https://spec.graphql.org/September2026/#sec-Validation) [§6.1](https://spec.graphql.org/September2026/#sec-Executing-Requests) [§6.1.1](https://spec.graphql.org/September2026/#sec-Validating-Requests) | ✗ 2/1047 (1 new in September 2026) |
 | Descriptions and comments don't change validation (`descriptionsInert`) | MUST | [§2.2](https://spec.graphql.org/September2026/#sec-Descriptions) [§2.1.4](https://spec.graphql.org/September2026/#sec-Insignificant-Commas) | ✗ 58/116 (all since September 2025) |
 | Interface spreads where §5.5.2.3's formal text and prose disagree: which reading (`fragmentSpreadReading`). invalid (the formal text): 2; valid (own scope, which the prose doesn't settle): 4. Observed: invalid (the formal text) 2, valid (own scope, which the prose doesn't settle) 4 | INFO | [§5.5.2.3](https://spec.graphql.org/September2026/#sec-Fragment-Spread-Is-Possible) | ✓ 6 |
 | Nullable variables with a default in a OneOf field, where §5.8.5's formal text and prose disagree: which reading (`oneOfVariableReading`). valid (the formal text): 2. Observed: valid (the formal text) 2 | INFO | [§5.8.5](https://spec.graphql.org/September2026/#sec-All-Variable-Usages-Are-Allowed) | ✓ 2 |
@@ -908,11 +908,11 @@ expected: invalid: DirectivesAreUniquePerLocation ["once"]
 ## Coerce
 
 - **Capabilities:** absent-vs-null, coerce, custom-directives, custom-scalar-literals, custom-scalar-results, error-propagation-off, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, validate
-- **Cases:** 2219 submitted, 2219 distinct, 0 malformed
+- **Cases:** 2222 submitted, 2222 distinct, 0 malformed
 - **Vectors relying on rules after October 2021:** since September 2025, 11 of 57 vectors failing; new in September 2026, 5 of 9 vectors failing
 - **Adapter problems:** none
-- **Checker self-test:** passed (37787 negative controls)
-- **Run:** kit f437858e472b, 2026-11-15, strict
+- **Checker self-test:** passed (37839 negative controls)
+- **Run:** kit c28a56e3d22f, 2026-11-16, strict
 
 ### Findings
 
@@ -982,7 +982,23 @@ expected: a request error
 
 <a id="coerce-finding-5"></a>
 
-#### 5. `stringValue`: coerces to the wrong value under §2.10.4 (String Value)
+#### 5. `float`: accepts what §3.5.2 (Float) rejects
+
+2 cases, in `literal` (2).
+
+- Float accepts integer and float input values, and rejects non-finite values (MUST, [§3.5.2](https://spec.graphql.org/September2026/#sec-Float))
+
+The shortest case, from `literal`:
+
+```
+input:    { float(v: 1e400) }  variables: {}
+response: {"response":{"data":{"float":"ok"}},"calls":[{"path":["float"],"arguments":{"v":"Infinity"}}]}
+expected: a field error at float, or a request error
+```
+
+<a id="coerce-finding-6"></a>
+
+#### 6. `stringValue`: coerces to the wrong value under §2.10.4 (String Value)
 
 2 cases, in `string-value` (2).
 
@@ -995,22 +1011,6 @@ input:    { string(v: """	a
 		b  c""") }  variables: {}
 response: {"response":{"data":{"string":"ok"}},"calls":[{"path":["string"],"arguments":{"v":"\ta\r\nb\r  c"}}]}
 expected: string resolved with {"v":"\ta\nb\nc"}
-```
-
-<a id="coerce-finding-6"></a>
-
-#### 6. `float`: accepts what §3.5.2 (Float) rejects
-
-1 case, in `literal` (1).
-
-- Float accepts integer and float input values, and rejects non-finite values (MUST, [§3.5.2](https://spec.graphql.org/September2026/#sec-Float))
-
-The shortest case, from `literal`:
-
-```
-input:    { float(v: 1e400) }  variables: {}
-response: {"response":{"data":{"float":"ok"}},"calls":[{"path":["float"],"arguments":{"v":"Infinity"}}]}
-expected: a field error at float, or a request error
 ```
 
 <a id="coerce-finding-7"></a>
@@ -1061,7 +1061,7 @@ expected: a request error
 | --- | :---: | :---: | :---: |
 | Int accepts only integer input values (`int`) | MUST | [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) | ✓ 200 |
 | Int rejects integers outside the signed 32-bit range (`intRange`) | SHOULD | [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) | ✓ 32 |
-| Float accepts integer and float input values, and rejects non-finite values (`float`) | MUST | [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) | ✗ 1/69 |
+| Float accepts integer and float input values, and rejects non-finite values (`float`) | MUST | [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) | ✗ 2/72 |
 | Float and an integer a double can't hold exactly: refused, or rounded to the nearest double (`floatPrecision`). rounded to the nearest double: 1. Observed: rounded to the nearest double 1 | INFO | [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) | ✓ 1 |
 | String accepts only string input values (`string`) | MUST | [§3.5.3](https://spec.graphql.org/September2026/#sec-String) | ✓ 55 |
 | A string literal's escapes and block string indentation decode to its Unicode text (`stringValue`) | MUST | [§2.10.4](https://spec.graphql.org/September2026/#sec-String-Value) | ✗ 2/21 |
@@ -1089,15 +1089,15 @@ expected: a request error
 | A document that doesn't parse is a request error (`syntaxError`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§6.1](https://spec.graphql.org/September2026/#sec-Executing-Requests) | ✓ 16 |
 | A document with known validation errors fails as a request error, without executing (`invalidNotExecuted`) | MUST | [§6.1.1](https://spec.graphql.org/September2026/#sec-Validating-Requests) | ✓ 807 |
 | Only valid documents are executed (`onlyValidExecuted`) | SHOULD | [§6.1.1](https://spec.graphql.org/September2026/#sec-Validating-Requests) [§5](https://spec.graphql.org/September2026/#sec-Validation) | ! 3/4 (all since September 2025) |
-| A valid document isn't rejected at validation (`acceptsValid`) | MUST | [§5](https://spec.graphql.org/September2026/#sec-Validation) | ✓ 1360 |
-| A request error result has no data entry (`requestErrorNoData`) | MUST | [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✗ 5/1673 (all new in September 2026) |
-| A request gets a response (`responds`) | MUST | [§7](https://spec.graphql.org/September2026/#sec-Response) | ✗ 1/2219 |
-| A field error's path is the field's response path (`fieldErrorPath`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 37 |
-| Every error is a map with a string message (`errorFormat`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 2219 |
-| errors, when present, is a non-empty list (`errorsList`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 2219 |
-| The response is a map (`resultMap`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✓ 2219 |
-| The result has no entries besides data, errors and extensions (`additionalEntries`) | MUST | [§7.1.8](https://spec.graphql.org/September2026/#sec-Additional-Entries) | ✓ 2219 |
-| extensions, when present, is a map (`extensions`) | MUST | [§7.1.7](https://spec.graphql.org/September2026/#sec-Extensions) | ✓ 2219 |
+| A valid document isn't rejected at validation (`acceptsValid`) | MUST | [§5](https://spec.graphql.org/September2026/#sec-Validation) | ✓ 1362 |
+| A request error result has no data entry (`requestErrorNoData`) | MUST | [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✗ 5/1674 (all new in September 2026) |
+| A request gets a response (`responds`) | MUST | [§7](https://spec.graphql.org/September2026/#sec-Response) | ✗ 1/2222 |
+| A field error's path is the field's response path (`fieldErrorPath`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 38 |
+| Every error is a map with a string message (`errorFormat`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 2222 |
+| errors, when present, is a non-empty list (`errorsList`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 2222 |
+| The response is a map (`resultMap`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✓ 2222 |
+| The result has no entries besides data, errors and extensions (`additionalEntries`) | MUST | [§7.1.8](https://spec.graphql.org/September2026/#sec-Additional-Entries) | ✓ 2222 |
+| extensions, when present, is a map (`extensions`) | MUST | [§7.1.7](https://spec.graphql.org/September2026/#sec-Extensions) | ✓ 2222 |
 | JSON strings with a lone surrogate: kept as sent, replaced with U+FFFD, or refused (`loneSurrogates`). kept as sent: 2. Observed: kept as sent 2 | INFO | — | ✓ 2 |
 | JSON numbers a double can't hold: read exactly, read as binary64, or refused (`jsonNumbers`) | INFO | — | ✓ 3 |
 | A request's extensions with keys of no meaning to the service leave the response as it is (`requestExtensions`). the same answer as without extensions: 4. Observed: the same answer as without extensions 4 | INFO | [§6](https://spec.graphql.org/September2026/#sec-Execution) | ✓ 4 |
@@ -1148,12 +1148,12 @@ expected: a request error
 ## Schema
 
 - **Capabilities:** absent-vs-null, coerce, custom-directives, custom-scalar-literals, custom-scalar-results, error-propagation-off, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, validate
-- **Cases:** 490 submitted, 490 distinct, 0 malformed
-- **Vectors:** 490 of 495 graded (not graded: 5 unspecified)
-- **Vectors relying on rules after October 2021:** since September 2025, 7 of 66 vectors failing; new in September 2026, 14 of 27 vectors failing
+- **Cases:** 496 submitted, 496 distinct, 0 malformed
+- **Vectors:** 496 of 501 graded (not graded: 5 unspecified)
+- **Vectors relying on rules after October 2021:** since September 2025, 7 of 66 vectors failing; new in September 2026, 16 of 31 vectors failing
 - **Adapter problems:** none
-- **Checker self-test:** passed (992 negative controls)
-- **Run:** kit f437858e472b, 2026-11-15, strict
+- **Checker self-test:** passed (1004 negative controls)
+- **Run:** kit c28a56e3d22f, 2026-11-16, strict
 
 ### Findings
 
@@ -1175,7 +1175,26 @@ expected: invalid: breaks TYPE_NAME_RESERVED and no other rule
 
 <a id="schema-finding-2"></a>
 
-#### 2. `rootTypesDifferent`: ROOT_TYPES_DIFFERENT not enforced: accepts a schema that breaks only this rule
+#### 2. `acceptsValid`: rejects 5 valid schemas with the same error, one edit from schemas that break directiveExtensionReferencesPrevious or directiveExtensionUsesPrevious: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026
+
+5 cases, in `extension` (5). All rely on grammar or rules introduced in September 2026, not in October 2021.
+
+Each rejected document is one edit from a document that breaks only `directiveExtensionReferencesPrevious` or `directiveExtensionUsesPrevious`; which rule the implementation applied is a guess.
+
+- Valid schemas are accepted (MUST, [§3](https://spec.graphql.org/September2026/#sec-Type-System))
+
+The shortest case, from `directiveExtensionUsesPrevious.1.valid`:
+
+```
+problem:  SchemaProblem: errors=[InvalidSyntaxError{ message=Invalid syntax with offending token 'extend' at line 1 column 105 ,offendingToken=extend ,locations=[SourceLocation{line=1, column=105}] ,sourcePrevi
+input:    [since September 2026] directive @d on FIELD | DIRECTIVE_DEFINITION directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e
+response: {"valid":false,"errors":["SchemaProblem: errors=[InvalidSyntaxError{ message=Invalid syntax with offending token 'extend' at line 1 column 105 ,offendingToken=extend ,locations=[SourceLocation{line=1, column=105}] ,sourcePreview=directive @d on FIELD | DIRECTIVE_DEFINITION directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e\n}]"]}
+expected: valid (TypeSystem!Verdict is empty)
+```
+
+<a id="schema-finding-3"></a>
+
+#### 3. `rootTypesDifferent`: ROOT_TYPES_DIFFERENT not enforced: accepts a schema that breaks only this rule
 
 4 cases, in `root` (3), `extension` (1).
 
@@ -1189,9 +1208,9 @@ response: {"valid":true}
 expected: invalid: breaks ROOT_TYPES_DIFFERENT and no other rule
 ```
 
-<a id="schema-finding-3"></a>
+<a id="schema-finding-4"></a>
 
-#### 3. `acceptsValid`: rejects 4 valid schemas with the same error, one edit from schemas that break directiveExtensionNotReapplied, directiveLocationsValid or directiveReferencesItselfIndirectly: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026
+#### 4. `acceptsValid`: rejects 4 valid schemas with the same error, one edit from schemas that break directiveExtensionNotReapplied, directiveLocationsValid or directiveReferencesItselfIndirectly: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026
 
 4 cases, in `directive` (3), `extension` (1). All rely on grammar or rules introduced in September 2026, not in October 2021.
 
@@ -1208,9 +1227,9 @@ response: {"valid":false,"errors":["SchemaProblem: errors=[InvalidSyntaxError{ m
 expected: valid (TypeSystem!Verdict is empty)
 ```
 
-<a id="schema-finding-4"></a>
+<a id="schema-finding-5"></a>
 
-#### 4. `acceptsValid`: rejects 4 valid schemas with the same error, one edit from schemas that break directiveExtensionDefined, directiveExtensionNotReapplied or directiveLocationsValid: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026
+#### 5. `acceptsValid`: rejects 4 valid schemas with the same error, one edit from schemas that break directiveExtensionDefined, directiveExtensionNotReapplied or directiveLocationsValid: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026
 
 4 cases, in `extension` (4). All rely on grammar or rules introduced in September 2026, not in October 2021.
 
@@ -1224,25 +1243,6 @@ The shortest case, from `directiveExtensionNotReapplied.2.valid`:
 problem:  SchemaProblem: errors=[InvalidSyntaxError{ message=Invalid syntax with offending token 'extend' at line 1 column 45 ,offendingToken=extend ,locations=[SourceLocation{line=1, column=45}] ,sourcePreview
 input:    [since September 2026] directive @d on FIELD type Query { a: Int } extend directive @d @deprecated(reason: "x")
 response: {"valid":false,"errors":["SchemaProblem: errors=[InvalidSyntaxError{ message=Invalid syntax with offending token 'extend' at line 1 column 45 ,offendingToken=extend ,locations=[SourceLocation{line=1, column=45}] ,sourcePreview=directive @d on FIELD type Query { a: Int } extend directive @d @deprecated(reason: \"x\")\n}]"]}
-expected: valid (TypeSystem!Verdict is empty)
-```
-
-<a id="schema-finding-5"></a>
-
-#### 5. `acceptsValid`: rejects 3 valid schemas with the same error, one edit from schemas that break directiveExtensionReferencesPrevious or directiveExtensionUsesPrevious: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026
-
-3 cases, in `extension` (3). All rely on grammar or rules introduced in September 2026, not in October 2021.
-
-Each rejected document is one edit from a document that breaks only `directiveExtensionReferencesPrevious` or `directiveExtensionUsesPrevious`; which rule the implementation applied is a guess.
-
-- Valid schemas are accepted (MUST, [§3](https://spec.graphql.org/September2026/#sec-Type-System))
-
-The shortest case, from `directiveExtensionUsesPrevious.1.valid`:
-
-```
-problem:  SchemaProblem: errors=[InvalidSyntaxError{ message=Invalid syntax with offending token 'extend' at line 1 column 105 ,offendingToken=extend ,locations=[SourceLocation{line=1, column=105}] ,sourcePrevi
-input:    [since September 2026] directive @d on FIELD | DIRECTIVE_DEFINITION directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e
-response: {"valid":false,"errors":["SchemaProblem: errors=[InvalidSyntaxError{ message=Invalid syntax with offending token 'extend' at line 1 column 105 ,offendingToken=extend ,locations=[SourceLocation{line=1, column=105}] ,sourcePreview=directive @d on FIELD | DIRECTIVE_DEFINITION directive @e on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e\n}]"]}
 expected: valid (TypeSystem!Verdict is empty)
 ```
 
@@ -1345,7 +1345,23 @@ expected: invalid: breaks INPUT_OBJECT_UNBREAKABLE_CYCLE and no other rule
 
 <a id="schema-finding-12"></a>
 
-#### 12. `extensionOneOf`: EXTENSION_ONEOF not enforced: accepts a schema that breaks only this rule
+#### 12. `directiveReferencesItselfIndirectly`: DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule
+
+2 cases, in `directive` (2).
+
+- A directive definition doesn't reference itself through a type or directive (MUST, [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
+
+The shortest case, from `directiveReferencesItselfIndirectly.6.invalid`:
+
+```
+input:    directive @a(x: Int @b) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @b(y: In) on ARGUMENT_DEFINITION input In { f: Int @a } type Query { a: Int }
+response: {"valid":true}
+expected: invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule
+```
+
+<a id="schema-finding-13"></a>
+
+#### 13. `extensionOneOf`: EXTENSION_ONEOF not enforced: accepts a schema that breaks only this rule
 
 2 cases, in `extension` (2). All rely on grammar or rules introduced in September 2025, not in October 2021.
 
@@ -1359,9 +1375,9 @@ response: {"valid":true}
 expected: invalid: breaks EXTENSION_ONEOF and no other rule
 ```
 
-<a id="schema-finding-13"></a>
+<a id="schema-finding-14"></a>
 
-#### 13. `specifiedByNotBuiltin`: SPECIFIED_BY_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule
+#### 14. `specifiedByNotBuiltin`: SPECIFIED_BY_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule
 
 2 cases, in `extension` (2).
 
@@ -1375,9 +1391,9 @@ response: {"valid":true}
 expected: invalid: breaks SPECIFIED_BY_NOT_BUILTIN and no other rule
 ```
 
-<a id="schema-finding-14"></a>
+<a id="schema-finding-15"></a>
 
-#### 14. `rootTypesAreObjects`: ROOT_TYPES_ARE_OBJECTS: crashes on a schema that breaks only this rule, instead of rejecting it
+#### 15. `rootTypesAreObjects`: ROOT_TYPES_ARE_OBJECTS: crashes on a schema that breaks only this rule, instead of rejecting it
 
 1 case, in `root` (1).
 
@@ -1392,9 +1408,9 @@ response: "the adapter answered with an error: java.lang.ClassCastException: cla
 expected: invalid: breaks ROOT_TYPES_ARE_OBJECTS and no other rule
 ```
 
-<a id="schema-finding-15"></a>
+<a id="schema-finding-16"></a>
 
-#### 15. `acceptsValid`: rejects a valid schema, one edit from a schema that breaks only requiredArgNotDeprecated; which rule it applied is a guess: the message says what the implementation checked; all rely on September 2025
+#### 16. `acceptsValid`: rejects a valid schema, one edit from a schema that breaks only requiredArgNotDeprecated; which rule it applied is a guess: the message says what the implementation checked; all rely on September 2025
 
 1 case, in `typeUse` (1). All rely on grammar or rules introduced in September 2025, not in October 2021.
 
@@ -1411,9 +1427,9 @@ response: {"valid":false,"errors":["SchemaProblem: errors=[The object type 'Quer
 expected: valid (TypeSystem!Verdict is empty)
 ```
 
-<a id="schema-finding-16"></a>
+<a id="schema-finding-17"></a>
 
-#### 16. `inputFieldInputType`: INPUT_FIELD_INPUT_TYPE: crashes on a schema that breaks only this rule, instead of rejecting it
+#### 17. `inputFieldInputType`: INPUT_FIELD_INPUT_TYPE: crashes on a schema that breaks only this rule, instead of rejecting it
 
 1 case, in `input` (1).
 
@@ -1428,9 +1444,9 @@ response: "the adapter answered with an error: java.lang.ClassCastException: cla
 expected: invalid: breaks INPUT_FIELD_INPUT_TYPE and no other rule
 ```
 
-<a id="schema-finding-17"></a>
+<a id="schema-finding-18"></a>
 
-#### 17. `typeNamesUnique`: TYPE_NAMES_UNIQUE not enforced: accepts a schema that breaks only this rule
+#### 18. `typeNamesUnique`: TYPE_NAMES_UNIQUE not enforced: accepts a schema that breaks only this rule
 
 1 case, in `names` (1).
 
@@ -1444,9 +1460,9 @@ response: {"valid":true}
 expected: invalid: breaks TYPE_NAMES_UNIQUE and no other rule
 ```
 
-<a id="schema-finding-18"></a>
+<a id="schema-finding-19"></a>
 
-#### 18. `acceptsValid`: rejects a valid schema, one edit from a schema that breaks only implFieldCovariant; which rule it applied is a guess: the message says what the implementation checked
+#### 19. `acceptsValid`: rejects a valid schema, one edit from a schema that breaks only implFieldCovariant; which rule it applied is a guess: the message says what the implementation checked
 
 1 case, in `implementation` (1).
 
@@ -1463,9 +1479,9 @@ response: {"valid":false,"errors":["InvalidSchemaException: invalid schema:\nobj
 expected: valid (TypeSystem!Verdict is empty)
 ```
 
-<a id="schema-finding-19"></a>
+<a id="schema-finding-20"></a>
 
-#### 19. `directiveLocationsValid`: DIRECTIVE_LOCATIONS_VALID not enforced: accepts a schema that breaks only this rule
+#### 20. `directiveLocationsValid`: DIRECTIVE_LOCATIONS_VALID not enforced: accepts a schema that breaks only this rule
 
 1 case, in `directive` (1).
 
@@ -1479,9 +1495,9 @@ response: {"valid":true}
 expected: invalid: breaks DIRECTIVE_LOCATIONS_VALID and no other rule
 ```
 
-<a id="schema-finding-20"></a>
+<a id="schema-finding-21"></a>
 
-#### 20. `acceptsValid`: rejects a valid schema, one edit from a schema that breaks only directiveUsesItself; which rule it applied is a guess: the message says what the implementation checked; all rely on September 2026
+#### 21. `acceptsValid`: rejects a valid schema, one edit from a schema that breaks only directiveUsesItself; which rule it applied is a guess: the message says what the implementation checked; all rely on September 2026
 
 1 case, in `directive` (1). All rely on grammar or rules introduced in September 2026, not in October 2021.
 
@@ -1496,22 +1512,6 @@ problem:  SchemaProblem: errors=['d' [@1:1] tried to use a location 'DIRECTIVE_D
 input:    [since September 2026] directive @d on DIRECTIVE_DEFINITION type Query { a: Int }
 response: {"valid":false,"errors":["SchemaProblem: errors=['d' [@1:1] tried to use a location 'DIRECTIVE_DEFINITION' but that is illegal]"]}
 expected: valid (TypeSystem!Verdict is empty)
-```
-
-<a id="schema-finding-21"></a>
-
-#### 21. `directiveReferencesItselfIndirectly`: DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule
-
-1 case, in `directive` (1).
-
-- A directive definition doesn't reference itself through a type or directive (MUST, [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
-
-The shortest case, from `directiveReferencesItselfIndirectly.6.invalid`:
-
-```
-input:    directive @a(x: Int @b) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @b(y: In) on ARGUMENT_DEFINITION input In { f: Int @a } type Query { a: Int }
-response: {"valid":true}
-expected: invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule
 ```
 
 <a id="schema-finding-22"></a>
@@ -1588,7 +1588,7 @@ expected: invalid: breaks EXTENSION_DIRECTIVES_NOT_REAPPLIED and no other rule
 | Input object default values don't form a cycle (`inputObjectDefaultValueCycle`). New in September 2025: October 2021 doesn't have default value validation | MUST (since September 2025) | [§3.10](https://spec.graphql.org/September2026/#sec-Input-Objects) | ✓ 4 |
 | A directive has one or more locations (`directiveLocationsDefined`). New in September 2025: October 2021 doesn't have the rule that a directive definition includes a location. SDL can't write a directive without locations, so no vector breaks this rule | MUST (since September 2025) | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | – |
 | A directive definition doesn't use itself (`directiveUsesItself`) | MUST | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ✓ 3 |
-| A directive definition doesn't reference itself through a type or directive (`directiveReferencesItselfIndirectly`) | MUST | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ✗ 1/4 |
+| A directive definition doesn't reference itself through a type or directive (`directiveReferencesItselfIndirectly`) | MUST | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ✗ 2/5 |
 | Every directive the document applies is defined, or built in (`directivesDefined`) | MUST | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ✓ 3 |
 | Every directive the document applies is at a location it is declared for (`directiveLocationsValid`) | MUST | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ✗ 1/28 |
 | A type extension extends a type that is defined (`extensionTargetDefined`) | MUST | [§3.5.6](https://spec.graphql.org/September2026/#sec-Scalar-Extensions) [§3.6.3](https://spec.graphql.org/September2026/#sec-Object-Extensions) [§3.7.1](https://spec.graphql.org/September2026/#sec-Interface-Extensions) [§3.8.1](https://spec.graphql.org/September2026/#sec-Union-Extensions) [§3.9.1](https://spec.graphql.org/September2026/#sec-Enum-Extensions) [§3.10.2](https://spec.graphql.org/September2026/#sec-Input-Object-Extensions) | ✓ 6 |
@@ -1603,10 +1603,10 @@ expected: invalid: breaks EXTENSION_DIRECTIVES_NOT_REAPPLIED and no other rule
 | A directive extension extends a defined directive (`directiveExtensionDefined`). New in September 2026: October 2021 doesn't have directive extensions | MUST (new in September 2026) | [§3.13.6](https://spec.graphql.org/September2026/#sec-Directive-Extensions) | ✓ 1 |
 | A directive extension doesn't apply a non-repeatable directive again (`directiveExtensionNotReapplied`). New in September 2026: October 2021 doesn't have directive extensions | MUST (new in September 2026) | [§3.13.6](https://spec.graphql.org/September2026/#sec-Directive-Extensions) | ✓ 3 |
 | A directive extension doesn't apply the directive it extends (`directiveExtensionUsesPrevious`). New in September 2026: October 2021 doesn't have directive extensions | MUST (new in September 2026) | [§3.13.6](https://spec.graphql.org/September2026/#sec-Directive-Extensions) | ✓ 1 |
-| A directive extension doesn't reference the directive it extends through a type or directive (`directiveExtensionReferencesPrevious`). New in September 2026: October 2021 doesn't have directive extensions | MUST (new in September 2026) | [§3.13.6](https://spec.graphql.org/September2026/#sec-Directive-Extensions) | ✓ 2 |
+| A directive extension doesn't reference the directive it extends through a type or directive (`directiveExtensionReferencesPrevious`). New in September 2026: October 2021 doesn't have directive extensions | MUST (new in September 2026) | [§3.13.6](https://spec.graphql.org/September2026/#sec-Directive-Extensions) | ✓ 4 |
 | A definition doesn't apply a non-repeatable directive twice to one element (`directiveNotRepeated`) | INFO | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) [§5.7.3](https://spec.graphql.org/September2026/#sec-Directives-Are-Unique-per-Location) | ✓ 3 |
 | A directive applied in SDL has the arguments its definition gives it (`appliedDirectiveArguments`) | INFO | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) [§2.13](https://spec.graphql.org/September2026/#sec-Language.Directives) [§5.4](https://spec.graphql.org/September2026/#sec-Validation.Arguments) | ✓ 9 |
-| Valid schemas are accepted (`acceptsValid`) | MUST | [§3](https://spec.graphql.org/September2026/#sec-Type-System) | ✗ 14/250 (1 since September 2025, 12 new in September 2026) |
+| Valid schemas are accepted (`acceptsValid`) | MUST | [§3](https://spec.graphql.org/September2026/#sec-Type-System) | ✗ 16/253 (1 since September 2025, 14 new in September 2026) |
 
 - **Basis for `typeNamesUnique`:** §3.3: "All types within a GraphQL schema must have unique names. No two provided types may have the same name."
 - **Basis for `typeNameNotBuiltin`:** §3.3: "No provided type may have a name which conflicts with any built in types (including Scalar and Introspection types)."
@@ -1679,10 +1679,10 @@ expected: invalid: breaks EXTENSION_DIRECTIVES_NOT_REAPPLIED and no other rule
 - **Cases:** 64 submitted, 64 distinct, 0 malformed
 - **Vectors:** 64 of 71 graded (not graded: 7 new in September 2026 (September 2025 profile))
 - **Profile:** the September 2025 edition's introspection types. September 2026's introspection query was rejected ("Validation error (UnknownArgument@[__schema/directives]) : Unknown field argument 'includeDeprecated'"). September 2025's was answered, so this run grades against September 2025.
-- **Vectors relying on rules after October 2021:** since September 2025, 10 of 16 vectors failing
+- **Vectors relying on rules after October 2021:** since September 2025, 13 of 19 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (353 negative controls)
-- **Run:** kit f437858e472b, 2026-11-15, strict
+- **Run:** kit c28a56e3d22f, 2026-11-16, strict
 
 ### Findings
 
@@ -1690,7 +1690,7 @@ expected: invalid: breaks EXTENSION_DIRECTIVES_NOT_REAPPLIED and no other rule
 
 #### 1. `builtinAdditions`, `builtinNullability`: the built-in __Directive.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Field.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __InputValue.isDeprecated has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Type has a field September 2025 doesn't define; the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.inputFields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it
 
-17 cases, in `minimal` (1), `rich` (1), `interfaces` (1), `defaults` (1), `deprecation` (1), `inputDeprecation` (1), `roots` (1), `unreferenced` (1), `builtinScalars` (1), `scalars` (1), `oneOf` (1), `order` (1), `interfaceDeprecation` (1), `inputDeprecationAll` (1), `directiveArgDeprecation` (1), `locations` (1), `descriptionText` (1). 5 of them rely on grammar or rules introduced in September 2025, not in October 2021.
+16 cases, in `minimal` (1), `rich` (1), `interfaces` (1), `deprecation` (1), `inputDeprecation` (1), `roots` (1), `unreferenced` (1), `builtinScalars` (1), `scalars` (1), `oneOf` (1), `order` (1), `interfaceDeprecation` (1), `inputDeprecationAll` (1), `directiveArgDeprecation` (1), `locations` (1), `descriptionText` (1). 5 of them rely on grammar or rules introduced in September 2025, not in October 2021.
 
 - The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection))
 - The fields and arguments of the introspection types and built-in directives have the Non-Null wrapping the spec gives them (SHOULD, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
@@ -1708,7 +1708,7 @@ expected: [object Object]
 
 #### 2. `builtinNullability`: the built-in __Directive.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Field.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __InputValue.isDeprecated has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.inputFields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it
 
-17 cases, in `minimal` (1), `rich` (1), `interfaces` (1), `defaults` (1), `deprecation` (1), `inputDeprecation` (1), `roots` (1), `unreferenced` (1), `builtinScalars` (1), `scalars` (1), `oneOf` (1), `order` (1), `interfaceDeprecation` (1), `inputDeprecationAll` (1), `directiveArgDeprecation` (1), `locations` (1), `descriptionText` (1). All rely on grammar or rules introduced in September 2025, not in October 2021.
+16 cases, in `minimal` (1), `rich` (1), `interfaces` (1), `deprecation` (1), `inputDeprecation` (1), `roots` (1), `unreferenced` (1), `builtinScalars` (1), `scalars` (1), `oneOf` (1), `order` (1), `interfaceDeprecation` (1), `inputDeprecationAll` (1), `directiveArgDeprecation` (1), `locations` (1), `descriptionText` (1). All rely on grammar or rules introduced in September 2025, not in October 2021.
 
 - The fields and arguments of the introspection types and built-in directives have the Non-Null wrapping the spec gives them (SHOULD, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
 
@@ -1723,7 +1723,61 @@ expected: [object Object]
 
 <a id="introspect-finding-3"></a>
 
-#### 3. `builtinAdditions`, `builtinNullability`, `descriptions`: a description the document gives is returned as it is, the schema's included: differs from Introspection.tla; the built-in __Directive.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Field.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __InputValue.isDeprecated has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Type has a field September 2025 doesn't define; the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.inputFields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it
+#### 3. `builtinAdditions`, `builtinNullability`, `defaultValuePrinting`: a printed default value has a control character in a string, unescaped; the built-in __Directive.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Field.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __InputValue.isDeprecated has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Type has a field September 2025 doesn't define; the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.inputFields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it
+
+2 cases, in `defaults` (1), `printing` (1). 1 of them rely on grammar or rules introduced in September 2025, not in October 2021.
+
+- The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection))
+- The fields and arguments of the introspection types and built-in directives have the Non-Null wrapping the spec gives them (SHOULD, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
+- A default value's strings are printed with control characters escaped, and supplementary characters, if escaped, as \u{…} (SHOULD, [§2.10.4](https://spec.graphql.org/September2026/#sec-String-Value) [§4.2.4](https://spec.graphql.org/September2026/#sec-The-__InputValue-Type))
+
+The shortest case, from `defaults.inc`:
+
+```
+problem:  added:fields at __Type, inputNullability at __Directive.args(includeDeprecated:), inputNullability at __Field.args(includeDeprecated:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), inputNullability at __Type.inputFields(includeDeprecated:), nullability at __InputValue.isDeprecated, printedControl at Query.f(bell:)
+input:    enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = "say \"hi\"", n: Int = null, l: [E!] = [X, Y], big: ID = 9007199254740993, huge: Float = 1000000000000000000000, bell: String = "\u0007"): Int }  (the introspection query, September 2025 profile; includeDeprecated: true)
+response: {"kind":"OBJECT","name":"Query","description":null,"specifiedByURL":null,"isOneOf":null,"fields":[{"name":"f","description":null,"args":[{"name":"x","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}},"defaultValue":"1","isDeprecated":false,"deprecationReason":null},{"name":"y","description":null,"type":{"kind":"SCALAR","name":"Float","ofType":null},"defaultValue":"1","isDeprecated":false,"deprecationReason":null},{"name":"z","description":null,"type":{"kind":"SCALAR","name":"ID","ofType":null},"defaultValue":"7","isDeprecated":false,"deprecationReason":null},{"name":"w","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}}},"defaultValue":"[1, 2]","isDeprecated":false,"deprecationReason":null},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"I","ofType":null},"defaultValue":"{b : 2}","isDeprecated":false,"deprecationReason":null},{"name":"s","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"say \\\"hi\\\"\"","isDeprecated":false,"deprecationReason":null},{"name":"n","description":null,"type":{"kind":"SCALAR","name":"Int","ofType":null},"defaultValue":"null","isDeprecated":false,"deprecationReason":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"ENUM","name":"E","ofType":null}}},"defaultValue":"[X, Y]","isDeprecated":false,"deprecationReason":null},{"name":"big","description":null,"type":{"kind":"SCALAR","name":"ID","ofType":null},"defaultValue":"9007199254740993","isDeprecated":false,"deprecationReason":null},{"name":"huge","description":null,"type":{"kind":"SCALAR","name":"Float","ofType":null},"defaultValue":"1000000000000000000000","isDeprecated":false,"deprecationReason":null},{"name":"bell","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"\u0007\"","isDeprecated":false,"deprecationReason":null}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}
+expected: [object Object]
+```
+
+<a id="introspect-finding-4"></a>
+
+#### 4. `builtinNullability`, `defaultValuePrinting`: a printed default value has a control character in a string, unescaped; the built-in __Directive.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Field.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __InputValue.isDeprecated has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.inputFields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it
+
+2 cases, in `defaults` (1), `printing` (1). All rely on grammar or rules introduced in September 2025, not in October 2021.
+
+- The fields and arguments of the introspection types and built-in directives have the Non-Null wrapping the spec gives them (SHOULD, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
+- A default value's strings are printed with control characters escaped, and supplementary characters, if escaped, as \u{…} (SHOULD, [§2.10.4](https://spec.graphql.org/September2026/#sec-String-Value) [§4.2.4](https://spec.graphql.org/September2026/#sec-The-__InputValue-Type))
+
+The shortest case, from `defaults.defaults`:
+
+```
+problem:  inputNullability at __Directive.args(includeDeprecated:), inputNullability at __Field.args(includeDeprecated:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), inputNullability at __Type.inputFields(includeDeprecated:), nullability at __InputValue.isDeprecated, printedControl at Query.f(bell:)
+input:    enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = "say \"hi\"", n: Int = null, l: [E!] = [X, Y], big: ID = 9007199254740993, huge: Float = 1000000000000000000000, bell: String = "\u0007"): Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)
+response: {"kind":"OBJECT","name":"Query","description":null,"specifiedByURL":null,"isOneOf":null,"fields":[{"name":"f","description":null,"args":[{"name":"x","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}},"defaultValue":"1","isDeprecated":false,"deprecationReason":null},{"name":"y","description":null,"type":{"kind":"SCALAR","name":"Float","ofType":null},"defaultValue":"1","isDeprecated":false,"deprecationReason":null},{"name":"z","description":null,"type":{"kind":"SCALAR","name":"ID","ofType":null},"defaultValue":"7","isDeprecated":false,"deprecationReason":null},{"name":"w","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}}},"defaultValue":"[1, 2]","isDeprecated":false,"deprecationReason":null},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"I","ofType":null},"defaultValue":"{b : 2}","isDeprecated":false,"deprecationReason":null},{"name":"s","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"say \\\"hi\\\"\"","isDeprecated":false,"deprecationReason":null},{"name":"n","description":null,"type":{"kind":"SCALAR","name":"Int","ofType":null},"defaultValue":"null","isDeprecated":false,"deprecationReason":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"ENUM","name":"E","ofType":null}}},"defaultValue":"[X, Y]","isDeprecated":false,"deprecationReason":null},{"name":"big","description":null,"type":{"kind":"SCALAR","name":"ID","ofType":null},"defaultValue":"9007199254740993","isDeprecated":false,"deprecationReason":null},{"name":"huge","description":null,"type":{"kind":"SCALAR","name":"Float","ofType":null},"defaultValue":"1000000000000000000000","isDeprecated":false,"deprecationReason":null},{"name":"bell","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"\u0007\"","isDeprecated":false,"deprecationReason":null}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}
+expected: [object Object]
+```
+
+<a id="introspect-finding-5"></a>
+
+#### 5. `defaultValuePrinting`: a printed default value has a control character in a string, unescaped
+
+2 cases, in `defaults` (1), `printing` (1). All rely on grammar or rules introduced in September 2025, not in October 2021.
+
+- A default value's strings are printed with control characters escaped, and supplementary characters, if escaped, as \u{…} (SHOULD, [§2.10.4](https://spec.graphql.org/September2026/#sec-String-Value) [§4.2.4](https://spec.graphql.org/September2026/#sec-The-__InputValue-Type))
+
+The shortest case, from `defaults.lookup`:
+
+```
+problem:  printedControl at Query.f(bell:)
+input:    enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = "say \"hi\"", n: Int = null, l: [E!] = [X, Y], big: ID = 9007199254740993, huge: Float = 1000000000000000000000, bell: String = "\u0007"): Int }  (__type(name:) for Query, I, Unknown, September 2025 profile; includeDeprecated: true)
+response: {"__type(name: \"Query\")":{"kind":"OBJECT","name":"Query","description":null,"specifiedByURL":null,"isOneOf":null,"fields":[{"name":"f","description":null,"args":[{"name":"x","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}},"defaultValue":"1","isDeprecated":false,"deprecationReason":null},{"name":"y","description":null,"type":{"kind":"SCALAR","name":"Float","ofType":null},"defaultValue":"1","isDeprecated":false,"deprecationReason":null},{"name":"z","description":null,"type":{"kind":"SCALAR","name":"ID","ofType":null},"defaultValue":"7","isDeprecated":false,"deprecationReason":null},{"name":"w","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"Int","ofType":null}}},"defaultValue":"[1, 2]","isDeprecated":false,"deprecationReason":null},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"I","ofType":null},"defaultValue":"{b : 2}","isDeprecated":false,"deprecationReason":null},{"name":"s","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"say \\\"hi\\\"\"","isDeprecated":false,"deprecationReason":null},{"name":"n","description":null,"type":{"kind":"SCALAR","name":"Int","ofType":null},"defaultValue":"null","isDeprecated":false,"deprecationReason":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"NON_NULL","name":null,"ofType":{"kind":"ENUM","name":"E","ofType":null}}},"defaultValue":"[X, Y]","isDeprecated":false,"deprecationReason":null},{"name":"big","description":null,"type":{"kind":"SCALAR","name":"ID","ofType":null},"defaultValue":"9007199254740993","isDeprecated":false,"deprecationReason":null},{"name":"huge","description":null,"type":{"kind":"SCALAR","name":"Float","ofType":null},"defaultValue":"1000000000000000000000","isDeprecated":false,"deprecationReason":null},{"name":"bell","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"\u0007\"","isDeprecated":false,"deprecationReason":null}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}}
+expected: [object Object]
+```
+
+<a id="introspect-finding-6"></a>
+
+#### 6. `builtinAdditions`, `builtinNullability`, `descriptions`: a description the document gives is returned as it is, the schema's included: differs from Introspection.tla; the built-in __Directive.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Field.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __InputValue.isDeprecated has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Type has a field September 2025 doesn't define; the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.inputFields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it
 
 1 case, in `descriptions` (1).
 
@@ -1740,9 +1794,9 @@ response: {"kind":"INTERFACE","name":"I","description":"An interface\r\nover x\r
 expected: [object Object]
 ```
 
-<a id="introspect-finding-4"></a>
+<a id="introspect-finding-7"></a>
 
-#### 4. `builtinNullability`, `descriptions`: a description the document gives is returned as it is, the schema's included: differs from Introspection.tla; the built-in __Directive.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Field.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __InputValue.isDeprecated has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.inputFields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it
+#### 7. `builtinNullability`, `descriptions`: a description the document gives is returned as it is, the schema's included: differs from Introspection.tla; the built-in __Directive.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Field.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __InputValue.isDeprecated has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.inputFields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it
 
 1 case, in `descriptions` (1).
 
@@ -1758,46 +1812,9 @@ response: {"kind":"INTERFACE","name":"I","description":"An interface\r\nover x\r
 expected: [object Object]
 ```
 
-<a id="introspect-finding-5"></a>
+<a id="introspect-finding-8"></a>
 
-#### 5. `builtinAdditions`, `builtinNullability`, `defaultValuePrinting`: a printed default value has a control character in a string, unescaped; the built-in __Directive.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Field.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __InputValue.isDeprecated has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Type has a field September 2025 doesn't define; the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.inputFields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it
-
-1 case, in `printing` (1).
-
-- The introspection types have no field, argument, enum value or type the spec doesn't define (INFO, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection))
-- The fields and arguments of the introspection types and built-in directives have the Non-Null wrapping the spec gives them (SHOULD, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
-- A default value's strings are printed with control characters escaped, and supplementary characters, if escaped, as \u{…} (SHOULD, [§2.10.4](https://spec.graphql.org/September2026/#sec-String-Value) [§4.2.4](https://spec.graphql.org/September2026/#sec-The-__InputValue-Type))
-
-The shortest case, from `printing.inc`:
-
-```
-problem:  added:fields at __Type, inputNullability at __Directive.args(includeDeprecated:), inputNullability at __Field.args(includeDeprecated:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), inputNullability at __Type.inputFields(includeDeprecated:), nullability at __InputValue.isDeprecated, printedControl at In.s, printedControl at Query.f(c:), printedControl at Query.f(i:), printedControl at Query.f(l:)
-input:    input In { s: String = "\u0003", t: [String] = ["😀"] } type Query { f(c: String = "\u0000\u0001\t\n\u001F\u007F\u0080\u0085\u009F", e: String = "😀 é", l: [String] = ["\u0002", "😀"], i: In = {s: "\u0004", t: ["\u0005😀"]}): Int }  (the introspection query, September 2025 profile; includeDeprecated: true)
-response: {"kind":"OBJECT","name":"Query","description":null,"specifiedByURL":null,"isOneOf":null,"fields":[{"name":"f","description":null,"args":[{"name":"c","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"\u0000\u0001\\t\\n\u001f\"","isDeprecated":false,"deprecationReason":null},{"name":"e","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"😀 é\"","isDeprecated":false,"deprecationReason":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"String","ofType":null}},"defaultValue":"[\"\u0002\", \"😀\"]","isDeprecated":false,"deprecationReason":null},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"In","ofType":null},"defaultValue":"{s : \"\u0004\", t : [\"\u0005😀\"]}","isDeprecated":false,"deprecationReason":null}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}
-expected: [object Object]
-```
-
-<a id="introspect-finding-6"></a>
-
-#### 6. `builtinNullability`, `defaultValuePrinting`: a printed default value has a control character in a string, unescaped; the built-in __Directive.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Field.args(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __InputValue.isDeprecated has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it; the built-in __Type.enumValues(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.fields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in __Type.inputFields(includeDeprecated:) has September 2025's type, but not its Non-Null wrapping; October 2021 doesn't define it
-
-1 case, in `printing` (1). All rely on grammar or rules introduced in September 2025, not in October 2021.
-
-- The fields and arguments of the introspection types and built-in directives have the Non-Null wrapping the spec gives them (SHOULD, [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
-- A default value's strings are printed with control characters escaped, and supplementary characters, if escaped, as \u{…} (SHOULD, [§2.10.4](https://spec.graphql.org/September2026/#sec-String-Value) [§4.2.4](https://spec.graphql.org/September2026/#sec-The-__InputValue-Type))
-
-The shortest case, from `printing.defaults`:
-
-```
-problem:  inputNullability at __Directive.args(includeDeprecated:), inputNullability at __Field.args(includeDeprecated:), inputNullability at __Type.enumValues(includeDeprecated:), inputNullability at __Type.fields(includeDeprecated:), inputNullability at __Type.inputFields(includeDeprecated:), nullability at __InputValue.isDeprecated, printedControl at In.s, printedControl at Query.f(c:), printedControl at Query.f(i:), printedControl at Query.f(l:)
-input:    input In { s: String = "\u0003", t: [String] = ["😀"] } type Query { f(c: String = "\u0000\u0001\t\n\u001F\u007F\u0080\u0085\u009F", e: String = "😀 é", l: [String] = ["\u0002", "😀"], i: In = {s: "\u0004", t: ["\u0005😀"]}): Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)
-response: {"kind":"OBJECT","name":"Query","description":null,"specifiedByURL":null,"isOneOf":null,"fields":[{"name":"f","description":null,"args":[{"name":"c","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"\u0000\u0001\\t\\n\u001f\"","isDeprecated":false,"deprecationReason":null},{"name":"e","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"😀 é\"","isDeprecated":false,"deprecationReason":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"String","ofType":null}},"defaultValue":"[\"\u0002\", \"😀\"]","isDeprecated":false,"deprecationReason":null},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"In","ofType":null},"defaultValue":"{s : \"\u0004\", t : [\"\u0005😀\"]}","isDeprecated":false,"deprecationReason":null}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}
-expected: [object Object]
-```
-
-<a id="introspect-finding-7"></a>
-
-#### 7. `descriptions`: a description the document gives is returned as it is, the schema's included: differs from Introspection.tla
+#### 8. `descriptions`: a description the document gives is returned as it is, the schema's included: differs from Introspection.tla
 
 1 case, in `descriptions` (1).
 
@@ -1809,23 +1826,6 @@ The shortest case, from `descriptions.lookup`:
 problem:  description at I
 input:    """ The schema, described. """ schema { query: Query } """ A query root. Indented second paragraph. """ type Query { """ A field with a block description """ f( """The argument""" x: In "Another, with \"quotes\" and a \\ backslash" y: Int ): Int u: U e: E i: I s: S } "An input object" input In { """Input field""" a: Int } """An interface over x """ interface I { "Interface field" x: Int } type O implements I { x: Int } """A union of one type""" union U = O """ An enum """ enum E { "A value" A """ Another value """ B } """A scalar with \""" in it""" scalar S  (__type(name:) for Query, In, I, U, E, S, Unknown, September 2025 profile; includeDeprecated: true)
 response: {"__type(name: \"I\")":{"kind":"INTERFACE","name":"I","description":"An interface\r\nover x\r","specifiedByURL":null,"isOneOf":null,"fields":[{"name":"x","description":"Interface field","args":[],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":[{"kind":"OBJECT","name":"O","ofType":null}]}}
-expected: [object Object]
-```
-
-<a id="introspect-finding-8"></a>
-
-#### 8. `defaultValuePrinting`: a printed default value has a control character in a string, unescaped
-
-1 case, in `printing` (1). All rely on grammar or rules introduced in September 2025, not in October 2021.
-
-- A default value's strings are printed with control characters escaped, and supplementary characters, if escaped, as \u{…} (SHOULD, [§2.10.4](https://spec.graphql.org/September2026/#sec-String-Value) [§4.2.4](https://spec.graphql.org/September2026/#sec-The-__InputValue-Type))
-
-The shortest case, from `printing.lookup`:
-
-```
-problem:  printedControl at In.s, printedControl at Query.f(c:), printedControl at Query.f(i:), printedControl at Query.f(l:)
-input:    input In { s: String = "\u0003", t: [String] = ["😀"] } type Query { f(c: String = "\u0000\u0001\t\n\u001F\u007F\u0080\u0085\u009F", e: String = "😀 é", l: [String] = ["\u0002", "😀"], i: In = {s: "\u0004", t: ["\u0005😀"]}): Int }  (__type(name:) for Query, In, Unknown, September 2025 profile; includeDeprecated: true)
-response: {"__type(name: \"Query\")":{"kind":"OBJECT","name":"Query","description":null,"specifiedByURL":null,"isOneOf":null,"fields":[{"name":"f","description":null,"args":[{"name":"c","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"\u0000\u0001\\t\\n\u001f\"","isDeprecated":false,"deprecationReason":null},{"name":"e","description":null,"type":{"kind":"SCALAR","name":"String","ofType":null},"defaultValue":"\"😀 é\"","isDeprecated":false,"deprecationReason":null},{"name":"l","description":null,"type":{"kind":"LIST","name":null,"ofType":{"kind":"SCALAR","name":"String","ofType":null}},"defaultValue":"[\"\u0002\", \"😀\"]","isDeprecated":false,"deprecationReason":null},{"name":"i","description":null,"type":{"kind":"INPUT_OBJECT","name":"In","ofType":null},"defaultValue":"{s : \"\u0004\", t : [\"\u0005😀\"]}","isDeprecated":false,"deprecationReason":null}],"type":{"kind":"SCALAR","name":"Int","ofType":null},"isDeprecated":false,"deprecationReason":null}],"inputFields":null,"interfaces":[],"enumValues":null,"possibleTypes":null}}
 expected: [object Object]
 ```
 
@@ -1854,7 +1854,7 @@ expected: [object Object]
 | Field and directive arguments, with their types (`arguments`) | MUST | [§4.2.3](https://spec.graphql.org/September2026/#sec-The-__Field-Type) [§4.2.4](https://spec.graphql.org/September2026/#sec-The-__InputValue-Type) [§4.2.6](https://spec.graphql.org/September2026/#sec-The-__Directive-Type) | ✓ 60 |
 | defaultValue is null for an input value without a default, and otherwise null or an encoding of the default (`defaultValue`) | MUST | [§4.2.4](https://spec.graphql.org/September2026/#sec-The-__InputValue-Type) | ✓ 60 |
 | defaultValue encodes the default value of an input value that has one, rather than returning null (`defaultValueOmitted`) | SHOULD | [§4.2.4](https://spec.graphql.org/September2026/#sec-The-__InputValue-Type) | ✓ 60 |
-| A default value's strings are printed with control characters escaped, and supplementary characters, if escaped, as \u{…} (`defaultValuePrinting`). Since September 2025: October 2021 has no rule on producing a StringValue. | SHOULD (since September 2025) | [§2.10.4](https://spec.graphql.org/September2026/#sec-String-Value) [§4.2.4](https://spec.graphql.org/September2026/#sec-The-__InputValue-Type) | ! 3/60 (all since September 2025) |
+| A default value's strings are printed with control characters escaped, and supplementary characters, if escaped, as \u{…} (`defaultValuePrinting`). Since September 2025: October 2021 has no rule on producing a StringValue. | SHOULD (since September 2025) | [§2.10.4](https://spec.graphql.org/September2026/#sec-String-Value) [§4.2.4](https://spec.graphql.org/September2026/#sec-The-__InputValue-Type) | ! 6/60 (all since September 2025) |
 | An input object's inputFields, with their types (`inputFields`) | MUST | [§4.2.2](https://spec.graphql.org/September2026/#sec-The-__Type-Type) [§4.2.4](https://spec.graphql.org/September2026/#sec-The-__InputValue-Type) | ✓ 60 |
 | An enum's enumValues (`enumValues`) | MUST | [§4.2.2](https://spec.graphql.org/September2026/#sec-The-__Type-Type) [§4.2.5](https://spec.graphql.org/September2026/#sec-The-__EnumValue-Type) | ✓ 60 |
 | interfaces, and possibleTypes for unions and interfaces (`interfaces`) | MUST | [§4.2.2](https://spec.graphql.org/September2026/#sec-The-__Type-Type) | ✓ 60 |
@@ -1868,7 +1868,7 @@ expected: [object Object]
 | @skip and @include are provided, @specifiedBy when the schema has a custom scalar, @oneOf when it has a OneOf input object (`builtinDirectives`) | SHOULD | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) [§3.13.1](https://spec.graphql.org/September2026/#sec--skip) [§3.13.2](https://spec.graphql.org/September2026/#sec--include) [§3.13.4](https://spec.graphql.org/September2026/#sec--specifiedBy) [§3.13.5](https://spec.graphql.org/September2026/#sec--oneOf) | ✓ 40 |
 | The introspection types and built-in directives are as the spec defines them, with nothing left out or changed (`builtinDefinitions`) | MUST | [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ✓ 60 |
 | The fields and arguments of the introspection types and built-in directives have the Non-Null wrapping the spec gives them (`builtinNullability`) | SHOULD | [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ! 38/60 (all since September 2025) |
-| The introspection types have no field, argument, enum value or type the spec doesn't define (`builtinAdditions`) | INFO | [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) | i 19/60 (5 since September 2025) |
+| The introspection types have no field, argument, enum value or type the spec doesn't define (`builtinAdditions`) | INFO | [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) | i 19/60 (6 since September 2025) |
 | Under an older release's profile, a built-in definition that differs from that release's is as a later release defines it (`builtinEdition`) | INFO | [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ✓ 60 |
 | __typename names the root type, and no fields list includes it (`typename`) | MUST | [§4.1](https://spec.graphql.org/September2026/#sec-Type-Name-Introspection) | ✓ 60 |
 | Fields, arguments, enum values, directives, members and interfaces come in source order (`order`). Since September 2025: October 2021 has no Stable Ordering. | SHOULD (since September 2025) | [§4.2](https://spec.graphql.org/September2026/#sec-Schema-Introspection) | ✓ 60 |

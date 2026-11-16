@@ -28,19 +28,19 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f437858e472b",
-    "date": "2026-11-15",
+    "kit": "c28a56e3d22f",
+    "date": "2026-11-16",
     "strict": true,
-    "vectors": 3367,
-    "graded": 3354,
+    "vectors": 3370,
+    "graded": 3357,
     "skipped": {
       "unspecified": 13
     }
   },
   "checkerSelfTest": "passed (15 negative controls)",
   "cases": {
-    "submitted": 3354,
-    "distinct": 3354,
+    "submitted": 3357,
+    "distinct": 3357,
     "malformed": 0
   },
   "adapterProblems": 0,
@@ -370,8 +370,8 @@
         }
       ],
       "status": "fail",
-      "cases": 295,
-      "failing": 5,
+      "cases": 296,
+      "failing": 6,
       "failingSince": {
         "September2025": 1
       },
@@ -601,7 +601,7 @@
         }
       ],
       "status": "fail",
-      "cases": 1045,
+      "cases": 1047,
       "failing": 2,
       "failingSince": {
         "September2026": 1
@@ -783,14 +783,14 @@
       "checks": [
         "valuesOfCorrectType"
       ],
-      "summary": "§5.6.1 Values of Correct Type isn't enforced: accepts documents that break only this rule; 1 of 5 rely on rules since September 2025",
-      "cases": 5,
+      "summary": "§5.6.1 Values of Correct Type isn't enforced: accepts documents that break only this rule; 1 of 6 rely on rules since September 2025",
+      "cases": 6,
       "since": {
         "September2025": 1
       },
       "fixtures": {
         "values": 1,
-        "twins": 4
+        "twins": 5
       },
       "fixture": "twins",
       "example": {
@@ -909,7 +909,7 @@
       "fixture": "twins",
       "problem": "A numeric literal with more than 100 characters has been presented. To prevent Denial Of Service attacks, parsing has been cancelled.",
       "example": {
-        "input": "ValuesOfCorrectType-valid-66: { echo( float: 100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 ) }",
+        "input": "ValuesOfCorrectType-valid-68: { echo( float: 100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 ) }",
         "response": {
           "errors": [
             {

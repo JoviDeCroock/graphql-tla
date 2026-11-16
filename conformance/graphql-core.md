@@ -15,7 +15,7 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 - **Cases:** 29642 submitted, 6777 distinct, 4 malformed
 - **Adapter problems:** none
 - **Checker self-test:** passed (87 negative controls)
-- **Run:** kit f437858e472b, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
+- **Run:** kit c28a56e3d22f, 2026-11-16, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
 
 ### Findings
 
@@ -191,7 +191,7 @@ response: undefined
 - **Vectors relying on rules after October 2021:** since September 2025, 2 of 130 vectors failing; new in September 2026, 30 of 31 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (10 negative controls)
-- **Run:** kit f437858e472b, 2026-11-15, strict
+- **Run:** kit c28a56e3d22f, 2026-11-16, strict
 
 ### Findings
 
@@ -380,12 +380,12 @@ expected: {"ok":true}
 ## Validate
 
 - **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
-- **Cases:** 3354 submitted, 3354 distinct, 0 malformed
-- **Vectors:** 3354 of 3367 graded (not graded: 13 unspecified)
+- **Cases:** 3357 submitted, 3357 distinct, 0 malformed
+- **Vectors:** 3357 of 3370 graded (not graded: 13 unspecified)
 - **Vectors relying on rules after October 2021:** since September 2025, 25 of 248 vectors failing; new in September 2026, 5 of 3 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (15 negative controls)
-- **Run:** kit f437858e472b, 2026-11-15, strict
+- **Run:** kit c28a56e3d22f, 2026-11-16, strict
 
 ### Findings
 
@@ -458,7 +458,7 @@ expected: invalid: SingleRootField ["requiredRuntimeValidation"]
 
 #### 5. `valuesOfCorrectType`: §5.6.1 Values of Correct Type isn't enforced: accepts documents that break only this rule
 
-5 cases, in `twins` (5).
+6 cases, in `twins` (6).
 
 - Values of Correct Type (MUST, [§5.6.1](https://spec.graphql.org/September2026/#sec-Values-of-Correct-Type) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float))
 
@@ -570,7 +570,7 @@ expected: valid
 | Fragment Spread Target Defined (`fragmentSpreadTargetDefined`) | MUST | [§5.5.2.1](https://spec.graphql.org/September2026/#sec-Fragment-Spread-Target-Defined) | ✓ 9 |
 | Fragment Spreads Must Not Form Cycles (`fragmentSpreadsMustNotFormCycles`) | MUST | [§5.5.2.2](https://spec.graphql.org/September2026/#sec-Fragment-Spreads-Must-Not-Form-Cycles) | ✓ 54 |
 | Fragment Spread Is Possible (`fragmentSpreadIsPossible`) | MUST | [§5.5.2.3](https://spec.graphql.org/September2026/#sec-Fragment-Spread-Is-Possible) | ✓ 38 |
-| Values of Correct Type (`valuesOfCorrectType`) | MUST | [§5.6.1](https://spec.graphql.org/September2026/#sec-Values-of-Correct-Type) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) | ✗ 5/295 |
+| Values of Correct Type (`valuesOfCorrectType`) | MUST | [§5.6.1](https://spec.graphql.org/September2026/#sec-Values-of-Correct-Type) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) | ✗ 6/296 |
 | Int literals out of 32-bit range are rejected (`intInputRange`) | SHOULD | [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) [§5.6.1](https://spec.graphql.org/September2026/#sec-Values-of-Correct-Type) | ✓ 4 |
 | Input Object Field Names (`inputObjectFieldNames`). every document that breaks this rule also breaks §5.6.1 Values of Correct Type, which subsumes it, so a rejection can't be credited to this rule; accepting one fails both | MUST | [§5.6.2](https://spec.graphql.org/September2026/#sec-Input-Object-Field-Names) | ⊂ |
 | Input Object Field Uniqueness (`inputObjectFieldUniqueness`) | MUST | [§5.6.3](https://spec.graphql.org/September2026/#sec-Input-Object-Field-Uniqueness) | ✓ 9 |
@@ -583,7 +583,7 @@ expected: valid
 | All Variable Uses Defined (`allVariableUsesDefined`) | MUST | [§5.8.3](https://spec.graphql.org/September2026/#sec-All-Variable-Uses-Defined) | ✓ 15 |
 | All Variables Used (`allVariablesUsed`) | MUST | [§5.8.4](https://spec.graphql.org/September2026/#sec-All-Variables-Used) | ✓ 18 |
 | All Variable Usages Are Allowed (`allVariableUsagesAreAllowed`) | MUST | [§5.8.5](https://spec.graphql.org/September2026/#sec-All-Variable-Usages-Are-Allowed) | ✗ 2/638 (all since September 2025) |
-| Valid documents are accepted (`acceptsValid`) | MUST | [§5](https://spec.graphql.org/September2026/#sec-Validation) [§6.1](https://spec.graphql.org/September2026/#sec-Executing-Requests) [§6.1.1](https://spec.graphql.org/September2026/#sec-Validating-Requests) | ✗ 1/1045 (all new in September 2026) |
+| Valid documents are accepted (`acceptsValid`) | MUST | [§5](https://spec.graphql.org/September2026/#sec-Validation) [§6.1](https://spec.graphql.org/September2026/#sec-Executing-Requests) [§6.1.1](https://spec.graphql.org/September2026/#sec-Validating-Requests) | ✗ 1/1047 (all new in September 2026) |
 | Descriptions and comments don't change validation (`descriptionsInert`) | MUST | [§2.2](https://spec.graphql.org/September2026/#sec-Descriptions) [§2.1.4](https://spec.graphql.org/September2026/#sec-Insignificant-Commas) | ✓ 114 |
 | Interface spreads where §5.5.2.3's formal text and prose disagree: which reading (`fragmentSpreadReading`). invalid (the formal text): 2; valid (own scope, which the prose doesn't settle): 4. Observed: invalid (the formal text) 2, valid (own scope, which the prose doesn't settle) 4 | INFO | [§5.5.2.3](https://spec.graphql.org/September2026/#sec-Fragment-Spread-Is-Possible) | ✓ 6 |
 | Nullable variables with a default in a OneOf field, where §5.8.5's formal text and prose disagree: which reading (`oneOfVariableReading`). invalid (the prose): 2. Observed: invalid (the prose) 2 | INFO | [§5.8.5](https://spec.graphql.org/September2026/#sec-All-Variable-Usages-Are-Allowed) | ✓ 2 |
@@ -629,11 +629,11 @@ expected: valid
 ## Coerce
 
 - **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
-- **Cases:** 2219 submitted, 2219 distinct, 0 malformed
+- **Cases:** 2222 submitted, 2222 distinct, 0 malformed
 - **Vectors relying on rules after October 2021:** since September 2025, 8 of 57 vectors failing; new in September 2026, 9 of 9 vectors failing
 - **Adapter problems:** none
-- **Checker self-test:** passed (38095 negative controls)
-- **Run:** kit f437858e472b, 2026-11-15, strict
+- **Checker self-test:** passed (38147 negative controls)
+- **Run:** kit c28a56e3d22f, 2026-11-16, strict
 
 ### Findings
 
@@ -687,7 +687,23 @@ expected: a request error
 
 <a id="coerce-finding-4"></a>
 
-#### 4. `oneOf`: accepts what §3.10.1 (OneOf Input Objects) rejects
+#### 4. `float`: accepts what §3.5.2 (Float) rejects
+
+2 cases, in `literal` (2).
+
+- Float accepts integer and float input values, and rejects non-finite values (MUST, [§3.5.2](https://spec.graphql.org/September2026/#sec-Float))
+
+The shortest case, from `literal`:
+
+```
+input:    { float(v: 1e400) }  variables: {}
+response: {"response":{"data":{"float":"ok"}},"calls":[{"path":["float"],"arguments":{"v":"Infinity"}}]}
+expected: a field error at float
+```
+
+<a id="coerce-finding-5"></a>
+
+#### 5. `oneOf`: accepts what §3.10.1 (OneOf Input Objects) rejects
 
 2 cases, in `oneOf` (2). All rely on grammar or rules introduced in September 2025, not in October 2021.
 
@@ -699,22 +715,6 @@ The shortest case, from `oneOf`:
 input:    [since September 2025] query($b: Int) { oneOfExample(arg: { a: "abc", b: $b }) }  variables: {}
 response: {"response":{"data":{"oneOfExample":"ok"}},"calls":[{"path":["oneOfExample"],"arguments":{"arg":{"a":"abc"}}}]}
 expected: a field error at oneOfExample
-```
-
-<a id="coerce-finding-5"></a>
-
-#### 5. `float`: accepts what §3.5.2 (Float) rejects
-
-1 case, in `literal` (1).
-
-- Float accepts integer and float input values, and rejects non-finite values (MUST, [§3.5.2](https://spec.graphql.org/September2026/#sec-Float))
-
-The shortest case, from `literal`:
-
-```
-input:    { float(v: 1e400) }  variables: {}
-response: {"response":{"data":{"float":"ok"}},"calls":[{"path":["float"],"arguments":{"v":"Infinity"}}]}
-expected: a field error at float
 ```
 
 <a id="coerce-finding-6"></a>
@@ -764,7 +764,7 @@ expected: a request error
 | --- | :---: | :---: | :---: |
 | Int accepts only integer input values (`int`) | MUST | [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) | ✓ 352 |
 | Int rejects integers outside the signed 32-bit range (`intRange`) | SHOULD | [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) | ✓ 32 |
-| Float accepts integer and float input values, and rejects non-finite values (`float`) | MUST | [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) | ✗ 1/102 |
+| Float accepts integer and float input values, and rejects non-finite values (`float`) | MUST | [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) | ✗ 2/105 |
 | Float and an integer a double can't hold exactly: refused, or rounded to the nearest double (`floatPrecision`). rounded to the nearest double: 1. Observed: rounded to the nearest double 1 | INFO | [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) | ✓ 1 |
 | String accepts only string input values (`string`) | MUST | [§3.5.3](https://spec.graphql.org/September2026/#sec-String) | ✓ 97 |
 | A string literal's escapes and block string indentation decode to its Unicode text (`stringValue`) | MUST | [§2.10.4](https://spec.graphql.org/September2026/#sec-String-Value) | ✓ 21 |
@@ -780,8 +780,8 @@ expected: a request error
 | Lists: each item coerced, a single value wrapped in a list (`list`) | MUST | [§3.11](https://spec.graphql.org/September2026/#sec-List) | ✓ 504 |
 | Non-Null rejects null (`nonNull`) | MUST | [§3.12](https://spec.graphql.org/September2026/#sec-Non-Null) | ✓ 4 |
 | CoerceVariableValues: defaults, missing and null values, and failures as request errors (`variables`) | MUST | [§6.1.2](https://spec.graphql.org/September2026/#sec-Coercing-Variable-Values) | ✓ 882 |
-| CoerceArgumentValues: defaults, missing variables, and null for Non-Null arguments (`arguments`) | MUST | [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) | ✓ 839 |
-| A value CoerceArgumentValues can't coerce is a field error, not a request error (`argumentErrorKind`) | SHOULD | [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) | ✓ 817 |
+| CoerceArgumentValues: defaults, missing variables, and null for Non-Null arguments (`arguments`) | MUST | [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) | ✓ 840 |
+| A value CoerceArgumentValues can't coerce is a field error, not a request error (`argumentErrorKind`) | SHOULD | [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) | ✓ 818 |
 | An argument error below the root nulls the field's position and propagates (`argumentsBelowRoot`) | MUST | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 17 |
 | CreateSourceEventStream: the source stream's resolver gets the field's coerced arguments (`sourceStream`) | MUST | [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) | ✓ 6 |
 | An error while establishing a subscription's source stream is a request error (`sourceStreamError`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) | ✓ 4 |
@@ -794,13 +794,13 @@ expected: a request error
 | Only valid documents are executed (`onlyValidExecuted`) | SHOULD | [§6.1.1](https://spec.graphql.org/September2026/#sec-Validating-Requests) [§5](https://spec.graphql.org/September2026/#sec-Validation) | – |
 | A valid document isn't rejected at validation (`acceptsValid`) | MUST | [§5](https://spec.graphql.org/September2026/#sec-Validation) | – |
 | A request error result has no data entry (`requestErrorNoData`) | MUST | [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✗ 829/847 (6 since September 2025, 9 new in September 2026) |
-| A request gets a response (`responds`) | MUST | [§7](https://spec.graphql.org/September2026/#sec-Response) | ✓ 2219 |
-| A field error's path is the field's response path (`fieldErrorPath`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 826 |
-| Every error is a map with a string message (`errorFormat`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 2219 |
-| errors, when present, is a non-empty list (`errorsList`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 2219 |
-| The response is a map (`resultMap`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✓ 2219 |
-| The result has no entries besides data, errors and extensions (`additionalEntries`) | MUST | [§7.1.8](https://spec.graphql.org/September2026/#sec-Additional-Entries) | ✓ 2219 |
-| extensions, when present, is a map (`extensions`) | MUST | [§7.1.7](https://spec.graphql.org/September2026/#sec-Extensions) | ✓ 2219 |
+| A request gets a response (`responds`) | MUST | [§7](https://spec.graphql.org/September2026/#sec-Response) | ✓ 2222 |
+| A field error's path is the field's response path (`fieldErrorPath`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 827 |
+| Every error is a map with a string message (`errorFormat`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 2222 |
+| errors, when present, is a non-empty list (`errorsList`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 2222 |
+| The response is a map (`resultMap`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✓ 2222 |
+| The result has no entries besides data, errors and extensions (`additionalEntries`) | MUST | [§7.1.8](https://spec.graphql.org/September2026/#sec-Additional-Entries) | ✓ 2222 |
+| extensions, when present, is a map (`extensions`) | MUST | [§7.1.7](https://spec.graphql.org/September2026/#sec-Extensions) | ✓ 2222 |
 | JSON strings with a lone surrogate: kept as sent, replaced with U+FFFD, or refused (`loneSurrogates`). kept as sent: 2. Observed: kept as sent 2 | INFO | — | ✓ 2 |
 | JSON numbers a double can't hold: read exactly, read as binary64, or refused (`jsonNumbers`) | INFO | — | ✓ 3 |
 | A request's extensions with keys of no meaning to the service leave the response as it is (`requestExtensions`). the same answer as without extensions: 4. Observed: the same answer as without extensions 4 | INFO | [§6](https://spec.graphql.org/September2026/#sec-Execution) | ✓ 5 |
@@ -851,12 +851,12 @@ expected: a request error
 ## Schema
 
 - **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
-- **Cases:** 490 submitted, 490 distinct, 0 malformed
-- **Vectors:** 490 of 495 graded (not graded: 5 unspecified)
-- **Vectors relying on rules after October 2021:** since September 2025, 19 of 66 vectors failing; new in September 2026, 14 of 27 vectors failing
+- **Cases:** 496 submitted, 496 distinct, 0 malformed
+- **Vectors:** 496 of 501 graded (not graded: 5 unspecified)
+- **Vectors relying on rules after October 2021:** since September 2025, 19 of 66 vectors failing; new in September 2026, 16 of 31 vectors failing
 - **Adapter problems:** none
-- **Checker self-test:** passed (992 negative controls)
-- **Run:** kit f437858e472b, 2026-11-15, strict
+- **Checker self-test:** passed (1004 negative controls)
+- **Run:** kit c28a56e3d22f, 2026-11-16, strict
 
 ### Findings
 
@@ -878,9 +878,9 @@ expected: invalid: breaks ARG_DEFAULT_COMPATIBLE and no other rule
 
 <a id="schema-finding-2"></a>
 
-#### 2. `acceptsValid`: rejects 7 valid schemas with the same error, one edit from schemas that break directiveExtensionDefined, directiveExtensionNotReapplied, directiveExtensionReferencesPrevious, directiveExtensionUsesPrevious or directiveLocationsValid: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026
+#### 2. `acceptsValid`: rejects 9 valid schemas with the same error, one edit from schemas that break directiveExtensionDefined, directiveExtensionNotReapplied, directiveExtensionReferencesPrevious, directiveExtensionUsesPrevious or directiveLocationsValid: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026
 
-7 cases, in `extension` (7). All rely on grammar or rules introduced in September 2026, not in October 2021.
+9 cases, in `extension` (9). All rely on grammar or rules introduced in September 2026, not in October 2021.
 
 Each rejected document is one edit from a document that breaks only `directiveExtensionDefined` or `directiveExtensionNotReapplied` or `directiveExtensionReferencesPrevious` or `directiveExtensionUsesPrevious` or `directiveLocationsValid`; which rule the implementation applied is a guess.
 
@@ -913,7 +913,23 @@ expected: invalid: breaks ROOT_TYPES_DIFFERENT and no other rule
 
 <a id="schema-finding-4"></a>
 
-#### 4. `acceptsValid`: rejects 4 valid schemas with the same error, one edit from schemas that break directiveExtensionNotReapplied, directiveLocationsValid or directiveReferencesItselfIndirectly: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026
+#### 4. `directiveReferencesItselfIndirectly`: DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule
+
+4 cases, in `directive` (4).
+
+- A directive definition doesn't reference itself through a type or directive (MUST, [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
+
+The shortest case, from `directiveReferencesItselfIndirectly.2.invalid`:
+
+```
+input:    directive @d(a: Int @e) on ARGUMENT_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION type Query { a: Int }
+response: {"valid":true}
+expected: invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule
+```
+
+<a id="schema-finding-5"></a>
+
+#### 5. `acceptsValid`: rejects 4 valid schemas with the same error, one edit from schemas that break directiveExtensionNotReapplied, directiveLocationsValid or directiveReferencesItselfIndirectly: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026
 
 4 cases, in `directive` (3), `extension` (1). All rely on grammar or rules introduced in September 2026, not in October 2021.
 
@@ -930,9 +946,9 @@ response: {"valid":false,"errors":["Syntax Error: Expected 'on', found '@'.\n\nG
 expected: valid (TypeSystem!Verdict is empty)
 ```
 
-<a id="schema-finding-5"></a>
+<a id="schema-finding-6"></a>
 
-#### 5. `typeNameNotBuiltin`: TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule
+#### 6. `typeNameNotBuiltin`: TYPE_NAME_NOT_BUILTIN not enforced: accepts a schema that breaks only this rule
 
 3 cases, in `names` (3).
 
@@ -946,9 +962,9 @@ response: {"valid":true}
 expected: invalid: breaks TYPE_NAME_NOT_BUILTIN and no other rule
 ```
 
-<a id="schema-finding-6"></a>
+<a id="schema-finding-7"></a>
 
-#### 6. `inputObjectUnbreakableCycle`: INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule
+#### 7. `inputObjectUnbreakableCycle`: INPUT_OBJECT_UNBREAKABLE_CYCLE not enforced: accepts a schema that breaks only this rule
 
 3 cases, in `input` (2), `extension` (1). All rely on grammar or rules introduced in September 2026, not in October 2021.
 
@@ -962,9 +978,9 @@ response: {"valid":true}
 expected: invalid: breaks INPUT_OBJECT_UNBREAKABLE_CYCLE and no other rule
 ```
 
-<a id="schema-finding-7"></a>
+<a id="schema-finding-8"></a>
 
-#### 7. `inputObjectDefaultValueCycle`: INPUT_OBJECT_DEFAULT_VALUE_CYCLE: crashes on a schema that breaks only this rule, instead of rejecting it
+#### 8. `inputObjectDefaultValueCycle`: INPUT_OBJECT_DEFAULT_VALUE_CYCLE: crashes on a schema that breaks only this rule, instead of rejecting it
 
 3 cases, in `input` (3).
 
@@ -979,9 +995,9 @@ response: "the adapter answered with an error: RecursionError: maximum recursion
 expected: invalid: breaks INPUT_OBJECT_DEFAULT_VALUE_CYCLE and no other rule
 ```
 
-<a id="schema-finding-8"></a>
+<a id="schema-finding-9"></a>
 
-#### 8. `acceptsValid`: crashes on 3 valid schemas instead of accepting them; hint: inputObjectDefaultValueCycle, the rule their invalid siblings break
+#### 9. `acceptsValid`: crashes on 3 valid schemas instead of accepting them; hint: inputObjectDefaultValueCycle, the rule their invalid siblings break
 
 3 cases, in `input` (3).
 
@@ -996,22 +1012,6 @@ problem:  RecursionError: maximum recursion depth exceeded while calling a Pytho
 input:    input I { i: I = {i: null} } type Query { f(i: I): Int }
 response: "the adapter answered with an error: RecursionError: maximum recursion depth exceeded while calling a Python object (raised as TypeError)"
 expected: valid (TypeSystem!Verdict is empty)
-```
-
-<a id="schema-finding-9"></a>
-
-#### 9. `directiveReferencesItselfIndirectly`: DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule
-
-3 cases, in `directive` (3).
-
-- A directive definition doesn't reference itself through a type or directive (MUST, [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives))
-
-The shortest case, from `directiveReferencesItselfIndirectly.2.invalid`:
-
-```
-input:    directive @d(a: Int @e) on ARGUMENT_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION type Query { a: Int }
-response: {"valid":true}
-expected: invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule
 ```
 
 <a id="schema-finding-10"></a>
@@ -1153,7 +1153,7 @@ expected: invalid: breaks INPUT_OBJECT_DEFAULT_VALUE_CYCLE and no other rule
 | Input object default values don't form a cycle (`inputObjectDefaultValueCycle`). New in September 2025: October 2021 doesn't have default value validation. 4 failing cases are crashes, which fail under October 2021 too | MUST (since September 2025) | [§3.10](https://spec.graphql.org/September2026/#sec-Input-Objects) | ✗ 4/4 |
 | A directive has one or more locations (`directiveLocationsDefined`). New in September 2025: October 2021 doesn't have the rule that a directive definition includes a location. SDL can't write a directive without locations, so no vector breaks this rule | MUST (since September 2025) | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | – |
 | A directive definition doesn't use itself (`directiveUsesItself`) | MUST | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ✗ 2/3 |
-| A directive definition doesn't reference itself through a type or directive (`directiveReferencesItselfIndirectly`) | MUST | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ✗ 3/4 |
+| A directive definition doesn't reference itself through a type or directive (`directiveReferencesItselfIndirectly`) | MUST | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ✗ 4/5 |
 | Every directive the document applies is defined, or built in (`directivesDefined`) | MUST | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ✓ 3 |
 | Every directive the document applies is at a location it is declared for (`directiveLocationsValid`) | MUST | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) | ✓ 28 |
 | A type extension extends a type that is defined (`extensionTargetDefined`) | MUST | [§3.5.6](https://spec.graphql.org/September2026/#sec-Scalar-Extensions) [§3.6.3](https://spec.graphql.org/September2026/#sec-Object-Extensions) [§3.7.1](https://spec.graphql.org/September2026/#sec-Interface-Extensions) [§3.8.1](https://spec.graphql.org/September2026/#sec-Union-Extensions) [§3.9.1](https://spec.graphql.org/September2026/#sec-Enum-Extensions) [§3.10.2](https://spec.graphql.org/September2026/#sec-Input-Object-Extensions) | ✓ 6 |
@@ -1168,10 +1168,10 @@ expected: invalid: breaks INPUT_OBJECT_DEFAULT_VALUE_CYCLE and no other rule
 | A directive extension extends a defined directive (`directiveExtensionDefined`). New in September 2026: October 2021 doesn't have directive extensions | MUST (new in September 2026) | [§3.13.6](https://spec.graphql.org/September2026/#sec-Directive-Extensions) | ✓ 1 |
 | A directive extension doesn't apply a non-repeatable directive again (`directiveExtensionNotReapplied`). New in September 2026: October 2021 doesn't have directive extensions | MUST (new in September 2026) | [§3.13.6](https://spec.graphql.org/September2026/#sec-Directive-Extensions) | ✓ 3 |
 | A directive extension doesn't apply the directive it extends (`directiveExtensionUsesPrevious`). New in September 2026: October 2021 doesn't have directive extensions | MUST (new in September 2026) | [§3.13.6](https://spec.graphql.org/September2026/#sec-Directive-Extensions) | ✓ 1 |
-| A directive extension doesn't reference the directive it extends through a type or directive (`directiveExtensionReferencesPrevious`). New in September 2026: October 2021 doesn't have directive extensions | MUST (new in September 2026) | [§3.13.6](https://spec.graphql.org/September2026/#sec-Directive-Extensions) | ✓ 2 |
+| A directive extension doesn't reference the directive it extends through a type or directive (`directiveExtensionReferencesPrevious`). New in September 2026: October 2021 doesn't have directive extensions | MUST (new in September 2026) | [§3.13.6](https://spec.graphql.org/September2026/#sec-Directive-Extensions) | ✓ 4 |
 | A definition doesn't apply a non-repeatable directive twice to one element (`directiveNotRepeated`) | INFO | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) [§5.7.3](https://spec.graphql.org/September2026/#sec-Directives-Are-Unique-per-Location) | ✓ 3 |
 | A directive applied in SDL has the arguments its definition gives it (`appliedDirectiveArguments`) | INFO | [§3.13](https://spec.graphql.org/September2026/#sec-Type-System.Directives) [§2.13](https://spec.graphql.org/September2026/#sec-Language.Directives) [§5.4](https://spec.graphql.org/September2026/#sec-Validation.Arguments) | i 3/9 (1 since September 2025) |
-| Valid schemas are accepted (`acceptsValid`) | MUST | [§3](https://spec.graphql.org/September2026/#sec-Type-System) | ✗ 14/250 (11 new in September 2026) |
+| Valid schemas are accepted (`acceptsValid`) | MUST | [§3](https://spec.graphql.org/September2026/#sec-Type-System) | ✗ 16/253 (13 new in September 2026) |
 
 - **Basis for `typeNamesUnique`:** §3.3: "All types within a GraphQL schema must have unique names. No two provided types may have the same name."
 - **Basis for `typeNameNotBuiltin`:** §3.3: "No provided type may have a name which conflicts with any built in types (including Scalar and Introspection types)."
@@ -1244,10 +1244,10 @@ expected: invalid: breaks INPUT_OBJECT_DEFAULT_VALUE_CYCLE and no other rule
 - **Cases:** 71 submitted, 71 distinct, 2 malformed
 - **Vectors:** 71 of 71 graded
 - **Profile:** the September 2026 edition's introspection types (latest release)
-- **Vectors relying on rules after October 2021:** since September 2025, 10 of 16 vectors failing; new in September 2026, 2 of 7 vectors failing
+- **Vectors relying on rules after October 2021:** since September 2025, 12 of 19 vectors failing; new in September 2026, 2 of 7 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (353 negative controls)
-- **Run:** kit f437858e472b, 2026-11-15, strict
+- **Run:** kit c28a56e3d22f, 2026-11-16, strict
 
 ### Findings
 
@@ -1365,12 +1365,12 @@ expected: a well-formed execution result with exactly the fields the query selec
 ## Coordinate
 
 - **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
-- **Cases:** 203 submitted, 203 distinct, 0 malformed
-- **Vectors:** 203 of 203 graded
-- **Vectors relying on rules after October 2021:** since September 2025, 0 of 203 vectors failing
+- **Cases:** 210 submitted, 210 distinct, 0 malformed
+- **Vectors:** 210 of 210 graded
+- **Vectors relying on rules after October 2021:** since September 2025, 0 of 210 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (12 negative controls)
-- **Run:** kit f437858e472b, 2026-11-15, strict
+- **Run:** kit c28a56e3d22f, 2026-11-16, strict
 
 ### Findings
 
@@ -1389,7 +1389,7 @@ None.
 
 | Check | Level | Spec | Result |
 | --- | :---: | :---: | :---: |
-| A schema coordinate is one of the five productions, and nothing else (`grammar`). 17 vectors whose resolution the spec leaves undefined are graded on their syntax only | MUST (since September 2025) | [§2.14](https://spec.graphql.org/September2026/#sec-Schema-Coordinates) | ✓ 48 |
+| A schema coordinate is one of the five productions, and nothing else (`grammar`). 22 vectors whose resolution the spec leaves undefined are graded on their syntax only | MUST (since September 2025) | [§2.14](https://spec.graphql.org/September2026/#sec-Schema-Coordinates) | ✓ 53 |
 | Only Names and the punctuators ( ) . : @ are tokens (`tokens`) | MUST (since September 2025) | [§2.14](https://spec.graphql.org/September2026/#sec-Schema-Coordinates) | ✓ 15 |
 | No whitespace, line terminator, comma, comment or byte order mark anywhere (`noIgnored`) | MUST (since September 2025) | [§2.14](https://spec.graphql.org/September2026/#sec-Schema-Coordinates) | ✓ 25 |
 | A type coordinate resolves to the named type, built-in scalars included, or to nothing (`resolvesTypes`) | MUST (since September 2025) | [§2.14](https://spec.graphql.org/September2026/#sec-Schema-Coordinates) | ✓ 28 |
@@ -1399,7 +1399,7 @@ None.
 | A directive argument coordinate resolves to the directive's argument, or to nothing (`resolvesDirectiveArguments`) | MUST (since September 2025) | [§2.14](https://spec.graphql.org/September2026/#sec-Schema-Coordinates) | ✓ 6 |
 | A coordinate whose type, field or directive isn't in the schema raises an error (`missingContainers`) | MUST (since September 2025) | [§2.14](https://spec.graphql.org/September2026/#sec-Schema-Coordinates) | ✓ 11 |
 | A member or argument coordinate on a type of the wrong kind raises an error, as the Asserts say (`containerKind`). Observed: an error, as the Asserts say 10 | INFO (since September 2025) | [§2.14](https://spec.graphql.org/September2026/#sec-Schema-Coordinates) | ✓ 10 |
-| @skip, @include, @specifiedBy and @oneOf resolve, with their arguments, though the schema doesn't define them (`builtinDirectives`) | SHOULD (since September 2025) | [§2.14](https://spec.graphql.org/September2026/#sec-Schema-Coordinates) | ✓ 9 |
+| @skip, @include, @specifiedBy and @oneOf resolve, with their arguments, though the schema doesn't define them (`builtinDirectives`) | SHOULD (since September 2025) | [§2.14](https://spec.graphql.org/September2026/#sec-Schema-Coordinates) | ✓ 11 |
 
 - **Basis for `grammar`:** "SchemaCoordinate :: TypeCoordinate | MemberCoordinate | ArgumentCoordinate | DirectiveCoordinate | DirectiveArgumentCoordinate", with "TypeCoordinate :: Name", "MemberCoordinate :: Name . Name", "ArgumentCoordinate :: Name . Name ( Name : )", "DirectiveCoordinate :: @ Name" and "DirectiveArgumentCoordinate :: @ Name ( Name : )". A grammar production is a requirement on what parses (Appendix A: "descriptive assertions"). A coordinate the reference accepts and the implementation rejects fails here, whatever it resolves to.
 - **Basis for `tokens`:** "SchemaCoordinateToken :: SchemaCoordinatePunctuator | Name", "SchemaCoordinatePunctuator :: one of ( ) . : @", and "A {SchemaCoordinate} is a self-contained grammar with its own set of lexical tokens, it is not contained within a {Document}. The source text of a SchemaCoordinate must be a sequence of {SourceCharacter}." So `$`, `!`, a string, a number and `...` as one token are not schema coordinate tokens.

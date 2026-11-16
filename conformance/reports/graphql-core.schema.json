@@ -30,19 +30,19 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f437858e472b",
-    "date": "2026-11-15",
+    "kit": "c28a56e3d22f",
+    "date": "2026-11-16",
     "strict": true,
-    "vectors": 495,
-    "graded": 490,
+    "vectors": 501,
+    "graded": 496,
     "skipped": {
       "unspecified": 5
     }
   },
-  "checkerSelfTest": "passed (992 negative controls)",
+  "checkerSelfTest": "passed (1004 negative controls)",
   "cases": {
-    "submitted": 490,
-    "distinct": 490,
+    "submitted": 496,
+    "distinct": 496,
     "malformed": 0
   },
   "adapterProblems": 0,
@@ -52,8 +52,8 @@
       "failing": 19
     },
     "September2026": {
-      "vectors": 27,
-      "failing": 14
+      "vectors": 31,
+      "failing": 16
     }
   },
   "checks": [
@@ -1006,8 +1006,8 @@
         }
       ],
       "status": "fail",
-      "cases": 4,
-      "failing": 3,
+      "cases": 5,
+      "failing": 4,
       "basis": "§3.13 Type Validation: \"A Directive definition must not contain the use of a Directive which references itself indirectly by referencing a Type or Directive which transitively includes a reference to this Directive.\" The vectors that rest only on the prose, \"While defining a directive, it must not reference itself directly or indirectly\", aren't graded."
     },
     {
@@ -1429,7 +1429,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 4,
       "failing": 0,
       "since": "September2026",
       "note": "New in September 2026: October 2021 doesn't have directive extensions",
@@ -1500,10 +1500,10 @@
         }
       ],
       "status": "fail",
-      "cases": 250,
-      "failing": 14,
+      "cases": 253,
+      "failing": 16,
       "failingSince": {
-        "September2026": 11
+        "September2026": 13
       },
       "basis": "a schema is invalid only when it breaks a Type Validation rule of §3 or §4's Reserved Names; rejecting, or crashing on, a schema that breaks none applies a rule the spec doesn't have"
     }
@@ -1544,10 +1544,10 @@
         "directiveLocationsValid"
       ],
       "likelyOverStrict": false,
-      "summary": "rejects 7 valid schemas with the same error, one edit from schemas that break directiveExtensionDefined, directiveExtensionNotReapplied, directiveExtensionReferencesPrevious, directiveExtensionUsesPrevious or directiveLocationsValid: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026",
-      "cases": 7,
+      "summary": "rejects 9 valid schemas with the same error, one edit from schemas that break directiveExtensionDefined, directiveExtensionNotReapplied, directiveExtensionReferencesPrevious, directiveExtensionUsesPrevious or directiveLocationsValid: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026",
+      "cases": 9,
       "fixtures": {
-        "extension": 7
+        "extension": 9
       },
       "fixture": "directiveExtensionNotReapplied.2.valid",
       "problem": "Syntax Error: Unexpected Name 'directive'.",
@@ -1562,7 +1562,7 @@
         "expected": "valid (TypeSystem!Verdict is empty)"
       },
       "since": {
-        "September2026": 7
+        "September2026": 9
       }
     },
     {
@@ -1583,6 +1583,25 @@
           "valid": true
         },
         "expected": "invalid: breaks ROOT_TYPES_DIFFERENT and no other rule"
+      }
+    },
+    {
+      "kind": "not enforced",
+      "checks": [
+        "directiveReferencesItselfIndirectly"
+      ],
+      "summary": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule",
+      "cases": 4,
+      "fixtures": {
+        "directive": 4
+      },
+      "fixture": "directiveReferencesItselfIndirectly.2.invalid",
+      "example": {
+        "input": "directive @d(a: Int @e) on ARGUMENT_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION type Query { a: Int }",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule"
       }
     },
     {
@@ -1697,25 +1716,6 @@
         "input": "input I { i: I = {i: null} } type Query { f(i: I): Int }",
         "response": "the adapter answered with an error: RecursionError: maximum recursion depth exceeded while calling a Python object (raised as TypeError)",
         "expected": "valid (TypeSystem!Verdict is empty)"
-      }
-    },
-    {
-      "kind": "not enforced",
-      "checks": [
-        "directiveReferencesItselfIndirectly"
-      ],
-      "summary": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule",
-      "cases": 3,
-      "fixtures": {
-        "directive": 3
-      },
-      "fixture": "directiveReferencesItselfIndirectly.2.invalid",
-      "example": {
-        "input": "directive @d(a: Int @e) on ARGUMENT_DEFINITION directive @e(b: Int @d) on ARGUMENT_DEFINITION type Query { a: Int }",
-        "response": {
-          "valid": true
-        },
-        "expected": "invalid: breaks DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY and no other rule"
       }
     },
     {

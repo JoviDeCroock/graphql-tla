@@ -30,22 +30,22 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f437858e472b",
-    "date": "2026-11-15",
+    "kit": "c28a56e3d22f",
+    "date": "2026-11-16",
     "strict": true,
-    "vectors": 203,
-    "graded": 203
+    "vectors": 210,
+    "graded": 210
   },
   "checkerSelfTest": "passed (12 negative controls)",
   "cases": {
-    "submitted": 203,
-    "distinct": 203,
+    "submitted": 210,
+    "distinct": 210,
     "malformed": 0
   },
   "adapterProblems": 0,
   "since": {
     "September2025": {
-      "vectors": 203,
+      "vectors": 210,
       "failing": 0
     }
   },
@@ -64,9 +64,9 @@
       "since": "September2025",
       "basis": "\"SchemaCoordinate :: TypeCoordinate | MemberCoordinate | ArgumentCoordinate | DirectiveCoordinate | DirectiveArgumentCoordinate\", with \"TypeCoordinate :: Name\", \"MemberCoordinate :: Name . Name\", \"ArgumentCoordinate :: Name . Name ( Name : )\", \"DirectiveCoordinate :: @ Name\" and \"DirectiveArgumentCoordinate :: @ Name ( Name : )\". A grammar production is a requirement on what parses (Appendix A: \"descriptive assertions\"). A coordinate the reference accepts and the implementation rejects fails here, whatever it resolves to.",
       "status": "pass",
-      "cases": 48,
+      "cases": 53,
       "failing": 0,
-      "note": "17 vectors whose resolution the spec leaves undefined are graded on their syntax only"
+      "note": "22 vectors whose resolution the spec leaves undefined are graded on their syntax only"
     },
     {
       "id": "tokens",
@@ -238,7 +238,7 @@
       "since": "September2025",
       "basis": "\"A schema element can be ... a directive, or a directive argument defined within a schema (including built-in types and directives).\" Whether a schema has them is §3.13's: \"GraphQL implementations should provide the `@skip` and `@include` directives\", and \"should provide the `@specifiedBy` directive if representing custom scalar definitions\" and \"the `@oneOf` directive if representing OneOf Input Objects\", which the schema does.",
       "status": "pass",
-      "cases": 9,
+      "cases": 11,
       "failing": 0
     }
   ],

@@ -28,19 +28,19 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f437858e472b",
-    "date": "2026-11-15",
+    "kit": "c28a56e3d22f",
+    "date": "2026-11-16",
     "strict": true,
-    "vectors": 3367,
-    "graded": 3354,
+    "vectors": 3370,
+    "graded": 3357,
     "skipped": {
       "unspecified": 13
     }
   },
   "checkerSelfTest": "passed (15 negative controls)",
   "cases": {
-    "submitted": 3354,
-    "distinct": 3354,
+    "submitted": 3357,
+    "distinct": 3357,
     "malformed": 0
   },
   "adapterProblems": 0,
@@ -370,7 +370,7 @@
         }
       ],
       "status": "fail",
-      "cases": 295,
+      "cases": 296,
       "failing": 28,
       "failingSince": {
         "September2025": 5
@@ -598,7 +598,7 @@
         }
       ],
       "status": "fail",
-      "cases": 1045,
+      "cases": 1047,
       "failing": 17,
       "failingSince": {
         "September2026": 1

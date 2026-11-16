@@ -30,8 +30,8 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f437858e472b",
-    "date": "2026-11-15",
+    "kit": "c28a56e3d22f",
+    "date": "2026-11-16",
     "strict": true,
     "vectors": 71,
     "graded": 71,
@@ -51,8 +51,8 @@
   "adapterProblems": 0,
   "since": {
     "September2025": {
-      "vectors": 16,
-      "failing": 10
+      "vectors": 19,
+      "failing": 12
     },
     "September2026": {
       "vectors": 7,

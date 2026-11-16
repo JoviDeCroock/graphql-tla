@@ -15,11 +15,11 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f437858e472b",
-    "date": "2026-11-15",
+    "kit": "c28a56e3d22f",
+    "date": "2026-11-16",
     "strict": true,
-    "vectors": 3367,
-    "graded": 3262,
+    "vectors": 3370,
+    "graded": 3265,
     "skipped": {
       "custom-directives": 73,
       "unspecified": 13,
@@ -28,8 +28,8 @@
   },
   "checkerSelfTest": "passed (15 negative controls)",
   "cases": {
-    "submitted": 3262,
-    "distinct": 3262,
+    "submitted": 3265,
+    "distinct": 3265,
     "malformed": 0
   },
   "adapterProblems": 0,
@@ -356,8 +356,8 @@
         }
       ],
       "status": "fail",
-      "cases": 293,
-      "failing": 4,
+      "cases": 294,
+      "failing": 5,
       "basis": "Formal Specification: \"For each literal Input Value value in the document: Let type be the type expected in the position value is found. value must be coercible to type\" For a Float, §3.5.2 (the same in every release): \"If the input value otherwise represents a value not representable by finite IEEE 754 (e.g. NaN, Infinity, or a value outside the available precision), a request error must be raised.\" A literal too large for binary64, which rounds to Infinity (1e400), isn't coercible. A literal too small (1e-400) isn't graded: whether rounding it to 0 is \"outside the available precision\" the spec doesn't say."
     },
     {
@@ -584,7 +584,7 @@
         }
       ],
       "status": "fail",
-      "cases": 1005,
+      "cases": 1007,
       "failing": 11,
       "failingSince": {
         "September2026": 1
@@ -815,6 +815,25 @@
     },
     {
       "checks": [
+        "valuesOfCorrectType"
+      ],
+      "summary": "§5.6.1 Values of Correct Type isn't enforced: accepts documents that break only this rule",
+      "cases": 5,
+      "fixtures": {
+        "twins": 5
+      },
+      "fixture": "twins",
+      "example": {
+        "input": "ValuesOfCorrectType-263: { echo(float: 1e400) }",
+        "response": {
+          "valid": true,
+          "errors": []
+        },
+        "expected": "invalid: ValuesOfCorrectType [\"value\"]"
+      }
+    },
+    {
+      "checks": [
         "acceptsValid"
       ],
       "hint": [
@@ -844,25 +863,6 @@
           ]
         },
         "expected": "valid"
-      }
-    },
-    {
-      "checks": [
-        "valuesOfCorrectType"
-      ],
-      "summary": "§5.6.1 Values of Correct Type isn't enforced: accepts documents that break only this rule",
-      "cases": 4,
-      "fixtures": {
-        "twins": 4
-      },
-      "fixture": "twins",
-      "example": {
-        "input": "ValuesOfCorrectType-263: { echo(float: 1e400) }",
-        "response": {
-          "valid": true,
-          "errors": []
-        },
-        "expected": "invalid: ValuesOfCorrectType [\"value\"]"
       }
     },
     {

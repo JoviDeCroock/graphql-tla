@@ -15,7 +15,7 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 - **Not sent:** 3159 values a leaf type can't represent (no uncoercible-results capability)
 - **Adapter problems:** none
 - **Checker self-test:** passed (87 negative controls)
-- **Run:** kit f437858e472b, 2026-11-15, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
+- **Run:** kit c28a56e3d22f, 2026-11-16, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
 
 ### Findings
 

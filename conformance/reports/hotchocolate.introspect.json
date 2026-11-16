@@ -28,8 +28,8 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f437858e472b",
-    "date": "2026-11-15",
+    "kit": "c28a56e3d22f",
+    "date": "2026-11-16",
     "strict": true,
     "vectors": 71,
     "graded": 64,
@@ -54,8 +54,8 @@
   "adapterProblems": 0,
   "since": {
     "September2025": {
-      "vectors": 16,
-      "failing": 8
+      "vectors": 19,
+      "failing": 11
     }
   },
   "checks": [
@@ -304,9 +304,9 @@
       ],
       "status": "fail",
       "cases": 57,
-      "failing": 3,
+      "failing": 6,
       "failingSince": {
-        "September2025": 3
+        "September2025": 6
       },
       "since": "September2025",
       "basis": "§2.10.4: \"When producing a StringValue, implementations should use escape sequences to represent non-printable control characters (U+0000 to U+001F and U+007F to U+009F).\" \"If an implementation chooses to escape a supplementary character, it should only use a variable-width unicode escape sequence.\" §4.2.4: \"defaultValue may return a String encoding (using the GraphQL language) of the default value\". So a string in the encoding that has a control character unescaped, or a surrogate pair of fixed-width escapes, fails this check. A block string can't escape anything, so one that holds a control character fails it too; read literally that would rule out every multi-line block string, so the kit takes the weaker reading and lets a block string hold tabs, line feeds and carriage returns. September 2025 introduced both sentences; the value the encoding stands for is graded by defaultValue.",
@@ -602,7 +602,7 @@
       "cases": 58,
       "failing": 37,
       "failingSince": {
-        "September2025": 9
+        "September2025": 11
       },
       "basis": "§4.2 gives the introspection types with \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", and the sections below say what each field returns (\"kind must return __TypeKind.OBJECT\", \"isRepeatable must return a Boolean\", \"args returns a List of __InputValue\"). A field, argument or enum value left out, or with another type, can't return what they say. §3.13: \"A built-in directive is any directive defined within this specification\", each with its definition (§3.13.1 to §3.13.5). Appendix A: \"Conformance requirements are described in this document via both descriptive assertions and key words with clearly defined meanings.\" Where only the Non-Null wrapping differs, and the result accepts or returns everything the spec's would, the difference is builtinNullability; an addition is builtinAdditions."
     },
@@ -645,7 +645,7 @@
       "cases": 57,
       "failing": 36,
       "failingSince": {
-        "September2025": 8
+        "September2025": 10
       },
       "basis": "No sentence of §4 forbids extending the introspection types. The nearest is \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", which uses no key word, and Appendix A says \"A conforming implementation of GraphQL may provide additional functionality, but must not do so where explicitly disallowed\". Leaving out or changing a definition stays a MUST, under builtinDefinitions."
     },
@@ -1206,17 +1206,18 @@
         "builtinAdditions",
         "builtinDefinitions",
         "builtinNullability",
-        "defaultValueOmitted"
+        "defaultValueOmitted",
+        "defaultValuePrinting"
       ],
-      "summary": "defaultValue is null for an input value that has a default; the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in @deprecated(reason:) isn't as September 2025 defines it (defaultValue); the built-in __Directive has a field September 2025 doesn't define; the built-in __Type has a field September 2025 doesn't define",
+      "summary": "a printed default value has a control character in a string, unescaped; defaultValue is null for an input value that has a default; the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in @deprecated(reason:) isn't as September 2025 defines it (defaultValue); the built-in __Directive has a field September 2025 doesn't define; the built-in __Type has a field September 2025 doesn't define",
       "cases": 1,
       "fixtures": {
         "defaults": 1
       },
       "fixture": "defaults.inc",
-      "problem": "added:fields at __Directive, added:fields at __Type, defaultValue at @deprecated(reason:), defaultValueOmitted at Query.f(n:), inputNullability at @deprecated(reason:)",
+      "problem": "added:fields at __Directive, added:fields at __Type, defaultValue at @deprecated(reason:), defaultValueOmitted at Query.f(n:), inputNullability at @deprecated(reason:), printedControl at Query.f(bell:)",
       "example": {
-        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }  (the introspection query, September 2025 profile; includeDeprecated: true)",
+        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y], big: ID = 9007199254740993, huge: Float = 1000000000000000000000, bell: String = \"\\u0007\"): Int }  (the introspection query, September 2025 profile; includeDeprecated: true)",
         "response": {
           "kind": "OBJECT",
           "name": "Query",
@@ -1340,6 +1341,42 @@
                     }
                   },
                   "defaultValue": "[ X, Y ]",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "big",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  },
+                  "defaultValue": "9007199254740993",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "huge",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Float",
+                    "ofType": null
+                  },
+                  "defaultValue": "1000000000000000000000",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "bell",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": "\"\u0007\"",
                   "isDeprecated": false,
                   "deprecationReason": null
                 }
@@ -1482,6 +1519,42 @@
                     }
                   },
                   "defaultValue": "[X, Y]",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "big",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  },
+                  "defaultValue": "9007199254740993",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "huge",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Float",
+                    "ofType": null
+                  },
+                  "defaultValue": "1000000000000000000000",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "bell",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": "\"\\u0007\"",
                   "isDeprecated": false,
                   "deprecationReason": null
                 }
@@ -1507,17 +1580,18 @@
         "builtinAdditions",
         "builtinDefinitions",
         "builtinNullability",
-        "defaultValueOmitted"
+        "defaultValueOmitted",
+        "defaultValuePrinting"
       ],
-      "summary": "defaultValue is null for an input value that has a default; the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in @deprecated(reason:) isn't as September 2025 defines it (defaultValue); the built-in __Type has a field September 2025 doesn't define",
+      "summary": "a printed default value has a control character in a string, unescaped; defaultValue is null for an input value that has a default; the built-in @deprecated(reason:) has September 2025's type, but not its Non-Null wrapping; it is as October 2021 defines it; the built-in @deprecated(reason:) isn't as September 2025 defines it (defaultValue); the built-in __Type has a field September 2025 doesn't define",
       "cases": 1,
       "fixtures": {
         "defaults": 1
       },
       "fixture": "defaults.defaults",
-      "problem": "added:fields at __Type, defaultValue at @deprecated(reason:), defaultValueOmitted at Query.f(n:), inputNullability at @deprecated(reason:)",
+      "problem": "added:fields at __Type, defaultValue at @deprecated(reason:), defaultValueOmitted at Query.f(n:), inputNullability at @deprecated(reason:), printedControl at Query.f(bell:)",
       "example": {
-        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)",
+        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y], big: ID = 9007199254740993, huge: Float = 1000000000000000000000, bell: String = \"\\u0007\"): Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)",
         "response": {
           "kind": "OBJECT",
           "name": "Query",
@@ -1641,6 +1715,42 @@
                     }
                   },
                   "defaultValue": "[ X, Y ]",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "big",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  },
+                  "defaultValue": "9007199254740993",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "huge",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Float",
+                    "ofType": null
+                  },
+                  "defaultValue": "1000000000000000000000",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "bell",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": "\"\u0007\"",
                   "isDeprecated": false,
                   "deprecationReason": null
                 }
@@ -1783,6 +1893,42 @@
                     }
                   },
                   "defaultValue": "[X, Y]",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "big",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  },
+                  "defaultValue": "9007199254740993",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "huge",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Float",
+                    "ofType": null
+                  },
+                  "defaultValue": "1000000000000000000000",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "bell",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": "\"\\u0007\"",
                   "isDeprecated": false,
                   "deprecationReason": null
                 }
@@ -2153,8 +2299,11 @@
       },
       "fixture": "printing.inc",
       "problem": "added:fields at __Directive, added:fields at __Type, defaultValue at @deprecated(reason:), inputNullability at @deprecated(reason:), printedControl at In.s, printedControl at Query.f(c:), printedControl at Query.f(i:), printedControl at Query.f(l:)",
+      "since": {
+        "September2025": 1
+      },
       "example": {
-        "input": "input In { s: String = \"\\u0003\", t: [String] = [\"😀\"] } type Query { f(c: String = \"\\u0000\\u0001\\t\\n\\u001F\\u007F\\u0080\\u0085\\u009F\", e: String = \"😀 é\", l: [String] = [\"\\u0002\", \"😀\"], i: In = {s: \"\\u0004\", t: [\"\\u0005😀\"]}): Int }  (the introspection query, September 2025 profile; includeDeprecated: true)",
+        "input": "[since September 2025] input In { s: String = \"\\u0003\", t: [String] = [\"😀\"] } type Query { f(c: String = \"\\u0000\\u0001\\t\\n\\u001F\\u007F\\u0080\\u0085\\u009F\", e: String = \"😀 é\", l: [String] = [\"\\u0002\", \"😀\"], i: In = {s: \"\\u0004\", t: [\"\\u0005😀\"]}): Int }  (the introspection query, September 2025 profile; includeDeprecated: true)",
         "response": {
           "kind": "OBJECT",
           "name": "Query",
@@ -2326,8 +2475,11 @@
       },
       "fixture": "printing.defaults",
       "problem": "added:fields at __Type, defaultValue at @deprecated(reason:), inputNullability at @deprecated(reason:), printedControl at In.s, printedControl at Query.f(c:), printedControl at Query.f(i:), printedControl at Query.f(l:)",
+      "since": {
+        "September2025": 1
+      },
       "example": {
-        "input": "input In { s: String = \"\\u0003\", t: [String] = [\"😀\"] } type Query { f(c: String = \"\\u0000\\u0001\\t\\n\\u001F\\u007F\\u0080\\u0085\\u009F\", e: String = \"😀 é\", l: [String] = [\"\\u0002\", \"😀\"], i: In = {s: \"\\u0004\", t: [\"\\u0005😀\"]}): Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)",
+        "input": "[since September 2025] input In { s: String = \"\\u0003\", t: [String] = [\"😀\"] } type Query { f(c: String = \"\\u0000\\u0001\\t\\n\\u001F\\u007F\\u0080\\u0085\\u009F\", e: String = \"😀 é\", l: [String] = [\"\\u0002\", \"😀\"], i: In = {s: \"\\u0004\", t: [\"\\u0005😀\"]}): Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)",
         "response": {
           "kind": "OBJECT",
           "name": "Query",
@@ -2487,17 +2639,18 @@
     },
     {
       "checks": [
-        "defaultValueOmitted"
+        "defaultValueOmitted",
+        "defaultValuePrinting"
       ],
-      "summary": "defaultValue is null for an input value that has a default",
+      "summary": "a printed default value has a control character in a string, unescaped; defaultValue is null for an input value that has a default",
       "cases": 1,
       "fixtures": {
         "defaults": 1
       },
       "fixture": "defaults.lookup",
-      "problem": "defaultValueOmitted at Query.f(n:)",
+      "problem": "defaultValueOmitted at Query.f(n:), printedControl at Query.f(bell:)",
       "example": {
-        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }  (__type(name:) for Query, I, Unknown, September 2025 profile; includeDeprecated: true)",
+        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y], big: ID = 9007199254740993, huge: Float = 1000000000000000000000, bell: String = \"\\u0007\"): Int }  (__type(name:) for Query, I, Unknown, September 2025 profile; includeDeprecated: true)",
         "response": {
           "__type(name: \"Query\")": {
             "kind": "OBJECT",
@@ -2622,6 +2775,42 @@
                       }
                     },
                     "defaultValue": "[ X, Y ]",
+                    "isDeprecated": false,
+                    "deprecationReason": null
+                  },
+                  {
+                    "name": "big",
+                    "description": null,
+                    "type": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    },
+                    "defaultValue": "9007199254740993",
+                    "isDeprecated": false,
+                    "deprecationReason": null
+                  },
+                  {
+                    "name": "huge",
+                    "description": null,
+                    "type": {
+                      "kind": "SCALAR",
+                      "name": "Float",
+                      "ofType": null
+                    },
+                    "defaultValue": "1000000000000000000000",
+                    "isDeprecated": false,
+                    "deprecationReason": null
+                  },
+                  {
+                    "name": "bell",
+                    "description": null,
+                    "type": {
+                      "kind": "SCALAR",
+                      "name": "String",
+                      "ofType": null
+                    },
+                    "defaultValue": "\"\u0007\"",
                     "isDeprecated": false,
                     "deprecationReason": null
                   }
@@ -2768,6 +2957,42 @@
                     "defaultValue": "[X, Y]",
                     "isDeprecated": false,
                     "deprecationReason": null
+                  },
+                  {
+                    "name": "big",
+                    "description": null,
+                    "type": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    },
+                    "defaultValue": "9007199254740993",
+                    "isDeprecated": false,
+                    "deprecationReason": null
+                  },
+                  {
+                    "name": "huge",
+                    "description": null,
+                    "type": {
+                      "kind": "SCALAR",
+                      "name": "Float",
+                      "ofType": null
+                    },
+                    "defaultValue": "1000000000000000000000",
+                    "isDeprecated": false,
+                    "deprecationReason": null
+                  },
+                  {
+                    "name": "bell",
+                    "description": null,
+                    "type": {
+                      "kind": "SCALAR",
+                      "name": "String",
+                      "ofType": null
+                    },
+                    "defaultValue": "\"\\u0007\"",
+                    "isDeprecated": false,
+                    "deprecationReason": null
                   }
                 ],
                 "type": {
@@ -2887,7 +3112,7 @@
         "September2025": 1
       },
       "example": {
-        "input": "input In { s: String = \"\\u0003\", t: [String] = [\"😀\"] } type Query { f(c: String = \"\\u0000\\u0001\\t\\n\\u001F\\u007F\\u0080\\u0085\\u009F\", e: String = \"😀 é\", l: [String] = [\"\\u0002\", \"😀\"], i: In = {s: \"\\u0004\", t: [\"\\u0005😀\"]}): Int }  (__type(name:) for Query, In, Unknown, September 2025 profile; includeDeprecated: true)",
+        "input": "[since September 2025] input In { s: String = \"\\u0003\", t: [String] = [\"😀\"] } type Query { f(c: String = \"\\u0000\\u0001\\t\\n\\u001F\\u007F\\u0080\\u0085\\u009F\", e: String = \"😀 é\", l: [String] = [\"\\u0002\", \"😀\"], i: In = {s: \"\\u0004\", t: [\"\\u0005😀\"]}): Int }  (__type(name:) for Query, In, Unknown, September 2025 profile; includeDeprecated: true)",
         "response": {
           "__type(name: \"Query\")": {
             "kind": "OBJECT",

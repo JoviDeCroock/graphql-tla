@@ -30,11 +30,11 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f437858e472b",
-    "date": "2026-11-15",
+    "kit": "c28a56e3d22f",
+    "date": "2026-11-16",
     "strict": true,
-    "vectors": 2219,
-    "run": 2219,
+    "vectors": 2222,
+    "run": 2222,
     "skipped": 0,
     "modes": [
       "unvalidated",
@@ -42,10 +42,10 @@
       "big JSON numbers graded under jsonNumbers"
     ]
   },
-  "checkerSelfTest": "passed (38095 negative controls)",
+  "checkerSelfTest": "passed (38147 negative controls)",
   "cases": {
-    "submitted": 2219,
-    "distinct": 2219,
+    "submitted": 2222,
+    "distinct": 2222,
     "malformed": 0
   },
   "adapterProblems": 0,
@@ -107,8 +107,8 @@
       ],
       "basis": "\"When expected as an input type, both integer and float input values are accepted. ... All other input values, including strings with numeric content, must raise a request error indicating an incorrect type. If the input value otherwise represents a value not representable by finite IEEE 754 (e.g. NaN, Infinity, or a value outside the available precision), a request error must be raised.\" October 2021 says the same. A non-finite value such as the literal 1e400 is a MUST failure here; an adapter that validates may refuse that literal at validation (it isn't \"coercible\", §5.6.1) or at coercion, and only a resolved value fails. A fractional value is kept as its decimal, which the vectors only use with at most 15 significant digits. What \"outside the available precision\" covers is floatPrecision's.",
       "status": "fail",
-      "cases": 102,
-      "failing": 1,
+      "cases": 105,
+      "failing": 2,
       "failingSince": {}
     },
     {
@@ -395,7 +395,7 @@
       ],
       "basis": "The algorithm's steps: an argument with no value, or whose variable has no runtime value, gets \"the result of coercing defaultValue\" if it has one; an explicit null is kept; a variable's value is used as it is; a literal is coerced; \"Otherwise if argumentType is a Non-Nullable type, and either hasValue is not true or value is null, raise an execution error.\" Algorithm steps have the algorithm's level (Appendix A). Whether a failure is an execution error or a request error is argumentErrorKind's. September 2025 says the same. October 2021 adds the default as it is (see the vectors `since` September 2025) and otherwise says the same.",
       "status": "pass",
-      "cases": 839,
+      "cases": 840,
       "failing": 0,
       "failingSince": {}
     },
@@ -412,7 +412,7 @@
       ],
       "basis": "The input coercion rules call the failure a request error (§3.5: \"If an input value does not match a coercion rule, a request error must be raised\"; §3.12: \"... then a request error must be raised\"). CoerceArgumentValues says \"raise an execution error\", and September 2026 settles the conflict with a SHOULD (September 2025 has the same sentence): \"Any request error raised as a result of input coercion during CoerceArgumentValues() should be treated instead as an execution error.\" So a request error where the reference gives a field error fails only this SHOULD. Except where §3.10 or §3.10.1 itself says \"an execution error must be raised\" (a variable in an input object literal whose runtime value is null at a Non-Null field; a OneOf literal whose one entry is a variable with a null or no runtime value): those vectors (`executionErrorRequired`) fail their own check. October 2021's CoerceArgumentValues says \"raise a field error\" and has no such sentence, while its §3.5 and §3.12 still say a request error must be raised; the kit takes the weaker reading there too, the same SHOULD.",
       "status": "pass",
-      "cases": 817,
+      "cases": 818,
       "failing": 0,
       "failingSince": {}
     },
@@ -692,7 +692,7 @@
       ],
       "basis": "\"When a GraphQL service receives a request, it must return a well-formed response.\" October 2021 says the same. The adapter answers with an `error` when the implementation produced no response at all, for example because it threw. Execution's check of the same name grades the same sentence. No response says nothing about the coercion rule the vector is about, so it always counts here, whatever the reference's answer; the finding names that rule as a hint. Every vector exercises this check.",
       "status": "pass",
-      "cases": 2219,
+      "cases": 2222,
       "failing": 0,
       "failingSince": {}
     },
@@ -714,7 +714,7 @@
       ],
       "basis": "§7.1.6: an error that \"can be associated to a particular field in the GraphQL result ... must contain an entry with the key {\"path\"} with a response path which describes the response position which raised the error\". §7.1.4: a response path names response positions, not arguments. A result whose data holds the field as null, with one error and no resolver call, is a field error whatever its path. If that is the answer the vector expects, a path other than the field's fails this check. Every vector that accepts a field error exercises it. October 2021's §7.1.2 keeps the must: the error \"must contain an entry with the key path that details the path of the response field which experienced the error\". Its shoulds there are about the path's form (\"should be a list of path segments\", indices \"should be 0-indexed integers\"), not about which field it names, so a path to the argument (`[\"v\"]`) fails a MUST in every edition. September 2025 and September 2026 have the same §7.1.6 sentence.",
       "status": "pass",
-      "cases": 826,
+      "cases": 827,
       "failing": 0,
       "failingSince": {}
     },
@@ -731,7 +731,7 @@
       ],
       "basis": "\"Every error must contain an entry with the key {\"message\"} with a string description of the error\", and each error \"must be a map\" (§7.1.1, §7.1.3). October 2021 says the same (\"each error is a map\", \"Every error must contain an entry with the key message\"). A result whose errors aren't all maps with a string message, such as [null], or a field error with only a path, fails this check wherever its outcome would otherwise match. Every vector exercises it.",
       "status": "pass",
-      "cases": 2219,
+      "cases": 2222,
       "failing": 0,
       "failingSince": {}
     },
@@ -748,7 +748,7 @@
       ],
       "basis": "The same check as execution's. September 2026, §7.1.1: \"If any errors are raised during operation execution, the execution result must contain an entry with key {\"errors\"}. The value of this entry must be a non-empty list ... If the request completed without raising any errors, this entry must not be present.\" October 2021, §7.1: \"If the request raised any errors, the response map must contain an entry with key errors. ... If the request completed without raising any errors, this entry must not be present.\" Its §7.1.2 also says \"should not be present\", but the §7.1 MUST is the sentence about the entry, so the check is a MUST in every edition, as in execution. September 2025 says the same (\"If execution raised any errors ...\"). A value with \"errors\": [] is still a value for the vector's own check, and fails this one. Every vector exercises it.",
       "status": "pass",
-      "cases": 2219,
+      "cases": 2222,
       "failing": 0,
       "failingSince": {}
     },
@@ -770,7 +770,7 @@
       ],
       "basis": "§7.1.1: \"An execution result must be a map.\" §7.1.3: \"A request error result must be a map.\" A result whose `response` is a list, a string, a number, a boolean or null fails here, rather than being taken as an adapter that doesn't follow the result format. Execution's check of the same name. October 2021, §7.1: \"A response to a GraphQL request must be a map.\" Every vector exercises it.",
       "status": "pass",
-      "cases": 2219,
+      "cases": 2222,
       "failing": 0,
       "failingSince": {}
     },
@@ -787,7 +787,7 @@
       ],
       "basis": "\"To ensure future changes to the protocol do not break existing services and clients, the execution result and request error result maps must not contain any entries other than those described above.\" October 2021, §7.1: \"the top level response map must not contain any entries other than the three described above\". The same check as execution's, applied to every result here, request errors included. A result with another top-level entry is still classified, and fails this check wherever its outcome would otherwise pass. Every vector exercises it.",
       "status": "pass",
-      "cases": 2219,
+      "cases": 2222,
       "failing": 0,
       "failingSince": {}
     },
@@ -804,7 +804,7 @@
       ],
       "basis": "\"The \\\"extensions\\\" entry in an execution result or request error result, if set, must have a map as its value.\" October 2021, §7.1: \"This entry, if set, must have a map as its value.\" The same check as execution's. A result whose top-level extensions isn't a map is still classified, and fails this check wherever its outcome would otherwise pass. Every vector exercises it.",
       "status": "pass",
-      "cases": 2219,
+      "cases": 2222,
       "failing": 0,
       "failingSince": {}
     },
@@ -950,6 +950,46 @@
     },
     {
       "checks": [
+        "float"
+      ],
+      "summary": "accepts what §3.5.2 (Float) rejects",
+      "cases": 2,
+      "fixtures": {
+        "literal": 2
+      },
+      "fixture": "literal",
+      "example": {
+        "vector": "coerce-0429",
+        "input": "{ float(v: 1e400) }  variables: {}",
+        "response": {
+          "response": {
+            "data": {
+              "float": "ok"
+            }
+          },
+          "calls": [
+            {
+              "path": [
+                "float"
+              ],
+              "arguments": {
+                "v": "Infinity"
+              }
+            }
+          ]
+        },
+        "outcome": {
+          "outcome": "value",
+          "field": "float",
+          "arguments": {
+            "v": "Infinity"
+          }
+        },
+        "expected": "a field error at float"
+      }
+    },
+    {
+      "checks": [
         "oneOf"
       ],
       "summary": "accepts what §3.10.1 (OneOf Input Objects) rejects",
@@ -993,46 +1033,6 @@
           }
         },
         "expected": "a field error at oneOfExample"
-      }
-    },
-    {
-      "checks": [
-        "float"
-      ],
-      "summary": "accepts what §3.5.2 (Float) rejects",
-      "cases": 1,
-      "fixtures": {
-        "literal": 1
-      },
-      "fixture": "literal",
-      "example": {
-        "vector": "coerce-0429",
-        "input": "{ float(v: 1e400) }  variables: {}",
-        "response": {
-          "response": {
-            "data": {
-              "float": "ok"
-            }
-          },
-          "calls": [
-            {
-              "path": [
-                "float"
-              ],
-              "arguments": {
-                "v": "Infinity"
-              }
-            }
-          ]
-        },
-        "outcome": {
-          "outcome": "value",
-          "field": "float",
-          "arguments": {
-            "v": "Infinity"
-          }
-        },
-        "expected": "a field error at float"
       }
     },
     {

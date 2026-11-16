@@ -25,19 +25,19 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f437858e472b",
-    "date": "2026-11-15",
+    "kit": "c28a56e3d22f",
+    "date": "2026-11-16",
     "strict": true,
-    "vectors": 495,
-    "graded": 490,
+    "vectors": 501,
+    "graded": 496,
     "skipped": {
       "unspecified": 5
     }
   },
-  "checkerSelfTest": "passed (992 negative controls)",
+  "checkerSelfTest": "passed (1004 negative controls)",
   "cases": {
-    "submitted": 490,
-    "distinct": 490,
+    "submitted": 496,
+    "distinct": 496,
     "malformed": 0
   },
   "adapterProblems": 0,
@@ -47,8 +47,8 @@
       "failing": 20
     },
     "September2026": {
-      "vectors": 27,
-      "failing": 15
+      "vectors": 31,
+      "failing": 17
     }
   },
   "checks": [
@@ -1007,7 +1007,7 @@
         }
       ],
       "status": "fail",
-      "cases": 4,
+      "cases": 5,
       "failing": 1,
       "basis": "§3.13 Type Validation: \"A Directive definition must not contain the use of a Directive which references itself indirectly by referencing a Type or Directive which transitively includes a reference to this Directive.\" The vectors that rest only on the prose, \"While defining a directive, it must not reference itself directly or indirectly\", aren't graded."
     },
@@ -1436,7 +1436,7 @@
         }
       ],
       "status": "pass",
-      "cases": 2,
+      "cases": 4,
       "failing": 0,
       "since": "September2026",
       "note": "New in September 2026: October 2021 doesn't have directive extensions",
@@ -1507,11 +1507,11 @@
         }
       ],
       "status": "fail",
-      "cases": 250,
-      "failing": 20,
+      "cases": 253,
+      "failing": 23,
       "failingSince": {
         "September2025": 3,
-        "September2026": 12
+        "September2026": 14
       },
       "basis": "a schema is invalid only when it breaks a Type Validation rule of §3 or §4's Reserved Names; rejecting, or crashing on, a schema that breaks none applies a rule the spec doesn't have"
     }
@@ -1559,6 +1559,40 @@
       }
     },
     {
+      "kind": "over-strict",
+      "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
+        "directiveExtensionDefined",
+        "directiveExtensionNotReapplied",
+        "directiveExtensionReferencesPrevious",
+        "directiveExtensionUsesPrevious",
+        "directiveLocationsValid"
+      ],
+      "likelyOverStrict": false,
+      "summary": "rejects 9 valid schemas with the same error, one edit from schemas that break directiveExtensionDefined, directiveExtensionNotReapplied, directiveExtensionReferencesPrevious, directiveExtensionUsesPrevious or directiveLocationsValid: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026",
+      "cases": 9,
+      "fixtures": {
+        "extension": 9
+      },
+      "fixture": "directiveExtensionNotReapplied.2.valid",
+      "problem": "GraphQL::ParseError: Expected one of SCHEMA, SCALAR, TYPE, ENUM, INPUT, UNION, INTERFACE, actual: DIRECTIVE (\"directive\") at [1, 52]",
+      "example": {
+        "input": "[since September 2026] directive @d on FIELD type Query { a: Int } extend directive @d @deprecated(reason: \"x\")",
+        "response": {
+          "valid": false,
+          "errors": [
+            "GraphQL::ParseError: Expected one of SCHEMA, SCALAR, TYPE, ENUM, INPUT, UNION, INTERFACE, actual: DIRECTIVE (\"directive\") at [1, 52]"
+          ]
+        },
+        "expected": "valid (TypeSystem!Verdict is empty)"
+      },
+      "since": {
+        "September2026": 9
+      }
+    },
+    {
       "kind": "not enforced",
       "checks": [
         "directiveLocationsValid"
@@ -1575,40 +1609,6 @@
           "valid": true
         },
         "expected": "invalid: breaks DIRECTIVE_LOCATIONS_VALID and no other rule"
-      }
-    },
-    {
-      "kind": "over-strict",
-      "checks": [
-        "acceptsValid"
-      ],
-      "hint": [
-        "directiveExtensionDefined",
-        "directiveExtensionNotReapplied",
-        "directiveExtensionReferencesPrevious",
-        "directiveExtensionUsesPrevious",
-        "directiveLocationsValid"
-      ],
-      "likelyOverStrict": false,
-      "summary": "rejects 7 valid schemas with the same error, one edit from schemas that break directiveExtensionDefined, directiveExtensionNotReapplied, directiveExtensionReferencesPrevious, directiveExtensionUsesPrevious or directiveLocationsValid: one cause, which the pairs don't pin on any one rule; the message says what the implementation checked; all rely on September 2026",
-      "cases": 7,
-      "fixtures": {
-        "extension": 7
-      },
-      "fixture": "directiveExtensionNotReapplied.2.valid",
-      "problem": "GraphQL::ParseError: Expected one of SCHEMA, SCALAR, TYPE, ENUM, INPUT, UNION, INTERFACE, actual: DIRECTIVE (\"directive\") at [1, 52]",
-      "example": {
-        "input": "[since September 2026] directive @d on FIELD type Query { a: Int } extend directive @d @deprecated(reason: \"x\")",
-        "response": {
-          "valid": false,
-          "errors": [
-            "GraphQL::ParseError: Expected one of SCHEMA, SCALAR, TYPE, ENUM, INPUT, UNION, INTERFACE, actual: DIRECTIVE (\"directive\") at [1, 52]"
-          ]
-        },
-        "expected": "valid (TypeSystem!Verdict is empty)"
-      },
-      "since": {
-        "September2026": 7
       }
     },
     {
@@ -2532,10 +2532,10 @@
         "directive": 1
       },
       "fixture": "directiveLocationsValid.4.invalid",
-      "problem": "NoMethodError: undefined method 'graphql_name' for class #<Class:0x0000000121726600>",
+      "problem": "NoMethodError: undefined method 'graphql_name' for class #<Class:0x00000001214f0de0>",
       "example": {
         "input": "directive @d on OBJECT schema @d { query: Query } type Query { a: Int }",
-        "response": "the adapter answered with an error: NoMethodError: undefined method 'graphql_name' for class #<Class:0x0000000121726600>",
+        "response": "the adapter answered with an error: NoMethodError: undefined method 'graphql_name' for class #<Class:0x00000001214f0de0>",
         "expected": "invalid: breaks DIRECTIVE_LOCATIONS_VALID and no other rule"
       }
     },
@@ -2581,19 +2581,46 @@
         "directive": 1
       },
       "fixture": "directiveUsesItself.3.valid",
-      "problem": "ArgumentError: #<Class:0x000000012170f838> (d) has an invalid directive location: `locations DIRECTIVE_DEFINITION`",
+      "problem": "ArgumentError: #<Class:0x00000001212bb5e8> (d) has an invalid directive location: `locations DIRECTIVE_DEFINITION`",
       "example": {
         "input": "[since September 2026] directive @d on DIRECTIVE_DEFINITION type Query { a: Int }",
         "response": {
           "valid": false,
           "errors": [
-            "ArgumentError: #<Class:0x000000012170f838> (d) has an invalid directive location: `locations DIRECTIVE_DEFINITION`"
+            "ArgumentError: #<Class:0x00000001212bb5e8> (d) has an invalid directive location: `locations DIRECTIVE_DEFINITION`"
           ]
         },
         "expected": "valid (TypeSystem!Verdict is empty)"
       },
       "since": {
         "September2026": 1
+      }
+    },
+    {
+      "kind": "over-strict",
+      "checks": [
+        "acceptsValid"
+      ],
+      "hint": [
+        "directiveReferencesItselfIndirectly"
+      ],
+      "likelyOverStrict": false,
+      "summary": "rejects a valid schema, one edit from a schema that breaks only directiveReferencesItselfIndirectly; which rule it applied is a guess: the message says what the implementation checked",
+      "cases": 1,
+      "fixtures": {
+        "directive": 1
+      },
+      "fixture": "directiveReferencesItselfIndirectly.7.valid",
+      "problem": "ArgumentError: Directive `@e` can't be attached to arg because INPUT_FIELD_DEFINITION isn't included in its locations (ARGUMENT_DEFINITION).",
+      "example": {
+        "input": "directive @d(arg: Int @e) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION directive @e(arg: X) on ARGUMENT_DEFINITION directive @Y on INPUT_FIELD_DEFINITION input X { a: Y @Y } input Y { b: Int } type Query { a: Int }",
+        "response": {
+          "valid": false,
+          "errors": [
+            "ArgumentError: Directive `@e` can't be attached to arg because INPUT_FIELD_DEFINITION isn't included in its locations (ARGUMENT_DEFINITION)."
+          ]
+        },
+        "expected": "valid (TypeSystem!Verdict is empty)"
       }
     },
     {
@@ -2679,10 +2706,10 @@
         "extension": 1
       },
       "fixture": "extensionTargetKind.1.invalid",
-      "problem": "NameError: undefined method 'field' for class '#<Class:#<Class:0x0000000121722a00>>'",
+      "problem": "NameError: undefined method 'field' for class '#<Class:#<Class:0x00000001213394c0>>'",
       "example": {
         "input": "scalar S type Query { a: Int } extend type S { b: Int }",
-        "response": "the adapter answered with an error: NameError: undefined method 'field' for class '#<Class:#<Class:0x0000000121722a00>>'",
+        "response": "the adapter answered with an error: NameError: undefined method 'field' for class '#<Class:#<Class:0x00000001213394c0>>'",
         "expected": "invalid: breaks EXTENSION_TARGET_KIND and no other rule"
       }
     },
@@ -2697,10 +2724,10 @@
         "extension": 1
       },
       "fixture": "extensionTargetKind.3.invalid",
-      "problem": "NoMethodError: undefined method 'possible_types' for class #<Class:0x0000000120b943a0>",
+      "problem": "NoMethodError: undefined method 'possible_types' for class #<Class:0x00000001215d50a8>",
       "example": {
         "input": "enum E { A } type A { a: Int } type Query { e: E } extend union E = Query",
-        "response": "the adapter answered with an error: NoMethodError: undefined method 'possible_types' for class #<Class:0x0000000120b943a0>",
+        "response": "the adapter answered with an error: NoMethodError: undefined method 'possible_types' for class #<Class:0x00000001215d50a8>",
         "expected": "invalid: breaks EXTENSION_TARGET_KIND and no other rule"
       }
     },
@@ -2715,10 +2742,10 @@
         "extension": 1
       },
       "fixture": "extensionTargetKind.4.invalid",
-      "problem": "NoMethodError: undefined method 'value' for class #<Class:0x0000000120653850>",
+      "problem": "NoMethodError: undefined method 'value' for class #<Class:0x0000000120866368>",
       "example": {
         "input": "input E { a: Int } type Query { f(e: E): Int } extend enum E { B }",
-        "response": "the adapter answered with an error: NoMethodError: undefined method 'value' for class #<Class:0x0000000120653850>",
+        "response": "the adapter answered with an error: NoMethodError: undefined method 'value' for class #<Class:0x0000000120866368>",
         "expected": "invalid: breaks EXTENSION_TARGET_KIND and no other rule"
       }
     },
@@ -2733,10 +2760,10 @@
         "extension": 1
       },
       "fixture": "extensionTargetKind.5.invalid",
-      "problem": "NoMethodError: undefined method 'argument' for class #<Class:0x0000000120bf9930>",
+      "problem": "NoMethodError: undefined method 'argument' for class #<Class:0x0000000121510b40>",
       "example": {
         "input": "enum In { A } type Query { f(i: In): Int } extend input In { b: Int }",
-        "response": "the adapter answered with an error: NoMethodError: undefined method 'argument' for class #<Class:0x0000000120bf9930>",
+        "response": "the adapter answered with an error: NoMethodError: undefined method 'argument' for class #<Class:0x0000000121510b40>",
         "expected": "invalid: breaks EXTENSION_TARGET_KIND and no other rule"
       }
     },

@@ -15,8 +15,8 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f437858e472b",
-    "date": "2026-11-15",
+    "kit": "c28a56e3d22f",
+    "date": "2026-11-16",
     "strict": true,
     "vectors": 71,
     "graded": 54,
@@ -39,8 +39,8 @@
   "adapterProblems": 0,
   "since": {
     "September2025": {
-      "vectors": 14,
-      "failing": 3
+      "vectors": 17,
+      "failing": 6
     }
   },
   "checks": [
@@ -253,6 +253,9 @@
       "status": "fail",
       "cases": 47,
       "failing": 6,
+      "failingSince": {
+        "September2025": 3
+      },
       "basis": "§4.2.4: \"defaultValue may return a String encoding (using the GraphQL language) of the default value used by this input value in the condition a value is not provided at runtime. If this input value has no default value, returns null.\" A string that encodes another value, or one for an input value without a default, contradicts that. Appendix A: \"Conformance requirements are described in this document via both descriptive assertions and key words with clearly defined meanings.\""
     },
     {
@@ -289,9 +292,9 @@
       ],
       "status": "fail",
       "cases": 47,
-      "failing": 3,
+      "failing": 6,
       "failingSince": {
-        "September2025": 3
+        "September2025": 6
       },
       "since": "September2025",
       "basis": "§2.10.4: \"When producing a StringValue, implementations should use escape sequences to represent non-printable control characters (U+0000 to U+001F and U+007F to U+009F).\" \"If an implementation chooses to escape a supplementary character, it should only use a variable-width unicode escape sequence.\" §4.2.4: \"defaultValue may return a String encoding (using the GraphQL language) of the default value\". So a string in the encoding that has a control character unescaped, or a surrogate pair of fixed-width escapes, fails this check. A block string can't escape anything, so one that holds a control character fails it too; read literally that would rule out every multi-line block string, so the kit takes the weaker reading and lets a block string hold tabs, line feeds and carriage returns. September 2025 introduced both sentences; the value the encoding stands for is graded by defaultValue.",
@@ -624,7 +627,7 @@
       "cases": 47,
       "failing": 14,
       "failingSince": {
-        "September2025": 3
+        "September2025": 4
       },
       "basis": "No sentence of §4 forbids extending the introspection types. The nearest is \"Below are the full set of type system definitions providing schema introspection, which are fully defined in the sections below\", which uses no key word, and Appendix A says \"A conforming implementation of GraphQL may provide additional functionality, but must not do so where explicitly disallowed\". Leaving out or changing a definition stays a MUST, under builtinDefinitions."
     },
@@ -1024,489 +1027,22 @@
     },
     {
       "checks": [
-        "defaultValue"
-      ],
-      "summary": "defaultValue is null for an input value without a default, and otherwise null or an encoding of the default: differs from Introspection.tla",
-      "cases": 2,
-      "fixtures": {
-        "defaults": 2
-      },
-      "fixture": "defaults.defaults",
-      "problem": "defaultValue at Query.f(s:)",
-      "example": {
-        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)",
-        "response": {
-          "kind": "OBJECT",
-          "name": "Query",
-          "description": null,
-          "specifiedByURL": null,
-          "isOneOf": null,
-          "fields": [
-            {
-              "name": "f",
-              "description": null,
-              "args": [
-                {
-                  "name": "x",
-                  "description": null,
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "Int",
-                      "ofType": null
-                    }
-                  },
-                  "defaultValue": "1",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "y",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Float",
-                    "ofType": null
-                  },
-                  "defaultValue": "1",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "z",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "ID",
-                    "ofType": null
-                  },
-                  "defaultValue": "7",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "w",
-                  "description": null,
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "LIST",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "Int",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": "[1, 2]",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "i",
-                  "description": null,
-                  "type": {
-                    "kind": "INPUT_OBJECT",
-                    "name": "I",
-                    "ofType": null
-                  },
-                  "defaultValue": "{b: 2}",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "s",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  },
-                  "defaultValue": "\"say \"hi\"\"",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "n",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "defaultValue": "null",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "l",
-                  "description": null,
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "ENUM",
-                        "name": "E",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": "[X, Y]",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ],
-              "type": {
-                "kind": "SCALAR",
-                "name": "Int",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "inputFields": null,
-          "interfaces": [],
-          "enumValues": null,
-          "possibleTypes": null
-        },
-        "expected": {
-          "kind": "OBJECT",
-          "name": "Query",
-          "description": null,
-          "specifiedByURL": null,
-          "isOneOf": null,
-          "fields": [
-            {
-              "name": "f",
-              "description": null,
-              "args": [
-                {
-                  "name": "x",
-                  "description": null,
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "Int",
-                      "ofType": null
-                    }
-                  },
-                  "defaultValue": "1",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "y",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Float",
-                    "ofType": null
-                  },
-                  "defaultValue": "1",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "z",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "ID",
-                    "ofType": null
-                  },
-                  "defaultValue": "7",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "w",
-                  "description": null,
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "LIST",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "Int",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": "[1, 2]",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "i",
-                  "description": null,
-                  "type": {
-                    "kind": "INPUT_OBJECT",
-                    "name": "I",
-                    "ofType": null
-                  },
-                  "defaultValue": "{b: 2}",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "s",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  },
-                  "defaultValue": "\"say \\\"hi\\\"\"",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "n",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "defaultValue": "null",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "l",
-                  "description": null,
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "ENUM",
-                        "name": "E",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": "[X, Y]",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ],
-              "type": {
-                "kind": "SCALAR",
-                "name": "Int",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "inputFields": null,
-          "interfaces": [],
-          "enumValues": null,
-          "possibleTypes": null
-        }
-      }
-    },
-    {
-      "checks": [
         "defaultValue",
         "defaultValuePrinting"
       ],
       "summary": "a printed default value has a control character in a string, unescaped; defaultValue is null for an input value without a default, and otherwise null or an encoding of the default: differs from Introspection.tla",
-      "cases": 2,
+      "cases": 4,
       "fixtures": {
+        "defaults": 2,
         "printing": 2
       },
-      "fixture": "printing.defaults",
-      "problem": "defaultValue at Query.f(c:), printedControl at In.s, printedControl at Query.f(i:), printedControl at Query.f(l:)",
-      "example": {
-        "input": "input In { s: String = \"\\u0003\", t: [String] = [\"😀\"] } type Query { f(c: String = \"\\u0000\\u0001\\t\\n\\u001F\\u007F\\u0080\\u0085\\u009F\", e: String = \"😀 é\", l: [String] = [\"\\u0002\", \"😀\"], i: In = {s: \"\\u0004\", t: [\"\\u0005😀\"]}): Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)",
-        "response": {
-          "kind": "OBJECT",
-          "name": "Query",
-          "description": null,
-          "specifiedByURL": null,
-          "isOneOf": null,
-          "fields": [
-            {
-              "name": "f",
-              "description": null,
-              "args": [
-                {
-                  "name": "c",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  },
-                  "defaultValue": "\"\u0000\u0001\t\n\u001f\"",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "e",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  },
-                  "defaultValue": "\"😀 é\"",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "l",
-                  "description": null,
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "String",
-                      "ofType": null
-                    }
-                  },
-                  "defaultValue": "[\"\u0002\", \"😀\"]",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "i",
-                  "description": null,
-                  "type": {
-                    "kind": "INPUT_OBJECT",
-                    "name": "In",
-                    "ofType": null
-                  },
-                  "defaultValue": "{s: \"\u0004\", t: [\"\u0005😀\"]}",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ],
-              "type": {
-                "kind": "SCALAR",
-                "name": "Int",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "inputFields": null,
-          "interfaces": [],
-          "enumValues": null,
-          "possibleTypes": null
-        },
-        "expected": {
-          "kind": "OBJECT",
-          "name": "Query",
-          "description": null,
-          "specifiedByURL": null,
-          "isOneOf": null,
-          "fields": [
-            {
-              "name": "f",
-              "description": null,
-              "args": [
-                {
-                  "name": "c",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  },
-                  "defaultValue": "\"\\u0000\\u0001\\t\\n\\u001f\\u007F\\u0080\\u0085\\u009F\"",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "e",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  },
-                  "defaultValue": "\"😀 é\"",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "l",
-                  "description": null,
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "String",
-                      "ofType": null
-                    }
-                  },
-                  "defaultValue": "[\"\\u0002\", \"😀\"]",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "i",
-                  "description": null,
-                  "type": {
-                    "kind": "INPUT_OBJECT",
-                    "name": "In",
-                    "ofType": null
-                  },
-                  "defaultValue": "{s: \"\\u0004\", t: [\"\\u0005😀\"]}",
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ],
-              "type": {
-                "kind": "SCALAR",
-                "name": "Int",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "inputFields": null,
-          "interfaces": [],
-          "enumValues": null,
-          "possibleTypes": null
-        }
-      }
-    },
-    {
-      "checks": [
-        "builtinAdditions",
-        "defaultValue"
-      ],
-      "summary": "defaultValue is null for an input value without a default, and otherwise null or an encoding of the default: differs from Introspection.tla; the built-in __Directive has a field September 2025 doesn't define",
-      "cases": 1,
-      "fixtures": {
-        "defaults": 1
+      "fixture": "defaults.defaults",
+      "problem": "defaultValue at Query.f(big:), defaultValue at Query.f(s:), printedControl at Query.f(bell:)",
+      "since": {
+        "September2025": 2
       },
-      "fixture": "defaults.inc",
-      "problem": "added:fields at __Directive, defaultValue at Query.f(s:)",
       "example": {
-        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y]): Int }  (the introspection query, September 2025 profile; includeDeprecated: true)",
+        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y], big: ID = 9007199254740993, huge: Float = 1000000000000000000000, bell: String = \"\\u0007\"): Int }  (the introspection query, September 2025 profile; includeDeprecated: the default)",
         "response": {
           "kind": "OBJECT",
           "name": "Query",
@@ -1631,6 +1167,42 @@
                     }
                   },
                   "defaultValue": "[X, Y]",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "big",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  },
+                  "defaultValue": "9007199254740992",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "huge",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Float",
+                    "ofType": null
+                  },
+                  "defaultValue": "1000000000000000000000",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "bell",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": "\"\u0007\"",
                   "isDeprecated": false,
                   "deprecationReason": null
                 }
@@ -1773,6 +1345,42 @@
                     }
                   },
                   "defaultValue": "[X, Y]",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "big",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  },
+                  "defaultValue": "9007199254740993",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "huge",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Float",
+                    "ofType": null
+                  },
+                  "defaultValue": "1000000000000000000000",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "bell",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": "\"\\u0007\"",
                   "isDeprecated": false,
                   "deprecationReason": null
                 }
@@ -1800,14 +1408,18 @@
         "defaultValuePrinting"
       ],
       "summary": "a printed default value has a control character in a string, unescaped; defaultValue is null for an input value without a default, and otherwise null or an encoding of the default: differs from Introspection.tla; the built-in __Directive has a field September 2025 doesn't define",
-      "cases": 1,
+      "cases": 2,
       "fixtures": {
+        "defaults": 1,
         "printing": 1
       },
-      "fixture": "printing.inc",
-      "problem": "added:fields at __Directive, defaultValue at Query.f(c:), printedControl at In.s, printedControl at Query.f(i:), printedControl at Query.f(l:)",
+      "fixture": "defaults.inc",
+      "problem": "added:fields at __Directive, defaultValue at Query.f(big:), defaultValue at Query.f(s:), printedControl at Query.f(bell:)",
+      "since": {
+        "September2025": 1
+      },
       "example": {
-        "input": "input In { s: String = \"\\u0003\", t: [String] = [\"😀\"] } type Query { f(c: String = \"\\u0000\\u0001\\t\\n\\u001F\\u007F\\u0080\\u0085\\u009F\", e: String = \"😀 é\", l: [String] = [\"\\u0002\", \"😀\"], i: In = {s: \"\\u0004\", t: [\"\\u0005😀\"]}): Int }  (the introspection query, September 2025 profile; includeDeprecated: true)",
+        "input": "enum E { X Y } input I { a: Int = 1, b: Int, c: [Int] = 1, e: E = Y, f: Float = 2 } type Query { f(x: [Int] = 1, y: Float = 1, z: ID = 7, w: [[Int]] = [1, 2], i: I = {b: 2}, s: String = \"say \\\"hi\\\"\", n: Int = null, l: [E!] = [X, Y], big: ID = 9007199254740993, huge: Float = 1000000000000000000000, bell: String = \"\\u0007\"): Int }  (the introspection query, September 2025 profile; includeDeprecated: true)",
         "response": {
           "kind": "OBJECT",
           "name": "Query",
@@ -1820,26 +1432,98 @@
               "description": null,
               "args": [
                 {
-                  "name": "c",
+                  "name": "x",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "Int",
+                      "ofType": null
+                    }
                   },
-                  "defaultValue": "\"\u0000\u0001\t\n\u001f\"",
+                  "defaultValue": "1",
                   "isDeprecated": false,
                   "deprecationReason": null
                 },
                 {
-                  "name": "e",
+                  "name": "y",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Float",
+                    "ofType": null
+                  },
+                  "defaultValue": "1",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "z",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  },
+                  "defaultValue": "7",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "w",
+                  "description": null,
+                  "type": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "LIST",
+                      "name": null,
+                      "ofType": {
+                        "kind": "SCALAR",
+                        "name": "Int",
+                        "ofType": null
+                      }
+                    }
+                  },
+                  "defaultValue": "[1, 2]",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "i",
+                  "description": null,
+                  "type": {
+                    "kind": "INPUT_OBJECT",
+                    "name": "I",
+                    "ofType": null
+                  },
+                  "defaultValue": "{b: 2}",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "s",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
                     "name": "String",
                     "ofType": null
                   },
-                  "defaultValue": "\"😀 é\"",
+                  "defaultValue": "\"say \"hi\"\"",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "n",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": "null",
                   "isDeprecated": false,
                   "deprecationReason": null
                 },
@@ -1850,24 +1534,52 @@
                     "kind": "LIST",
                     "name": null,
                     "ofType": {
-                      "kind": "SCALAR",
-                      "name": "String",
-                      "ofType": null
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "ENUM",
+                        "name": "E",
+                        "ofType": null
+                      }
                     }
                   },
-                  "defaultValue": "[\"\u0002\", \"😀\"]",
+                  "defaultValue": "[X, Y]",
                   "isDeprecated": false,
                   "deprecationReason": null
                 },
                 {
-                  "name": "i",
+                  "name": "big",
                   "description": null,
                   "type": {
-                    "kind": "INPUT_OBJECT",
-                    "name": "In",
+                    "kind": "SCALAR",
+                    "name": "ID",
                     "ofType": null
                   },
-                  "defaultValue": "{s: \"\u0004\", t: [\"\u0005😀\"]}",
+                  "defaultValue": "9007199254740992",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "huge",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Float",
+                    "ofType": null
+                  },
+                  "defaultValue": "1000000000000000000000",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "bell",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": "\"\u0007\"",
                   "isDeprecated": false,
                   "deprecationReason": null
                 }
@@ -1898,26 +1610,98 @@
               "description": null,
               "args": [
                 {
-                  "name": "c",
+                  "name": "x",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "Int",
+                      "ofType": null
+                    }
                   },
-                  "defaultValue": "\"\\u0000\\u0001\\t\\n\\u001f\\u007F\\u0080\\u0085\\u009F\"",
+                  "defaultValue": "1",
                   "isDeprecated": false,
                   "deprecationReason": null
                 },
                 {
-                  "name": "e",
+                  "name": "y",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Float",
+                    "ofType": null
+                  },
+                  "defaultValue": "1",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "z",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  },
+                  "defaultValue": "7",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "w",
+                  "description": null,
+                  "type": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "LIST",
+                      "name": null,
+                      "ofType": {
+                        "kind": "SCALAR",
+                        "name": "Int",
+                        "ofType": null
+                      }
+                    }
+                  },
+                  "defaultValue": "[1, 2]",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "i",
+                  "description": null,
+                  "type": {
+                    "kind": "INPUT_OBJECT",
+                    "name": "I",
+                    "ofType": null
+                  },
+                  "defaultValue": "{b: 2}",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "s",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
                     "name": "String",
                     "ofType": null
                   },
-                  "defaultValue": "\"😀 é\"",
+                  "defaultValue": "\"say \\\"hi\\\"\"",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "n",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": "null",
                   "isDeprecated": false,
                   "deprecationReason": null
                 },
@@ -1928,24 +1712,52 @@
                     "kind": "LIST",
                     "name": null,
                     "ofType": {
-                      "kind": "SCALAR",
-                      "name": "String",
-                      "ofType": null
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "ENUM",
+                        "name": "E",
+                        "ofType": null
+                      }
                     }
                   },
-                  "defaultValue": "[\"\\u0002\", \"😀\"]",
+                  "defaultValue": "[X, Y]",
                   "isDeprecated": false,
                   "deprecationReason": null
                 },
                 {
-                  "name": "i",
+                  "name": "big",
                   "description": null,
                   "type": {
-                    "kind": "INPUT_OBJECT",
-                    "name": "In",
+                    "kind": "SCALAR",
+                    "name": "ID",
                     "ofType": null
                   },
-                  "defaultValue": "{s: \"\\u0004\", t: [\"\\u0005😀\"]}",
+                  "defaultValue": "9007199254740993",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "huge",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Float",
+                    "ofType": null
+                  },
+                  "defaultValue": "1000000000000000000000",
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "bell",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": "\"\\u0007\"",
                   "isDeprecated": false,
                   "deprecationReason": null
                 }

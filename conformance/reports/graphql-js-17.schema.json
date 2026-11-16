@@ -31,19 +31,19 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f437858e472b",
-    "date": "2026-11-15",
+    "kit": "c28a56e3d22f",
+    "date": "2026-11-16",
     "strict": true,
-    "vectors": 495,
-    "graded": 490,
+    "vectors": 501,
+    "graded": 496,
     "skipped": {
       "unspecified": 5
     }
   },
-  "checkerSelfTest": "passed (992 negative controls)",
+  "checkerSelfTest": "passed (1004 negative controls)",
   "cases": {
-    "submitted": 490,
-    "distinct": 490,
+    "submitted": 496,
+    "distinct": 496,
     "malformed": 0
   },
   "adapterProblems": 0,
@@ -53,8 +53,8 @@
       "failing": 3
     },
     "September2026": {
-      "vectors": 27,
-      "failing": 6
+      "vectors": 31,
+      "failing": 8
     }
   },
   "checks": [
@@ -1004,8 +1004,8 @@
         }
       ],
       "status": "fail",
-      "cases": 4,
-      "failing": 4,
+      "cases": 5,
+      "failing": 5,
       "failingSince": {
         "September2026": 1
       },
@@ -1436,10 +1436,10 @@
         }
       ],
       "status": "fail",
-      "cases": 2,
-      "failing": 2,
+      "cases": 4,
+      "failing": 4,
       "failingSince": {
-        "September2026": 2
+        "September2026": 4
       },
       "since": "September2026",
       "note": "New in September 2026: October 2021 doesn't have directive extensions",
@@ -1507,7 +1507,7 @@
         }
       ],
       "status": "pass",
-      "cases": 250,
+      "cases": 253,
       "failing": 0,
       "basis": "a schema is invalid only when it breaks a Type Validation rule of §3 or §4's Reserved Names; rejecting, or crashing on, a schema that breaks none applies a rule the spec doesn't have"
     }
@@ -1519,9 +1519,9 @@
         "directiveReferencesItselfIndirectly"
       ],
       "summary": "DIRECTIVE_REFERENCES_ITSELF_INDIRECTLY not enforced: accepts a schema that breaks only this rule",
-      "cases": 4,
+      "cases": 5,
       "fixtures": {
-        "directive": 4
+        "directive": 5
       },
       "fixture": "directiveReferencesItselfIndirectly.5.invalid",
       "example": {
@@ -1533,6 +1533,28 @@
       },
       "since": {
         "September2026": 1
+      }
+    },
+    {
+      "kind": "not enforced",
+      "checks": [
+        "directiveExtensionReferencesPrevious"
+      ],
+      "summary": "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS not enforced: accepts a schema that breaks only this rule",
+      "cases": 4,
+      "fixtures": {
+        "extension": 4
+      },
+      "fixture": "directiveExtensionReferencesPrevious.1.invalid",
+      "example": {
+        "input": "[since September 2026] directive @d on FIELD | DIRECTIVE_DEFINITION directive @e @d on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e",
+        "response": {
+          "valid": true
+        },
+        "expected": "invalid: breaks DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS and no other rule"
+      },
+      "since": {
+        "September2026": 4
       }
     },
     {
@@ -1615,28 +1637,6 @@
       },
       "since": {
         "September2025": 2
-      }
-    },
-    {
-      "kind": "not enforced",
-      "checks": [
-        "directiveExtensionReferencesPrevious"
-      ],
-      "summary": "DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS not enforced: accepts a schema that breaks only this rule",
-      "cases": 2,
-      "fixtures": {
-        "extension": 2
-      },
-      "fixture": "directiveExtensionReferencesPrevious.1.invalid",
-      "example": {
-        "input": "[since September 2026] directive @d on FIELD | DIRECTIVE_DEFINITION directive @e @d on DIRECTIVE_DEFINITION type Query { a: Int } extend directive @d @e",
-        "response": {
-          "valid": true
-        },
-        "expected": "invalid: breaks DIRECTIVE_EXTENSION_REFERENCES_PREVIOUS and no other rule"
-      },
-      "since": {
-        "September2026": 2
       }
     },
     {

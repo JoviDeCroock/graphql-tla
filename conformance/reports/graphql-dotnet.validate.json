@@ -22,11 +22,11 @@
     "validate"
   ],
   "provenance": {
-    "kit": "f437858e472b",
-    "date": "2026-11-15",
+    "kit": "c28a56e3d22f",
+    "date": "2026-11-16",
     "strict": true,
-    "vectors": 3367,
-    "graded": 3334,
+    "vectors": 3370,
+    "graded": 3337,
     "skipped": {
       "unspecified": 13,
       "custom-scalar-literals": 20
@@ -34,8 +34,8 @@
   },
   "checkerSelfTest": "passed (15 negative controls)",
   "cases": {
-    "submitted": 3334,
-    "distinct": 3334,
+    "submitted": 3337,
+    "distinct": 3337,
     "malformed": 0
   },
   "adapterProblems": 0,
@@ -368,7 +368,7 @@
         }
       ],
       "status": "pass",
-      "cases": 295,
+      "cases": 296,
       "failing": 0,
       "basis": "Formal Specification: \"For each literal Input Value value in the document: Let type be the type expected in the position value is found. value must be coercible to type\" For a Float, §3.5.2 (the same in every release): \"If the input value otherwise represents a value not representable by finite IEEE 754 (e.g. NaN, Infinity, or a value outside the available precision), a request error must be raised.\" A literal too large for binary64, which rounds to Infinity (1e400), isn't coercible. A literal too small (1e-400) isn't graded: whether rounding it to 0 is \"outside the available precision\" the spec doesn't say."
     },
@@ -596,7 +596,7 @@
         }
       ],
       "status": "fail",
-      "cases": 1039,
+      "cases": 1041,
       "failing": 37,
       "failingSince": {
         "September2026": 1
