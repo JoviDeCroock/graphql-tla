@@ -93,10 +93,6 @@ What the spec specifies and no reference states:
 - **Generators use graphql-js for syntax.** The validate, coerce and schema vector generators use graphql-js to parse and print documents. They take no verdict from it.
 - **Mutants.** Every property must be broken by at least one planted bug (302 mutants over 130 properties), and each differential must catch the bugs planted in its reference. That shows the properties are not vacuous. It doesn't show they match the spec.
 
-## Editorial drift
-
-A few comments cite section numbers from before the October 2021 edition was renumbered: `§4.4` for Type Name Introspection (now §4.1), `§4.5` for the introspection types (now §4.2), and `§2.9.8` for Input Object Values (now §2.10.8). They are in `Reference.tla`, `Validation.tla` and `TypeSystem.tla`. The operators are right; only the citations are stale.
-
 ## Changes since the references were written
 
 The spec changes the references already follow, from graphql-spec's history up to bfcc722:
