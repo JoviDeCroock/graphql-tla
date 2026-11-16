@@ -225,14 +225,13 @@ export const CHECKS = [
   },
   {
     id: "nothingAfterCancel",
-    level: "SHOULD",
-    levels: { October2021: "MUST" },
+    level: "MUST",
     spec: ["6.2.3", "6.2.3.2"],
     title: "No result arrives after the client cancels the response stream",
     streamOnly: true,
     requires: ["subscription-stream"],
     basis:
-      "MapSourceToResponseEvent (§6.2.3.2): \"When {responseStream} is cancelled: Cancel {sourceStream}. Complete {responseStream} normally\", and a completed stream emits nothing more. But the algorithm doesn't say what happens to an event whose ExecuteSubscriptionEvent was already running when the stream was cancelled, whose step \"emit {executionResult} on {responseStream}\" comes after, and §6.2.3's \"When an event stream is cancelled, it must complete\" doesn't say how soon. With the level in doubt the kit takes the weaker one. The kit's scenario cancels the stream while an event's resolvers are pending, then settles them; a result for that event after the cancel fails here (graphql-js 17 delivers it, then completes). September 2025 says the same. October 2021's §6.2.3: after cancelling, an observer \"must receive no more events from that event stream\", a must.",
+      "§6.2.3 (Event Streams): \"An observer may at any point decide to stop observing an event stream by cancelling it. When an event stream is cancelled, it must complete.\" MapSourceToResponseEvent (§6.2.3.2): \"When {responseStream} is cancelled: Cancel {sourceStream}. Complete {responseStream} normally.\" A completed stream emits nothing more, so a result for an event whose ExecuteSubscriptionEvent was still running when the client cancelled must not be emitted: the algorithm's step \"emit {executionResult} on {responseStream}\" comes after the stream completed. October 2021's §6.2.3 said so outright: \"An observer may at any point decide to stop observing an event stream by cancelling it, after which it must receive no more events from that event stream.\" September 2025 dropped that sentence in graphql/graphql-spec#1099, \"Editorial changes for Event Streams\", which its description calls a rewrite of the Event Streams definition \"to be more clear\", so the kit reads the requirement as unchanged: a MUST in every release. The kit's scenario cancels the stream while an event's resolvers are pending, then settles them; a result for that event after the cancel fails here (graphql-js 16 and 17 deliver it, then complete).",
   },
   {
     id: "dataShape",

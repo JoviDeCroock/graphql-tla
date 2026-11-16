@@ -564,8 +564,8 @@ Validating, as graphql-ruby runs a request:
   operation; the error doesn't write the subscription
   (`subscriptions/default_subscription_resolve_extension.rb:45-47`), but
   the response is that execution's result. For a subscription argument that
-  can't be coerced, graphql-ruby gives an execution error, which the
-  informational `sourceStreamArguments` records.
+  can't be coerced, graphql-ruby gives an execution error, which fails
+  `sourceStreamArguments` (MUST, new in September 2026, §7.1.5).
 - **A null variable as a Non-Null list item (1 vector, `list`):**
   `query($x: Int = 1) { intsNN(v: [1, $x]) }` with `{"x": null}` gives the
   resolver `[1, nil]` for `[Int!]!`. A variable inside a list literal is

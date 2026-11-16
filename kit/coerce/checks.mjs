@@ -199,12 +199,12 @@ export const CHECKS = [
   },
   {
     id: "sourceStreamArguments",
-    title: "A subscription root field's argument that can't be coerced: request error or execution error",
-    level: "INFO",
+    title: "A subscription root field's argument that can't be coerced is a request error",
+    level: "MUST",
     requires: ["subscription-source"],
-    spec: ["6.2.3.1", "6.4.1"],
+    spec: ["6.2.3.1", "6.4.1", "7.1.5"],
     basis:
-      "The text contradicts itself here. CoerceArgumentValues, which CreateSourceEventStream calls, says \"raise an execution error\", and §6.4.1: \"Any request error raised as a result of input coercion during CoerceArgumentValues() should be treated instead as an execution error.\" But it runs before operation execution begins, and §7.1.5 says \"If an error was raised before operation execution begins, the response must be a request error result\"; §6.2.3.1's Note: \"The call to CreateSourceEventStream() occurs before operation execution begins, and thus an error raised here will be a request error.\" Coercion.tla gives the request error by default and the execution error under its sourceArgumentsFieldError reading; both pass, and the report records which happened. Accepting the value fails the type's own check (`nonNull`, `int`). New in September 2026 (`since`).",
+      "§6.2: \"Operation execution begins when the execution algorithm for the operation type is invoked: ExecuteQuery() for query operations, ExecuteMutation() for mutation operations, and Subscribe() for subscription operations.\" ExecuteRequest runs CreateSourceEventStream before Subscribe, and CreateSourceEventStream: \"Let argumentValues be the result of CoerceArgumentValues(subscriptionType, field, variableValues).\" §7.1.5: \"If an error was raised before operation execution begins, the response must be a request error result which will result in no response data.\" So an argument of the subscription root field that can't be coerced must give a request error result. CoerceArgumentValues calls the error it raises an execution error, and §6.4.1 says \"Any request error raised as a result of input coercion during CoerceArgumentValues() should be treated instead as an execution error\"; those name the error, while §7.1.5 says what the response must be when it is raised before operation execution, and §6.2.3.1's Note agrees: \"The call to CreateSourceEventStream() occurs before operation execution begins, and thus an error raised here will be a request error.\" An execution error (a result with data) fails here, and accepting the value fails the type's own check (`nonNull`, `int`). September 2025 runs CreateSourceEventStream inside Subscribe, after operation execution begins, so these vectors have `since` September 2026.",
   },
   {
     id: "unvalidatedBranches",
@@ -375,11 +375,6 @@ export const POLICIES = {
   // default reading uses the value as it is (§6.4.1's Note); this one
   // wraps it, as §3.11 wraps any other such value.
   variableItemWrapped: { level: "unspecified" },
-  // A subscription root field's argument that can't be coerced: the spec
-  // contradicts itself (sourceStreamArguments). The default reading is a
-  // request error (§7.1.5); this one, the execution error
-  // CoerceArgumentValues raises.
-  sourceArgumentsFieldError: { level: "unspecified" },
   // October 2021's answer to a vector whose rule is new since then
   // (`since`; Coercion.tla's coerceDefaults switch): recognised, but it
   // fails the vector's check, since such vectors are graded like any

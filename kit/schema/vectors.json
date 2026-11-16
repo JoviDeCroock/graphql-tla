@@ -312,7 +312,8 @@
       "family": "root",
       "rule": "ROOT_TYPES_ARE_OBJECTS",
       "origin": "§3.3.1: a valid schema without a mutation root operation type, even though it contains a type named Mutation",
-      "unspecified": "No normative sentence says what the mutation root is when the schema definition is omitted and a type named Mutation isn't an object type. §3.3.1 only says the definition \"can omit the schema definition when each root operation type uses its respective default root type name, no other type uses any default root type name, and the schema does not have a description\", a condition on writing SDL. The reading that Mutation is the mutation root, an interface, and so the schema is invalid, rests on an example's \"would be incorrectly presumed to be the mutation root operation type\". October 2021 has neither the \"no other type\" clause nor that example, and its text allows reading the schema as one with no mutation root, which is valid. TypeSystem.tla follows the example.",
+      "since": "September2025",
+      "editionNote": "new in September 2025: §3.3.1's \"no other type uses any default root type name\"",
       "pair": "rootTypesAreObjects.2.valid",
       "sdl": "type Query { a: Int } interface Mutation { a: Int }",
       "verdict": [
@@ -1665,7 +1666,8 @@
       "id": "implementsUnique.1.invalid",
       "spec": [
         "3.6",
-        "3.7"
+        "3.7",
+        "3.7.1"
       ],
       "family": "implementation",
       "rule": "IMPLEMENTS_UNIQUE",
@@ -1682,7 +1684,8 @@
       "id": "implementsUnique.1.valid",
       "spec": [
         "3.6",
-        "3.7"
+        "3.7",
+        "3.7.1"
       ],
       "family": "implementation",
       "rule": "IMPLEMENTS_UNIQUE",
@@ -4108,7 +4111,8 @@
       "id": "implementsUnique.2.invalid",
       "spec": [
         "3.6",
-        "3.7"
+        "3.7",
+        "3.7.1"
       ],
       "family": "implementation",
       "rule": "IMPLEMENTS_UNIQUE",
@@ -4125,7 +4129,8 @@
       "id": "implementsUnique.2.valid",
       "spec": [
         "3.6",
-        "3.7"
+        "3.7",
+        "3.7.1"
       ],
       "family": "implementation",
       "rule": "IMPLEMENTS_UNIQUE",
@@ -7321,6 +7326,90 @@
       ],
       "pair": "extensionInterfacesNew.2.invalid",
       "sdl": "interface I { a: Int } interface J { a: Int } type Query { a: Int } extend type Query implements I extend type Query implements J",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implementsUnique.3.invalid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.7.1"
+      ],
+      "family": "extension",
+      "rule": "IMPLEMENTS_UNIQUE",
+      "origin": "§3.7: \"An interface type may declare that it implements one or more unique interfaces\", of the resulting extended Interface type",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "implementsUnique.3.valid",
+      "sdl": "interface A { a: Int } interface B { a: Int } interface I implements A { a: Int } type Query implements I & A & B { a: Int } extend interface I implements A",
+      "verdict": [
+        "IMPLEMENTS_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implementsUnique.3.valid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.7.1"
+      ],
+      "family": "extension",
+      "rule": "IMPLEMENTS_UNIQUE",
+      "origin": "§3.7: \"An interface type may declare that it implements one or more unique interfaces\", of the resulting extended Interface type",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "implementsUnique.3.invalid",
+      "sdl": "interface A { a: Int } interface B { a: Int } interface I implements A { a: Int } type Query implements I & A & B { a: Int } extend interface I implements B",
+      "verdict": [],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "implementsUnique.4.invalid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.7.1"
+      ],
+      "family": "extension",
+      "rule": "IMPLEMENTS_UNIQUE",
+      "origin": "§3.7: \"An interface type may declare that it implements one or more unique interfaces\", of the resulting extended Interface type",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "implementsUnique.4.valid",
+      "sdl": "interface A { a: Int } interface B { a: Int } interface I { a: Int } type Query implements I & A & B { a: Int } extend interface I implements A extend interface I implements A",
+      "verdict": [
+        "IMPLEMENTS_UNIQUE"
+      ],
+      "expected": {
+        "valid": false
+      }
+    },
+    {
+      "id": "implementsUnique.4.valid",
+      "spec": [
+        "3.6",
+        "3.7",
+        "3.7.1"
+      ],
+      "family": "extension",
+      "rule": "IMPLEMENTS_UNIQUE",
+      "origin": "§3.7: \"An interface type may declare that it implements one or more unique interfaces\", of the resulting extended Interface type",
+      "requires": [
+        "schema-extensions"
+      ],
+      "pair": "implementsUnique.4.invalid",
+      "sdl": "interface A { a: Int } interface B { a: Int } interface I { a: Int } type Query implements I & A & B { a: Int } extend interface I implements A extend interface I implements B",
       "verdict": [],
       "expected": {
         "valid": true

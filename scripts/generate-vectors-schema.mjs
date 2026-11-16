@@ -52,6 +52,12 @@ const out = join(root, "kit/schema/vectors.json");
 // where October 2021 says "the original" one: an invalid schema whose
 // conflict is with an earlier extension, not the definition, relies on it.
 const PREVIOUS = ["September2025", "\"the previous\" type in the extension rules (October 2021: \"the original\")"];
+// The release whose §3.3.1 says a document "can omit the schema definition
+// when ... no other type uses any default root type name". October 2021
+// says only "when the query, mutation, and subscription root types are
+// named "Query", "Mutation", and "Subscription"", which lets a document
+// without one read as a schema whose type named Mutation isn't a root.
+const NO_OTHER_ROOT_NAME = ["September2025", "§3.3.1's \"no other type uses any default root type name\""];
 
 // [family, rule, invalid, valid, origin, options]. Families are the
 // differential's scenarios: names, root, typeUse, defaults, implementation,
@@ -75,12 +81,17 @@ const PAIRS = [
   ["root", "QUERY_ROOT_PROVIDED", "type Q { a: Int }", "type Query { a: Int }"],
   ["root", "QUERY_ROOT_PROVIDED", "schema { mutation: M } type M { a: Int }", "schema { query: M } type M { a: Int }"],
   ["root", "ROOT_TYPES_ARE_OBJECTS", "interface Query { a: Int }", "type Query { a: Int }"],
+  // With no schema definition, Mutation is the mutation root (the spec's
+  // examples), an interface; and if it weren't, the document couldn't omit
+  // the schema definition, since "no other type uses any default root type
+  // name" wouldn't hold (§3.3.1). Either way the schema is invalid.
   [
     "root",
     "ROOT_TYPES_ARE_OBJECTS",
     "type Query { a: Int } interface Mutation { a: Int }",
     "schema { query: Query } type Query { a: Int } interface Mutation { a: Int }",
     "§3.3.1: a valid schema without a mutation root operation type, even though it contains a type named Mutation",
+    { since: NO_OTHER_ROOT_NAME },
   ],
   ["root", "ROOT_TYPES_ARE_OBJECTS", "schema { query: Q mutation: In } type Q { a: Int } input In { a: Int }", "schema { query: Q } type Q { a: Int } input In { a: Int }"],
   // Types the document doesn't define (TypeSystem!UnknownType): no Object
@@ -603,6 +614,25 @@ const PAIRS = [
     undefined,
     { since: PREVIOUS },
   ],
+  // §3.7.1 has no rule like §3.6.3's item 5, but an interface type
+  // extension that adds an interface the type already implements leaves the
+  // resulting type implementing it twice, which §3.7's "one or more unique
+  // interfaces" forbids (TypeSystem!AddedInterfaces). October 2021 has the
+  // same sentence, and no "previous" type is involved.
+  [
+    "extension",
+    "IMPLEMENTS_UNIQUE",
+    "interface A { a: Int } interface B { a: Int } interface I implements A { a: Int } type Query implements I & A & B { a: Int } extend interface I implements A",
+    "interface A { a: Int } interface B { a: Int } interface I implements A { a: Int } type Query implements I & A & B { a: Int } extend interface I implements B",
+    "§3.7: \"An interface type may declare that it implements one or more unique interfaces\", of the resulting extended Interface type",
+  ],
+  [
+    "extension",
+    "IMPLEMENTS_UNIQUE",
+    "interface A { a: Int } interface B { a: Int } interface I { a: Int } type Query implements I & A & B { a: Int } extend interface I implements A extend interface I implements A",
+    "interface A { a: Int } interface B { a: Int } interface I { a: Int } type Query implements I & A & B { a: Int } extend interface I implements A extend interface I implements B",
+    "§3.7: \"An interface type may declare that it implements one or more unique interfaces\", of the resulting extended Interface type",
+  ],
   ["extension", "IMPL_FIELD_PROVIDED", "interface I { x: Int } type Query { a: Int } extend type Query implements I", "interface I { x: Int } type Query { a: Int } extend type Query implements I { x: Int }", "§3.6.3: the resulting extended object type must be a super-set of all interfaces it implements"],
   [
     "extension",
@@ -731,17 +761,6 @@ const declaresBuiltinScalar = (sdl) =>
   graphql.parse(sdl).definitions.some((d) => d.kind === "ScalarTypeDefinition" && BUILTIN_SCALARS.has(d.name.value));
 const SELF_REFERENCE_THROUGH_ARGUMENT =
   "§3.13 rule 3 forbids a directive definition to contain the use of a directive that leads back to it. This definition uses no directive: it reaches itself only through its own argument's type. The prose, \"While defining a directive, it must not reference itself directly or indirectly\", forbids it, and TypeSystem.tla follows the prose, but the formal rule doesn't.";
-// `type Query { a: Int } interface Mutation { a: Int }`: no normative
-// sentence makes a type named Mutation the mutation root of a schema that
-// omits its schema definition. §3.3.1 says the definition "can omit the
-// schema definition when each root operation type uses its respective
-// default root type name, no other type uses any default root type name,
-// and the schema does not have a description", a condition on writing the
-// SDL. Only an example says a type named Mutation "would be incorrectly
-// presumed to be the mutation root operation type", and October 2021 has
-// neither that clause nor that example.
-const PRESUMED_ROOT =
-  "No normative sentence says what the mutation root is when the schema definition is omitted and a type named Mutation isn't an object type. §3.3.1 only says the definition \"can omit the schema definition when each root operation type uses its respective default root type name, no other type uses any default root type name, and the schema does not have a description\", a condition on writing SDL. The reading that Mutation is the mutation root, an interface, and so the schema is invalid, rests on an example's \"would be incorrectly presumed to be the mutation root operation type\". October 2021 has neither the \"no other type\" clause nor that example, and its text allows reading the schema as one with no mutation root, which is valid. TypeSystem.tla follows the example.";
 // `type Query { a: Int } extend schema @d`: §3.3.2 says "The Schema must
 // already be defined". A document with no schema definition still has a
 // schema, whose root operation types have the default names; whether that
@@ -749,7 +768,6 @@ const PRESUMED_ROOT =
 const IMPLICIT_SCHEMA =
   "§3.3.2 says \"The Schema must already be defined.\" This document has no schema definition, but it has a schema: its query root operation type is the type named Query. Whether that schema is \"already defined\" the spec doesn't say. TypeSystem.tla reads it as not defined.";
 const UNSPECIFIED = {
-  "type Query { a: Int } interface Mutation { a: Int }": PRESUMED_ROOT,
   "directive @d on SCHEMA type Query { a: Int } extend schema @d": IMPLICIT_SCHEMA,
   "directive @d(a: In) on INPUT_FIELD_DEFINITION input In { f: Int @d } type Query { a(x: In): Int }": SELF_REFERENCE_THROUGH_ARGUMENT,
   "directive @d(c: Color) on ENUM_VALUE enum Color { RED @d BLUE } type Query { a: Color }": SELF_REFERENCE_THROUGH_ARGUMENT,

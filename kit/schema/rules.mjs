@@ -110,7 +110,7 @@ export const RULES = [
     "rootTypesAreObjects",
     "Root operation types are object types",
     ["3.3.1"],
-    '§3.3.1: "The query root operation type must be provided and must be an Object type." For mutation: "If it is provided, it must be an Object type", and "Similarly" for subscription. A root operation type the document names but doesn\'t define isn\'t an Object type.',
+    '§3.3.1: "The query root operation type must be provided and must be an Object type." For mutation: "If it is provided, it must be an Object type", and "Similarly" for subscription. A root operation type the document names but doesn\'t define isn\'t an Object type. Without a schema definition, a type named Mutation is the mutation root ("would be incorrectly presumed to be the mutation root operation type", in an example), so one that isn\'t an Object type breaks this rule. Reading it as no mutation root rejects the document too: "The type system definition language can omit the schema definition when each root operation type uses its respective default root type name, no other type uses any default root type name, and the schema does not have a description", and such a Mutation would be another type that uses a default root type name. That clause is new in September 2025, so `rootTypesAreObjects.2.invalid` has `since` September 2025: October 2021 says only "can omit the schema definition when the query, mutation, and subscription root types are named "Query", "Mutation", and "Subscription" respectively".',
   ],
   [
     "ROOT_TYPES_DIFFERENT",
@@ -186,8 +186,8 @@ export const RULES = [
     "IMPLEMENTS_UNIQUE",
     "implementsUnique",
     "A type implements each interface once",
-    ["3.6", "3.7"],
-    '§3.6 Type Validation, a list "This set of rules must be adhered to by every Object type": "An object type may declare that it implements one or more unique interfaces." §3.7: "An interface type may declare that it implements one or more unique interfaces, but may not implement itself."',
+    ["3.6", "3.7", "3.7.1"],
+    '§3.6 Type Validation, a list "This set of rules must be adhered to by every Object type": "An object type may declare that it implements one or more unique interfaces." §3.7: "An interface type may declare that it implements one or more unique interfaces, but may not implement itself." For extended interface types (tagged `schema-extensions`): §3.7.1 has no rule like §3.6.3\'s "Any interfaces provided must not be already implemented by the previous Object type", but its extensions add to the interface type ("Interface type extensions are used to represent an interface which has been extended from some previous interface"), so one that adds an interface the type already implements leaves the resulting type implementing it twice, which §3.7\'s rule forbids. October 2021 says the same.',
   ],
   [
     "IMPLEMENTS_INTERFACES",
@@ -425,7 +425,7 @@ export const RULES = [
     "extensionInterfacesNew",
     "An object type extension adds only interfaces the type doesn't implement",
     ["3.6.3"],
-    '§3.6.3: "Any interfaces provided must not be already implemented by the previous Object type." §3.7.1 has no such rule for interface type extensions.',
+    '§3.6.3: "Any interfaces provided must not be already implemented by the previous Object type." §3.7.1 has no such rule for interface type extensions; an interface type extension that adds an interface the type already implements is graded under implementsUnique, on the resulting type.',
   ],
   [
     "EXTENSION_DIRECTIVES_NOT_REAPPLIED",

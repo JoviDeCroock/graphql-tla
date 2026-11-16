@@ -331,11 +331,17 @@ Operations == <<"query", "mutation", "subscription">>
 \* "The default root type name for each query, mutation, and subscription
 \* root operation type are "Query", "Mutation", and "Subscription"
 \* respectively." Without a schema definition, a type with that name is
-\* "presumed to be" the root operation type. That reading comes from the
-\* spec's examples, not a rule. For a type named Mutation that isn't an
-\* object type, it makes the schema invalid (the root isn't an object),
-\* where reading it as no mutation root would make it valid, so the kit
-\* marks that vector `unspecified` (docs/kit/schema.md).
+\* "presumed to be" the root operation type, as the spec's examples say.
+\* For a type named Mutation that isn't an object type this makes the
+\* schema invalid (the root isn't an object). The other readings reject it
+\* too: "The type system definition language can omit the schema
+\* definition when each root operation type uses its respective default
+\* root type name, no other type uses any default root type name, and the
+\* schema does not have a description", and if Mutation isn't the mutation
+\* root, it is another type that uses a default root type name, so the
+\* document can't omit the schema definition. Only the reason differs. That
+\* clause is new in September 2025: October 2021 allows reading such a
+\* document as a valid schema with no mutation root (docs/kit/schema.md).
 DefaultRootTypeName(operation) ==
   CASE operation = "query" -> "Query"
     [] operation = "mutation" -> "Mutation"
@@ -841,6 +847,14 @@ AppendOperations(seq, more) ==
 \* stays repeated: no extension rule is about that, so the extended type's
 \* own rules see it (an object type extension's `implements I & I`).
 NewNames(seq, more) == SelectSeq(more, LAMBDA n : n \notin Range(seq))
+\* The interfaces an extension adds. An object type extension's are only
+\* the new ones: "Any interfaces provided must not be already implemented by
+\* the previous Object type" (§3.6.3) rejects the others. §3.7.1 has no such
+\* rule, so an interface type extension's are all added, and one the type
+\* already implements is there twice: the resulting type breaks §3.7's "An
+\* interface type may declare that it implements one or more unique
+\* interfaces" (IMPLEMENTS_UNIQUE).
+AddedInterfaces(T, X) == IF X.kind = "OBJECT" THEN NewNames(T.interfaces, X.interfaces) ELSE X.interfaces
 \* Member types: "All member types of a Union type extension must be unique"
 \* is an extension rule, so a repeat within the extension is dropped too.
 RECURSIVE AppendNames(_, _)
@@ -850,7 +864,7 @@ AppendNames(seq, more) ==
 
 Merge(T, X) ==
   [T EXCEPT !.fields = AppendNamed(@, X.fields),
-            !.interfaces = @ \o NewNames(@, X.interfaces),
+            !.interfaces = @ \o AddedInterfaces(T, X),
             !.members = AppendNames(@, X.members),
             !.values = AppendNamed(@, X.values),
             !.inputFields = AppendNamed(@, X.inputFields),
@@ -928,7 +942,8 @@ ExtensionItemsAreNew(S, k) ==
        /\ Range(X.members) \cap Range(P.members) = {}
 
 \* "Any interfaces provided must not be already implemented by the previous
-\* Object type." §3.7.1 has no such rule for interface type extensions.
+\* Object type." §3.7.1 has no such rule for interface type extensions; the
+\* resulting interface type's IMPLEMENTS_UNIQUE catches one (AddedInterfaces).
 ExtensionInterfacesAreNew(S, k) ==
   LET X == Extensions(S)[k] IN
   (ExtendsItsKind(S, X) /\ X.kind = "OBJECT") =>

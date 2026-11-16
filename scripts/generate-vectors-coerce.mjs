@@ -883,8 +883,9 @@ for (const [document, variables, spec] of UNVALIDATED) fresh("unvalidated", "unv
 // "stream", return a source stream with one event; "raise", raise an error.
 // Errors raised there are raised before operation execution begins, so the
 // response "must be a request error result" (§7.1.5), new in September
-// 2026 (`since`). `typeCheck`: the check a value counts against where an
-// argument doesn't coerce (sourceStreamArguments accepts either error).
+// 2026 (`since`), and so is an argument of the root field that doesn't
+// coerce (sourceStreamArguments). `typeCheck`: the check a value counts
+// against there.
 const SUBSCRIPTIONS = [
   ["sourceStream", "subscription { event(v: 1) }", "{}", "stream", {}],
   ["sourceStream", "subscription { alias: event(v: 2) }", "{}", "stream", {}],
@@ -907,7 +908,7 @@ const SUBSCRIPTIONS = [
 ];
 const SUBSCRIPTION_SPEC = {
   sourceStream: ["6.2.3.1"],
-  sourceStreamArguments: ["6.2.3.1", "6.4.1"],
+  sourceStreamArguments: ["6.2.3.1", "6.4.1", "7.1.5"],
   variables: ["6.2.3.1"],
   sourceStreamError: ["7.1.6", "6.2.3.1"],
   unvalidatedBranches: ["6.2.3.1"],
@@ -1289,7 +1290,6 @@ ASSUME \\A i \\in DOMAIN Cases :
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.missingListItem = "drop"]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.floatRounded = TRUE]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.variableItemWrapped = TRUE]), c, c.request),
-              Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.sourceArgumentsFieldError = TRUE]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.coerceDefaults = FALSE]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.nestedListItems = FALSE]), c, c.request),
               Answer(WithPolicy(Schema, [DefaultPolicy EXCEPT !.coerceDefaults = FALSE, !.nestedListItems = FALSE]), c, c.request),
@@ -1403,7 +1403,6 @@ const POLICY_RUNS = [
   ["missingListItemDropped"],
   ["floatRounded"],
   ["variableItemWrapped"],
-  ["sourceArgumentsFieldError"],
 ];
 const TEXT = String.raw`"((?:[^"\\]|\\.)*)"`;
 const ANSWER = String.raw`<<\s*"(\w*)",\s*${TEXT}\s*>>`;

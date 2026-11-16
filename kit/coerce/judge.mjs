@@ -371,7 +371,6 @@ const PROTOCOL = new Set(["nested-fields", "subscription-source", "request-exten
 
 const LABELS = {
   floatPrecision: (accept) => accept.map(floatPrecisionLabel),
-  sourceStreamArguments: (accept) => accept.map((a) => (a.outcome === "request-error" ? "request error" : "execution error")),
   requestExtensions: (accept) => accept.map(() => "the same answer as without extensions"),
 };
 
@@ -427,8 +426,8 @@ const gradedPlan = (vector, capabilities, known) => {
   return {
     check: vector.check,
     accept,
-    // floatPrecision, sourceStreamArguments and requestExtensions are
-    // informational: which reading the result follows.
+    // floatPrecision and requestExtensions are informational: which
+    // reading the result follows.
     labels: LABELS[vector.check]?.(accept),
     deviations,
     withoutDefaults,

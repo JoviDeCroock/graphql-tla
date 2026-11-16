@@ -251,7 +251,7 @@ writing (execution with `--random 1500 --seed 1`, the sheet's run):
 
 | Area | Result |
 | --- | --- |
-| execution | 29642 cases, 6777 distinct, and 36 subscription streams. `calledSerially` (SHOULD) fails on 1394 mutation cases (510 in `mutation`, 884 in `mutationRoot`, below), and `nothingAfterCancel` (SHOULD) on 4 streams (below); every other check passes. With `--coroutine-resolvers` (`--random 200`), only `nothingAfterCancel` fails. |
+| execution | 29642 cases, 6777 distinct, and 36 subscription streams. `calledSerially` (SHOULD) fails on 1394 mutation cases (510 in `mutation`, 884 in `mutationRoot`, below), and `nothingAfterCancel` (MUST) on 4 streams (below); every other check passes. With `--coroutine-resolvers` (`--random 200`), only `nothingAfterCancel` fails. |
 | parse | 2815 of 2847 vectors agree, with `parse-sdl`. 32 fail, every one on a vector with `since`: §2.5 (11), §3.13 (5) and §3.13.6 (14), since September 2026, and §2.10.4 (2), since September 2025. No crash, crash probes included. |
 | validate | 3275 of 3354 vectors agree; 16 of the failures are crashes. `fieldSelectionMerging`, `singleRootField`, `valuesOfCorrectType`, `operationTypeExistence`, `allVariableUsagesAreAllowed`, and through syntax crashes `executableDefinitions`, `leafFieldSelections` and `acceptsValid`, fail (below). |
 | coerce | 1375 of 2219 vectors match. `requestErrorNoData` fails on 829 (below); `inputObject` (5), `notExecutable` (5), `oneOf` (2), `unvalidatedBranches` (2) and `float` (1) on 15 more. Every new check of this round passes: `syntaxError`, `argumentsBelowRoot`, `sourceStream`, `sourceStreamError`. A lone surrogate is kept as sent. With `--validate`: 558 match, and only `requestErrorNoData` (1660) and `float` (1) fail. |
@@ -322,12 +322,12 @@ Whether a user sees this depends on what the resolver does when it is called:
   root field nulls `data`, the resolvers after it have still been called,
   though their results are never awaited.
 
-### Execution: a result after the client cancelled (SHOULD)
+### Execution: a result after the client cancelled (MUST)
 
 In the stream scenario "cancelled while an event executes", graphql-core
 delivers the event's result after `aclose()` on the response stream has
 returned, so the kit sees the stream complete and then a result
-(`nothingAfterCancel`, a SHOULD, 4 streams). `MapAsyncIterator.__anext__`
+(`nothingAfterCancel`, a MUST, 4 streams). `MapAsyncIterator.__anext__`
 (`execution/map_async_iterator.py:55-83`) runs the event's execution (its
 callback) once the source has yielded, and `aclose` only closes the source
 and sets a flag; it doesn't stop an `__anext__` already past the source, so

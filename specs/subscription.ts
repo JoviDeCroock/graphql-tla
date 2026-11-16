@@ -36,9 +36,11 @@
  * yields nothing. graphql-js 17 differs there: its generator's return() is
  * queued behind the in-flight event, whose response is still delivered
  * before the stream completes (a mutant below, caught by
- * nothingNewAfterUnsubscribe). The kit grades that as a SHOULD
- * (nothingAfterCancel in kit/execution/checks.mjs), since the algorithm
- * doesn't say what becomes of an event already executing.
+ * nothingNewAfterUnsubscribe). The kit grades that as a MUST
+ * (nothingAfterCancel in kit/execution/checks.mjs): a completed stream
+ * emits nothing, and October 2021 said so outright ("must receive no more
+ * events from that event stream"), a sentence September 2025 dropped in an
+ * editorial rewrite (graphql/graphql-spec#1099).
  *
  * The kit's subscription-stream checks (kit/execution/checks.mjs) grade
  * implementations on what this model states: eventPerSourceEvent

@@ -193,7 +193,7 @@ Appendix B (Algorithms), the only description of algorithm steps:
 
 **Problem:** No normative sentence says how a reader finds the roots when the schema definition is omitted. That a type named `Query`, `Mutation` or `Subscription` is presumed to be a root is said only in the text around the examples, which Appendix A makes non-normative. For `type Query { a: Int } interface Mutation { a: Int }` without a schema definition there are three readings: `Mutation` is the mutation root and the schema is invalid ("must be an Object type"); the schema has no mutation root and is valid; or the document is wrong because "no other type uses any _default root type name_" doesn't hold. October 2021 has neither the "no other type" clause nor the example.
 
-**Kit today:** schema `rootTypesAreObjects` (MUST): `rootTypesAreObjects.2.invalid` (the document above) is `unspecified` and not graded. `TypeSystem.tla` takes `Mutation` as the mutation root.
+**Kit today:** schema `rootTypesAreObjects` (MUST): `rootTypesAreObjects.2.invalid` (the document above) is graded as invalid, since September 2025 (the release that added "no other type uses any _default root type name_"). `TypeSystem.tla` takes `Mutation` as the mutation root; the other reading rejects the document too.
 
 ---
 
@@ -322,7 +322,7 @@ October 2021, §3.6.3:
 
 **Problem:** §3.7.1's rule list has no counterpart to §3.6.3's rule 5, so `interface I implements A { ... } extend interface I implements A` breaks no extension rule. §3.7's "unique interfaces" might catch it on the merged type, but §3.6 has the same "unique interfaces" sentence and §3.6.3 still states rule 5, so the asymmetry looks unintended.
 
-**Kit today:** schema `extensionInterfacesNew` (MUST) covers object type extensions only. The interface case isn't vectored.
+**Kit today:** schema `extensionInterfacesNew` (MUST) covers object type extensions. The interface case is graded under `implementsUnique` (MUST) on the resulting type: `TypeSystem.tla` keeps every interface an interface type extension adds (`AddedInterfaces`), and `implementsUnique.3` and `.4` are minimal pairs (`schema-extensions`).
 
 ---
 
@@ -530,7 +530,7 @@ Explanatory text:
 
 **Problem:** For `subscription { eventNN(v: null) }`, CoerceArgumentValues raises an execution error, and §6.4.1 says even a request error there "should be treated" as one. But the call happens before operation execution begins, where §7.1.5 requires a request error result, and there is no response position yet for an execution error to occur at. The Note sides with the request error, but Notes are non-normative.
 
-**Kit today:** coerce `sourceStreamArguments`, INFO, since September 2026 (capability `subscription-source`, 5 vectors): a request error and an execution error both pass. `Coercion.tla` gives the request error by default (switch `sourceArgumentsFieldError` for the other).
+**Kit today:** coerce `sourceStreamArguments`, MUST, since September 2026 (capability `subscription-source`, 5 vectors): only a request error passes. `Coercion.tla` gives the request error and has no switch for the other.
 
 ---
 
@@ -573,7 +573,7 @@ October 2021, §6.2.3:
 
 **Problem:** The algorithm doesn't say what happens to an event whose ExecuteSubscriptionEvent is still running when the client cancels. Its "emit" step comes after, and "it must complete" doesn't say how soon. So the result may be dropped, or emitted before the stream completes. October 2021 forbade any further event after cancelling; September 2025 removed that sentence and put nothing in its place.
 
-**Kit today:** execution `nothingAfterCancel`, SHOULD (October 2021: MUST). graphql-js 16 and 17 both deliver the in-flight result.
+**Kit today:** execution `nothingAfterCancel`, MUST in every release. graphql-js 16 and 17 both deliver the in-flight result, and fail it.
 
 ---
 

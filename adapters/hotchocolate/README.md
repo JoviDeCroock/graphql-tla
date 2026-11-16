@@ -152,7 +152,7 @@ A resolver that returns `1.2` for an `Int` field gives `1`, not an execution err
 
 In the `ordering` fixture, `query { foo @skip(if: true) bar ... { foo } ... }` answers `{"foo":…,"bar":…}`; CollectFields skips the first `foo`, so `bar` comes first (§6.3.2, the §3.6 example). An error at `foo` has the location of the skipped selection (line 2, column 3), not of the one that was executed. `OperationCompiler.ResolveField` adds a response name to the selection set at its first occurrence, whatever its include condition, and merges later occurrences into it; `@skip` and `@include` are only evaluated per request, as include flags (`Core/src/Execution/Processing/OperationCompiler.cs:410-470`). 1110 cases fail `keyOrder` and 559 `errorLocationsAccurate`, all in `ordering`.
 
-### Execution: a result after the client cancelled (`nothingAfterCancel`, SHOULD)
+### Execution: a result after the client cancelled (`nothingAfterCancel`, MUST)
 
 When the client cancels the response stream while an event is executing, the event's result still arrives: `ReadResultsAsync` yields it although its cancellation token was cancelled (4 stream cases, `subscription` and `subscriptionAlias`). Hot Chocolate's websocket transport sends such a result too: it reads with `WithCancellation(ct)` and sends each result with the session's token, not the operation's (`AspNetCore/src/AspNetCore/Subscriptions/OperationSession.cs:69-80`).
 

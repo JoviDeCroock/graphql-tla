@@ -509,6 +509,19 @@ ExtensionsAreChecked == ~done =>
      \* "unique interfaces" rule's.
      /\ Is(Exts(Schema(<<Obj("Query", <<>>, <<F("a", R("Int"))>>), IfaceI>>), <<ExtImplements("Query", <<"I", "I">>, <<>>)>>),
            {"IMPLEMENTS_UNIQUE"})
+  \* §3.7.1 has no rule like §3.6.3's, but an interface type extension that
+  \* adds an interface the type already implements leaves the resulting type
+  \* implementing it twice, against §3.7's "one or more unique interfaces".
+  /\ LET IfaceA == Iface("A", <<>>, <<F("a", R("Int"))>>)
+         IfaceB == Iface("B", <<>>, <<F("a", R("Int"))>>)
+         IfaceIA == Iface("I", <<"A">>, <<F("a", R("Int"))>>)
+         Adds(names) == [Ext("INTERFACE", "I") EXCEPT !.interfaces = names]
+     IN /\ Is(Exts(With(<<IfaceA, IfaceB, IfaceIA>>), <<Adds(<<"A">>)>>), {"IMPLEMENTS_UNIQUE"})
+        /\ Is(Exts(With(<<IfaceA, IfaceB, IfaceIA>>), <<Adds(<<"B">>)>>), {})
+        /\ TypeNamed(Extended(Exts(With(<<IfaceA, IfaceB, IfaceIA>>), <<Adds(<<"B">>)>>)), "I").interfaces = <<"A", "B">>
+        \* The same when an earlier extension added it.
+        /\ Is(Exts(With(<<IfaceA, IfaceB, Iface("I", <<>>, <<F("a", R("Int"))>>)>>), <<Adds(<<"A">>), Adds(<<"A">>)>>),
+              {"IMPLEMENTS_UNIQUE"})
   \* §3.7.1's example: extend interface NamedEntity { nickname: String },
   \* with its implementations extended too.
   /\ LET named == Iface("NamedEntity", <<>>, <<F("name", R("String"))>>)

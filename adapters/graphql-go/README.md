@@ -294,7 +294,7 @@ In both modes:
   a `Subscribe` returning a channel that is closed before any event; the
   response channel closes with no result and no error.
 - **Cancelling while an event executes yields a "context canceled" result**
-  (`nothingAfterCancel`, SHOULD; `errorPath`, MUST; `complete`). `Execute`
+  (`nothingAfterCancel`, MUST; `errorPath`, MUST; `complete`). `Execute`
   waits on the request's context next to the execution (executor.go:86-89),
   and when the client cancels it returns at once
   `{"data": null, "errors": [{"message": "context canceled", "locations": []}]}`,

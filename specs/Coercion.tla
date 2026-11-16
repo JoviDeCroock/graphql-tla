@@ -220,12 +220,6 @@ AsNumber(n) == [n EXCEPT !.kind = "number"]
 (*                       (§6.4.1's Note: variable values are already       *)
 (*                       coerced). TRUE: §3.11's "list of size one" is     *)
 (*                       applied to it, as to any other item               *)
-(*   sourceArgumentsFieldError  what a subscription root field's argument  *)
-(*                       that can't be coerced raises, which the spec      *)
-(*                       contradicts itself on (see RespondFrom). FALSE: a *)
-(*                       request error, as §7.1.5 says of any error raised *)
-(*                       before operation execution begins. TRUE: an       *)
-(*                       execution error, as CoerceArgumentValues says     *)
 (*                                                                         *)
 (* Two more switches aren't choices the spec leaves open but editions:     *)
 (*                                                                         *)
@@ -246,7 +240,7 @@ AsNumber(n) == [n EXCEPT !.kind = "number"]
 (* September 2026. A schema without a policy field uses it, and a policy   *)
 (* without a switch takes that switch's default.                           *)
 
-DefaultPolicy == [enumFromString |-> TRUE, inputFieldDefaults |-> TRUE, missingListItem |-> "null", floatRounded |-> FALSE, variableItemWrapped |-> FALSE, coerceDefaults |-> TRUE, nestedListItems |-> TRUE, sourceArgumentsFieldError |-> FALSE]
+DefaultPolicy == [enumFromString |-> TRUE, inputFieldDefaults |-> TRUE, missingListItem |-> "null", floatRounded |-> FALSE, variableItemWrapped |-> FALSE, coerceDefaults |-> TRUE, nestedListItems |-> TRUE]
 PolicyOf(S) == IF "policy" \in DOMAIN S THEN S.policy ELSE DefaultPolicy
 WithPolicy(S, policy) == [types |-> S.types, fields |-> S.fields, policy |-> policy]
 Switch(S, name) == IF name \in DOMAIN PolicyOf(S) THEN PolicyOf(S)[name] ELSE DefaultPolicy[name]
@@ -694,12 +688,13 @@ RootEntries(operation) ==
 \* (§7.1.5). The source stream then emits one event, whose execution
 \* coerces the same arguments again and calls the field's resolver.
 \*
-\* CoerceArgumentValues itself says "raise an execution error" for an
-\* argument it can't coerce, and §6.4.1 "Any request error raised as a
-\* result of input coercion during CoerceArgumentValues() should be treated
-\* instead as an execution error"; §6.2.3.1's Note says "an error raised here
-\* will be a request error". The text contradicts itself for such an
-\* argument, so policy.sourceArgumentsFieldError gives the other reading.
+\* That includes an argument of the root field that CoerceArgumentValues
+\* can't coerce. CoerceArgumentValues says "raise an execution error", and
+\* §6.4.1 "Any request error raised as a result of input coercion during
+\* CoerceArgumentValues() should be treated instead as an execution error",
+\* but those name the error; §7.1.5 says what the response must be when it
+\* is raised before operation execution begins, and §6.2.3.1's Note agrees:
+\* "an error raised here will be a request error".
 RespondFrom(S, operation, request, source) ==
   LET coercedVariableValues == CoerceVariableValues(S, operation, request) IN
   IF ~coercedVariableValues.ok THEN Outcome("requestError", NullV)
@@ -708,9 +703,7 @@ RespondFrom(S, operation, request, source) ==
                                      coercedVariableValues.value.entries)
     IN IF operation.type = "subscription"
        THEN IF RootEntries(operation) # 1 THEN Outcome("requestError", NullV)
-            ELSE IF ~args.ok
-            THEN IF Switch(S, "sourceArgumentsFieldError")
-                 THEN Outcome("fieldError", NullV) ELSE Outcome("requestError", NullV)
+            ELSE IF ~args.ok THEN Outcome("requestError", NullV)
             ELSE IF source = "raise" THEN Outcome("requestError", NullV)
             ELSE Outcome("resolved", args.value)
        ELSE IF args.ok THEN Outcome("resolved", args.value) ELSE Outcome("fieldError", NullV)
@@ -1203,7 +1196,6 @@ Sub(variables, key, field, arguments, others) == OpAt("subscription", "", variab
 Other(kind, name) == [kind |-> kind, name |-> name]
 Doc(operations) == Given(TRUE, FALSE, operations)
 OneV == {Entry("v", I(1))}
-SourceRead == WithPolicy(ExampleSchema, [DefaultPolicy EXCEPT !.sourceArgumentsFieldError = TRUE])
 SubscriptionCases == <<
   Case(RespondFrom(ExampleSchema, Sub(<<>>, "int", "int", OneV, <<>>), {}, "stream"), Resolved({Entry("v", N(1))})),
   \* "This value is unaffected if an alias is used."
@@ -1216,11 +1208,6 @@ SubscriptionCases == <<
   Case(RespondFrom(ExampleSchema, Sub(X(IntT, FALSE, NullV), "intNN", "intNN", {Entry("v", VarV("x"))}, <<>>), {Entry("x", NullV)}, "stream"),
        RequestError),
   Case(Respond(ExampleSchema, Op(X(IntT, FALSE, NullV), "intNN", {Entry("v", VarV("x"))}), {Entry("x", NullV)}), FieldError),
-  \* ... and an execution error under the other reading, which leaves a
-  \* variable that can't be coerced a request error.
-  Case(RespondFrom(SourceRead, Sub(<<>>, "intNN", "intNN", {Entry("v", NullV)}, <<>>), {}, "stream"), FieldError),
-  Case(RespondFrom(SourceRead, Sub(X(IntT, FALSE, NullV), "int", "int", {Entry("v", VarV("x"))}, <<>>), {Entry("x", Str("a"))}, "stream"),
-       RequestError),
   \* Two root fields, defined or not: a request error. A spread of a
   \* fragment the document doesn't define adds nothing.
   Case(RespondFrom(ExampleSchema, Sub(<<>>, "int", "int", OneV, <<Other("field", "intNN")>>), {}, "stream"), RequestError),

@@ -260,6 +260,14 @@ const mutants = [
     why: NO_EXTENSIONS,
   },
   {
+    name: "an interface type extension may add an interface the type already implements, which the extended type lists once",
+    find: 'AddedInterfaces(T, X) == IF X.kind = "OBJECT" THEN NewNames(T.interfaces, X.interfaces) ELSE X.interfaces',
+    replace: "AddedInterfaces(T, X) == NewNames(T.interfaces, X.interfaces)",
+    property: "ExtensionsAreChecked",
+    differential: false,
+    why: NO_EXTENSIONS,
+  },
+  {
     name: "a schema extension needs no schema to extend",
     find: 'SchemaExtensionHasSchema(S, X) == X.kind = "SCHEMA" => S.schemaDef',
     replace: "SchemaExtensionHasSchema(S, X) == TRUE",
