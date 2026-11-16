@@ -21,7 +21,7 @@
     "uncoercible-results"
   ],
   "provenance": {
-    "kit": "0625b35d64dd",
+    "kit": "1ad955aa3659",
     "date": "2026-11-16",
     "strict": true,
     "random": 1500,
@@ -31,8 +31,8 @@
   "checkerSelfTest": "passed (87 negative controls)",
   "cases": {
     "submitted": 27080,
-    "distinct": 5376,
-    "malformed": 917
+    "distinct": 5406,
+    "malformed": 928
   },
   "adapterProblems": 0,
   "checks": [
@@ -59,8 +59,8 @@
       ],
       "basis": "No sentence says to respond only once execution is complete; the algorithms do. ExecuteRootSelectionSet (§6.3.1) returns {data} once ExecuteCollectedFields has run, and §6.3.3 says \"Execution will recursively resolve and complete the value of every entry in the collected fields map\". §7.1.5 adds: \"The response data is the result of accumulating the resolved result of all response positions during execution.\" Positions §6.3.3 lets an implementation cancel don't hold the response back. September 2025 has the same algorithms and sentences, and October 2021's algorithms are the same.",
       "status": "fail",
-      "cases": 5561,
-      "failing": 368
+      "cases": 5590,
+      "failing": 353
     },
     {
       "id": "dataMatches",
@@ -85,8 +85,8 @@
       ],
       "basis": "When an error propagates to the root, §6.4.4 and §7.1.5 say data \"should be null\", in every release (October 2021: §6.4.4 and §7.1.1). The kit still requires null, because no other value conforms: the execution result must have a data entry (§7.1.1), {} or a partial map leaves out an entry ExecuteCollectedFields must produce (§6.3.3), and a map with null at the failed root field breaks that field's Non-Null type.",
       "status": "fail",
-      "cases": 5561,
-      "failing": 1323
+      "cases": 5590,
+      "failing": 1331
     },
     {
       "id": "keyOrder",
@@ -101,8 +101,8 @@
       ],
       "basis": "§7.2.2: \"Serialization formats which only represent unordered maps but where order is still implicit in the serialization's textual order (such as JSON) should preserve the order of requested fields textually.\" September 2025 and October 2021 say the same.",
       "status": "fail",
-      "cases": 5561,
-      "failing": 2205
+      "cases": 5590,
+      "failing": 2231
     },
     {
       "id": "errorsWereRaised",
@@ -122,7 +122,7 @@
       ],
       "basis": "§7.1.6: an error that \"can be associated to a particular field in the GraphQL result ... must contain an entry with the key {\"path\"} with a response path which describes the response position which raised the error\"; §7.1.4: \"When a response path is present on an error result, it identifies the response position which raised the error.\" September 2025 has both sentences. October 2021's §7.1.2: it \"must contain an entry with the key path that details the path of the response field which experienced the error\". A path that leaves out list indices counts against responsePosition instead, and one cut short at the nullable position the error propagated to against errorPathFull: both are paths to the raised error in the wrong form, not errors that weren't raised.",
       "status": "pass",
-      "cases": 5559,
+      "cases": 5588,
       "failing": 0
     },
     {
@@ -142,7 +142,7 @@
       ],
       "basis": "September 2026's §6.4.4: \"That is, each error added to the errors list during execution must have a unique response path.\" September 2025's: \"That is, only one error should be added to the errors list per response position.\" October 2021's: \"That is, only one error should be added to the errors list per field.\" The must is new in September 2026 (graphql-spec#1183). All three say the errors list \"must not be further affected\" when a position is null because of an error already added. A response with two errors at one path doesn't say whether the second was added for a position the first had already nulled (which breaks that must) or raised on its own, so in September 2025 and October 2021 the kit takes the weaker reading, the should.",
       "status": "pass",
-      "cases": 5559,
+      "cases": 5588,
       "failing": 0
     },
     {
@@ -163,7 +163,7 @@
       ],
       "basis": "§7.1.6: \"When an execution error is raised at a given response position, then that response position must not be present within the response {\"data\"} entry (except {null})\", and §6.4.4 propagates it to the nearest nullable parent. September 2025 has the same sentences. October 2021, §6.4.4: a field error \"is handled as though the field returned {null}\", and §6.3 (Errors and Non-Null Fields): the error \"must propagate to this entire selection set, either resolving to {null} if allowed or further propagated to a parent field.\" An error whose position holds a value breaks these in every release.",
       "status": "pass",
-      "cases": 5559,
+      "cases": 5588,
       "failing": 0
     },
     {
@@ -187,8 +187,8 @@
       ],
       "basis": "September 2026's §6.4.4: \"While these errors must be reported in the response\", and twice \"the error must be added to the {\"errors\"} list in the execution result\"; §7.1.1: the errors entry \"must be a non-empty list of execution error raised during operation execution\"; §7.1.6: \"the {\"errors\"} entry must include the error\". September 2025 has the same musts (its §7.1.1: \"must be a non-empty list of execution error raised during execution\"). October 2021 has both words. Its §6.4.4 says twice that \"the error must be added to the {\"errors\"} list in the response\", but opens with \"While these errors should be reported in the response\", and its §7.1.2 says \"If field errors were raised during execution, it should contain those errors\" and \"The errors entry should include all raised field errors.\" September 2025 made each of these a must. With the October 2021 level in doubt, the kit takes the weaker one there. (October 2021's §7.1 still says the response \"must contain an entry with key errors\" if any errors were raised, so a response with no errors entry at all breaks a must in every release; the check doesn't count that case apart.)",
       "status": "fail",
-      "cases": 5559,
-      "failing": 729
+      "cases": 5588,
+      "failing": 719
     },
     {
       "id": "serialErrorsKept",
@@ -232,8 +232,8 @@
       ],
       "basis": "The one sentence that says whether a mutation's root selection set is executed serially is §6.2.2's, in every release: \"This selection set should be executed serially.\" §6.3.4 adds, with no key word: \"When executing a mutation, the selections in the top most selection set will be executed in serial order, starting with the first appearing field textually.\" Its musts (\"When executing a collected fields map serially, the executor must consider each entry ... It must determine the corresponding entry in the result map for each item to completion before it continues on to the next entry\") say what serial execution is, once a selection set is executed serially. The sentence that the root selection set \"must be executed serially\" is introduced by \"For example\", which Appendix A makes non-normative. ExecuteMutation passes \"serial\" unconditionally, but the prose about the same step says should, so the level is in doubt and the kit takes the weaker one. September 2025 and October 2021 (§6.2.2, §6.3.1) say the same.",
       "status": "fail",
-      "cases": 1188,
-      "failing": 1188
+      "cases": 1180,
+      "failing": 1180
     },
     {
       "id": "mutationFieldsOnce",
@@ -481,7 +481,10 @@
     {
       "id": "nothingAfterCancel",
       "title": "No result arrives after the client cancels the response stream",
-      "level": "MUST",
+      "level": "SHOULD",
+      "levels": {
+        "October2021": "MUST"
+      },
       "requires": [
         "subscription-stream"
       ],
@@ -497,7 +500,7 @@
           "url": "https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream"
         }
       ],
-      "basis": "§6.2.3 (Event Streams): \"An observer may at any point decide to stop observing an event stream by cancelling it. When an event stream is cancelled, it must complete.\" MapSourceToResponseEvent (§6.2.3.2): \"When {responseStream} is cancelled: Cancel {sourceStream}. Complete {responseStream} normally.\" A completed stream emits nothing more, so a result for an event whose ExecuteSubscriptionEvent was still running when the client cancelled must not be emitted: the algorithm's step \"emit {executionResult} on {responseStream}\" comes after the stream completed. October 2021's §6.2.3 said so outright: \"An observer may at any point decide to stop observing an event stream by cancelling it, after which it must receive no more events from that event stream.\" September 2025 dropped that sentence in graphql/graphql-spec#1099, \"Editorial changes for Event Streams\", which its description calls a rewrite of the Event Streams definition \"to be more clear\", so the kit reads the requirement as unchanged: a MUST in every release. The kit's scenario cancels the stream while an event's resolvers are pending, then settles them; a result for that event after the cancel fails here (graphql-js 16 and 17 deliver it, then complete).",
+      "basis": "MapSourceToResponseEvent (§6.2.3.2): \"When {responseStream} is cancelled: Cancel {sourceStream}. Complete {responseStream} normally\", and a completed stream emits nothing more. But the algorithm doesn't say what happens to an event whose ExecuteSubscriptionEvent was already running when the stream was cancelled, whose step \"emit {executionResult} on {responseStream}\" comes after, and §6.2.3's \"When an event stream is cancelled, it must complete\" doesn't say how soon. With the level in doubt the kit takes the weaker one. The kit's scenario cancels the stream while an event's resolvers are pending, then settles them; a result for that event after the cancel fails here (graphql-js 17 delivers it, then completes). September 2025 says the same. October 2021's §6.2.3: after cancelling, an observer \"must receive no more events from that event stream\", a must.",
       "status": "fail",
       "cases": 12,
       "failing": 4
@@ -520,7 +523,7 @@
       ],
       "basis": "ExecuteCollectedFields (§6.3.3) sets an entry in the result map only for each entry of the collected fields map, and §7.1.5 says \"The response data is the result of accumulating the resolved result of all response positions during execution.\" A value at a position the operation doesn't select isn't the completed value, as for dataMatches. September 2025 has the same algorithm and sentence, and October 2021's algorithms are the same.",
       "status": "pass",
-      "cases": 18457,
+      "cases": 18483,
       "failing": 0
     },
     {
@@ -551,8 +554,8 @@
       ],
       "basis": "§3.5.2: \"Non-finite floating-point internal values ({NaN} and {Infinity}) cannot be coerced to {Float} and must raise an execution error.\" §3.5, for every scalar, custom ones included: a service \"must uphold the contract the scalar type describes, either by coercing the value or producing an execution error if a value cannot be coerced\" (custom scalars with custom-scalar-results, whose resolver returns a value the scalar's result coercion rejects). §3.9: \"GraphQL services must return one of the defined set of possible values. If a reasonable coercion is not possible they must raise an execution error.\" CoerceResult (§6.4.3): the internal method \"must return a valid value for the type and not {null}. Otherwise raise an execution error.\" September 2025 says the same, and October 2021 too, with \"field error\". A value passed through fails here, as does no response at all after such a value, whose root cause it is. A null without an error is coercionErrorReported.",
       "status": "fail",
-      "cases": 604,
-      "failing": 311
+      "cases": 610,
+      "failing": 303
     },
     {
       "id": "intFraction",
@@ -572,8 +575,8 @@
       ],
       "basis": "§3.5.1: \"GraphQL services may coerce non-integer internal values to integers when reasonable without losing information, otherwise they must raise an execution error.\" Truncating 1.2 to 1 loses information, so the must applies. The sentence after it, \"For example, a floating-point number 1.2 should raise an execution error instead of being truncated to 1\", is an example, which Appendix A makes non-normative, so its should doesn't set the level. September 2025 has the same sentences, and October 2021 too, with \"field error\". A value passed through fails here, as does no response at all after such a value. A null without an error is coercionErrorReported.",
       "status": "fail",
-      "cases": 234,
-      "failing": 181
+      "cases": 243,
+      "failing": 191
     },
     {
       "id": "coercionErrorReported",
@@ -616,8 +619,8 @@
       ],
       "basis": "Such a value \"must raise an execution error\" (§3.5.1, §3.5.2, §3.9), CoerceResult's internal method \"must return a valid value for the type and not {null}\" (§6.4.3), and §6.4.4 says the error \"must be added to the {\"errors\"} list\" and opens \"While these errors must be reported in the response\". A null without an error at its path breaks one of these, in September 2026 and September 2025 alike, whichever the service did: coerced the value to null, or raised the error and left it out. October 2021 keeps the musts on raising, but says raised field errors \"should be reported\" and \"should include all raised field errors\" (see nullsExplained). The response can't tell the two apart, so the kit takes the weaker reading there: a SHOULD.",
       "status": "fail",
-      "cases": 982,
-      "failing": 448
+      "cases": 1000,
+      "failing": 453
     },
     {
       "id": "intRange",
@@ -635,7 +638,7 @@
       ],
       "basis": "§3.5.1: \"If the integer internal value represents a value less than -2^31 or greater than or equal to 2^31, an execution error should be raised.\" September 2025 says the same, and October 2021 too, with \"a field error\". Graded only for adapters with scalar-results, in fixtures with invalid results. A null without an error is coercionErrorReported.",
       "status": "pass",
-      "cases": 218,
+      "cases": 208,
       "failing": 0
     },
     {
@@ -657,7 +660,7 @@
       ],
       "basis": "§3.5.5: \"The ID type is serialized in the same way as a String; however, it is not intended to be human-readable. While it is often numeric, it must always serialize as a String.\" Its Result Coercion lets a service raise an execution error when \"coercion is not possible\", which also passes. September 2025 says the same. October 2021: \"it should always serialize as a String\". Graded only for adapters with scalar-results, in fixtures with invalid results.",
       "status": "pass",
-      "cases": 383,
+      "cases": 385,
       "failing": 0
     },
     {
@@ -673,7 +676,7 @@
       ],
       "basis": "CompleteValue returns {CoerceResult(fieldType, result)} for a leaf (§6.4.3), and the kit's resolvers return a value that is already valid for the type. §3.5 lets a service coerce internal values only \"when reasonable without losing information\", so a valid value coerces to itself. September 2025 and October 2021 say the same.",
       "status": "pass",
-      "cases": 18457,
+      "cases": 18483,
       "failing": 0
     },
     {
@@ -689,7 +692,7 @@
       ],
       "basis": "§7.2.1: \"When using JSON as a serialization of GraphQL responses, the following JSON values should be used to encode the related GraphQL values\". §7.2 lets \"a string or simpler primitive ... be used as a substitute\" when a format lacks one. September 2025 and October 2021 say the same.",
       "status": "pass",
-      "cases": 18457,
+      "cases": 18483,
       "failing": 0
     },
     {
@@ -705,7 +708,7 @@
       ],
       "basis": "§7.1.1: \"An execution result must be a map.\" September 2025 says the same. October 2021's §7.1: \"A response to a GraphQL request must be a map.\"",
       "status": "pass",
-      "cases": 26733,
+      "cases": 26741,
       "failing": 0
     },
     {
@@ -721,7 +724,7 @@
       ],
       "basis": "§7.1.1: \"The execution result must contain an entry with key {\"data\"}.\" September 2025 says the same. October 2021's §7.1: \"If the request included execution, the response map must contain an entry with key data\", and §7.1.2: \"The data entry in the response must be present.\"",
       "status": "pass",
-      "cases": 26733,
+      "cases": 26741,
       "failing": 0
     },
     {
@@ -737,7 +740,7 @@
       ],
       "basis": "September 2026's §7.1.1: \"If any errors are raised during operation execution, the execution result must contain an entry with key {\"errors\"}. The value of this entry must be a non-empty list ... If the request completed without raising any errors, this entry must not be present.\" September 2025's opens \"If execution raised any errors\" and has the same musts. October 2021's §7.1: \"If the request raised any errors, the response map must contain an entry with key errors. ... If the request completed without raising any errors, this entry must not be present.\" Its §7.1.2 also says \"should not be present\", but the §7.1 must is the sentence about the entry, so the check is a MUST in every release, as in coerce.",
       "status": "pass",
-      "cases": 26733,
+      "cases": 26741,
       "failing": 0
     },
     {
@@ -753,7 +756,7 @@
       ],
       "basis": "§7.1.8: \"the execution result and request error result maps must not contain any entries other than those described above.\" September 2025 says the same. October 2021's §7.1: \"the top level response map must not contain any entries other than the three described above.\"",
       "status": "pass",
-      "cases": 26733,
+      "cases": 26741,
       "failing": 0
     },
     {
@@ -791,7 +794,7 @@
       ],
       "basis": "§7.1.1: \"Each error must be a map\"; §7.1.6: \"Every error must contain an entry with the key {\"message\"} with a string description of the error\", and an error's extensions entry, \"if set, must have a map as its value.\" September 2025 says the same. October 2021's §7.1.2 says each error \"is a map\", and has the same musts on message and extensions.",
       "status": "pass",
-      "cases": 17736,
+      "cases": 17793,
       "failing": 0
     },
     {
@@ -807,7 +810,7 @@
       ],
       "basis": "§7.1.6: \"it should contain an entry with the key {\"locations\"} with a list of locations, where each location is a map with the keys {\"line\"} and {\"column\"}, both positive numbers starting from `1`\". The whole sentence, shape included, is a should. September 2025 and October 2021 (§7.1.2) say the same.",
       "status": "pass",
-      "cases": 17736,
+      "cases": 17793,
       "failing": 0
     },
     {
@@ -823,7 +826,7 @@
       ],
       "basis": "§7.1.6: \"If an error can be associated to a particular point in the requested GraphQL document, it should contain an entry with the key {\"locations\"} with a list of locations\". Every error the kit's resolvers cause is raised at a field, or a list item of a field, of the document the kit sent. An error without locations, or with an empty list, fails. September 2025 and October 2021 (§7.1.2) say the same.",
       "status": "pass",
-      "cases": 17736,
+      "cases": 17793,
       "failing": 0
     },
     {
@@ -839,7 +842,7 @@
       ],
       "basis": "§7.1.6: each location is a map with the keys line and column, \"both positive numbers starting from `1` which describe the beginning of an associated syntax element\". For an error raised at a field, or at an item of a list field, the associated element is that field's selection in the document the kit sent: the kit accepts the start of any of its field nodes (several when selections merge), or the start of the field's name after an alias. A location elsewhere fails. Locations are only compared for errors whose path is where the kit's outcome raised the error. The whole sentence is a should. September 2025 and October 2021 (§7.1.2) say the same.",
       "status": "pass",
-      "cases": 17732,
+      "cases": 17789,
       "failing": 0
     },
     {
@@ -855,7 +858,7 @@
       ],
       "basis": "§7.1.6: an error that \"can be associated to a particular field in the GraphQL result ... must contain an entry with the key {\"path\"} with a response path which describes the response position which raised the error\". Every error the kit's resolvers cause is raised at a field or list item. A path to a position the operation doesn't select describes no response position. September 2025 has the same sentence, and October 2021's §7.1.2 the same must (\"must contain an entry with the key path that details the path of the response field which experienced the error\").",
       "status": "fail",
-      "cases": 17736,
+      "cases": 17793,
       "failing": 4
     },
     {
@@ -874,7 +877,7 @@
       ],
       "basis": "§7.1.4: \"The value for a response path must be a list of path segments\", \"path segments that represent list indices must be 0-indexed integers\", and an aliased field \"must use the aliased name\". A path that is a raised error's path with its list indices left out (`[\"tags\"]` for an error at `tags.0`) breaks the first two. September 2025's §7.1.4 has the same musts; they came with its new Response Position section (graphql-spec#1073). October 2021 has no such section: its §7.1.2 says each of these with should: \"This field should be a list of path segments starting at the root of the response and ending with the field associated with the error\", list indices \"should be 0-indexed integers\", \"the path to the error should use the aliased name\".",
       "status": "pass",
-      "cases": 17736,
+      "cases": 17793,
       "failing": 0
     },
     {
@@ -890,7 +893,7 @@
       ],
       "basis": "§7.1.6, in every release (October 2021: §7.1.2): \"If the field which experienced an error was declared as `Non-Null`, the `null` result will bubble up to the next nullable field. In that case, the `path` for the error should include the full path to the result field where the error was raised, even if that field is not present in the response.\" The general sentence before it says the path \"must\" describe the position which raised the error, but the sentence about this very case says should, so the level is in doubt and the kit takes the weaker one. A path that stops at a position the error propagated to, above where it was raised, fails here.",
       "status": "pass",
-      "cases": 17736,
+      "cases": 17793,
       "failing": 0
     },
     {
@@ -906,7 +909,7 @@
       ],
       "basis": "§7.1.6: \"GraphQL services should not provide any additional entries to the error format\", and its Note: \"While non-specified entries are not violations, they are still discouraged.\" September 2025 and October 2021 (§7.1.2) say the same.",
       "status": "pass",
-      "cases": 17736,
+      "cases": 17793,
       "failing": 0
     },
     {
@@ -932,7 +935,7 @@
       ],
       "basis": "§7.1.1: \"An execution result must be a map\", and Appendix B defines a map: \"Each entry has a unique key\". Data is built of maps too (ExecuteCollectedFields, §6.3.3, sets one entry per response name), as is each error. §7.2.1 serializes a map as a JSON object; a JSON object that repeats a name, which JSON.parse silently reduces to the last one, describes no map with unique keys. The kit reads the adapter's raw line for this. September 2025 says the same; October 2021's §7.1 says \"A response to a GraphQL request must be a map\", and its Appendix A defines no map, so the rule rests there on JSON objects meaning maps.",
       "status": "pass",
-      "cases": 26733,
+      "cases": 26741,
       "failing": 0
     },
     {
@@ -1002,7 +1005,7 @@
       ],
       "fixture": "aliases",
       "example": {
-        "trace": "call second; call first; settle second = null; settle first = error",
+        "trace": "call first; call second; settle first = null; settle second = error",
         "response": {
           "data": {
             "first": null,
@@ -1010,31 +1013,31 @@
           },
           "errors": [
             {
-              "message": "resolver at first failed",
+              "message": "resolver at second failed",
               "locations": [
                 {
-                  "line": 7,
+                  "line": 2,
                   "column": 3
                 }
               ],
               "path": [
-                "first"
+                "second"
               ]
             }
           ]
         },
         "expected": "data {\"second\": null, \"first\": null}"
       },
-      "cases": 1786,
+      "cases": 1808,
       "fixtures": {
         "abstract": 27,
-        "aliases": 257,
-        "leaves": 276,
-        "nullPropagation": 11,
-        "ordering": 1111,
+        "aliases": 256,
+        "leaves": 272,
+        "nullPropagation": 12,
+        "ordering": 1134,
         "scalars": 20,
         "subscriptionAlias": 6,
-        "unions": 78
+        "unions": 81
       }
     },
     {
@@ -1043,7 +1046,7 @@
       ],
       "fixture": "fragments",
       "example": {
-        "trace": "call node; settle node = object(Bot); call node.nodeId; call node.id; settle node.nodeId = null",
+        "trace": "call node; settle node = object(Bot); call node.id; call node.nodeId; settle node.nodeId = null",
         "response": {
           "data": null,
           "errors": [
@@ -1064,16 +1067,16 @@
         },
         "expected": "data {\"node\": null}"
       },
-      "cases": 550,
+      "cases": 578,
       "fixtures": {
-        "abstract": 47,
-        "aliases": 24,
-        "fragments": 145,
-        "lists": 103,
-        "merging": 78,
-        "nullPropagation": 110,
+        "abstract": 45,
+        "aliases": 30,
+        "fragments": 148,
+        "lists": 100,
+        "merging": 89,
+        "nullPropagation": 122,
         "subscriptionAlias": 14,
-        "unions": 29
+        "unions": 30
       }
     },
     {
@@ -1082,12 +1085,12 @@
       ],
       "fixture": "mutation",
       "example": {
-        "trace": "call first; call second; call third; settle second = error",
+        "trace": "call first; call second; call third; settle second = null",
         "response": {
           "data": null,
           "errors": [
             {
-              "message": "resolver at second failed",
+              "message": "Cannot return null for non-nullable field Mutation.second.",
               "locations": [
                 {
                   "line": 5,
@@ -1102,25 +1105,9 @@
         },
         "expected": "data null"
       },
-      "cases": 319,
+      "cases": 314,
       "fixtures": {
-        "mutation": 319
-      }
-    },
-    {
-      "checks": [
-        "resultCoercion"
-      ],
-      "summary": "the implementation produced no response, after a resolver returned a value its type can't represent: …",
-      "fixture": "leaves",
-      "problem": "the implementation produced no response, after a resolver returned a value its type can't represent: \"can't serialize the result: json: unsupported value: +Inf\"",
-      "example": {
-        "trace": "call count; call ratio; call color; settle ratio = uncoercible; settle count = leaf; settle color = error",
-        "noResponse": "can't serialize the result: json: unsupported value: +Inf"
-      },
-      "cases": 311,
-      "fixtures": {
-        "leaves": 311
+        "mutation": 314
       }
     },
     {
@@ -1154,9 +1141,25 @@
           ]
         }
       },
-      "cases": 293,
+      "cases": 307,
       "fixtures": {
-        "leaves": 293
+        "leaves": 307
+      }
+    },
+    {
+      "checks": [
+        "resultCoercion"
+      ],
+      "summary": "the implementation produced no response, after a resolver returned a value its type can't represent: …",
+      "fixture": "leaves",
+      "problem": "the implementation produced no response, after a resolver returned a value its type can't represent: \"can't serialize the result: json: unsupported value: +Inf\"",
+      "example": {
+        "trace": "call count; call ratio; call color; settle count = uncoercible; settle color = uncoercible; settle ratio = uncoercible",
+        "noResponse": "can't serialize the result: json: unsupported value: +Inf"
+      },
+      "cases": 303,
+      "fixtures": {
+        "leaves": 303
       }
     },
     {
@@ -1178,9 +1181,9 @@
         },
         "expected": "data {\"a\": null, \"b\": null, \"__typename\": \"Mutation\", \"root\": \"Mutation\", \"likeAll\": []}"
       },
-      "cases": 250,
+      "cases": 253,
       "fixtures": {
-        "mutationRoot": 250
+        "mutationRoot": 253
       }
     },
     {
@@ -1190,7 +1193,7 @@
       ],
       "fixture": "merging",
       "example": {
-        "trace": "call a; call b; settle a = object(A); call a.subfield1; call a.subfield2; settle b = error; settle a.subfield2 = null",
+        "trace": "call a; call b; settle a = object(A); call a.subfield2; call a.subfield1; settle a.subfield2 = null; settle b = error",
         "response": {
           "data": null,
           "errors": [
@@ -1211,13 +1214,13 @@
         },
         "expected": "data {\"a\": null, \"b\": null}"
       },
-      "cases": 199,
+      "cases": 198,
       "fixtures": {
-        "abstract": 46,
-        "aliases": 36,
-        "lists": 51,
-        "merging": 46,
-        "unions": 20
+        "abstract": 44,
+        "aliases": 31,
+        "lists": 63,
+        "merging": 43,
+        "unions": 17
       }
     },
     {
@@ -1228,67 +1231,18 @@
       "fixture": "leaves",
       "problem": "count is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
       "example": {
-        "trace": "call count; call ratio; call color; settle count = uncoercible; settle ratio = error; settle color = null",
+        "trace": "call count; call ratio; call color; settle count = uncoercible; settle color = null; settle ratio = null",
         "response": {
           "data": {
             "color": null,
             "count": 1,
             "ratio": null
-          },
-          "errors": [
-            {
-              "message": "resolver at ratio failed",
-              "locations": [
-                {
-                  "line": 3,
-                  "column": 3
-                }
-              ],
-              "path": [
-                "ratio"
-              ]
-            }
-          ]
+          }
         }
       },
-      "cases": 176,
+      "cases": 187,
       "fixtures": {
-        "leaves": 176
-      }
-    },
-    {
-      "checks": [
-        "calledSerially",
-        "dataMatches",
-        "nullsExplained"
-      ],
-      "fixture": "mutationRoot",
-      "example": {
-        "trace": "call a; call b; call likeAll; settle a = error; settle likeAll = list(1); settle b = null; call likeAll.0; settle likeAll.0 = error",
-        "response": {
-          "data": null,
-          "errors": [
-            {
-              "message": "resolver at likeAll.0 failed",
-              "locations": [
-                {
-                  "line": 21,
-                  "column": 3
-                }
-              ],
-              "path": [
-                "likeAll",
-                0
-              ]
-            }
-          ]
-        },
-        "expected": "data {\"a\": null, \"b\": null, \"__typename\": \"Mutation\", \"root\": \"Mutation\", \"likeAll\": null}"
-      },
-      "cases": 174,
-      "fixtures": {
-        "mutation": 9,
-        "mutationRoot": 165
+        "leaves": 187
       }
     },
     {
@@ -1298,10 +1252,10 @@
       ],
       "fixture": "leaves",
       "example": {
-        "trace": "call count; call ratio; call color; settle ratio = object(); settle count = error; settle color = leaf",
+        "trace": "call count; call ratio; call color; settle ratio = object(); settle count = error; settle color = error",
         "response": {
           "data": {
-            "color": "RED",
+            "color": null,
             "count": null,
             "ratio": null
           },
@@ -1317,14 +1271,61 @@
               "path": [
                 "count"
               ]
+            },
+            {
+              "message": "resolver at color failed",
+              "locations": [
+                {
+                  "line": 4,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "color"
+              ]
             }
           ]
         },
-        "expected": "data {\"count\": null, \"ratio\": null, \"color\": <leaf>}"
+        "expected": "data {\"count\": null, \"ratio\": null, \"color\": null}"
       },
-      "cases": 169,
+      "cases": 170,
       "fixtures": {
-        "leaves": 169
+        "leaves": 170
+      }
+    },
+    {
+      "checks": [
+        "calledSerially",
+        "dataMatches",
+        "nullsExplained"
+      ],
+      "fixture": "mutationRoot",
+      "example": {
+        "trace": "call a; call b; call likeAll; settle b = object(Payload); settle a = error; settle likeAll = error; call b.likes; settle b.likes = null",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "Cannot return null for non-nullable field Payload.likes.",
+              "locations": [
+                {
+                  "line": 6,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "b",
+                "likes"
+              ]
+            }
+          ]
+        },
+        "expected": "data {\"a\": null, \"b\": null, \"__typename\": \"Mutation\", \"root\": \"Mutation\", \"likeAll\": null}"
+      },
+      "cases": 170,
+      "fixtures": {
+        "mutation": 10,
+        "mutationRoot": 160
       }
     },
     {
@@ -1358,9 +1359,9 @@
           ]
         }
       },
-      "cases": 155,
+      "cases": 146,
       "fixtures": {
-        "leaves": 155
+        "leaves": 146
       }
     },
     {
@@ -1371,7 +1372,45 @@
       ],
       "fixture": "mutationRoot",
       "example": {
-        "trace": "call a; call b; call likeAll; settle a = object(Payload); call a.likes; settle a.likes = error",
+        "trace": "call a; call b; call likeAll; settle a = object(Payload); call a.likes; settle a.likes = null",
+        "response": {
+          "data": null,
+          "errors": [
+            {
+              "message": "Cannot return null for non-nullable field Payload.likes.",
+              "locations": [
+                {
+                  "line": 3,
+                  "column": 5
+                },
+                {
+                  "line": 19,
+                  "column": 5
+                }
+              ],
+              "path": [
+                "a",
+                "likes"
+              ]
+            }
+          ]
+        },
+        "expected": "data (incomplete)"
+      },
+      "cases": 117,
+      "fixtures": {
+        "mutation": 3,
+        "mutationRoot": 114
+      }
+    },
+    {
+      "checks": [
+        "calledSerially",
+        "dataMatches"
+      ],
+      "fixture": "mutationRoot",
+      "example": {
+        "trace": "call a; call b; call likeAll; settle b = null; settle a = object(Payload); call a.likes; settle likeAll = null; settle a.likes = error",
         "response": {
           "data": null,
           "errors": [
@@ -1394,46 +1433,12 @@
             }
           ]
         },
-        "expected": "data (incomplete)"
-      },
-      "cases": 120,
-      "fixtures": {
-        "mutation": 1,
-        "mutationRoot": 119
-      }
-    },
-    {
-      "checks": [
-        "calledSerially",
-        "dataMatches"
-      ],
-      "fixture": "mutationRoot",
-      "example": {
-        "trace": "call a; call b; call likeAll; settle a = null; settle b = null; settle likeAll = list(1); call likeAll.0; settle likeAll.0 = null",
-        "response": {
-          "data": null,
-          "errors": [
-            {
-              "message": "Cannot return null for non-nullable field Mutation.likeAll.",
-              "locations": [
-                {
-                  "line": 21,
-                  "column": 3
-                }
-              ],
-              "path": [
-                "likeAll",
-                0
-              ]
-            }
-          ]
-        },
         "expected": "data {\"a\": null, \"b\": null, \"__typename\": \"Mutation\", \"root\": \"Mutation\", \"likeAll\": null}"
       },
-      "cases": 102,
+      "cases": 104,
       "fixtures": {
         "mutation": 10,
-        "mutationRoot": 92
+        "mutationRoot": 94
       }
     },
     {
@@ -1455,11 +1460,11 @@
         },
         "expected": "data (incomplete)"
       },
-      "cases": 95,
+      "cases": 92,
       "fixtures": {
-        "abstract": 26,
+        "abstract": 24,
         "lists": 58,
-        "unions": 10,
+        "unions": 9,
         "subscriptionAlias": 1
       }
     },
@@ -1491,9 +1496,9 @@
         },
         "expected": "data null"
       },
-      "cases": 82,
+      "cases": 86,
       "fixtures": {
-        "mutation": 82
+        "mutation": 86
       }
     },
     {
@@ -1505,7 +1510,7 @@
       ],
       "fixture": "mutationRoot",
       "example": {
-        "trace": "call a; call b; call likeAll; settle b = error; settle a = object(Payload); call a.likes; settle a.likes = error",
+        "trace": "call a; call b; call likeAll; settle a = object(Payload); call a.likes; settle likeAll = error; settle a.likes = error",
         "response": {
           "data": null,
           "errors": [
@@ -1530,9 +1535,9 @@
         },
         "expected": "data (incomplete)"
       },
-      "cases": 72,
+      "cases": 65,
       "fixtures": {
-        "mutationRoot": 72
+        "mutationRoot": 65
       }
     },
     {
@@ -1563,9 +1568,9 @@
         },
         "expected": "data (incomplete)"
       },
-      "cases": 47,
+      "cases": 48,
       "fixtures": {
-        "mutation": 47
+        "mutation": 48
       }
     },
     {
@@ -1576,7 +1581,7 @@
       ],
       "fixture": "mutation",
       "example": {
-        "trace": "call first; call second; call third; settle third = error; settle first = object(Payload); call first.likes; settle first.likes = error",
+        "trace": "call first; call second; call third; settle first = object(Payload); call first.likes; settle third = error; settle first.likes = error",
         "response": {
           "data": null,
           "errors": [
@@ -1597,9 +1602,26 @@
         },
         "expected": "data (incomplete)"
       },
-      "cases": 22,
+      "cases": 23,
       "fixtures": {
-        "mutation": 22
+        "mutation": 23
+      }
+    },
+    {
+      "checks": [
+        "failsWithSource"
+      ],
+      "summary": "the source failed, and the response stream completed normally with no result carrying an error before it",
+      "fixture": "subscription",
+      "problem": "the source failed, and the response stream completed normally with no result carrying an error before it",
+      "example": {
+        "trace": "",
+        "stream": "the source fails before any event: kit fails the source; the response stream completes"
+      },
+      "cases": 8,
+      "fixtures": {
+        "subscription": 4,
+        "subscriptionAlias": 4
       }
     },
     {
@@ -1631,65 +1653,9 @@
         },
         "expected": "data (incomplete)"
       },
-      "cases": 11,
+      "cases": 7,
       "fixtures": {
-        "lists": 11
-      }
-    },
-    {
-      "checks": [
-        "failsWithSource"
-      ],
-      "summary": "the source failed, and the response stream completed normally with no result carrying an error before it",
-      "fixture": "subscription",
-      "problem": "the source failed, and the response stream completed normally with no result carrying an error before it",
-      "example": {
-        "trace": "",
-        "stream": "the source fails before any event: kit fails the source; the response stream completes"
-      },
-      "cases": 8,
-      "fixtures": {
-        "subscription": 4,
-        "subscriptionAlias": 4
-      }
-    },
-    {
-      "checks": [
-        "intFraction"
-      ],
-      "summary": "… is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
-      "fixture": "unions",
-      "problem": "matrix.0.0 is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
-      "example": {
-        "trace": "call search; call matrix; settle search = error; settle matrix = list(1); call matrix.0; settle matrix.0 = list(1); call matrix.0.0; settle matrix.0.0 = uncoercible",
-        "response": {
-          "data": {
-            "matrix": [
-              [
-                1
-              ]
-            ],
-            "search": null
-          },
-          "errors": [
-            {
-              "message": "resolver at search failed",
-              "locations": [
-                {
-                  "line": 2,
-                  "column": 3
-                }
-              ],
-              "path": [
-                "search"
-              ]
-            }
-          ]
-        }
-      },
-      "cases": 5,
-      "fixtures": {
-        "unions": 5
+        "lists": 7
       }
     },
     {
@@ -1732,6 +1698,45 @@
       "fixtures": {
         "subscription": 2,
         "subscriptionAlias": 2
+      }
+    },
+    {
+      "checks": [
+        "intFraction"
+      ],
+      "summary": "… is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
+      "fixture": "unions",
+      "problem": "matrix.0.0 is 1, though its resolver returned a value its type can't represent, which must raise an execution error",
+      "example": {
+        "trace": "call search; call matrix; settle matrix = list(1); settle search = leaf; call matrix.0; settle matrix.0 = list(1); call matrix.0.0; settle matrix.0.0 = uncoercible",
+        "response": {
+          "data": {
+            "matrix": [
+              [
+                1
+              ]
+            ],
+            "search": null
+          },
+          "errors": [
+            {
+              "message": "User Error: expected iterable, but did not find one for field Query.search.",
+              "locations": [
+                {
+                  "line": 2,
+                  "column": 3
+                }
+              ],
+              "path": [
+                "search"
+              ]
+            }
+          ]
+        }
+      },
+      "cases": 4,
+      "fixtures": {
+        "unions": 4
       }
     },
     {
@@ -1790,7 +1795,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 146
+      "failing": 140
     },
     {
       "id": "aliases",
@@ -1968,7 +1973,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 145
+      "failing": 148
     },
     {
       "id": "leaves",
@@ -1996,7 +2001,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 1163
+      "failing": 1171
     },
     {
       "id": "lists",
@@ -2024,7 +2029,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 223
+      "failing": 228
     },
     {
       "id": "merging",
@@ -2047,7 +2052,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 124
+      "failing": 132
     },
     {
       "id": "mutation",
@@ -2070,7 +2075,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 490
+      "failing": 494
     },
     {
       "id": "mutationRoot",
@@ -2103,7 +2108,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 698
+      "failing": 686
     },
     {
       "id": "noPropagation",
@@ -2136,7 +2141,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 121
+      "failing": 134
     },
     {
       "id": "ordering",
@@ -2169,7 +2174,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 1111
+      "failing": 1134
     },
     {
       "id": "scalars",
@@ -2271,7 +2276,7 @@
       ],
       "status": "fail",
       "cases": 1500,
-      "failing": 137
+      "failing": 138
     }
   ],
   "ok": false
