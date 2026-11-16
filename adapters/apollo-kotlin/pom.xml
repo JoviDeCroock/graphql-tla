@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>graphqltla</groupId>
+  <artifactId>apollo-kotlin-adapter</artifactId>
+  <version>1.0</version>
+  <packaging>jar</packaging>
+  <description>A graphql-tla conformance adapter for Apollo Kotlin's apollo-execution (docs/conformance.md)</description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- The release under test: com.apollographql.apollo:apollo-execution, from Apollo Kotlin. -->
+    <apollo.version>5.2.0</apollo.version>
+    <kotlin.version>2.3.21</kotlin.version>
+    <kotlin.compiler.jvmTarget>21</kotlin.compiler.jvmTarget>
+  </properties>
+
+  <dependencies>
+    <!-- apollo-execution brings apollo-ast, apollo-api, okio and kotlinx-coroutines at the versions it was released with. -->
+    <dependency>
+      <groupId>com.apollographql.apollo</groupId>
+      <artifactId>apollo-execution-jvm</artifactId>
+      <version>${apollo.version}</version>
+    </dependency>
+    <!-- Only for the adapter's own NDJSON protocol with the kit. Requests,
+         variables and responses go through Apollo's own JSON reader and writer. -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.20.1</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>apollo-kotlin-adapter</finalName>
+    <sourceDirectory>src/main/kotlin</sourceDirectory>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-maven-plugin</artifactId>
+        <version>${kotlin.version}</version>
+        <executions>
+          <execution>
+            <id>compile</id>
+            <goals><goal>compile</goal></goals>
+          </execution>
+        </executions>
+        <configuration>
+          <args>
+            <arg>-opt-in=com.apollographql.apollo.annotations.ApolloExperimental</arg>
+          </args>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>graphqltla.AdapterKt</mainClass>
+                </transformer>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>META-INF/versions/*/module-info.class</exclude>
+                    <exclude>module-info.class</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

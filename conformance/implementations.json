@@ -117,6 +117,21 @@
         "Fields called twice (a mutation root field too, `mutationFieldsOnce`; repeated errors at one path, `errorPathsUnique`; a null lost when results merge), error paths without list indices, the nested list, the non-finite Float and the subscription findings reproduce with `#[graphql_object]` (`examples/macros.rs`). A source stream's failure can only be an error item in a Rust stream, which Juniper answers with an error result and a normal completion; the kit accepts that as completing with the error (the weaker reading of §6.2.3), so `failsWithSource` passes. See the [adapter's README](../adapters/juniper/README.md#known-juniper-deviations).",
         "The adapter doesn't claim `invalid-results` (result shapes are fixed by Rust types), `custom-directives` (Juniper can't declare a directive of its own), `parse-sdl` (Juniper parses only executable documents), or the schema and coordinate areas (Juniper doesn't read SDL and has no schema coordinate API, so every schema verdict would be the adapter's). Introspection descriptions are read from SDL by the adapter with `async-graphql-parser`, which can't read September 2025's string forms: those 3 vectors aren't graded."
       ]
+    },
+    {
+      "key": "apollo-kotlin",
+      "adapter": "adapters/apollo-kotlin/run.sh",
+      "build": "adapters/apollo-kotlin/target/apollo-kotlin-adapter.jar",
+      "env": {
+        "JAVA_HOME": "~/.cache/graphql-tla-toolchains/jdk/Contents/Home"
+      },
+      "notes": [
+        "The adapter tests `com.apollographql.apollo:apollo-execution` 5.2.0. It builds an `ExecutableSchema` from the SDL with one `Resolver` on every field, and runs each request as a server does: the body goes through `parseAsGraphQLRequest`, and the response is `GraphQLResponse#serialize`'s JSON. `idle` holds because every coroutine runs on the adapter's own single-threaded dispatcher; the determinism replay passed. apollo-execution uses each subscription event as the root field's value and calls no resolver on it, so the source stream's emission of an event stands for the root field's call, and `parentValue` grades nothing at a subscription's root.",
+        "Execution findings: `resultCoercion`, because an unknown enum value is passed through, and a non-finite Float reaches Apollo's JSON writer, which throws, so the client gets no response. `serialErrorsKept`, because field errors live in the result tree and a propagating Non-Null error drops the ones already there. `dataMatches`, because a subscription event doesn't propagate a null Non-Null root field. `errorLocationsPresent` (SHOULD), because execution errors carry no locations.",
+        "apollo-execution has no public validation function. For validate, the adapter reads the verdict that `ExecutableSchema#execute` hands to its `PersistedDocumentCache`, and stops the request there. apollo-ast reports Lone Anonymous Operation and All Variables Used as Apollo-specific warnings, which apollo-execution drops, and has no Single Root Field rule. Every request error carries `\"data\": null` because `GraphQLResponse#serialize` always writes it; the kit counts that under `requestErrorNoData` in most coerce vectors. apollo-ast's schema validation says it doesn't implement the full rules, and interface cycles crash its cache key computation.",
+        "The introspection types lack `__Type.isOneOf`, so introspect is graded against September 2025, and `__type` with an unknown name raises instead of returning null.",
+        "Not claimed: `deferred-items` (apollo-execution doesn't await list items), `exact-numbers` (Apollo's JSON reader reads a number beyond a `Long` as a `Double`) and `unvalidated` (`execute` always validates). Every finding, with source locations and reproductions, is in the [adapter's README](../adapters/apollo-kotlin/README.md#known-apollo-kotlin-deviations)."
+      ]
     }
   ]
 }
