@@ -29,11 +29,11 @@
     "validate"
   ],
   "provenance": {
-    "kit": "0625b35d64dd",
-    "date": "2026-11-16",
+    "kit": "240a580eae23",
+    "date": "2026-11-26",
     "strict": true,
-    "vectors": 2222,
-    "run": 2222,
+    "vectors": 2244,
+    "run": 2244,
     "skipped": 0,
     "modes": [
       "validating: invalid documents graded under invalidNotExecuted where the validator rejects them, else onlyValidExecuted",
@@ -41,17 +41,17 @@
       "big JSON numbers graded under jsonNumbers"
     ]
   },
-  "checkerSelfTest": "passed (37841 negative controls)",
+  "checkerSelfTest": "passed (38242 negative controls)",
   "cases": {
-    "submitted": 2222,
-    "distinct": 2222,
+    "submitted": 2244,
+    "distinct": 2244,
     "malformed": 0
   },
   "adapterProblems": 0,
   "since": {
     "September2025": {
-      "vectors": 57,
-      "failing": 20
+      "vectors": 64,
+      "failing": 22
     },
     "September2026": {
       "vectors": 9,
@@ -326,10 +326,10 @@
       ],
       "basis": "§3.10.1, new in September 2025 (October 2021 has no OneOf Input Objects): the value \"must contain exactly one entry and that entry must not be null or the null literal, otherwise a request error must be raised\", and \"The resulting coerced map must contain exactly one entry and the value for that entry must not be null, otherwise an execution error must be raised.\" The vectors are §3.10.1's table of examples and a few more, on a schema of their own (the vectors' `schema: \"oneOf\"`), all `since` September 2025. September 2026 says the same.",
       "status": "fail",
-      "cases": 10,
-      "failing": 4,
+      "cases": 17,
+      "failing": 5,
       "failingSince": {
-        "September2025": 4
+        "September2025": 5
       }
     },
     {
@@ -345,7 +345,7 @@
       ],
       "basis": "An item that isn't a list, where the item type is a list, is coerced as a list of one: \"list values are accepted only when each item in the list can be accepted by the list's item type\", and a value that is \"not a list\" is accepted by a list type as \"a list of size one\". That prose is the same in every edition. October 2021's table of examples says \"Error: Incorrect item value\" for [1, 2, 3] as [[Int]], but examples are non-normative (\"Examples in this document are non-normative\"), and the tables of September 2025 and September 2026 give [[1], [2], [3]]. So these vectors carry no `since`, and the table's answer fails this check under a finding of its own. A list item that is a variable whose runtime value isn't a list, where the item type is a list ([$x, [$x]] for [[Int]] with $x: Int), is only in an invalid document (§5.8.5), and the spec doesn't say whether the value is used as it is (§6.4.1's Note: variable values are already coerced) or wrapped as \"a list of size one\": both pass, for adapters that execute invalid documents.",
       "status": "fail",
-      "cases": 329,
+      "cases": 333,
       "failing": 1,
       "failingSince": {}
     },
@@ -379,7 +379,7 @@
       ],
       "basis": "The algorithm's steps: a missing variable with a default gets \"the result of coercing defaultValue\"; \"Otherwise if variableType is a Non-Nullable type, and either hasValue is not true or value is null, raise a request error\"; a null value is kept; \"If value cannot be coerced according to the input coercion rules of variableType, raise a request error.\" Algorithm steps have the algorithm's level (Appendix A). September 2025 says the same. October 2021 adds the default as it is (see the vectors `since` September 2025) and otherwise says the same.",
       "status": "fail",
-      "cases": 879,
+      "cases": 889,
       "failing": 5,
       "failingSince": {
         "September2025": 2
@@ -398,8 +398,8 @@
       ],
       "basis": "The algorithm's steps: an argument with no value, or whose variable has no runtime value, gets \"the result of coercing defaultValue\" if it has one; an explicit null is kept; a variable's value is used as it is; a literal is coerced; \"Otherwise if argumentType is a Non-Nullable type, and either hasValue is not true or value is null, raise an execution error.\" Algorithm steps have the algorithm's level (Appendix A). Whether a failure is an execution error or a request error is argumentErrorKind's. September 2025 says the same. October 2021 adds the default as it is (see the vectors `since` September 2025) and otherwise says the same.",
       "status": "fail",
-      "cases": 37,
-      "failing": 2,
+      "cases": 44,
+      "failing": 3,
       "failingSince": {}
     },
     {
@@ -415,7 +415,7 @@
       ],
       "basis": "The input coercion rules call the failure a request error (§3.5: \"If an input value does not match a coercion rule, a request error must be raised\"; §3.12: \"... then a request error must be raised\"). CoerceArgumentValues says \"raise an execution error\", and September 2026 settles the conflict with a SHOULD (September 2025 has the same sentence): \"Any request error raised as a result of input coercion during CoerceArgumentValues() should be treated instead as an execution error.\" So a request error where the reference gives a field error fails only this SHOULD. Except where §3.10 or §3.10.1 itself says \"an execution error must be raised\" (a variable in an input object literal whose runtime value is null at a Non-Null field; a OneOf literal whose one entry is a variable with a null or no runtime value): those vectors (`executionErrorRequired`) fail their own check. October 2021's CoerceArgumentValues says \"raise a field error\" and has no such sentence, while its §3.5 and §3.12 still say a request error must be raised; the kit takes the weaker reading there too, the same SHOULD.",
       "status": "pass",
-      "cases": 10,
+      "cases": 12,
       "failing": 0,
       "failingSince": {}
     },
@@ -567,7 +567,7 @@
       ],
       "basis": "GetOperation: \"If operationName is null: If document contains exactly one operation. Return the Operation contained in the document. Otherwise raise a request error requiring operationName.\" and \"Let operation be the Operation named operationName in document. If operation was not found, raise a request error.\" Includes a mutation running on the mutation root type, and only the selected operation's variables being coerced. Algorithm steps have the algorithm's level (Appendix A). October 2021 says the same.",
       "status": "fail",
-      "cases": 25,
+      "cases": 31,
       "failing": 3,
       "failingSince": {}
     },
@@ -623,7 +623,7 @@
       ],
       "basis": "\"If validation errors are known, they should be reported in the list of \\\"errors\\\" in the response and the request must fail without operation execution.\" The MUST holds only where the errors are known: graded for adapters without `unvalidated` that claim `validate`, on vectors Validation.tla rejects and the implementation's own validator (asked through the validate area) rejects too. A request error, no data, no resolver called. October 2021 says the same.",
       "status": "pass",
-      "cases": 805,
+      "cases": 807,
       "failing": 0,
       "failingSince": {}
     },
@@ -662,7 +662,7 @@
       ],
       "basis": "As the validate area's check of the same name: a document that breaks no validation rule is valid, and must not be refused as invalid. Graded for adapters without `unvalidated` that claim `validate`: a valid vector answered with a request error whose document the implementation's own validator rejects (asked through the validate area) fails here, not under the coercion rule the vector is about, whether or not the reference's answer is also a request error.",
       "status": "pass",
-      "cases": 1362,
+      "cases": 1382,
       "failing": 0,
       "failingSince": {}
     },
@@ -679,10 +679,10 @@
       ],
       "basis": "September 2026 and September 2025, §7.1.3: \"The request error result map must not contain an entry with key {\"data\"}.\" October 2021, §7.1: \"If the request failed before execution, due to a syntax error, missing information, or validation error, this entry must not be present.\" and §7.1.2: \"If a request error is raised, execution does not begin and the data entry in the response must not be present.\" Its §7.1.1 also says \"should not be present\", but the two MUST sentences are the ones about request errors, so the check is a MUST in every edition. A request error with \"data\": null is still a request error for the vector's own check, and fails this one.",
       "status": "fail",
-      "cases": 1674,
-      "failing": 1621,
+      "cases": 1684,
+      "failing": 1630,
       "failingSince": {
-        "September2025": 12,
+        "September2025": 13,
         "September2026": 9
       }
     },
@@ -699,7 +699,7 @@
       ],
       "basis": "\"When a GraphQL service receives a request, it must return a well-formed response.\" October 2021 says the same. The adapter answers with an `error` when the implementation produced no response at all, for example because it threw. Execution's check of the same name grades the same sentence. No response says nothing about the coercion rule the vector is about, so it always counts here, whatever the reference's answer; the finding names that rule as a hint. Every vector exercises this check.",
       "status": "pass",
-      "cases": 2222,
+      "cases": 2244,
       "failing": 0,
       "failingSince": {}
     },
@@ -721,7 +721,7 @@
       ],
       "basis": "§7.1.6: an error that \"can be associated to a particular field in the GraphQL result ... must contain an entry with the key {\"path\"} with a response path which describes the response position which raised the error\". §7.1.4: a response path names response positions, not arguments. A result whose data holds the field as null, with one error and no resolver call, is a field error whatever its path. If that is the answer the vector expects, a path other than the field's fails this check. Every vector that accepts a field error exercises it. October 2021's §7.1.2 keeps the must: the error \"must contain an entry with the key path that details the path of the response field which experienced the error\". Its shoulds there are about the path's form (\"should be a list of path segments\", indices \"should be 0-indexed integers\"), not about which field it names, so a path to the argument (`[\"v\"]`) fails a MUST in every edition. September 2025 and September 2026 have the same §7.1.6 sentence.",
       "status": "pass",
-      "cases": 37,
+      "cases": 39,
       "failing": 0,
       "failingSince": {}
     },
@@ -738,7 +738,7 @@
       ],
       "basis": "\"Every error must contain an entry with the key {\"message\"} with a string description of the error\", and each error \"must be a map\" (§7.1.1, §7.1.3). October 2021 says the same (\"each error is a map\", \"Every error must contain an entry with the key message\"). A result whose errors aren't all maps with a string message, such as [null], or a field error with only a path, fails this check wherever its outcome would otherwise match. Every vector exercises it.",
       "status": "pass",
-      "cases": 2222,
+      "cases": 2244,
       "failing": 0,
       "failingSince": {}
     },
@@ -755,7 +755,7 @@
       ],
       "basis": "The same check as execution's. September 2026, §7.1.1: \"If any errors are raised during operation execution, the execution result must contain an entry with key {\"errors\"}. The value of this entry must be a non-empty list ... If the request completed without raising any errors, this entry must not be present.\" October 2021, §7.1: \"If the request raised any errors, the response map must contain an entry with key errors. ... If the request completed without raising any errors, this entry must not be present.\" Its §7.1.2 also says \"should not be present\", but the §7.1 MUST is the sentence about the entry, so the check is a MUST in every edition, as in execution. September 2025 says the same (\"If execution raised any errors ...\"). A value with \"errors\": [] is still a value for the vector's own check, and fails this one. Every vector exercises it.",
       "status": "pass",
-      "cases": 2222,
+      "cases": 2244,
       "failing": 0,
       "failingSince": {}
     },
@@ -777,7 +777,7 @@
       ],
       "basis": "§7.1.1: \"An execution result must be a map.\" §7.1.3: \"A request error result must be a map.\" A result whose `response` is a list, a string, a number, a boolean or null fails here, rather than being taken as an adapter that doesn't follow the result format. Execution's check of the same name. October 2021, §7.1: \"A response to a GraphQL request must be a map.\" Every vector exercises it.",
       "status": "pass",
-      "cases": 2222,
+      "cases": 2244,
       "failing": 0,
       "failingSince": {}
     },
@@ -794,7 +794,7 @@
       ],
       "basis": "\"To ensure future changes to the protocol do not break existing services and clients, the execution result and request error result maps must not contain any entries other than those described above.\" October 2021, §7.1: \"the top level response map must not contain any entries other than the three described above\". The same check as execution's, applied to every result here, request errors included. A result with another top-level entry is still classified, and fails this check wherever its outcome would otherwise pass. Every vector exercises it.",
       "status": "pass",
-      "cases": 2222,
+      "cases": 2244,
       "failing": 0,
       "failingSince": {}
     },
@@ -811,7 +811,7 @@
       ],
       "basis": "\"The \\\"extensions\\\" entry in an execution result or request error result, if set, must have a map as its value.\" October 2021, §7.1: \"This entry, if set, must have a map as its value.\" The same check as execution's. A result whose top-level extensions isn't a map is still classified, and fails this check wherever its outcome would otherwise pass. Every vector exercises it.",
       "status": "pass",
-      "cases": 2222,
+      "cases": 2244,
       "failing": 0,
       "failingSince": {}
     },
@@ -872,23 +872,23 @@
         "requestErrorNoData"
       ],
       "summary": "answers a request error with a \"data\" entry, which §7.1.3 (Request Error Result) says it must not have",
-      "cases": 1621,
+      "cases": 1630,
       "since": {
-        "September2025": 12,
+        "September2025": 13,
         "September2026": 9
       },
       "fixtures": {
         "literal": 735,
         "variable": 760,
         "omitted": 3,
-        "variable-default": 4,
+        "variable-default": 6,
         "nullable-variable": 9,
         "nested-variable": 17,
         "arguments": 3,
         "unused-variable": 2,
         "spec-example": 10,
-        "oneOf": 11,
-        "operation": 8,
+        "oneOf": 12,
+        "operation": 14,
         "order": 2,
         "descriptions": 2,
         "not-executable": 6,
@@ -1058,6 +1058,49 @@
     },
     {
       "checks": [
+        "oneOf"
+      ],
+      "summary": "accepts what §3.10.1 (OneOf Input Objects) rejects",
+      "cases": 5,
+      "since": {
+        "September2025": 5
+      },
+      "fixtures": {
+        "oneOf": 5
+      },
+      "fixture": "oneOf",
+      "example": {
+        "vector": "coerce-2028",
+        "input": "[since September 2025] query($var: ExampleOneOfInputObject) { oneOfExample(arg: $var) }  variables: {\"var\": {}}",
+        "response": {
+          "calls": [
+            {
+              "path": [
+                "oneOfExample"
+              ],
+              "arguments": {
+                "arg": {}
+              }
+            }
+          ],
+          "response": {
+            "data": {
+              "oneOfExample": "ok"
+            }
+          }
+        },
+        "outcome": {
+          "outcome": "value",
+          "field": "oneOfExample",
+          "arguments": {
+            "arg": {}
+          }
+        },
+        "expected": "a request error"
+      }
+    },
+    {
+      "checks": [
         "variables"
       ],
       "summary": "coerces to the wrong value under §6.1.2 (Coercing Variable Values)",
@@ -1101,45 +1144,43 @@
     },
     {
       "checks": [
-        "oneOf"
+        "arguments"
       ],
-      "summary": "accepts what §3.10.1 (OneOf Input Objects) rejects",
-      "cases": 4,
-      "since": {
-        "September2025": 4
-      },
+      "summary": "coerces to the wrong value under §6.4.1 (Coercing Field Arguments)",
+      "cases": 3,
       "fixtures": {
-        "oneOf": 4
+        "nullable-variable": 1,
+        "arguments": 2
       },
-      "fixture": "oneOf",
+      "fixture": "arguments",
       "example": {
-        "vector": "coerce-2028",
-        "input": "[since September 2025] query($var: ExampleOneOfInputObject) { oneOfExample(arg: $var) }  variables: {\"var\": {}}",
+        "vector": "coerce-2238",
+        "input": "query($x: Int) { pair(a: $x, b: $x) }  variables: {}",
         "response": {
           "calls": [
             {
               "path": [
-                "oneOfExample"
+                "pair"
               ],
               "arguments": {
-                "arg": {}
+                "b": "GQLIntValue: 2"
               }
             }
           ],
           "response": {
             "data": {
-              "oneOfExample": "ok"
+              "pair": "ok"
             }
           }
         },
         "outcome": {
           "outcome": "value",
-          "field": "oneOfExample",
+          "field": "pair",
           "arguments": {
-            "arg": {}
+            "b": "GQLIntValue: 2"
           }
         },
-        "expected": "a request error"
+        "expected": "pair resolved with {\"b\":2}"
       }
     },
     {
@@ -1252,47 +1293,6 @@
           }
         },
         "expected": "a request error"
-      }
-    },
-    {
-      "checks": [
-        "arguments"
-      ],
-      "summary": "coerces to the wrong value under §6.4.1 (Coercing Field Arguments)",
-      "cases": 2,
-      "fixtures": {
-        "nullable-variable": 1,
-        "arguments": 1
-      },
-      "fixture": "nullable-variable",
-      "example": {
-        "vector": "coerce-0412",
-        "input": "query($x: Int) { intNNDefault(v: $x) }  variables: {}",
-        "response": {
-          "calls": [
-            {
-              "path": [
-                "intNNDefault"
-              ],
-              "arguments": {
-                "v": "GQLIntValue: 7"
-              }
-            }
-          ],
-          "response": {
-            "data": {
-              "intNNDefault": "ok"
-            }
-          }
-        },
-        "outcome": {
-          "outcome": "value",
-          "field": "intNNDefault",
-          "arguments": {
-            "v": "GQLIntValue: 7"
-          }
-        },
-        "expected": "intNNDefault resolved with {\"v\":7}"
       }
     },
     {

@@ -209,8 +209,11 @@ resolvers returning `1.5` for an Int and `"false"` for a Boolean answers
 `{"data":{"i":1,"b":true}}`. The kit's `leaves` fixture catches the Int case:
 an `uncoercible` outcome returns `1.2` for an Int, and graphql-ruby answers `1`
 instead of an error (`intFraction`, a MUST, in both modes, since no hook is
-involved). It doesn't probe Boolean, since §3.5.4 leaves reasonable coercions
-to the service.
+involved). The `booleanResult` fixture returns an object for a Boolean, which
+can't become a Boolean without losing information, and graphql-ruby answers
+`true` instead of an error (`dataMatches`, `nullsExplained`). The kit doesn't
+send strings such as `"false"` for a Boolean, since §3.5.4 lets a service
+coerce other values "where reasonable".
 
 ## Other areas
 

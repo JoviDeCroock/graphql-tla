@@ -13,10 +13,10 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 ## Execution
 
 - **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, error-propagation-off, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, validate
-- **Cases:** 31362 submitted, 5788 distinct, 701 malformed
+- **Cases:** 43836 submitted, 6165 distinct, 701 malformed
 - **Adapter problems:** none
 - **Checker self-test:** passed (87 negative controls)
-- **Run:** kit 1ad955aa3659, 2026-11-16, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
+- **Run:** kit 240a580eae23, 2026-11-26, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
 
 ### Findings
 
@@ -24,7 +24,7 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 
 #### 1. `errorLocationsPresent`: execution errors raised at a field have no locations
 
-20207 cases, in `mutation` (1708), `nullPropagation` (1588), `mutationRoot` (1539), `unions` (1503), `lists` (1487), `subscription` (1428), `directives_kept` (1329), `ordering` (1329), `aliases` (1276), `merging` (1160), `fragments` (1145), `scalars` (945), `subscriptionAlias` (944), `leaves` (906), `abstract` (874), `directives_skipped` (523), `directives_excluded` (523).
+26897 cases, in `mutation` (1708), `nullPropagation` (1588), `mutationRoot` (1539), `unions` (1503), `lists` (1487), `subscription` (1428), `directives_kept` (1329), `ordering` (1329), `aliases` (1276), `conditionalMerge_on` (1170), `conditionalMerge_off` (1170), `merging` (1160), `fragments` (1145), `nonNullListItems` (1099), `scalars` (945), `subscriptionAlias` (944), `leaves` (906), `abstract` (874), `booleanResult` (776), `listPartialNull` (707), `abstractList` (665), `nestedLists` (650), `directives_skipped` (523), `directives_excluded` (523), `deepLists` (453).
 
 - An execution error raised at a field has locations (SHOULD, [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors))
 
@@ -129,20 +129,20 @@ expected: data null
 
 | Check | Level | Spec | Result |
 | --- | :---: | :---: | :---: |
-| The response is sent only once execution is complete (`complete`) | MUST | [§6.3.1](https://spec.graphql.org/September2026/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data) | ✓ 5618 |
-| data is the completed value: field collection, value completion and null propagation (`dataMatches`) | MUST | [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) | ✗ 14/5618 |
-| Response keys are in collected field order (`keyOrder`) | SHOULD | [§7.2.2](https://spec.graphql.org/September2026/#sec-Serialized-Map-Ordering) | ✓ 5618 |
-| Every error was raised, at the path where it was raised (`errorsWereRaised`) | MUST | [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 5618 |
-| No two errors share a response path (`errorPathsUnique`) | MUST (SHOULD in September 2025 and October 2021) | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) | ✓ 5618 |
-| Every error is inside a null in data (`errorsInsideNulls`) | MUST | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 5618 |
-| Every null an error caused comes with an error from one of its causes (`nullsExplained`) | MUST (SHOULD in October 2021) | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 5618 |
+| The response is sent only once execution is complete (`complete`) | MUST | [§6.3.1](https://spec.graphql.org/September2026/#sec-Executing-the-Root-Selection-Set) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data) | ✓ 5995 |
+| data is the completed value: field collection, value completion and null propagation (`dataMatches`) | MUST | [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) | ✗ 14/5995 |
+| Response keys are in collected field order (`keyOrder`) | SHOULD | [§7.2.2](https://spec.graphql.org/September2026/#sec-Serialized-Map-Ordering) | ✓ 5995 |
+| Every error was raised, at the path where it was raised (`errorsWereRaised`) | MUST | [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 5995 |
+| No two errors share a response path (`errorPathsUnique`) | MUST (SHOULD in September 2025 and October 2021) | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) | ✓ 5995 |
+| Every error is inside a null in data (`errorsInsideNulls`) | MUST | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 5995 |
+| Every null an error caused comes with an error from one of its causes (`nullsExplained`) | MUST (SHOULD in October 2021) | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 5995 |
 | A mutation that ran its root fields serially reports every error its earlier root fields raised (`serialErrorsKept`) | MUST (SHOULD in October 2021) | [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) | ✗ 60/250 |
 | A mutation's root fields execute one after another (`calledSerially`) | SHOULD | [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution) | ✓ 250 |
 | Each mutation root field the operation selects executes once, and no other mutation root field executes (`mutationFieldsOnce`) | MUST | [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution) | ✓ 3500 |
-| Each field is executed once, merged selections included (mutation root fields: mutationFieldsOnce) (`callsOnce`) | INFO | — | ✓ 31326 |
-| Only fields the operation selects are executed (mutation root fields: mutationFieldsOnce) (`callsSelected`) | INFO | — | ✓ 31326 |
-| A field executes only once its parent has a value that contains it (`callsReachable`) | INFO | — | ✓ 31326 |
-| A request gets a response (`responds`) | MUST | [§7](https://spec.graphql.org/September2026/#sec-Response) | ✓ 29724 |
+| Each field is executed once, merged selections included (mutation root fields: mutationFieldsOnce) (`callsOnce`) | INFO | — | ✓ 43800 |
+| Only fields the operation selects are executed (mutation root fields: mutationFieldsOnce) (`callsSelected`) | INFO | — | ✓ 43800 |
+| A field executes only once its parent has a value that contains it (`callsReachable`) | INFO | — | ✓ 43800 |
+| A request gets a response (`responds`) | MUST | [§7](https://spec.graphql.org/September2026/#sec-Response) | ✓ 42198 |
 | A subscription event yields an execution result, even when its data is null (`eventYieldsResult`) | MUST | [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§7.1.2](https://spec.graphql.org/September2026/#sec-Response-Format.Response-Stream) | ✓ 3084 |
 | Each source event yields one execution result on the response stream, before it completes (`eventPerSourceEvent`) | MUST | [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§7.1.2](https://spec.graphql.org/September2026/#sec-Response-Format.Response-Stream) | ✓ 36 |
 | The response stream completes only when its source completes or fails, or it is cancelled (`streamEndsOnlyForCause`) | SHOULD | [§6.2.3](https://spec.graphql.org/September2026/#sec-Subscription) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) | ✓ 36 |
@@ -151,30 +151,30 @@ expected: data null
 | A cancelled response stream completes normally (`cancelCompletes`) | MUST (since September 2025) | [§6.2.3](https://spec.graphql.org/September2026/#sec-Subscription) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§6.2.3.3](https://spec.graphql.org/September2026/#sec-Unsubscribe) | ✓ 12 |
 | Cancelling the response stream cancels the source stream (`cancelCancelsSource`) | MUST (since September 2025) | [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§6.2.3.3](https://spec.graphql.org/September2026/#sec-Unsubscribe) | ✓ 12 |
 | No result arrives after the client cancels the response stream (`nothingAfterCancel`) | SHOULD (MUST in October 2021) | [§6.2.3](https://spec.graphql.org/September2026/#sec-Subscription) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) | ✓ 12 |
-| data holds only positions the operation selects (`dataShape`) | MUST | [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data) | ✓ 24974 |
+| data holds only positions the operation selects (`dataShape`) | MUST | [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data) | ✓ 35478 |
 | A non-finite Float, an unknown enum value or a value a custom scalar rejects raises an execution error instead of being passed through (`resultCoercion`) | MUST | [§3.5](https://spec.graphql.org/September2026/#sec-Scalars) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) [§3.9](https://spec.graphql.org/September2026/#sec-Enums) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✗ 701/1112 |
 | A fraction returned for an Int (1.2) raises an execution error instead of being truncated (`intFraction`) | MUST | [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✓ 317 |
 | A position whose resolver returned a value its type can't represent isn't null without an error (`coercionErrorReported`) | MUST (SHOULD in October 2021) | [§3.5](https://spec.graphql.org/September2026/#sec-Scalars) [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) [§3.5.2](https://spec.graphql.org/September2026/#sec-Float) [§3.9](https://spec.graphql.org/September2026/#sec-Enums) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) | ✓ 1440 |
 | An Int outside 32 bits returned by a resolver (2147483648) raises an execution error instead of being passed through (`intRange`) | SHOULD | [§3.5.1](https://spec.graphql.org/September2026/#sec-Int) | ✓ 265 |
 | An ID whose resolver returned an integer (4) is serialized as a String ("4") (`idAsString`) | MUST (SHOULD in October 2021) | [§3.5.5](https://spec.graphql.org/September2026/#sec-ID) | ✓ 391 |
-| Leaf values are the resolver's canonical value (Int 1, Float 1.5, Boolean true, an enum's first value, "v") (`leafValues`) | MUST | [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✓ 24974 |
-| Leaf values use the JSON type §7.2.1 gives their GraphQL type (a number for Int 1, not "1") (`leafEncoding`) | SHOULD | [§7.2.1](https://spec.graphql.org/September2026/#sec-JSON-Serialization) | ✓ 24974 |
-| The execution result is a map (`resultMap`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 29359 |
-| An execution result has a data entry (`dataPresent`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 29359 |
-| errors, when present, is a non-empty list (`errorsList`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 29359 |
-| The response has no entries besides data, errors and extensions (`additionalEntries`) | MUST | [§7.1.8](https://spec.graphql.org/September2026/#sec-Additional-Entries) | ✓ 29359 |
+| Leaf values are the resolver's canonical value (Int 1, Float 1.5, Boolean true, an enum's first value, "v") (`leafValues`) | MUST | [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✓ 35478 |
+| Leaf values use the JSON type §7.2.1 gives their GraphQL type (a number for Int 1, not "1") (`leafEncoding`) | SHOULD | [§7.2.1](https://spec.graphql.org/September2026/#sec-JSON-Serialization) | ✓ 35478 |
+| The execution result is a map (`resultMap`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 41833 |
+| An execution result has a data entry (`dataPresent`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 41833 |
+| errors, when present, is a non-empty list (`errorsList`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 41833 |
+| The response has no entries besides data, errors and extensions (`additionalEntries`) | MUST | [§7.1.8](https://spec.graphql.org/September2026/#sec-Additional-Entries) | ✓ 41833 |
 | extensions is a map (`extensions`). no response had an extensions entry, so there was nothing to grade (§7.1.7: the entry is a may) | MUST | [§7.1.7](https://spec.graphql.org/September2026/#sec-Extensions) | – |
-| Errors are maps with a message, and extensions, if present, is a map (`errorFormat`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 20484 |
+| Errors are maps with a message, and extensions, if present, is a map (`errorFormat`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 27174 |
 | An error's locations, if present, is a list of maps with line and column, both positive integers (`errorLocations`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | – |
-| An execution error raised at a field has locations (`errorLocationsPresent`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ! 20207/20484 |
+| An execution error raised at a field has locations (`errorLocationsPresent`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ! 26897/27174 |
 | An execution error's locations point at the field it was raised at (`errorLocationsAccurate`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | – |
-| Execution errors have a path to a position the operation selects (`errorPath`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 20484 |
-| Paths are lists of response names (aliases, not field names) and integer list indices, none left out (`responsePosition`) | MUST (SHOULD in October 2021) | [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 20484 |
-| An error that propagated to a nullable parent keeps the full path to where it was raised (`errorPathFull`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 20484 |
-| Errors have no entries besides message, locations, path and extensions (`errorEntries`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 20484 |
-| No map in the serialized response repeats a key (`uniqueKeys`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.2.1](https://spec.graphql.org/September2026/#sec-JSON-Serialization) [Appendix B](https://spec.graphql.org/September2026/#sec-Appendix-Notation-Conventions) | ✓ 29359 |
-| Each field's resolver is given its parent's value: the initial value at the root, a subscription event's value at its root (`parentValue`) | MUST | [§6.2.1](https://spec.graphql.org/September2026/#sec-Query) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§6.4.2](https://spec.graphql.org/September2026/#sec-Value-Resolution) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✓ 31326 |
-| The adapter follows the kit's protocol (call types, settles) (`protocol`) | ADAPTER | — | ✓ 31326 |
+| Execution errors have a path to a position the operation selects (`errorPath`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 27174 |
+| Paths are lists of response names (aliases, not field names) and integer list indices, none left out (`responsePosition`) | MUST (SHOULD in October 2021) | [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 27174 |
+| An error that propagated to a nullable parent keeps the full path to where it was raised (`errorPathFull`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 27174 |
+| Errors have no entries besides message, locations, path and extensions (`errorEntries`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 27174 |
+| No map in the serialized response repeats a key (`uniqueKeys`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.2.1](https://spec.graphql.org/September2026/#sec-JSON-Serialization) [Appendix B](https://spec.graphql.org/September2026/#sec-Appendix-Notation-Conventions) | ✓ 41833 |
+| Each field's resolver is given its parent's value: the initial value at the root, a subscription event's value at its root (`parentValue`) | MUST | [§6.2.1](https://spec.graphql.org/September2026/#sec-Query) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§6.4.2](https://spec.graphql.org/September2026/#sec-Value-Resolution) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✓ 43800 |
+| The adapter follows the kit's protocol (call types, settles) (`protocol`) | ADAPTER | — | ✓ 43800 |
 | With error propagation off, an error nulls the position where it happened (graphql-js 17's @experimental_disableErrorPropagation) (`disabledPropagation`) | INFO | — | i 1399/1602 |
 
 - **Basis for `complete`:** No sentence says to respond only once execution is complete; the algorithms do. ExecuteRootSelectionSet (§6.3.1) returns {data} once ExecuteCollectedFields has run, and §6.3.3 says "Execution will recursively resolve and complete the value of every entry in the collected fields map". §7.1.5 adds: "The response data is the result of accumulating the resolved result of all response positions during execution." Positions §6.3.3 lets an implementation cancel don't hold the response back. September 2025 has the same algorithms and sentences, and October 2021's algorithms are the same.
@@ -230,18 +230,26 @@ expected: data null
 | Fixture | Result | Note |
 | --- | :---: | :---: |
 | [`abstract`](../fixtures/abstract.graphql) | ! 874/1730 |  |
+| [`abstractList`](../fixtures/abstractList.graphql) | ! 665/1618 |  |
 | [`aliases`](../fixtures/aliases.graphql) | ! 1276/1698 |  |
+| [`booleanResult`](../fixtures/booleanResult.graphql) | ! 776/1508 |  |
+| [`conditionalMerge_on`](../fixtures/conditionalMerge_on.graphql) | ! 1170/1518 |  |
+| [`conditionalMerge_off`](../fixtures/conditionalMerge_off.graphql) | ! 1170/1518 |  |
+| [`deepLists`](../fixtures/deepLists.graphql) | ! 453/1518 |  |
 | [`directives_kept`](../fixtures/directives_kept.graphql) | ! 1329/1662 |  |
 | [`directives_skipped`](../fixtures/directives_skipped.graphql) | ! 523/1506 |  |
 | [`directives_excluded`](../fixtures/directives_excluded.graphql) | ! 523/1506 |  |
 | [`directives_dropped`](../fixtures/directives_dropped.graphql) | ✓ 1502 |  |
 | [`fragments`](../fixtures/fragments.graphql) | ! 1145/1576 |  |
 | [`leaves`](../fixtures/leaves.graphql) | ✗ 1607/1740 |  |
+| [`listPartialNull`](../fixtures/listPartialNull.graphql) | ! 707/1590 |  |
 | [`lists`](../fixtures/lists.graphql) | ! 1487/1914 |  |
 | [`merging`](../fixtures/merging.graphql) | ! 1160/1566 |  |
 | [`mutation`](../fixtures/mutation.graphql) | ✗ 1708/1750 |  |
 | [`mutationRoot`](../fixtures/mutationRoot.graphql) | ! 1539/1750 |  |
+| [`nestedLists`](../fixtures/nestedLists.graphql) | ! 650/1650 |  |
 | [`noPropagation`](../fixtures/noPropagation.graphql) | i 1399/1602 | outside the spec (graphql-js 17's @experimental_disableErrorPropagation): its failures are informational, under disabledPropagation, except protocol problems and the checks on resolver calls |
+| [`nonNullListItems`](../fixtures/nonNullListItems.graphql) | ! 1099/1554 |  |
 | [`nullPropagation`](../fixtures/nullPropagation.graphql) | ! 1588/1782 |  |
 | [`ordering`](../fixtures/ordering.graphql) | ! 1329/1662 |  |
 | [`scalars`](../fixtures/scalars.graphql) | ! 945/1532 |  |
@@ -839,11 +847,11 @@ expected: invalid: FragmentsOnObjectInterfaceOrUnionTypes ["Filter"]
 ## Coerce
 
 - **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, error-propagation-off, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, validate
-- **Cases:** 2222 submitted, 2222 distinct, 0 malformed
-- **Vectors relying on rules after October 2021:** since September 2025, 20 of 57 vectors failing; new in September 2026, 9 of 9 vectors failing
+- **Cases:** 2244 submitted, 2244 distinct, 0 malformed
+- **Vectors relying on rules after October 2021:** since September 2025, 22 of 64 vectors failing; new in September 2026, 9 of 9 vectors failing
 - **Adapter problems:** none
-- **Checker self-test:** passed (37841 negative controls)
-- **Run:** kit 0625b35d64dd, 2026-11-16, strict
+- **Checker self-test:** passed (38242 negative controls)
+- **Run:** kit 240a580eae23, 2026-11-26, strict
 
 ### Findings
 
@@ -851,7 +859,7 @@ expected: invalid: FragmentsOnObjectInterfaceOrUnionTypes ["Filter"]
 
 #### 1. `requestErrorNoData`: answers a request error with a "data" entry, which §7.1.3 (Request Error Result) says it must not have
 
-1621 cases, in `variable` (760), `literal` (735), `nested-variable` (17), `unparsable` (15), `nested` (14), `subscription` (13), `oneOf` (11), `spec-example` (10), `nullable-variable` (9), `operation` (8), `not-executable` (6), `variable-default` (4), `unvalidated` (4), `omitted` (3), `arguments` (3), `extensions` (3), `unused-variable` (2), `order` (2), `descriptions` (2). 12 of them rely on grammar or rules introduced in September 2025 and 9 on ones introduced in September 2026, not in October 2021.
+1630 cases, in `variable` (760), `literal` (735), `nested-variable` (17), `unparsable` (15), `operation` (14), `nested` (14), `subscription` (13), `oneOf` (12), `spec-example` (10), `nullable-variable` (9), `variable-default` (6), `not-executable` (6), `unvalidated` (4), `omitted` (3), `arguments` (3), `extensions` (3), `unused-variable` (2), `order` (2), `descriptions` (2). 13 of them rely on grammar or rules introduced in September 2025 and 9 on ones introduced in September 2026, not in October 2021.
 
 - A request error result has no data entry (MUST, [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result))
 
@@ -913,7 +921,23 @@ expected: a request error
 
 <a id="coerce-finding-5"></a>
 
-#### 5. `variables`: coerces to the wrong value under §6.1.2 (Coercing Variable Values)
+#### 5. `oneOf`: accepts what §3.10.1 (OneOf Input Objects) rejects
+
+5 cases, in `oneOf` (5). All rely on grammar or rules introduced in September 2025, not in October 2021.
+
+- OneOf input objects take exactly one non-null field (MUST, [§3.10.1](https://spec.graphql.org/September2026/#sec-OneOf-Input-Objects))
+
+The shortest case, from `oneOf`:
+
+```
+input:    [since September 2025] query($var: ExampleOneOfInputObject) { oneOfExample(arg: $var) }  variables: {"var": {}}
+response: {"calls":[{"path":["oneOfExample"],"arguments":{"arg":{}}}],"response":{"data":{"oneOfExample":"ok"}}}
+expected: a request error
+```
+
+<a id="coerce-finding-6"></a>
+
+#### 6. `variables`: coerces to the wrong value under §6.1.2 (Coercing Variable Values)
 
 4 cases, in `variable` (4). 2 of them rely on grammar or rules introduced in September 2025, not in October 2021.
 
@@ -927,25 +951,25 @@ response: {"calls":[{"path":["intDefault"],"arguments":{"v":"GQLIntValue: 7"}}],
 expected: intDefault resolved with {"v":7}
 ```
 
-<a id="coerce-finding-6"></a>
-
-#### 6. `oneOf`: accepts what §3.10.1 (OneOf Input Objects) rejects
-
-4 cases, in `oneOf` (4). All rely on grammar or rules introduced in September 2025, not in October 2021.
-
-- OneOf input objects take exactly one non-null field (MUST, [§3.10.1](https://spec.graphql.org/September2026/#sec-OneOf-Input-Objects))
-
-The shortest case, from `oneOf`:
-
-```
-input:    [since September 2025] query($var: ExampleOneOfInputObject) { oneOfExample(arg: $var) }  variables: {"var": {}}
-response: {"calls":[{"path":["oneOfExample"],"arguments":{"arg":{}}}],"response":{"data":{"oneOfExample":"ok"}}}
-expected: a request error
-```
-
 <a id="coerce-finding-7"></a>
 
-#### 7. `float`: accepts what §3.5.2 (Float) rejects
+#### 7. `arguments`: coerces to the wrong value under §6.4.1 (Coercing Field Arguments)
+
+3 cases, in `arguments` (2), `nullable-variable` (1).
+
+- CoerceArgumentValues: defaults, missing variables, and null for Non-Null arguments (MUST, [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments))
+
+The shortest case, from `arguments`:
+
+```
+input:    query($x: Int) { pair(a: $x, b: $x) }  variables: {}
+response: {"calls":[{"path":["pair"],"arguments":{"b":"GQLIntValue: 2"}}],"response":{"data":{"pair":"ok"}}}
+expected: pair resolved with {"b":2}
+```
+
+<a id="coerce-finding-8"></a>
+
+#### 8. `float`: accepts what §3.5.2 (Float) rejects
 
 3 cases, in `literal` (2), `variable` (1).
 
@@ -959,9 +983,9 @@ response: {"calls":[{"path":["float"],"arguments":{"v":"Infinity"}}],"response":
 expected: a field error at float, or a request error
 ```
 
-<a id="coerce-finding-8"></a>
+<a id="coerce-finding-9"></a>
 
-#### 8. `idCoerced`: rejects what §3.5.5 (ID) accepts
+#### 9. `idCoerced`: rejects what §3.5.5 (ID) accepts
 
 3 cases, in `variable` (3).
 
@@ -975,9 +999,9 @@ response: {"calls":[],"response":{"errors":[{"message":"Cannot coerce variable v
 expected: id resolved with {"v":"1000000000000000000000"}
 ```
 
-<a id="coerce-finding-9"></a>
+<a id="coerce-finding-10"></a>
 
-#### 9. `getOperation`: accepts what §6.1 (Executing Requests) rejects
+#### 10. `getOperation`: accepts what §6.1 (Executing Requests) rejects
 
 3 cases, in `operation` (3).
 
@@ -989,22 +1013,6 @@ The shortest case, from `operation`:
 input:    { int(v: 1) }  variables: {}  operationName: A
 response: {"calls":[{"path":["int"],"arguments":{"v":1}}],"response":{"data":{"int":"ok"}}}
 expected: a request error
-```
-
-<a id="coerce-finding-10"></a>
-
-#### 10. `arguments`: coerces to the wrong value under §6.4.1 (Coercing Field Arguments)
-
-2 cases, in `nullable-variable` (1), `arguments` (1).
-
-- CoerceArgumentValues: defaults, missing variables, and null for Non-Null arguments (MUST, [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments))
-
-The shortest case, from `nullable-variable`:
-
-```
-input:    query($x: Int) { intNNDefault(v: $x) }  variables: {}
-response: {"calls":[{"path":["intNNDefault"],"arguments":{"v":"GQLIntValue: 7"}}],"response":{"data":{"intNNDefault":"ok"}}}
-expected: intNNDefault resolved with {"v":7}
 ```
 
 <a id="coerce-finding-11"></a>
@@ -1098,31 +1106,31 @@ expected: a request error
 | Enums accept their own values, and reject string literals and unknown values (`enum`) | MUST | [§3.9](https://spec.graphql.org/September2026/#sec-Enums) | ✓ 100 |
 | Input objects: an object of defined fields, required fields, variables in fields (`inputObject`) | MUST | [§3.10](https://spec.graphql.org/September2026/#sec-Input-Objects) [§3.12](https://spec.graphql.org/September2026/#sec-Non-Null) | ✗ 12/251 (2 since September 2025) |
 | An omitted input field gets its default value (`inputFieldDefaults`) | SHOULD | [§3.10](https://spec.graphql.org/September2026/#sec-Input-Objects) | ✓ 59 |
-| OneOf input objects take exactly one non-null field (`oneOf`) | MUST | [§3.10.1](https://spec.graphql.org/September2026/#sec-OneOf-Input-Objects) | ✗ 4/10 (all since September 2025) |
-| Lists: each item coerced, a single value wrapped in a list (`list`) | MUST | [§3.11](https://spec.graphql.org/September2026/#sec-List) | ✗ 1/329 |
+| OneOf input objects take exactly one non-null field (`oneOf`) | MUST | [§3.10.1](https://spec.graphql.org/September2026/#sec-OneOf-Input-Objects) | ✗ 5/17 (all since September 2025) |
+| Lists: each item coerced, a single value wrapped in a list (`list`) | MUST | [§3.11](https://spec.graphql.org/September2026/#sec-List) | ✗ 1/333 |
 | Non-Null rejects null (`nonNull`) | MUST | [§3.12](https://spec.graphql.org/September2026/#sec-Non-Null) | – |
-| CoerceVariableValues: defaults, missing and null values, and failures as request errors (`variables`) | MUST | [§6.1.2](https://spec.graphql.org/September2026/#sec-Coercing-Variable-Values) | ✗ 5/879 (2 since September 2025) |
-| CoerceArgumentValues: defaults, missing variables, and null for Non-Null arguments (`arguments`) | MUST | [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) | ✗ 2/37 |
-| A value CoerceArgumentValues can't coerce is a field error, not a request error (`argumentErrorKind`) | SHOULD | [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) | ✓ 10 |
+| CoerceVariableValues: defaults, missing and null values, and failures as request errors (`variables`) | MUST | [§6.1.2](https://spec.graphql.org/September2026/#sec-Coercing-Variable-Values) | ✗ 5/889 (2 since September 2025) |
+| CoerceArgumentValues: defaults, missing variables, and null for Non-Null arguments (`arguments`) | MUST | [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) | ✗ 3/44 |
+| A value CoerceArgumentValues can't coerce is a field error, not a request error (`argumentErrorKind`) | SHOULD | [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) | ✓ 12 |
 | An argument error below the root nulls the field's position and propagates (`argumentsBelowRoot`) | MUST | [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 5 |
 | CreateSourceEventStream: the source stream's resolver gets the field's coerced arguments (`sourceStream`) | MUST | [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) | ✓ 5 |
 | An error while establishing a subscription's source stream is a request error (`sourceStreamError`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) | ✓ 4 |
 | A subscription root field's argument that can't be coerced is a request error (`sourceStreamArguments`) | MUST | [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) [§6.4.1](https://spec.graphql.org/September2026/#sec-Coercing-Field-Arguments) [§7.1.5](https://spec.graphql.org/September2026/#sec-Data) | ✓ 1 |
 | Selections only an invalid document has: a missing fragment and an undefined field are skipped, a second subscription root field is a request error (`unvalidatedBranches`) | MUST | [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§6.2.3.1](https://spec.graphql.org/September2026/#sec-Source-Stream) | – needs `unvalidated` |
-| GetOperation: the operation operationName names, or the only one, else a request error (`getOperation`) | MUST | [§6.1](https://spec.graphql.org/September2026/#sec-Executing-Requests) | ✗ 3/25 |
+| GetOperation: the operation operationName names, or the only one, else a request error (`getOperation`) | MUST | [§6.1](https://spec.graphql.org/September2026/#sec-Executing-Requests) | ✗ 3/31 |
 | A document with a type system definition isn't executed (`notExecutable`) | MUST | [§2.3](https://spec.graphql.org/September2026/#sec-Document) | ✓ 6 |
 | A document that doesn't parse is a request error (`syntaxError`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§6.1](https://spec.graphql.org/September2026/#sec-Executing-Requests) | ✗ 1/16 |
-| A document with known validation errors fails as a request error, without executing (`invalidNotExecuted`) | MUST | [§6.1.1](https://spec.graphql.org/September2026/#sec-Validating-Requests) | ✓ 805 |
+| A document with known validation errors fails as a request error, without executing (`invalidNotExecuted`) | MUST | [§6.1.1](https://spec.graphql.org/September2026/#sec-Validating-Requests) | ✓ 807 |
 | Only valid documents are executed (`onlyValidExecuted`) | SHOULD | [§6.1.1](https://spec.graphql.org/September2026/#sec-Validating-Requests) [§5](https://spec.graphql.org/September2026/#sec-Validation) | ! 2/6 |
-| A valid document isn't rejected at validation (`acceptsValid`) | MUST | [§5](https://spec.graphql.org/September2026/#sec-Validation) | ✓ 1362 |
-| A request error result has no data entry (`requestErrorNoData`) | MUST | [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✗ 1621/1674 (12 since September 2025, 9 new in September 2026) |
-| A request gets a response (`responds`) | MUST | [§7](https://spec.graphql.org/September2026/#sec-Response) | ✓ 2222 |
-| A field error's path is the field's response path (`fieldErrorPath`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 37 |
-| Every error is a map with a string message (`errorFormat`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 2222 |
-| errors, when present, is a non-empty list (`errorsList`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 2222 |
-| The response is a map (`resultMap`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✓ 2222 |
-| The result has no entries besides data, errors and extensions (`additionalEntries`) | MUST | [§7.1.8](https://spec.graphql.org/September2026/#sec-Additional-Entries) | ✓ 2222 |
-| extensions, when present, is a map (`extensions`) | MUST | [§7.1.7](https://spec.graphql.org/September2026/#sec-Extensions) | ✓ 2222 |
+| A valid document isn't rejected at validation (`acceptsValid`) | MUST | [§5](https://spec.graphql.org/September2026/#sec-Validation) | ✓ 1382 |
+| A request error result has no data entry (`requestErrorNoData`) | MUST | [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✗ 1630/1684 (13 since September 2025, 9 new in September 2026) |
+| A request gets a response (`responds`) | MUST | [§7](https://spec.graphql.org/September2026/#sec-Response) | ✓ 2244 |
+| A field error's path is the field's response path (`fieldErrorPath`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) [§7.1.4](https://spec.graphql.org/September2026/#sec-Response-Position) | ✓ 39 |
+| Every error is a map with a string message (`errorFormat`) | MUST | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 2244 |
+| errors, when present, is a non-empty list (`errorsList`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) | ✓ 2244 |
+| The response is a map (`resultMap`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.1.3](https://spec.graphql.org/September2026/#sec-Request-Error-Result) | ✓ 2244 |
+| The result has no entries besides data, errors and extensions (`additionalEntries`) | MUST | [§7.1.8](https://spec.graphql.org/September2026/#sec-Additional-Entries) | ✓ 2244 |
+| extensions, when present, is a map (`extensions`) | MUST | [§7.1.7](https://spec.graphql.org/September2026/#sec-Extensions) | ✓ 2244 |
 | JSON strings with a lone surrogate: kept as sent, replaced with U+FFFD, or refused (`loneSurrogates`). kept as sent: 2. Observed: kept as sent 2 | INFO | — | ✓ 2 |
 | JSON numbers a double can't hold: read exactly, read as binary64, or refused (`jsonNumbers`) | INFO | — | ✓ 3 |
 | A request's extensions with keys of no meaning to the service leave the response as it is (`requestExtensions`). the same answer as without extensions: 3. Observed: the same answer as without extensions 3 | INFO | [§6](https://spec.graphql.org/September2026/#sec-Execution) | ✓ 4 |

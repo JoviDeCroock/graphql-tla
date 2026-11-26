@@ -25,8 +25,8 @@
     "validate"
   ],
   "provenance": {
-    "kit": "1ad955aa3659",
-    "date": "2026-11-16",
+    "kit": "240a580eae23",
+    "date": "2026-11-26",
     "strict": true,
     "random": 1500,
     "seed": 1,
@@ -34,8 +34,8 @@
   },
   "checkerSelfTest": "passed (87 negative controls)",
   "cases": {
-    "submitted": 29540,
-    "distinct": 5088,
+    "submitted": 42014,
+    "distinct": 5435,
     "malformed": 318
   },
   "adapterProblems": 0,
@@ -63,7 +63,7 @@
       ],
       "basis": "No sentence says to respond only once execution is complete; the algorithms do. ExecuteRootSelectionSet (§6.3.1) returns {data} once ExecuteCollectedFields has run, and §6.3.3 says \"Execution will recursively resolve and complete the value of every entry in the collected fields map\". §7.1.5 adds: \"The response data is the result of accumulating the resolved result of all response positions during execution.\" Positions §6.3.3 lets an implementation cancel don't hold the response back. September 2025 has the same algorithms and sentences, and October 2021's algorithms are the same.",
       "status": "pass",
-      "cases": 5220,
+      "cases": 5567,
       "failing": 0
     },
     {
@@ -88,9 +88,9 @@
         }
       ],
       "basis": "When an error propagates to the root, §6.4.4 and §7.1.5 say data \"should be null\", in every release (October 2021: §6.4.4 and §7.1.1). The kit still requires null, because no other value conforms: the execution result must have a data entry (§7.1.1), {} or a partial map leaves out an entry ExecuteCollectedFields must produce (§6.3.3), and a map with null at the failed root field breaks that field's Non-Null type.",
-      "status": "pass",
-      "cases": 5220,
-      "failing": 0
+      "status": "fail",
+      "cases": 5567,
+      "failing": 1
     },
     {
       "id": "keyOrder",
@@ -105,7 +105,7 @@
       ],
       "basis": "§7.2.2: \"Serialization formats which only represent unordered maps but where order is still implicit in the serialization's textual order (such as JSON) should preserve the order of requested fields textually.\" September 2025 and October 2021 say the same.",
       "status": "pass",
-      "cases": 5220,
+      "cases": 5567,
       "failing": 0
     },
     {
@@ -126,7 +126,7 @@
       ],
       "basis": "§7.1.6: an error that \"can be associated to a particular field in the GraphQL result ... must contain an entry with the key {\"path\"} with a response path which describes the response position which raised the error\"; §7.1.4: \"When a response path is present on an error result, it identifies the response position which raised the error.\" September 2025 has both sentences. October 2021's §7.1.2: it \"must contain an entry with the key path that details the path of the response field which experienced the error\". A path that leaves out list indices counts against responsePosition instead, and one cut short at the nullable position the error propagated to against errorPathFull: both are paths to the raised error in the wrong form, not errors that weren't raised.",
       "status": "pass",
-      "cases": 5220,
+      "cases": 5567,
       "failing": 0
     },
     {
@@ -146,7 +146,7 @@
       ],
       "basis": "September 2026's §6.4.4: \"That is, each error added to the errors list during execution must have a unique response path.\" September 2025's: \"That is, only one error should be added to the errors list per response position.\" October 2021's: \"That is, only one error should be added to the errors list per field.\" The must is new in September 2026 (graphql-spec#1183). All three say the errors list \"must not be further affected\" when a position is null because of an error already added. A response with two errors at one path doesn't say whether the second was added for a position the first had already nulled (which breaks that must) or raised on its own, so in September 2025 and October 2021 the kit takes the weaker reading, the should.",
       "status": "pass",
-      "cases": 5220,
+      "cases": 5567,
       "failing": 0
     },
     {
@@ -167,7 +167,7 @@
       ],
       "basis": "§7.1.6: \"When an execution error is raised at a given response position, then that response position must not be present within the response {\"data\"} entry (except {null})\", and §6.4.4 propagates it to the nearest nullable parent. September 2025 has the same sentences. October 2021, §6.4.4: a field error \"is handled as though the field returned {null}\", and §6.3 (Errors and Non-Null Fields): the error \"must propagate to this entire selection set, either resolving to {null} if allowed or further propagated to a parent field.\" An error whose position holds a value breaks these in every release.",
       "status": "pass",
-      "cases": 5220,
+      "cases": 5567,
       "failing": 0
     },
     {
@@ -190,9 +190,9 @@
         }
       ],
       "basis": "September 2026's §6.4.4: \"While these errors must be reported in the response\", and twice \"the error must be added to the {\"errors\"} list in the execution result\"; §7.1.1: the errors entry \"must be a non-empty list of execution error raised during operation execution\"; §7.1.6: \"the {\"errors\"} entry must include the error\". September 2025 has the same musts (its §7.1.1: \"must be a non-empty list of execution error raised during execution\"). October 2021 has both words. Its §6.4.4 says twice that \"the error must be added to the {\"errors\"} list in the response\", but opens with \"While these errors should be reported in the response\", and its §7.1.2 says \"If field errors were raised during execution, it should contain those errors\" and \"The errors entry should include all raised field errors.\" September 2025 made each of these a must. With the October 2021 level in doubt, the kit takes the weaker one there. (October 2021's §7.1 still says the response \"must contain an entry with key errors\" if any errors were raised, so a response with no errors entry at all breaks a must in every release; the check doesn't count that case apart.)",
-      "status": "pass",
-      "cases": 5220,
-      "failing": 0
+      "status": "fail",
+      "cases": 5567,
+      "failing": 1
     },
     {
       "id": "serialErrorsKept",
@@ -272,7 +272,7 @@
       "spec": [],
       "basis": "§6.3.2: collecting fields \"ensures that multiple references to fields with the same response name will only be executed once\". That describes what the algorithm does, and Appendix A lets an implementation fulfil it \"in any way as long as the perceived result is equivalent\". §6.3.4: \"the resolution of fields other than top-level mutation fields must always be side effect-free and idempotent\", so calling such a field's resolver twice isn't perceived in the response, which the reference still grades whenever both calls settled to the same outcome. Recorded, never a failure. A mutation root field called twice is mutationFieldsOnce, a MUST.",
       "status": "pass",
-      "cases": 29540,
+      "cases": 42014,
       "failing": 0
     },
     {
@@ -282,7 +282,7 @@
       "spec": [],
       "basis": "CollectFields (§6.3.2) leaves out fields that @skip, @include or a fragment's type condition exclude, so the algorithm never executes them. As for callsOnce, Appendix A's \"perceived result is equivalent\" and §6.3.4's side-effect-free fields mean an extra call below the mutation root isn't perceived; the reference still grades the response. A mutation root field the operation doesn't select is mutationFieldsOnce, a MUST.",
       "status": "pass",
-      "cases": 29540,
+      "cases": 42014,
       "failing": 0
     },
     {
@@ -292,7 +292,7 @@
       "spec": [],
       "basis": "CompleteValue (§6.4.3) executes subfields only for an object value, and list items only for the items of a list. The example in §6.3.4 that says \"of course `birthday` must be resolved before `month`\" is non-normative (Appendix A). A call under a parent that settled null, or past a list's length, isn't perceived in the response for side-effect-free fields (§6.3.4, Appendix A), and the reference still grades the response.",
       "status": "pass",
-      "cases": 29540,
+      "cases": 42014,
       "failing": 0
     },
     {
@@ -308,7 +308,7 @@
       ],
       "basis": "§7: \"When a GraphQL service receives a request, it must return a well-formed response.\" September 2025 and October 2021 say the same.",
       "status": "pass",
-      "cases": 29540,
+      "cases": 42014,
       "failing": 0
     },
     {
@@ -527,7 +527,7 @@
       ],
       "basis": "ExecuteCollectedFields (§6.3.3) sets an entry in the result map only for each entry of the collected fields map, and §7.1.5 says \"The response data is the result of accumulating the resolved result of all response positions during execution.\" A value at a position the operation doesn't select isn't the completed value, as for dataMatches. September 2025 has the same algorithm and sentence, and October 2021's algorithms are the same.",
       "status": "pass",
-      "cases": 23891,
+      "cases": 34395,
       "failing": 0
     },
     {
@@ -680,7 +680,7 @@
       ],
       "basis": "CompleteValue returns {CoerceResult(fieldType, result)} for a leaf (§6.4.3), and the kit's resolvers return a value that is already valid for the type. §3.5 lets a service coerce internal values only \"when reasonable without losing information\", so a valid value coerces to itself. September 2025 and October 2021 say the same.",
       "status": "pass",
-      "cases": 23891,
+      "cases": 34395,
       "failing": 0
     },
     {
@@ -696,7 +696,7 @@
       ],
       "basis": "§7.2.1: \"When using JSON as a serialization of GraphQL responses, the following JSON values should be used to encode the related GraphQL values\". §7.2 lets \"a string or simpler primitive ... be used as a substitute\" when a format lacks one. September 2025 and October 2021 say the same.",
       "status": "pass",
-      "cases": 23891,
+      "cases": 34395,
       "failing": 0
     },
     {
@@ -712,7 +712,7 @@
       ],
       "basis": "§7.1.1: \"An execution result must be a map.\" September 2025 says the same. October 2021's §7.1: \"A response to a GraphQL request must be a map.\"",
       "status": "pass",
-      "cases": 29540,
+      "cases": 42014,
       "failing": 0
     },
     {
@@ -728,7 +728,7 @@
       ],
       "basis": "§7.1.1: \"The execution result must contain an entry with key {\"data\"}.\" September 2025 says the same. October 2021's §7.1: \"If the request included execution, the response map must contain an entry with key data\", and §7.1.2: \"The data entry in the response must be present.\"",
       "status": "pass",
-      "cases": 29540,
+      "cases": 42014,
       "failing": 0
     },
     {
@@ -744,7 +744,7 @@
       ],
       "basis": "September 2026's §7.1.1: \"If any errors are raised during operation execution, the execution result must contain an entry with key {\"errors\"}. The value of this entry must be a non-empty list ... If the request completed without raising any errors, this entry must not be present.\" September 2025's opens \"If execution raised any errors\" and has the same musts. October 2021's §7.1: \"If the request raised any errors, the response map must contain an entry with key errors. ... If the request completed without raising any errors, this entry must not be present.\" Its §7.1.2 also says \"should not be present\", but the §7.1 must is the sentence about the entry, so the check is a MUST in every release, as in coerce.",
       "status": "pass",
-      "cases": 29540,
+      "cases": 42014,
       "failing": 0
     },
     {
@@ -760,7 +760,7 @@
       ],
       "basis": "§7.1.8: \"the execution result and request error result maps must not contain any entries other than those described above.\" September 2025 says the same. October 2021's §7.1: \"the top level response map must not contain any entries other than the three described above.\"",
       "status": "pass",
-      "cases": 29540,
+      "cases": 42014,
       "failing": 0
     },
     {
@@ -798,7 +798,7 @@
       ],
       "basis": "§7.1.1: \"Each error must be a map\"; §7.1.6: \"Every error must contain an entry with the key {\"message\"} with a string description of the error\", and an error's extensions entry, \"if set, must have a map as its value.\" September 2025 says the same. October 2021's §7.1.2 says each error \"is a map\", and has the same musts on message and extensions.",
       "status": "pass",
-      "cases": 20659,
+      "cases": 26970,
       "failing": 0
     },
     {
@@ -814,7 +814,7 @@
       ],
       "basis": "§7.1.6: \"it should contain an entry with the key {\"locations\"} with a list of locations, where each location is a map with the keys {\"line\"} and {\"column\"}, both positive numbers starting from `1`\". The whole sentence, shape included, is a should. September 2025 and October 2021 (§7.1.2) say the same.",
       "status": "pass",
-      "cases": 20659,
+      "cases": 26970,
       "failing": 0
     },
     {
@@ -830,7 +830,7 @@
       ],
       "basis": "§7.1.6: \"If an error can be associated to a particular point in the requested GraphQL document, it should contain an entry with the key {\"locations\"} with a list of locations\". Every error the kit's resolvers cause is raised at a field, or a list item of a field, of the document the kit sent. An error without locations, or with an empty list, fails. September 2025 and October 2021 (§7.1.2) say the same.",
       "status": "pass",
-      "cases": 20659,
+      "cases": 26970,
       "failing": 0
     },
     {
@@ -846,7 +846,7 @@
       ],
       "basis": "§7.1.6: each location is a map with the keys line and column, \"both positive numbers starting from `1` which describe the beginning of an associated syntax element\". For an error raised at a field, or at an item of a list field, the associated element is that field's selection in the document the kit sent: the kit accepts the start of any of its field nodes (several when selections merge), or the start of the field's name after an alias. A location elsewhere fails. Locations are only compared for errors whose path is where the kit's outcome raised the error. The whole sentence is a should. September 2025 and October 2021 (§7.1.2) say the same.",
       "status": "pass",
-      "cases": 20659,
+      "cases": 26970,
       "failing": 0
     },
     {
@@ -862,7 +862,7 @@
       ],
       "basis": "§7.1.6: an error that \"can be associated to a particular field in the GraphQL result ... must contain an entry with the key {\"path\"} with a response path which describes the response position which raised the error\". Every error the kit's resolvers cause is raised at a field or list item. A path to a position the operation doesn't select describes no response position. September 2025 has the same sentence, and October 2021's §7.1.2 the same must (\"must contain an entry with the key path that details the path of the response field which experienced the error\").",
       "status": "pass",
-      "cases": 20659,
+      "cases": 26970,
       "failing": 0
     },
     {
@@ -881,7 +881,7 @@
       ],
       "basis": "§7.1.4: \"The value for a response path must be a list of path segments\", \"path segments that represent list indices must be 0-indexed integers\", and an aliased field \"must use the aliased name\". A path that is a raised error's path with its list indices left out (`[\"tags\"]` for an error at `tags.0`) breaks the first two. September 2025's §7.1.4 has the same musts; they came with its new Response Position section (graphql-spec#1073). October 2021 has no such section: its §7.1.2 says each of these with should: \"This field should be a list of path segments starting at the root of the response and ending with the field associated with the error\", list indices \"should be 0-indexed integers\", \"the path to the error should use the aliased name\".",
       "status": "pass",
-      "cases": 20659,
+      "cases": 26970,
       "failing": 0
     },
     {
@@ -897,7 +897,7 @@
       ],
       "basis": "§7.1.6, in every release (October 2021: §7.1.2): \"If the field which experienced an error was declared as `Non-Null`, the `null` result will bubble up to the next nullable field. In that case, the `path` for the error should include the full path to the result field where the error was raised, even if that field is not present in the response.\" The general sentence before it says the path \"must\" describe the position which raised the error, but the sentence about this very case says should, so the level is in doubt and the kit takes the weaker one. A path that stops at a position the error propagated to, above where it was raised, fails here.",
       "status": "pass",
-      "cases": 20659,
+      "cases": 26970,
       "failing": 0
     },
     {
@@ -913,7 +913,7 @@
       ],
       "basis": "§7.1.6: \"GraphQL services should not provide any additional entries to the error format\", and its Note: \"While non-specified entries are not violations, they are still discouraged.\" September 2025 and October 2021 (§7.1.2) say the same.",
       "status": "pass",
-      "cases": 20659,
+      "cases": 26970,
       "failing": 0
     },
     {
@@ -939,7 +939,7 @@
       ],
       "basis": "§7.1.1: \"An execution result must be a map\", and Appendix B defines a map: \"Each entry has a unique key\". Data is built of maps too (ExecuteCollectedFields, §6.3.3, sets one entry per response name), as is each error. §7.2.1 serializes a map as a JSON object; a JSON object that repeats a name, which JSON.parse silently reduces to the last one, describes no map with unique keys. The kit reads the adapter's raw line for this. September 2025 says the same; October 2021's §7.1 says \"A response to a GraphQL request must be a map\", and its Appendix A defines no map, so the rule rests there on JSON objects meaning maps.",
       "status": "pass",
-      "cases": 29540,
+      "cases": 42014,
       "failing": 0
     },
     {
@@ -978,7 +978,7 @@
       ],
       "basis": "ResolveFieldValue (§6.4.2): \"Return the result of calling {resolver}, providing {objectValue} and {argumentValues}\". ExecuteCollectedFields (§6.3.3) passes its {objectValue} to ExecuteField for every field; CompleteValue (§6.4.3) runs an object's subfields with {result}, the resolved value, as theirs; ExecuteRootSelectionSet passes the {initialValue} (§6.2.1: \"An initial value may be provided when executing a query operation\"), and §6.2.3.2: \"Each event from the underlying source stream triggers execution of the subscription selection set using that event's value as the {initialValue}\". Algorithm steps have the algorithm's level (Appendix A). Graded only for adapters with parent-values: the kit names each object its outcomes stand for, and each call reports the one its resolver got. September 2025 and October 2021 have the same algorithms.",
       "status": "pass",
-      "cases": 29540,
+      "cases": 42014,
       "failing": 0
     },
     {
@@ -988,7 +988,7 @@
       "spec": [],
       "basis": "Not a spec rule: the kit's protocol with the adapter (docs/conformance.md). A case where the adapter broke it says nothing reliable about the implementation.",
       "status": "pass",
-      "cases": 29540,
+      "cases": 42014,
       "failing": 0
     },
     {
@@ -1049,6 +1049,26 @@
       "fixtures": {
         "unions": 34
       }
+    },
+    {
+      "checks": [
+        "dataMatches",
+        "nullsExplained"
+      ],
+      "fixture": "booleanResult",
+      "example": {
+        "trace": "call enabled; settle enabled = object()",
+        "response": {
+          "data": {
+            "enabled": true
+          }
+        },
+        "expected": "data {\"enabled\": null}"
+      },
+      "cases": 1,
+      "fixtures": {
+        "booleanResult": 1
+      }
     }
   ],
   "fixtures": [
@@ -1086,6 +1106,44 @@
       "failing": 0
     },
     {
+      "id": "abstractList",
+      "spec": [
+        {
+          "number": "3.7",
+          "title": "Interfaces",
+          "url": "https://spec.graphql.org/September2026/#sec-Interfaces"
+        },
+        {
+          "number": "3.11",
+          "title": "List",
+          "url": "https://spec.graphql.org/September2026/#sec-List"
+        },
+        {
+          "number": "4.1",
+          "title": "Type Name Introspection",
+          "url": "https://spec.graphql.org/September2026/#sec-Type-Name-Introspection"
+        },
+        {
+          "number": "6.3.2",
+          "title": "Field Collection",
+          "url": "https://spec.graphql.org/September2026/#sec-Field-Collection"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/September2026/#sec-Value-Completion"
+        },
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors"
+        }
+      ],
+      "status": "pass",
+      "cases": 1618,
+      "failing": 0
+    },
+    {
       "id": "aliases",
       "spec": [
         {
@@ -1116,6 +1174,118 @@
       ],
       "status": "pass",
       "cases": 1698,
+      "failing": 0
+    },
+    {
+      "id": "booleanResult",
+      "spec": [
+        {
+          "number": "3.5.4",
+          "title": "Boolean",
+          "url": "https://spec.graphql.org/September2026/#sec-Boolean"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/September2026/#sec-Value-Completion"
+        },
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors"
+        }
+      ],
+      "status": "fail",
+      "cases": 1508,
+      "failing": 1
+    },
+    {
+      "id": "conditionalMerge_on",
+      "spec": [
+        {
+          "number": "3.13.1",
+          "title": "@skip",
+          "url": "https://spec.graphql.org/September2026/#sec--skip"
+        },
+        {
+          "number": "3.13.2",
+          "title": "@include",
+          "url": "https://spec.graphql.org/September2026/#sec--include"
+        },
+        {
+          "number": "6.3.2",
+          "title": "Field Collection",
+          "url": "https://spec.graphql.org/September2026/#sec-Field-Collection"
+        },
+        {
+          "number": "7.1.6",
+          "title": "Errors",
+          "url": "https://spec.graphql.org/September2026/#sec-Errors"
+        }
+      ],
+      "status": "pass",
+      "cases": 1518,
+      "failing": 0
+    },
+    {
+      "id": "conditionalMerge_off",
+      "spec": [
+        {
+          "number": "3.13.1",
+          "title": "@skip",
+          "url": "https://spec.graphql.org/September2026/#sec--skip"
+        },
+        {
+          "number": "3.13.2",
+          "title": "@include",
+          "url": "https://spec.graphql.org/September2026/#sec--include"
+        },
+        {
+          "number": "6.3.2",
+          "title": "Field Collection",
+          "url": "https://spec.graphql.org/September2026/#sec-Field-Collection"
+        },
+        {
+          "number": "7.1.6",
+          "title": "Errors",
+          "url": "https://spec.graphql.org/September2026/#sec-Errors"
+        }
+      ],
+      "status": "pass",
+      "cases": 1518,
+      "failing": 0
+    },
+    {
+      "id": "deepLists",
+      "spec": [
+        {
+          "number": "3.11",
+          "title": "List",
+          "url": "https://spec.graphql.org/September2026/#sec-List"
+        },
+        {
+          "number": "3.12.1",
+          "title": "Combining List and Non-Null",
+          "url": "https://spec.graphql.org/September2026/#sec-Combining-List-and-Non-Null"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/September2026/#sec-Value-Completion"
+        },
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors"
+        },
+        {
+          "number": "7.1.4",
+          "title": "Response Position",
+          "url": "https://spec.graphql.org/September2026/#sec-Response-Position"
+        }
+      ],
+      "status": "pass",
+      "cases": 1518,
       "failing": 0
     },
     {
@@ -1292,6 +1462,34 @@
       "failing": 284
     },
     {
+      "id": "listPartialNull",
+      "spec": [
+        {
+          "number": "3.11",
+          "title": "List",
+          "url": "https://spec.graphql.org/September2026/#sec-List"
+        },
+        {
+          "number": "3.12",
+          "title": "Non-Null",
+          "url": "https://spec.graphql.org/September2026/#sec-Non-Null"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/September2026/#sec-Value-Completion"
+        },
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors"
+        }
+      ],
+      "status": "pass",
+      "cases": 1590,
+      "failing": 0
+    },
+    {
       "id": "lists",
       "spec": [
         {
@@ -1399,6 +1597,34 @@
       "failing": 0
     },
     {
+      "id": "nestedLists",
+      "spec": [
+        {
+          "number": "3.11",
+          "title": "List",
+          "url": "https://spec.graphql.org/September2026/#sec-List"
+        },
+        {
+          "number": "3.12",
+          "title": "Non-Null",
+          "url": "https://spec.graphql.org/September2026/#sec-Non-Null"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/September2026/#sec-Value-Completion"
+        },
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors"
+        }
+      ],
+      "status": "pass",
+      "cases": 1650,
+      "failing": 0
+    },
+    {
       "id": "noPropagation",
       "spec": [],
       "status": "skipped",
@@ -1407,6 +1633,39 @@
       "failing": 0,
       "informational": 0,
       "note": "outside the spec (graphql-js 17's @experimental_disableErrorPropagation): its failures are informational, under disabledPropagation, except protocol problems and the checks on resolver calls"
+    },
+    {
+      "id": "nonNullListItems",
+      "spec": [
+        {
+          "number": "3.11",
+          "title": "List",
+          "url": "https://spec.graphql.org/September2026/#sec-List"
+        },
+        {
+          "number": "3.12.1",
+          "title": "Combining List and Non-Null",
+          "url": "https://spec.graphql.org/September2026/#sec-Combining-List-and-Non-Null"
+        },
+        {
+          "number": "6.4.3",
+          "title": "Value Completion",
+          "url": "https://spec.graphql.org/September2026/#sec-Value-Completion"
+        },
+        {
+          "number": "6.4.4",
+          "title": "Handling Execution Errors",
+          "url": "https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors"
+        },
+        {
+          "number": "7.1.4",
+          "title": "Response Position",
+          "url": "https://spec.graphql.org/September2026/#sec-Response-Position"
+        }
+      ],
+      "status": "pass",
+      "cases": 1554,
+      "failing": 0
     },
     {
       "id": "nullPropagation",
