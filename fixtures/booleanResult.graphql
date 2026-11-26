@@ -1,0 +1,14 @@
+# Boolean result coercion (§3.5.4, §6.4.3, §6.4.4): to adapters with
+# `invalid-results`, the kit sends an object for a Boolean, which must
+# raise an execution error rather than be read as truthy.
+# maxListLength: 0
+# invalidResults: true
+# spec: 3.5.4, 6.4.3, 6.4.4
+
+type Query {
+  enabled: Boolean
+}
+
+query {
+  enabled
+}

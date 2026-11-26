@@ -1,0 +1,29 @@
+# A Non-Null list of Non-Null items (§3.11, §3.12.1, §6.4.3, §6.4.4): an
+# error in an item's `id: ID!` nulls the item, which can't be null, so it
+# nulls `items: [Item!]!`, which can't be null either, so it nulls `box`,
+# the nearest nullable position. The sibling `ok` survives, and the error
+# keeps its full path, ["box", "items", 0, "key"].
+# maxListLength: 1
+# spec: 3.11, 3.12.1, 6.4.3, 6.4.4, 7.1.4
+
+type Query {
+  box: Box
+  ok: Boolean
+}
+
+type Box {
+  items: [Item!]!
+}
+
+type Item {
+  id: ID!
+}
+
+query {
+  box {
+    items {
+      key: id
+    }
+  }
+  ok
+}

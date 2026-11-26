@@ -42,18 +42,25 @@ fixtures/*.graphql ──generate──▶ specs/lib/fixtures.ts ──▶ specs
 | Coercion | [`Coercion.tla`](specs/Coercion.tla) | §3.5 and §3.9–§3.12 input coercion, `GetOperation`, `CoerceVariableValues`, `CoerceArgumentValues`, a subscription's source stream (`CreateSourceEventStream`), and request errors (§7.1). |
 | Scenarios | [`mutation.ts`](specs/mutation.ts), [`subscription.ts`](specs/subscription.ts), [`defer.ts`](specs/defer.ts), [`stream.ts`](specs/stream.ts) | Step-by-step models of behaviour over time. |
 
-Fixtures are plain GraphQL. Each [`fixtures/*.graphql`](fixtures) file holds a schema, one operation and its fragments, plus optional headers: `# variables:` (the variable values), `# variants:` (several sets of variable values, each its own fixture, named `<file>_<variant>`), `# maxListLength:`, `# invalidResults:` (resolvers may return values of the wrong shape) and `# spec:` (the sections it exercises). The 16 files make 19 fixtures:
+Fixtures are plain GraphQL. Each [`fixtures/*.graphql`](fixtures) file holds a schema, one operation and its fragments, plus optional headers: `# variables:` (the variable values), `# variants:` (several sets of variable values, each its own fixture, named `<file>_<variant>`), `# maxListLength:`, `# invalidResults:` (resolvers may return values of the wrong shape) and `# spec:` (the sections it exercises). The 23 files make 27 fixtures:
 
 - `nullPropagation`: Non-Null chains and `data: null`.
 - `lists`: `[Post!]` and `[String]!`, with items completing in parallel.
+- `listPartialNull`: a list item whose Non-Null child fails, next to an item that completes.
+- `nestedLists`: `[[Int!]]` with two rows, where a failed item nulls only its own row.
+- `nonNullListItems`: `[Item!]!`, where an item's error crosses the list and stops at the nullable object above it.
+- `deepLists`: three levels of lists, and an error path with an index at each.
 - `fragments`: an interface, inline fragments and fragment spreads, `@skip`/`@include`, aliases, and merged response keys.
 - `abstract`: union and interface type conditions inside interface- and union-typed fields, both outcomes of each, and `__typename` on an abstract field.
+- `abstractList`: an interface list holding both concrete types, in either order, with one type's Non-Null field failing.
 - `merging`: §6.3.2's own example of merged sub-selections.
 - `aliases`: aliases that swap root fields and leaves, in `data` and in error paths, and a deprecated field still executed.
 - `ordering`: response keys in the order CollectFields first meets them, with §3.6's examples.
 - `directives`: `@skip` and `@include` with variables on fields, inline fragments and spreads, one fixture per row of their truth table (`directives_kept`, `_skipped`, `_excluded`, `_dropped`).
+- `conditionalMerge`: one Non-Null field selected three times under `@include` and `@skip`, so its error locations name only the collected selections (`conditionalMerge_on`, `_off`).
 - `unions`: a union, `__typename`, a nested list, and results of the wrong shape.
 - `leaves`: leaf result coercion: a fraction for an Int, a non-finite Float, an unknown enum value.
+- `booleanResult`: an object for a Boolean.
 - `scalars`: a value a custom scalar's result coercion rejects, and an integer for an ID.
 - `mutation`: serial root fields, nullable and Non-Null.
 - `mutationRoot`: one root field under two response names, a list at the root, `__typename` and skipped root fields.
@@ -85,10 +92,10 @@ The kit has seven areas. Each checks one part of the spec against its TLA+ refer
 
 | Area | Spec | Reference | How | Checks |
 | --- | --- | --- | --- | --- |
-| [`execution`](docs/conformance.md) | §6, §7, and §3's result coercion | `Reference.tla` | drives your resolvers through 19 fixtures, every outcome and schedule, and checks each response against every response the spec allows; with capabilities, also subscription streams (§6.2.3), the value each resolver was called on, and custom scalar and ID results | 47 |
+| [`execution`](docs/conformance.md) | §6, §7, and §3's result coercion | `Reference.tla` | drives your resolvers through 27 fixtures, every outcome and schedule, and checks each response against every response the spec allows; with capabilities, also subscription streams (§6.2.3), the value each resolver was called on, and custom scalar and ID results | 47 |
 | [`parse`](docs/kit/parse.md) | §2, and §3's type system grammar | `Lexer.tla`, `Parser.tla` | accept or reject 2,847 source texts, mostly in minimal pairs; 713 of them type system documents (capability `parse-sdl`), and 20 crash probes | 51 |
 | [`validate`](docs/kit/validate.md) | §5, §2.2 | `Validation.tla` | 3,370 documents, each breaking one rule (two in 27 documented cases) or none, so each rule gets its own verdict, plus copies with descriptions and comments that must get the same verdict | 36 |
-| [`coerce`](docs/kit/coerce.md) | §2.10.4, §3.5, §3.9–§3.12, §6.1, §6.2.3.1, §6.4.1, §7.1 | `Coercion.tla` | 2,222 requests with variables and literals: a request error, a field error, or the coerced arguments; also operation selection, a subscription's source stream, and the shape of every response | 42 |
+| [`coerce`](docs/kit/coerce.md) | §2.10.4, §3.5, §3.9–§3.12, §6.1, §6.2.3.1, §6.4.1, §7.1 | `Coercion.tla` | 2,244 requests with variables and literals: a request error, a field error, or the coerced arguments; also operation selection, a subscription's source stream, and the shape of every response | 42 |
 | [`schema`](docs/kit/schema.md) | §3 | `TypeSystem.tla` | 505 SDL schemas in 255 minimal pairs, one or more per type-system rule; 135 with type system extensions (capability `schema-extensions`) | 64 |
 | [`introspect`](docs/kit/introspect.md) | §4 | `Introspection.tla` | 71 introspection queries over 21 schemas, with the variation the spec allows, answered under the September 2026, September 2025 or October 2021 profile | 31 |
 | [`coordinate`](docs/kit/coordinate.md) | §2.14 | `SchemaCoordinates.tla` | 210 schema coordinates over two schemas: whether each parses, and what it resolves to | 11 |
@@ -110,7 +117,7 @@ An adapter is a small program that speaks newline-delimited JSON. It builds the 
 | [`async-graphql`](adapters/async-graphql) | async-graphql 7.0.17, dynamic schemas | Execution only. Resolver errors have no `path` (§7.1.6, 13819 cases). Errors don't stop at the nearest nullable field, so any error nulls all of `data` (§6.4.4, 1275 cases). Fields aren't merged, so a field selected twice resolves twice, a mutation root field included (§6.3.4, 411). A null object or list item is completed as an object (§6.4.3), an integer ID is returned as a number (§3.5.5, 173), and an Int outside 32 bits is passed through (§3.5.1, a SHOULD, 135). The response stream ends after any event whose result has an error (§6.2.3.2, a SHOULD, 23 streams). |
 | [`apollo-kotlin`](adapters/apollo-kotlin) | Apollo Kotlin apollo-execution 5.2.0 (JVM) | Takes part in all seven areas. In execution, an unknown enum value is passed through and a non-finite Float leaves the client without a response (§3.5, `resultCoercion`, 701 cases); a propagating Non-Null error drops the errors of earlier mutation root fields (`serialErrorsKept`, 60); execution errors have no `locations` (a SHOULD). Every request error carries `"data": null` (§7.1.3, 1621 coerce vectors), and an argument's default literal reaches the resolver uncoerced. Validation has no Single Root Field rule (§5.2.4.1, 62) and drops Lone Anonymous Operation and All Variables Used to warnings; the schema builder leaves most §3 type validation rules unchecked; `__type(name:)` raises for an unknown type (§4.2.1); coordinates are lexed with the document lexer, so ignored tokens are accepted inside them (§2.14, 25). |
 
-The kit checks the checker too. Every execution run evaluates 87 negative controls: 50 broken variants of cases recorded from graphql-js ([`kit/execution/controls.json`](kit/execution/controls.json)), 27 made at check time for checks the recordings can't reach (parent values, streams, locations, repeated keys, custom scalars), and 10 report controls. Each must be caught by the clause or check it names. The other areas run a self-test of their own on every run: 10 controls in `parse`, 15 in `validate`, 12 in `coordinate`, 353 in `introspect`, 1015 in `schema` and 38,157 generated ones in `coerce`.
+The kit checks the checker too. Every execution run evaluates 87 negative controls: 50 broken variants of cases recorded from graphql-js ([`kit/execution/controls.json`](kit/execution/controls.json)), 27 made at check time for checks the recordings can't reach (parent values, streams, locations, repeated keys, custom scalars), and 10 report controls. Each must be caught by the clause or check it names. The other areas run a self-test of their own on every run: 10 controls in `parse`, 15 in `validate`, 12 in `coordinate`, 353 in `introspect`, 1015 in `schema` and 38,540 generated ones in `coerce`.
 
 **[The conformance sheet](conformance/README.md)** shows what each implementation was checked against and what it breaks, by spec section and by check, with the shortest failing case for each failure. Every cell is a count from a kit report (`--report`); `npm run conformance` regenerates it.
 
@@ -118,7 +125,7 @@ The kit checks the checker too. Every execution run evaluates 87 negative contro
 
 ### Execution
 
-Across the 19 fixtures, the executor's three variants (errors under a nulled position reported, dropped, or dropped with their resolvers cancelled), every schedule and every combination of resolver outcomes, `ExecutionConformance.tla` checks six properties:
+Across the 27 fixtures, the executor's three variants (errors under a nulled position reported, dropped, or dropped with their resolvers cancelled), every schedule and every combination of resolver outcomes, `ExecutionConformance.tla` checks six properties:
 
 - **`ResponseIsValid`:** the response sent satisfies `Reference!Valid` for the resolvers settled at that moment.
 - **`ResponseStaysValid`:** it stays valid as abandoned resolvers keep settling.

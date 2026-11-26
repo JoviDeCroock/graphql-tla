@@ -1,0 +1,15 @@
+# Three levels of lists (§3.11, §3.12.1, §6.4.3, §6.4.4, §7.1.4): in
+# `cells: [[[Int!]!]]`, an error or null in an innermost Int! nulls the
+# middle list, which can't be null, so it nulls its item of the outer list.
+# The error's path has an index at each of the three levels:
+# ["cube", 0, 0, 0].
+# maxListLength: 1
+# spec: 3.11, 3.12.1, 6.4.3, 6.4.4, 7.1.4
+
+type Query {
+  cells: [[[Int!]!]]
+}
+
+query {
+  cube: cells
+}

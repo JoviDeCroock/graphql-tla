@@ -975,9 +975,10 @@ for (const literal of ["1.7976931348623158e308", "-1.7976931348623158e308", "1.7
   add("literal", "float", `{ float(v: ${literal}) }`, "{}");
 }
 
-// §6.1 GetOperation precedes §6.1.2 CoerceVariableValues: ambiguous or unknown
-// operationName fails with a request error even when variables are missing or
-// invalid for one of the operations.
+// §6.1 GetOperation, with variables that are missing or invalid: an
+// ambiguous or unknown operationName is a request error either way. (The
+// outcome can't tell which step failed first; coerce-2065 is the vector that
+// shows selection decides which variables are coerced.)
 const OPERATION_PRECEDENCE = [
   ["query A($x: Int) { int(v: $x) } query B($y: Int!) { intNN(v: $y) }", [null, "C"], ["{}", '{"x": "bad", "y": "bad"}']],
   ["query A($x: Int!) { intNN(v: $x) }", ["Missing"], ["{}", '{"x": "bad"}']],
@@ -1000,8 +1001,25 @@ const ONEOF_DEFAULTS = [
 ];
 for (const [document, variableSets] of ONEOF_DEFAULTS) {
   for (const variables of variableSets) {
-    fresh("oneOf", "oneOf", document, variables, { schema: "oneOf", spec: ["3.10.1", "6.1.2"], since: "September2025" });
+    // No explicit `since`: the oneOf schema already makes these September
+    // 2025's, and gives them the edition note that says why.
+    fresh("oneOf", "oneOf", document, variables, { schema: "oneOf", spec: ["3.10.1", "6.1.2"] });
   }
+}
+
+// A variable default lets a nullable variable fill a Non-Null position, but
+// only at the top: `[Int] = [1]` at `[Int!]!` still uses Int where Int! is
+// expected (§5.8.5, §3.12). One omitted variable at two arguments leaves
+// each to its own default, and an explicit null reaches both (§6.1.2,
+// §6.4.1). A list variable as one row of a list literal is coerced from a
+// single value to that row (§3.11), not flattened into the outer list.
+const VARIABLE_POSITIONS = [
+  ["variable-default", "variables", ["5.8.5", "3.12", "6.1.2"], "query($x: [Int] = [1]) { intsNN(v: $x) }", ["{}", '{"x": [1, null]}']],
+  ["arguments", "arguments", ["6.1.2", "6.4.1"], "query($x: Int) { pair(a: $x, b: $x) }", ["{}", '{"x": null}', '{"x": 1}']],
+  ["nested-variable", "list", ["3.11", "6.4.1"], "query($row: [Int]) { matrix(v: [$row]) }", ["{}", '{"row": 1}', '{"row": null}', '{"row": [1, null]}']],
+];
+for (const [family, check, spec, document, variableSets] of VARIABLE_POSITIONS) {
+  for (const variables of variableSets) fresh(family, check, document, variables, { spec });
 }
 
 // ---------------------------------------------------------------------------

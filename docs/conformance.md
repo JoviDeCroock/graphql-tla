@@ -62,7 +62,7 @@ With some [capabilities](#capabilities) there is more: `initialValue`, `event` a
 
 Field by field:
 
-- **`fixture`:** the fixture's id: a [`fixtures/*.graphql`](../fixtures) file's name, or `<file>_<variant>` for a file with a `# variants:` header, which runs the same schema and document once per set of variable values (`directives` is `directives_kept`, `directives_skipped`, `directives_excluded` and `directives_dropped`). The 16 files make 19 fixtures. `schema`, `document` and `variables` hold everything needed to run it.
+- **`fixture`:** the fixture's id: a [`fixtures/*.graphql`](../fixtures) file's name, or `<file>_<variant>` for a file with a `# variants:` header, which runs the same schema and document once per set of variable values (`directives` is `directives_kept`, `directives_skipped`, `directives_excluded` and `directives_dropped`). The 23 files make 27 fixtures. `schema`, `document` and `variables` hold everything needed to run it.
 - **`call`:** numbers calls within an execution. Each `settle` names one.
 - **`path`:** the response path, with list indices as strings or numbers. This is only instrumentation. Paths in the response's errors must follow §7.1.4: integers for list indices.
 - **`returnType`:** the field's type in SDL syntax, or the item type for a list item. The kit checks it against the fixture.
