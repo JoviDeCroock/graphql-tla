@@ -1,0 +1,22 @@
+# Conditionally merged field selections (§3.13.1, §3.13.2, §6.3.2, §7.1.6):
+# `req` is selected three times under different @include/@skip conditions.
+# Under each variant of $show, exactly two occurrences are collected, so an
+# error on `req` must report locations only from the included occurrences
+# (checked by errorLocationsAccurate). `opt` is selected twice with opposite
+# directives, so it is always collected once under whichever occurrence applies.
+# variants: {"on": {"show": true}, "off": {"show": false}}
+# maxListLength: 0
+# spec: 3.13.1, 3.13.2, 6.3.2, 7.1.6
+
+type Query {
+  req: String!
+  opt: String
+}
+
+query ($show: Boolean!) {
+  req @include(if: $show)
+  req
+  req @skip(if: $show)
+  opt @include(if: $show)
+  opt @skip(if: $show)
+}
