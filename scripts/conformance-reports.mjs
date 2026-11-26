@@ -8,6 +8,8 @@
 // Usage: node scripts/conformance-reports.mjs [key ...] [--random N] [--area A ...]
 // --area reruns only the named areas (repeatable), keeping the other reports.
 
+// Takes --checker out of argv and hands it to the runs below as TLA_CHECKER.
+import "../kit/checker.mjs";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { homedir } from "node:os";

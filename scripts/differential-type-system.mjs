@@ -29,7 +29,7 @@
 // specs/introspection.mutants.mjs in a temp copy of the references, and
 // checks that the differential then fails.
 
-import { spawn } from "node:child_process";
+import { runChecker } from "../kit/checker.mjs";
 import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -40,7 +40,6 @@ import { validateSDL as validateSDL16 } from "graphql16/validation/validate.js";
 import { validateSDL as validateSDL17 } from "graphql17/validation/validate";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
-const cli = join(root, "node_modules/tla-ts/dist/cli.js");
 const arg = (name, fallback) => {
   const index = process.argv.indexOf(name);
   return index === -1 ? fallback : Number(process.argv[index + 1]);
@@ -1531,15 +1530,8 @@ const introspectionControls = (intro) => {
 
 const BATCH = 120;
 
-const runTla = (dir) =>
-  new Promise((done) => {
-    // tla-ts's parser recurses deeply on large modules.
-    const child = spawn(process.execPath, ["--stack-size=3000", cli, "-workers", "1", "DifferentialTypeSystem.tla"], { cwd: dir });
-    let output = "";
-    child.stdout.on("data", (chunk) => (output += chunk));
-    child.stderr.on("data", (chunk) => (output += chunk));
-    child.on("close", (status) => done({ status, output }));
-  });
+// tla-ts's parser recurses deeply on large modules.
+const runTla = (dir) => runChecker(["-workers", "1", "DifferentialTypeSystem.tla"], { cwd: dir, stack: "large" });
 
 const pool = async (items, worker, lanes = Math.max(1, Math.floor(availableParallelism() / 2))) => {
   const results = new Array(items.length);

@@ -1,0 +1,1438 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/JoviDeCroock/graphql-tla/kit/protocol.schema.json",
+  "title": "graphql-tla adapter protocol, version 1",
+  "description": "One line of the newline-delimited JSON the conformance kit and an adapter exchange on the adapter's stdin and stdout (docs/conformance.md, \"What your adapter does\"; docs/kit-areas.md, \"Protocol\"; docs/kit/<area>.md). Each line is one JSON object. Validate a line the kit wrote against #/$defs/kitMessage and a line the adapter wrote against #/$defs/adapterMessage; the top-level schema accepts either. A `result` message's fields depend on the area of the request it answers, which only its `id` tells: validate it against #/$defs/parseResult, #/$defs/validateResult, #/$defs/coerceResult, #/$defs/schemaResult, #/$defs/introspectResult or #/$defs/coordinateResult as well. Messages the kit sends are closed (no other properties): they describe exactly what this kit sends. Messages an adapter sends allow other properties, because the kit ignores fields it doesn't read. The schema checks the shape of each line, not the conversation: that a `settle` names a pending call, that an area answers each request once, that a list outcome's `items` has `length` entries, and the like are left to the kit. Escape U+2028 and U+2029 inside JSON strings as \\u2028 and \\u2029: some line readers treat the raw characters as line endings.",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/kitMessage"
+    },
+    {
+      "$ref": "#/$defs/adapterMessage"
+    }
+  ],
+  "$defs": {
+    "kitMessage": {
+      "title": "A message the kit sends",
+      "description": "Execution: execute, settle, source, cancel, end. Other areas: one request per vector, whose `type` is the area's name.",
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "execute",
+            "settle",
+            "source",
+            "cancel",
+            "end",
+            "parse",
+            "validate",
+            "coerce",
+            "schema",
+            "introspect",
+            "coordinate"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "execute"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/execute"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "settle"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/settle"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "source"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/source"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "cancel"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/cancel"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "end"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/end"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "parse"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/parseRequest"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "validate"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/validateRequest"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "coerce"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/coerceRequest"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "schema"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/schemaRequest"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "introspect"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/introspectRequest"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "coordinate"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/coordinateRequest"
+          }
+        }
+      ]
+    },
+    "adapterMessage": {
+      "title": "A message the adapter sends",
+      "description": "First `hello`, then for execution: call, response, idle, stream-error, no-response, error, and for subscription streams done and source-cancelled; for the other areas, `result` or `error` for each request. Other properties are allowed on every adapter message: the kit ignores fields it doesn't read.",
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "hello",
+            "call",
+            "response",
+            "idle",
+            "stream-error",
+            "no-response",
+            "error",
+            "done",
+            "source-cancelled",
+            "result"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "hello"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/hello"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "call"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/call"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "response"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/response"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "idle"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/idle"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "stream-error"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/streamError"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "no-response"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/noResponse"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "error"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/error"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "done"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/done"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "source-cancelled"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/sourceCancelled"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "result"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/result"
+          }
+        }
+      ]
+    },
+    "id": {
+      "description": "The execution or request the message belongs to. The kit numbers them from 1; the adapter echoes the id of the message it answers. The kit ignores an adapter message whose id isn't the one it is waiting for, except a second response to a finished execution, which stops the run.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "callId": {
+      "description": "Numbers resolver calls within an execution (docs/conformance.md: \"numbers calls within an execution. Each settle names one\"). The adapter picks it; the kit echoes it in `settle`. Reporting the same call id twice in one execution stops the run. The kit itself only compares call ids, so it would take other JSON values, but the protocol documents numbers and every adapter in adapters/ sends integers.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "path": {
+      "description": "A response path: field response names, and list indices as strings or numbers. In `call` this is only instrumentation; paths in a response's errors must follow §7.1.4 (integers for list indices).",
+      "type": "array",
+      "items": {
+        "type": [
+          "string",
+          "integer"
+        ]
+      }
+    },
+    "capability": {
+      "description": "A capability an adapter claims in `hello`. Execution: idle, deferred-items, invalid-results, uncoercible-results, mutation, subscription, subscription-stream, parent-values, custom-scalar-results, scalar-results, error-propagation-off (docs/conformance.md, \"Capabilities\"). Each other area is claimed by its name (parse, validate, coerce, schema, introspect, coordinate), and areas add their own: parse-sdl (parse), custom-scalar-literals (validate), custom-directives (validate and introspect), absent-vs-null, unvalidated, exact-numbers, nested-fields, subscription-source and request-extensions (coerce), schema-extensions (schema). The kit keeps the list as a set and ignores names it doesn't know; this schema rejects them, so that a misspelt capability (which the kit would silently treat as not claimed) shows up. Each: idle: After each execute, settle, source and cancel, the adapter lets the engine run until it is blocked on the kit, then sends `idle`. Makes runs deterministic, which the exhaustive runs need; without it the kit waits --grace ms of silence instead and only does random runs. deferred-items: A list's items settle one by one, each with its own `call`. Without it, a list `settle` carries `items`, the outcome of each item (never `error`), and the adapter returns them inline. invalid-results: The adapter can return results of the wrong shape: a leaf for a list type, an object for an Int, Float or Boolean. uncoercible-results: The adapter can return `uncoercible` values in fixtures with invalid results: a fraction for an Int, a non-finite Float, a name that isn't one of an enum's values. `uncoercibleTypes` in hello narrows the leaf types. mutation: It runs mutation operations. subscription: It runs subscription operations; the source stream yields one event, and the response is the result for that event. subscription-stream: The kit can drive a subscription's source stream (`stream: true` on execute, then `source` and `cancel`). Needs subscription. parent-values: Each field's `call` reports the value its resolver was given, as a token (`parent`): the kit sends initialValue and event on execute, a token on each object outcome and on each emitted event. custom-scalar-results: At custom scalar positions, in any fixture, the adapter can return a value the scalar's result coercion rejects (`uncoercible`), and that coercion raises an execution error. scalar-results: The adapter's resolvers can return the integer 4 for an ID and 2147483648 for an Int (leaf outcomes with a `value`), in fixtures with invalid results. error-propagation-off: It can execute with `errorPropagation: false`. parse: The adapter answers `parse` requests. validate: The adapter answers `validate` requests. In coerce, an adapter that also validates (no `unvalidated`) is asked the validate area's question about invalid documents. coerce: The adapter answers `coerce` requests. schema: The adapter answers `schema` requests. introspect: The adapter answers `introspect` requests. coordinate: The adapter answers `coordinate` requests. parse-sdl: parse: the adapter parses type system documents as well as executable ones; vectors with a `grammar` are asked only of adapters that claim it. custom-scalar-literals: validate: a custom scalar declared in the request's SDL accepts every literal. custom-directives: validate and introspect: the schema built from SDL keeps the directives the SDL declares, and the implementation knows them. absent-vs-null: coerce: `arguments` tells an absent entry from a null one. unvalidated: coerce: the adapter executes a document without validating it. exact-numbers: coerce: the adapter's JSON parser reads every number exactly. nested-fields: coerce: resolvers return objects for object fields and two objects for lists of objects, and `calls` covers every depth. subscription-source: coerce: the adapter takes `subscribe`, runs a subscription through its subscribe entry point with a source stream resolver it controls, and reports `sourceCalls`. request-extensions: coerce: the adapter takes `extensions` and passes it to the implementation as the request's extensions, or drops it where the implementation has no place for them. schema-extensions: schema: the SDL may hold type system extensions, which the adapter applies to the document's definitions and validates.",
+      "enum": [
+        "idle",
+        "deferred-items",
+        "invalid-results",
+        "uncoercible-results",
+        "mutation",
+        "subscription",
+        "subscription-stream",
+        "parent-values",
+        "custom-scalar-results",
+        "scalar-results",
+        "error-propagation-off",
+        "parse",
+        "validate",
+        "coerce",
+        "schema",
+        "introspect",
+        "coordinate",
+        "parse-sdl",
+        "custom-scalar-literals",
+        "custom-directives",
+        "absent-vs-null",
+        "unvalidated",
+        "exact-numbers",
+        "nested-fields",
+        "subscription-source",
+        "request-extensions",
+        "schema-extensions"
+      ]
+    },
+    "hello": {
+      "title": "hello",
+      "description": "The adapter's first line, announcing itself. Example: {\"type\":\"hello\",\"protocol\":1,\"name\":\"my-graphql 2.3\",\"capabilities\":[\"idle\",\"deferred-items\",\"mutation\",\"subscription\"]}. The kit waits 10 s for it.",
+      "type": "object",
+      "required": [
+        "type",
+        "protocol"
+      ],
+      "properties": {
+        "type": {
+          "const": "hello"
+        },
+        "protocol": {
+          "const": 1,
+          "description": "The protocol version. This kit speaks 1 and stops on any other."
+        },
+        "name": {
+          "type": "string",
+          "description": "The implementation and its version, as reports show it. The adapter command if absent."
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/capability"
+          },
+          "description": "What the adapter can do. None if absent."
+        },
+        "uncoercibleTypes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "Int",
+              "Float",
+              "Enum"
+            ]
+          },
+          "description": "Execution, with uncoercible-results: the leaf types it covers, all of them if absent. A typed implementation's Int field returns an integer type and an enum field a native enum, so neither can hold such a value: Juniper claims [\"Float\"]."
+        },
+        "nullItems": {
+          "type": "boolean",
+          "description": "Execution: false says the adapter can't return null for a list item of a Non-Null type, or for a subscription's event when the root field's type is Non-Null; the kit then never settles such a position with null. True if absent."
+        }
+      }
+    },
+    "execute": {
+      "title": "execute",
+      "description": "The kit starts an execution of a fixture. The adapter builds the schema, parses the document and executes it with one resolver installed on every field, which reports each call (`call`) and returns something the kit completes later (`settle`). Example: {\"type\":\"execute\",\"id\":7,\"fixture\":\"unions\",\"schema\":\"type Query { … }\",\"document\":\"query { … }\",\"operationType\":\"query\",\"variables\":{},\"errorPropagation\":true}",
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "fixture",
+        "schema",
+        "document",
+        "operationType",
+        "variables",
+        "errorPropagation"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "execute"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "fixture": {
+          "type": "string",
+          "description": "The fixture's id: a fixtures/*.graphql file's name, or <file>_<variant> for a file with a `# variants:` header."
+        },
+        "schema": {
+          "type": "string",
+          "description": "The fixture's schema, in SDL."
+        },
+        "document": {
+          "type": "string",
+          "description": "The fixture's executable document."
+        },
+        "operationType": {
+          "enum": [
+            "query",
+            "mutation",
+            "subscription"
+          ],
+          "description": "The type of the document's operation."
+        },
+        "variables": {
+          "type": "object",
+          "description": "The variable values."
+        },
+        "errorPropagation": {
+          "type": "boolean",
+          "description": "false: execute without error propagation (graphql-js 17's @experimental_disableErrorPropagation, which the document doesn't carry). Only sent as false to adapters with error-propagation-off. Outside the spec."
+        },
+        "initialValue": {
+          "type": "string",
+          "description": "With parent-values only: a token for the initial value (§6.2.1, §6.4). Pass an object that carries it as the operation's root value, so that root fields' resolvers can report it as `parent`."
+        },
+        "event": {
+          "type": "string",
+          "description": "With parent-values, on a subscription's execute without `stream`: the token of the one event the source stream yields. Yield an object that carries it."
+        },
+        "stream": {
+          "const": true,
+          "description": "On a subscription's execute for an adapter with subscription-stream: the kit drives the source stream with `source` and `cancel` messages. Without it, a subscription yields one event."
+        }
+      }
+    },
+    "outcome": {
+      "title": "outcome",
+      "description": "What a resolver produces, as the kit chooses it (docs/conformance.md, \"Outcomes\").",
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "leaf",
+            "object",
+            "list",
+            "null",
+            "error",
+            "uncoercible"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "leaf"
+              }
+            }
+          },
+          "then": {
+            "description": "{\"kind\":\"leaf\"}: the canonical value for the named type: Int 1, Float 1.5, Boolean true, an enum's first value, anything else \"v\"; at a list position (a wrong shape, only with invalid-results), the number 1. With `value` (scalar-results only, in fixtures with invalid results): that internal value as it is, the integer 4 for an ID or 2147483648 for an Int.",
+            "additionalProperties": false,
+            "properties": {
+              "kind": true,
+              "value": {
+                "type": "integer",
+                "description": "scalar-results only: the internal value the resolver returns, as it is."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "object"
+              }
+            }
+          },
+          "then": {
+            "description": "An object whose runtime type is `type`; for an abstract type, type resolution must pick it. An object for an Int, Float or Boolean (a wrong shape, only with invalid-results) has type \"\".",
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": true,
+              "type": {
+                "type": "string",
+                "description": "The object's runtime type, or \"\" for an object at a scalar position."
+              },
+              "token": {
+                "type": "string",
+                "description": "With parent-values: the object must carry it, so that the resolvers of its fields can report it as `parent`."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "list"
+              }
+            }
+          },
+          "then": {
+            "description": "A list of `length` items. With deferred-items, each item is itself pending and is reported with its own `call`; without it, `items` gives each item's outcome and the adapter returns them inline.",
+            "required": [
+              "length"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": true,
+              "length": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/itemOutcome"
+                },
+                "description": "Only for an adapter without deferred-items: the outcome of each item, `length` of them, never `error`."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "null",
+                  "error",
+                  "uncoercible"
+                ]
+              }
+            }
+          },
+          "then": {
+            "description": "null: the resolver returns null. error: it raises (throws, rejects, or returns an error value). uncoercible (with uncoercible-results, or custom-scalar-results at a custom scalar): a value the leaf type can't represent, such as 1.2 for an Int, Infinity or NaN for a Float, a name that isn't an enum value, or a value a custom scalar's result coercion rejects.",
+            "additionalProperties": false,
+            "properties": {
+              "kind": true
+            }
+          }
+        }
+      ]
+    },
+    "itemOutcome": {
+      "description": "An inline list item's outcome: any outcome but `error`.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/outcome"
+        },
+        {
+          "not": {
+            "properties": {
+              "kind": {
+                "const": "error"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "type": "object"
+          }
+        }
+      ]
+    },
+    "settle": {
+      "title": "settle",
+      "description": "The kit completes a pending resolver call with an outcome. Example: {\"type\":\"settle\",\"id\":7,\"call\":3,\"outcome\":{\"kind\":\"object\",\"type\":\"User\"}}",
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "call",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "settle"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "call": {
+          "$ref": "#/$defs/callId"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "source": {
+      "title": "source",
+      "description": "subscription-stream: the kit's source stream emits an event, completes normally, or fails. Examples: {\"type\":\"source\",\"id\":9,\"action\":\"emit\"}, {\"type\":\"source\",\"id\":9,\"action\":\"fail\",\"message\":\"the source stream failed\"}",
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "action"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "source"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "action": {
+          "enum": [
+            "emit",
+            "complete",
+            "fail"
+          ]
+        },
+        "token": {
+          "type": "string",
+          "description": "On emit, with parent-values: the event's value must carry it (\"event-2\")."
+        },
+        "message": {
+          "type": "string",
+          "description": "On fail: the error message the source stream completes with."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "fail"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "message"
+            ],
+            "properties": {
+              "token": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "emit"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "message": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "complete"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "message": false,
+              "token": false
+            }
+          }
+        }
+      ]
+    },
+    "cancel": {
+      "title": "cancel",
+      "description": "subscription-stream: the client cancels the response stream (Unsubscribe, §6.2.3.3), for example return() on an async iterator.",
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "cancel"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "end": {
+      "title": "end",
+      "description": "The kit is done with the execution or stream. The adapter can drop it; anything still pending can be abandoned, and anything still open closed without reporting it.",
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "end"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "call": {
+      "title": "call",
+      "description": "A resolver was called. Example: {\"type\":\"call\",\"id\":7,\"call\":3,\"path\":[\"search\",\"0\"],\"returnType\":\"SearchResult!\",\"after\":2}",
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "call",
+        "path",
+        "returnType"
+      ],
+      "properties": {
+        "type": {
+          "const": "call"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "call": {
+          "$ref": "#/$defs/callId"
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "returnType": {
+          "type": "string",
+          "description": "The field's type in SDL syntax, or the item type for a list item. The kit checks it against the fixture."
+        },
+        "after": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional but recommended: the number of settles for this execution the adapter had applied when the resolver was called. The kit ignores a value that isn't an integer."
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "With parent-values only: the token of the value the field's resolver was called on (its objectValue, §6.4.2), or null if the resolver got something without one. Left out on a list item's call."
+        }
+      }
+    },
+    "response": {
+      "title": "response",
+      "description": "The response the client would get, or for a subscription stream one execution result the response stream yielded. Example: {\"type\":\"response\",\"id\":7,\"response\":{\"data\":{\"search\":[{\"__typename\":\"User\",\"name\":null}]},\"errors\":[{\"message\":\"…\",\"path\":[\"search\",0,\"name\"]}]}}",
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "response"
+      ],
+      "properties": {
+        "type": {
+          "const": "response"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "response": {
+          "description": "The response, serialized as the implementation serializes it. The kit also reads the line as text, for a map that repeats a key (uniqueKeys). A response that isn't a well-formed execution result (§7.1) is graded as a malformed case, not refused by the protocol, so this schema doesn't constrain it."
+        }
+      }
+    },
+    "idle": {
+      "title": "idle",
+      "description": "With idle: after each kit message, once the engine is blocked on the kit.",
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "const": "idle"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "streamError": {
+      "title": "stream-error",
+      "description": "A subscription's response stream completed with an error (the client's next() threw). In a one-event subscription it stands in for the response, counted against eventYieldsResult; in a driven stream it is how the stream ended, once only and never after done.",
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "const": "stream-error"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "message": {
+          "type": "string",
+          "description": "The error's message. The kit records it, and takes an empty one if it is absent."
+        }
+      }
+    },
+    "noResponse": {
+      "title": "no-response",
+      "description": "The implementation produced no response at all for a query or mutation (serializing its result failed, or execution raised out to the caller), or nothing for one event of a subscription stream that goes on. Only where a client would get nothing; an adapter bug is an `error`.",
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "const": "no-response"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "message": {
+          "type": "string",
+          "description": "Why. The kit records it, and takes an empty one if it is absent."
+        }
+      }
+    },
+    "error": {
+      "title": "error",
+      "description": "In execution, the adapter itself failed, and the kit stops. In parse, validate, coerce, schema, introspect and coordinate, the implementation crashed on that request: the kit records a crash and goes on (in coerce, the outcome \"no response\"). Only the message's first line reaches a report.",
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "const": "error"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "message": {
+          "type": "string",
+          "description": "What failed. The kit takes an empty message if it is absent."
+        }
+      }
+    },
+    "done": {
+      "title": "done",
+      "description": "subscription-stream: the response stream completed normally (the client's next() said done, or its return() resolved). Once only.",
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "const": "done"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "sourceCancelled": {
+      "title": "source-cancelled",
+      "description": "subscription-stream: the implementation cancelled the kit's source stream (called its return(), cancel() or disposal). Only for a source that hadn't completed or failed.",
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "const": "source-cancelled"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "result": {
+      "title": "result",
+      "description": "An area's answer to the request with the same id. The other fields are the area's result: validate them against #/$defs/<area>Result.",
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "const": "result"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "parseRequest": {
+      "title": "parse request",
+      "description": "Whether a source text is a syntactically valid document of a grammar (docs/kit/parse.md). Example: {\"type\":\"parse\",\"id\":12,\"source\":\"{ a }\"}",
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "parse"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "source": {
+          "type": "string",
+          "description": "The source text. It may hold a lone surrogate."
+        },
+        "grammar": {
+          "enum": [
+            "typeSystem",
+            "typeSystemExtension",
+            "document"
+          ],
+          "description": "Only for adapters with parse-sdl, and only when the vector names one: TypeSystemDocument, TypeSystemExtensionDocument or Document. Absent: ExecutableDocument. The kit never sends \"executable\"."
+        }
+      }
+    },
+    "parseResult": {
+      "title": "parse result",
+      "description": "{\"type\":\"result\",\"id\":12,\"ok\":true}, or {\"type\":\"result\",\"id\":12,\"unsupported\":\"lone surrogate: …\"} for a source with a lone surrogate the adapter can't carry (anywhere else, unsupported is graded as a crash). A result with neither a boolean ok nor a string unsupported is malformed and fails the run. Other fields are ignored.",
+      "type": "object",
+      "anyOf": [
+        {
+          "required": [
+            "ok"
+          ],
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "description": "Whether the source is a syntactically valid document of the grammar. A parse error is false."
+            }
+          }
+        },
+        {
+          "required": [
+            "unsupported"
+          ],
+          "properties": {
+            "unsupported": {
+              "type": "string",
+              "description": "Why the adapter can't receive the source."
+            }
+          }
+        }
+      ]
+    },
+    "validateRequest": {
+      "title": "validate request",
+      "description": "Whether a document is valid against a schema (docs/kit/validate.md). In a coerce run, the kit also asks this of an adapter that claims validate and not unvalidated.",
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "schema",
+        "document"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "validate"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "schema": {
+          "type": "string",
+          "description": "SDL for a valid schema."
+        },
+        "document": {
+          "type": "string",
+          "description": "A GraphQL document. Every document parses under September 2026's grammar."
+        }
+      }
+    },
+    "validateResult": {
+      "title": "validate result",
+      "description": "{\"type\":\"result\",\"id\":12,\"valid\":false,\"errors\":[{\"message\":\"…\",\"locations\":[{\"line\":1,\"column\":9}]}]}. An answer whose valid isn't a boolean is malformed and fails the run. Other fields are ignored.",
+      "type": "object",
+      "required": [
+        "valid"
+      ],
+      "properties": {
+        "valid": {
+          "type": "boolean",
+          "description": "true if the implementation would go on to execute the document, false if it rejects it with validation errors."
+        },
+        "errors": {
+          "type": "array",
+          "description": "Optional: the validation errors, each documented as {message, locations: [{line, column}]}. The kit doesn't check them (a report quotes errors[0].message), so only an object item's documented fields are typed here.",
+          "items": {
+            "if": {
+              "type": "object"
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "locations": {
+                  "type": "array",
+                  "items": {
+                    "if": {
+                      "type": "object"
+                    },
+                    "then": {
+                      "type": "object",
+                      "properties": {
+                        "line": {
+                          "type": "integer"
+                        },
+                        "column": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "coerceRequest": {
+      "title": "coerce request",
+      "description": "Execute a request with a resolver on every field that records its arguments (docs/kit/coerce.md).",
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "schema",
+        "document",
+        "variables"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "coerce"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "schema": {
+          "type": "string",
+          "description": "SDL."
+        },
+        "document": {
+          "type": "string",
+          "description": "One or more operations, or none; it may not parse at all."
+        },
+        "variables": {
+          "type": "string",
+          "description": "The request's variables as raw JSON text, to parse with the implementation's own JSON parser."
+        },
+        "operationName": {
+          "type": "string",
+          "description": "The operation to run. Absent when the request doesn't name one."
+        },
+        "subscribe": {
+          "enum": [
+            "stream",
+            "raise"
+          ],
+          "description": "Only with subscription-source: what the subscription root field's source stream resolver does, return a stream of one event or raise."
+        },
+        "extensions": {
+          "type": "string",
+          "description": "Only with request-extensions: the request's extensions map as raw JSON text."
+        }
+      }
+    },
+    "coerceArguments": {
+      "type": "object",
+      "description": "The argument map the resolver got, as JSON: Int and Float as numbers, String and ID as strings, Boolean as booleans, enum values as their names, lists as arrays, input objects as objects; an entry with no value is left out; a value JSON can't represent (a non-finite float) as a string."
+    },
+    "coerceResult": {
+      "title": "coerce result",
+      "description": "{\"type\":\"result\",\"id\":12,\"response\":{\"data\":{\"int\":\"ok\"}},\"calls\":[{\"path\":[\"int\"],\"arguments\":{\"v\":2}}]}, or {\"type\":\"result\",\"id\":12,\"unsupported\":\"lone surrogate: …\"} for variables the adapter's JSON parser can't read (anywhere but a lone surrogate, graded as a crash). A response that is there but isn't a map is in the format (it fails resultMap), and then the kit reads nothing else. Otherwise a result not in this format is malformed. Other fields are ignored, but appear in the report's examples.",
+      "type": "object",
+      "anyOf": [
+        {
+          "required": [
+            "unsupported"
+          ],
+          "properties": {
+            "unsupported": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "required": [
+            "response"
+          ],
+          "properties": {
+            "response": {
+              "description": "The execution result, as the implementation would serialize it. A document that doesn't parse is answered with the implementation's request error."
+            },
+            "calls": {
+              "type": "array",
+              "description": "One entry per resolver call, in order, at every depth.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "path",
+                  "arguments"
+                ],
+                "properties": {
+                  "path": {
+                    "$ref": "#/$defs/path",
+                    "description": "The field's response path, with list indices and response names."
+                  },
+                  "arguments": {
+                    "$ref": "#/$defs/coerceArguments"
+                  }
+                }
+              }
+            },
+            "sourceCalls": {
+              "type": "array",
+              "description": "With subscription-source: one entry per call of a source stream resolver. Leave it out or send [] when there was none.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "field",
+                  "arguments"
+                ],
+                "properties": {
+                  "field": {
+                    "type": "string",
+                    "description": "The field's name, not its alias."
+                  },
+                  "arguments": {
+                    "$ref": "#/$defs/coerceArguments"
+                  }
+                }
+              }
+            }
+          },
+          "if": {
+            "properties": {
+              "response": {
+                "type": "object"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "calls"
+            ],
+            "properties": {
+              "response": {
+                "properties": {
+                  "errors": {
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "schemaRequest": {
+      "title": "schema request",
+      "description": "Whether an SDL schema is valid (docs/kit/schema.md). Example: {\"type\":\"schema\",\"id\":12,\"sdl\":\"interface I { f: Int } type Query implements I { f(b: Int!): Int }\"}",
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "sdl"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "schema"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "sdl": {
+          "type": "string",
+          "description": "A type system document. With schema-extensions it may also hold type system extensions."
+        }
+      }
+    },
+    "schemaResult": {
+      "title": "schema result",
+      "description": "{\"type\":\"result\",\"id\":12,\"valid\":false}. An answer whose valid isn't a boolean is malformed. Other fields, such as errors with the implementation's messages, are ignored, but appear in the report's examples.",
+      "type": "object",
+      "required": [
+        "valid"
+      ],
+      "properties": {
+        "valid": {
+          "type": "boolean",
+          "description": "Whether the implementation accepts the schema. Rejecting it, with validation errors or by failing to build it, is false."
+        }
+      }
+    },
+    "introspectRequest": {
+      "title": "introspect request",
+      "description": "Execute an introspection query against an SDL schema (docs/kit/introspect.md).",
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "sdl",
+        "query"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "introspect"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "sdl": {
+          "type": "string",
+          "description": "A valid type system document, with no extensions."
+        },
+        "query": {
+          "type": "string",
+          "description": "One of the kit's queries (kit/introspect/query.mjs)."
+        }
+      }
+    },
+    "introspectResult": {
+      "title": "introspect result",
+      "description": "{\"type\":\"result\",\"id\":12,\"response\":{\"data\":{\"__typename\":\"Query\",\"__schema\":{…}}}}. A result without response is counted as an adapter problem. Other fields are ignored.",
+      "type": "object",
+      "required": [
+        "response"
+      ],
+      "properties": {
+        "response": {
+          "description": "The execution result, as JSON, exactly as the implementation would send it. A schema that doesn't build or a query that is rejected is a request error: errors and no data entry."
+        }
+      }
+    },
+    "coordinateRequest": {
+      "title": "coordinate request",
+      "description": "Parse a schema coordinate (§2.14) and resolve it in an SDL schema (docs/kit/coordinate.md).",
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "sdl",
+        "coordinate"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "coordinate"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "sdl": {
+          "type": "string",
+          "description": "A valid schema with no extensions."
+        },
+        "coordinate": {
+          "type": "string",
+          "description": "The schema coordinate. It may hold any character. Don't trim or normalise it."
+        }
+      }
+    },
+    "coordinateResult": {
+      "title": "coordinate result",
+      "description": "One of {\"ok\":false}, {\"ok\":true,\"resolved\":null}, {\"ok\":true,\"resolved\":{\"kind\":\"argument\",\"path\":[\"Query\",\"searchBusiness\",\"criteria\"]}}, {\"ok\":true,\"error\":\"…\"}. A result with ok: true must have exactly one of resolved and error; anything else is malformed. Other fields are ignored.",
+      "type": "object",
+      "required": [
+        "ok"
+      ],
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "description": "Whether the coordinate parses. A syntax error is false."
+        },
+        "resolved": {
+          "description": "With ok: true, what resolving gave: null when it yields no element, otherwise the element.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "path"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "type",
+                    "field",
+                    "inputField",
+                    "enumValue",
+                    "argument",
+                    "directive",
+                    "directiveArgument"
+                  ],
+                  "description": "§2.14's kind of schema element."
+                },
+                "path": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The element's name and the names of the elements that contain it, outermost first. No @."
+                }
+              }
+            }
+          ]
+        },
+        "error": {
+          "type": "string",
+          "description": "With ok: true, instead of resolved: resolving raised an error with this message, which the kit doesn't read."
+        }
+      },
+      "if": {
+        "properties": {
+          "ok": {
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "then": {
+        "oneOf": [
+          {
+            "required": [
+              "resolved"
+            ],
+            "not": {
+              "required": [
+                "error"
+              ],
+              "type": "object"
+            },
+            "type": "object"
+          },
+          {
+            "required": [
+              "error"
+            ],
+            "not": {
+              "required": [
+                "resolved"
+              ],
+              "type": "object"
+            },
+            "type": "object"
+          }
+        ]
+      }
+    }
+  }
+}

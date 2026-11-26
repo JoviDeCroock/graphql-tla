@@ -1,15 +1,56 @@
 {
   "name": "graphql-tla",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "GraphQL's spec as TLA+: hand-written references for execution, validation, coercion, the type system, introspection and the language, a conformance kit that checks any implementation against them, and models of mutations, subscriptions, @defer and @stream, all model checked with tla-ts",
+  "keywords": [
+    "graphql",
+    "tla+",
+    "tlaplus",
+    "conformance",
+    "specification",
+    "model-checking",
+    "testing"
+  ],
+  "homepage": "https://github.com/JoviDeCroock/graphql-tla#readme",
+  "bugs": {
+    "url": "https://github.com/JoviDeCroock/graphql-tla/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JoviDeCroock/graphql-tla.git"
+  },
+  "license": "MIT",
+  "author": "Jovi De Croock",
   "type": "module",
+  "bin": {
+    "graphql-tla": "kit/cli.mjs"
+  },
+  "exports": {
+    "./protocol.schema.json": "./kit/protocol.schema.json",
+    "./checker": "./kit/checker.mjs",
+    "./ndjson": "./kit/ndjson.mjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "kit/",
+    "!kit/**/*.test.mjs",
+    "specs/*.tla",
+    "fixtures/*.graphql",
+    "adapters/graphql-js/",
+    "docs/"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "fixtures": "node scripts/generate-fixtures.mjs",
     "check": "npm run check:fixtures && npm run check:specs && npm run check:graphql-js && npm run check:vectors && npm run check:differentials",
     "check:fixtures": "node scripts/generate-fixtures.mjs --check",
     "check:specs": "node scripts/check.mjs",
-    "check:graphql-js": "node --test kit/adapter.test.mjs && node scripts/check-conformance.mjs",
+    "check:graphql-js": "node --test kit/adapter.test.mjs kit/checker.test.mjs && node scripts/check-conformance.mjs",
     "check:differentials": "node scripts/differential-lexer.mjs && node scripts/differential-validation.mjs && node scripts/differential-coercion.mjs && node scripts/differential-type-system.mjs",
     "check:mutants": "node scripts/differential-lexer.mjs --mutants && node scripts/differential-validation.mjs --mutants && node scripts/differential-coercion.mjs --mutants && node scripts/differential-type-system.mjs --mutants",
     "typecheck": "tsc && tsc -p website/tsconfig.json",
@@ -19,22 +60,20 @@
     "website:build": "tsc -p website/tsconfig.json && vite build website",
     "website:preview": "vite preview website",
     "test:sheet": "node --test scripts/test/*.test.mjs",
-    "website:test": "node --test website/test/*.test.mjs"
-  },
-  "devDependencies": {
-    "graphql16": "npm:graphql@16.15.0",
-    "graphql17": "npm:graphql@17.1.0",
-    "tla-ts": "0.0.10",
-    "typescript": "^6.0.3",
-    "vite": "^8.3.8"
-  },
-  "engines": {
-    "node": ">=22"
-  },
-  "bin": {
-    "graphql-tla": "kit/cli.mjs"
+    "website:test": "node --test website/test/*.test.mjs",
+    "test:protocol": "node --test kit/protocol.test.mjs",
+    "pack:check": "node scripts/check-pack.mjs",
+    "prepublishOnly": "npm run typecheck && npm run check:fixtures && node --test kit/adapter.test.mjs kit/checker.test.mjs && npm run test:protocol && npm run pack:check"
   },
   "dependencies": {
-    "preact": "^11.2.0"
+    "graphql17": "npm:graphql@17.1.0",
+    "tla-ts": "0.0.10"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "graphql16": "npm:graphql@16.15.0",
+    "preact": "^11.2.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.8"
   }
 }

@@ -31,6 +31,8 @@ The adapter is a process that reads and writes newline-delimited JSON on stdin a
 
 ### Messages
 
+[`kit/protocol.schema.json`](../kit/protocol.schema.json) is the machine-readable form of this protocol, as a JSON Schema (draft 2020-12), for every area: validate a line the kit sends against `#/$defs/kitMessage` and a line your adapter sends against `#/$defs/adapterMessage`. [`kit/protocol.test.mjs`](../kit/protocol.test.mjs) checks it against the graphql-js adapter's real traffic. Where this page and the schema disagree, the kit's code decides.
+
 The adapter starts by announcing itself:
 
 ```json

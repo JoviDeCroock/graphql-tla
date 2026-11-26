@@ -9,7 +9,7 @@
 // targets, so the check can't pass vacuously. check() also returns a report:
 // the facts a conformance sheet is built from.
 
-import { spawn } from "node:child_process";
+import { runChecker } from "../checker.mjs";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -22,7 +22,6 @@ import { protocolControls } from "./protocol-controls.mjs";
 import { positions, startOf } from "./positions.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
-const cli = join(root, "node_modules/tla-ts/dist/cli.js");
 
 export const CASE_FORMAT = 1;
 const SHARD_SIZE = 300;
@@ -738,14 +737,7 @@ Next == UNCHANGED done
 ====
 `;
 
-const runTla = (dir) =>
-  new Promise((done) => {
-    const child = spawn(process.execPath, [cli, "-workers", "1", "Shard.tla"], { cwd: dir });
-    let output = "";
-    child.stdout.on("data", (d) => (output += d));
-    child.stderr.on("data", (d) => (output += d));
-    child.on("close", (status) => done({ status, output }));
-  });
+const runTla = (dir) => runChecker(["-workers", "1", "Shard.tla"], { cwd: dir });
 
 const unescape = (s) => JSON.parse(`"${s}"`);
 

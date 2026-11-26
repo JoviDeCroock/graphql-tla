@@ -42,7 +42,7 @@
 //   --check  regenerates the vectors and fails if kit/parse/vectors.json
 //            differs.
 
-import { spawn } from "node:child_process";
+import { runChecker } from "../kit/checker.mjs";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -50,7 +50,6 @@ import { fileURLToPath } from "node:url";
 import { section } from "../kit/report.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
-const cli = join(root, "node_modules/tla-ts/dist/cli.js");
 const OUT = join(root, "kit/parse/vectors.json");
 const CHECK = process.argv.includes("--check");
 // tla-ts processes at once, each with one worker, and sources per process.
@@ -1046,25 +1045,9 @@ VectorsInit == vector = 0
 
 // A few sources (the crash probes) nest a thousand levels deep or run to
 // tens of thousands of characters, deeper than tla-ts's recursion goes on
-// Node's default stack. They are evaluated in a worker thread with a larger
-// one.
-const BIG_STACK = `
-import { Worker } from "node:worker_threads";
-const [cli, ...args] = process.argv.slice(1);
-const worker = new Worker(cli, { argv: args, execArgv: [], resourceLimits: { stackSizeMb: 1024, maxOldGenerationSizeMb: 8192 } });
-worker.on("exit", (code) => process.exit(code));
-worker.on("error", (error) => { console.error(error); process.exit(1); });
-`;
-
+// Node's default stack. They are evaluated with a much larger one.
 const runTla = (dir, bigStack) =>
-  new Promise((done) => {
-    const args = [cli, "-workers", "1", "-config", "ParseVectors.cfg", "ParseVectors.tla"];
-    const child = spawn(process.execPath, bigStack ? ["--input-type=module", "-e", BIG_STACK, ...args] : args, { cwd: dir });
-    let output = "";
-    child.stdout.on("data", (d) => (output += d));
-    child.stderr.on("data", (d) => (output += d));
-    child.on("close", (status) => done({ status, output }));
-  });
+  runChecker(["-workers", "1", "-config", "ParseVectors.cfg", "ParseVectors.tla"], { cwd: dir, stack: bigStack ? "huge" : undefined });
 
 // The reference's verdict on each candidate (a key): { ok, lexOk, lexPos,
 // failingToken, newer, keywordType, typeSystem2026 }.

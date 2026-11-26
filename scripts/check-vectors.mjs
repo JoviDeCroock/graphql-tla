@@ -3,6 +3,8 @@
 //
 // Usage: node scripts/check-vectors.mjs
 
+// Takes --checker out of argv and hands it to the runs below as TLA_CHECKER.
+import "../kit/checker.mjs";
 import { spawnSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join, resolve } from "node:path";

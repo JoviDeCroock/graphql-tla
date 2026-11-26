@@ -2,7 +2,7 @@
 // format version, spec sections by number, and where the run came from.
 
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -22,8 +22,17 @@ export const section = (number) => {
 };
 
 // The kit's commit, with "+dirty" if the kit, the specs or the fixtures
-// have changes that aren't committed.
+// have changes that aren't committed. An installed package isn't a
+// checkout (git would find the project it is installed in), so there it is
+// the package's version, as "v0.1.0".
 export const kitCommit = () => {
+  if (!existsSync(join(root, ".git"))) {
+    try {
+      return `v${JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version}`;
+    } catch {
+      return "unknown";
+    }
+  }
   const git = (...args) => execFileSync("git", args, { cwd: root, stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
   try {
     const dirty = git("status", "--porcelain", "--untracked-files=no", "--", "kit", "specs", "fixtures") !== "";

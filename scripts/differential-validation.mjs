@@ -32,7 +32,7 @@
 //
 // Usage: node scripts/differential-validation.mjs [--random N] [--seed S] [--mutants] [--verbose]
 
-import { spawn } from "node:child_process";
+import { runChecker } from "../kit/checker.mjs";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -41,7 +41,6 @@ import * as graphql16 from "graphql16";
 import * as graphql17 from "graphql17";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
-const cli = join(root, "node_modules/tla-ts/dist/cli.js");
 const arg = (name, fallback) => {
   const index = process.argv.indexOf(name);
   return index === -1 ? fallback : Number(process.argv[index + 1]);
@@ -1003,14 +1002,7 @@ const explain = (c) =>
 // ---------------------------------------------------------------------------
 // Running tla-ts
 
-const run = (args, cwd) =>
-  new Promise((done) => {
-    const child = spawn(process.execPath, [cli, ...args], { cwd });
-    let output = "";
-    child.stdout.on("data", (chunk) => (output += chunk));
-    child.stderr.on("data", (chunk) => (output += chunk));
-    child.on("close", (status) => done({ status, output }));
-  });
+const run = (args, cwd) => runChecker(args, { cwd });
 
 const pool = async (items, lanes, worker) => {
   const results = new Array(items.length);
