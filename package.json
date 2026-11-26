@@ -1,5 +1,5 @@
 {
-  "name": "graphql-tla",
+  "name": "@jdecroock/graphql-tla",
   "version": "0.1.0",
   "description": "GraphQL's spec as TLA+: hand-written references for execution, validation, coercion, the type system, introspection and the language, a conformance kit that checks any implementation against them, and models of mutations, subscriptions, @defer and @stream, all model checked with tla-ts",
   "keywords": [
