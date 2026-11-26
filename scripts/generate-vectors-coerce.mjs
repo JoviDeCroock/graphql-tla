@@ -975,6 +975,21 @@ for (const literal of ["1.7976931348623158e308", "-1.7976931348623158e308", "1.7
   add("literal", "float", `{ float(v: ${literal}) }`, "{}");
 }
 
+// §6.1 GetOperation precedes §6.1.2 CoerceVariableValues: ambiguous or unknown
+// operationName fails with a request error even when variables are missing or
+// invalid for one of the operations.
+const OPERATION_PRECEDENCE = [
+  ["query A($x: Int) { int(v: $x) } query B($y: Int!) { intNN(v: $y) }", [null, "C"], ["{}", '{"x": "bad", "y": "bad"}']],
+  ["query A($x: Int!) { intNN(v: $x) }", ["Missing"], ["{}", '{"x": "bad"}']],
+];
+for (const [document, names, variableSets] of OPERATION_PRECEDENCE) {
+  for (const operationName of names) {
+    for (const variables of variableSets) {
+      fresh("operation", "getOperation", document, variables, { operationName, spec: ["6.1"] });
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // TLA+ encodings for Coercion.tla (as in differential-coercion.mjs)
 
