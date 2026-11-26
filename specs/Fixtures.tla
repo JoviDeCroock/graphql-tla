@@ -1581,6 +1581,54 @@ Fixtures == [
     errorPropagation |-> TRUE,
     invalidResults |-> FALSE
   ],
+  nestedLists |-> [
+    schema |-> [
+      query |-> "Query",
+      mutation |-> "",
+      subscription |-> "",
+      types |-> (
+        ("Query" :> [
+          kind |-> "object",
+          fields |-> (
+            ("rows" :> [name |-> "Int", wrappers |-> <<"list", "list", "nonNull">>])
+          ),
+          possibleTypes |-> {"Query"}
+        ]) @@
+        ("Int" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("Boolean" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("String" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ])
+      )
+    ],
+    operationType |-> "query",
+    operation |-> <<
+      [
+        kind |-> "field",
+        name |-> "rows",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        selectionSet |-> <<>>
+      ]
+    >>,
+    fragments |-> <<>>,
+    variables |-> <<>>,
+    maxListLength |-> 2,
+    errorPropagation |-> TRUE,
+    invalidResults |-> FALSE
+  ],
   noPropagation |-> [
     schema |-> [
       query |-> "Query",

@@ -1,0 +1,14 @@
+# Nested-list null propagation (§3.11, §3.12, §6.4.3, §6.4.4): with
+# maxListLength 2, a null or error in a Non-Null inner element of `rows: [[Int!]]`
+# bubbles only to the inner nullable list (e.g. rows[1] becomes null while
+# rows[0] survives) and reports exact [outer, inner] error paths.
+# maxListLength: 2
+# spec: 3.11, 3.12, 6.4.3, 6.4.4
+
+type Query {
+  rows: [[Int!]]
+}
+
+query {
+  rows
+}
