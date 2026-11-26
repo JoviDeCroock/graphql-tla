@@ -1074,6 +1074,88 @@ Fixtures == [
     errorPropagation |-> TRUE,
     invalidResults |-> TRUE
   ],
+  listPartialNull |-> [
+    schema |-> [
+      query |-> "Query",
+      mutation |-> "",
+      subscription |-> "",
+      types |-> (
+        ("Child" :> [
+          kind |-> "object",
+          fields |-> (
+            ("id" :> [name |-> "ID", wrappers |-> <<"nonNull">>])
+          ),
+          possibleTypes |-> {"Child"}
+        ]) @@
+        ("ID" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("Wrapper" :> [
+          kind |-> "object",
+          fields |-> (
+            ("child" :> [name |-> "Child", wrappers |-> <<"nonNull">>])
+          ),
+          possibleTypes |-> {"Wrapper"}
+        ]) @@
+        ("Query" :> [
+          kind |-> "object",
+          fields |-> (
+            ("wrappers" :> [name |-> "Wrapper", wrappers |-> <<"list">>])
+          ),
+          possibleTypes |-> {"Query"}
+        ]) @@
+        ("Boolean" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("String" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ])
+      )
+    ],
+    operationType |-> "query",
+    operation |-> <<
+      [
+        kind |-> "field",
+        name |-> "wrappers",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        selectionSet |-> <<
+          [
+            kind |-> "field",
+            name |-> "child",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            selectionSet |-> <<
+              [
+                kind |-> "field",
+                name |-> "id",
+                alias |-> "",
+                typeCondition |-> "",
+                skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                selectionSet |-> <<>>
+              ]
+            >>
+          ]
+        >>
+      ]
+    >>,
+    fragments |-> <<>>,
+    variables |-> <<>>,
+    maxListLength |-> 2,
+    errorPropagation |-> TRUE,
+    invalidResults |-> FALSE
+  ],
   lists |-> [
     schema |-> [
       query |-> "Query",
