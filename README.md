@@ -83,10 +83,17 @@ npm run fixtures             # regenerate fixture data after editing fixtures/
 
 ## Checking your implementation
 
+The kit is on npm as `graphql-tla` (Node 22 or later):
+
 ```shell
+npm install --save-dev graphql-tla
 npx graphql-tla run execution --adapter "<command that starts your adapter>"
 npx graphql-tla run validate --adapter "<command that starts your adapter>"
 ```
+
+The package holds the kit, the TLA+ references and fixtures it checks against, these docs, and the graphql-js adapter as a worked example (`node node_modules/graphql-tla/adapters/graphql-js/adapter.mjs` runs graphql-js 17, a dependency of the package). The adapter protocol is also a JSON Schema, [`kit/protocol.schema.json`](kit/protocol.schema.json), importable as `graphql-tla/protocol.schema.json`, so an adapter's test suite can validate the lines it writes.
+
+**The model checker.** Every reference is evaluated by [tla-ts](https://github.com/aidenybai/tla-ts), which the package depends on. Another checker can stand in if it takes the same arguments (`-workers N`, `-config F.cfg`, `F.tla`) and prints what tla-ts prints: set `TLA_CHECKER` to its command, or pass `--checker "<command>"` to the kit or to any script in `scripts/`. A command naming a `.js` or `.mjs` file runs with the current Node; anything else runs as an executable, with the checker's arguments after it. [`kit/checker.mjs`](kit/checker.mjs) is the one place either is read, and every run goes through it.
 
 The kit has seven areas. Each checks one part of the spec against its TLA+ reference:
 
@@ -315,3 +322,7 @@ See [docs/writing-specs.md](docs/writing-specs.md) for the layout, the mutant fo
 The deployable Preact frontend lives in [`website/`](website/README.md). Run
 `npm run website:dev` locally or `npm run website:build` to generate static assets
 for Cloudflare Pages or Workers. It shows the latest checked-in conformance reports.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
