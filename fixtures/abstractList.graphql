@@ -1,0 +1,37 @@
+# Polymorphic list with mixed concrete types (§3.7, §3.11, §4.1, §6.3.2, §6.4.3, §6.4.4):
+# with maxListLength 2, `nodes: [Node]` can return both Alpha and Beta in either
+# order (`[Beta, Alpha]` or `[Alpha, Beta]`) in one response. Alpha has a Non-Null
+# field `a: String!` while Beta has a nullable `b: String`, so a failure on Alpha
+# nulls only that list element while preserving Beta and exact element alignment.
+# maxListLength: 2
+# spec: 3.7, 3.11, 4.1, 6.3.2, 6.4.3, 6.4.4
+
+interface Node {
+  id: ID!
+}
+
+type Alpha implements Node {
+  id: ID!
+  a: String!
+}
+
+type Beta implements Node {
+  id: ID!
+  b: String
+}
+
+type Query {
+  nodes: [Node]
+}
+
+query {
+  nodes {
+    __typename
+    ... on Alpha {
+      a
+    }
+    ... on Beta {
+      b
+    }
+  }
+}

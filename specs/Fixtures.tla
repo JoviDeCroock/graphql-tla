@@ -284,6 +284,125 @@ Fixtures == [
     errorPropagation |-> TRUE,
     invalidResults |-> FALSE
   ],
+  abstractList |-> [
+    schema |-> [
+      query |-> "Query",
+      mutation |-> "",
+      subscription |-> "",
+      types |-> (
+        ("Node" :> [
+          kind |-> "interface",
+          fields |-> (
+            ("id" :> [name |-> "ID", wrappers |-> <<"nonNull">>])
+          ),
+          possibleTypes |-> {"Alpha", "Beta"}
+        ]) @@
+        ("ID" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("Alpha" :> [
+          kind |-> "object",
+          fields |-> (
+            ("id" :> [name |-> "ID", wrappers |-> <<"nonNull">>]) @@
+            ("a" :> [name |-> "String", wrappers |-> <<"nonNull">>])
+          ),
+          possibleTypes |-> {"Alpha"}
+        ]) @@
+        ("String" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("Beta" :> [
+          kind |-> "object",
+          fields |-> (
+            ("id" :> [name |-> "ID", wrappers |-> <<"nonNull">>]) @@
+            ("b" :> [name |-> "String", wrappers |-> <<>>])
+          ),
+          possibleTypes |-> {"Beta"}
+        ]) @@
+        ("Query" :> [
+          kind |-> "object",
+          fields |-> (
+            ("nodes" :> [name |-> "Node", wrappers |-> <<"list">>])
+          ),
+          possibleTypes |-> {"Query"}
+        ]) @@
+        ("Boolean" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ])
+      )
+    ],
+    operationType |-> "query",
+    operation |-> <<
+      [
+        kind |-> "field",
+        name |-> "nodes",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        selectionSet |-> <<
+          [
+            kind |-> "field",
+            name |-> "__typename",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            selectionSet |-> <<>>
+          ],
+          [
+            kind |-> "inlineFragment",
+            name |-> "",
+            alias |-> "",
+            typeCondition |-> "Alpha",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            selectionSet |-> <<
+              [
+                kind |-> "field",
+                name |-> "a",
+                alias |-> "",
+                typeCondition |-> "",
+                skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                selectionSet |-> <<>>
+              ]
+            >>
+          ],
+          [
+            kind |-> "inlineFragment",
+            name |-> "",
+            alias |-> "",
+            typeCondition |-> "Beta",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            selectionSet |-> <<
+              [
+                kind |-> "field",
+                name |-> "b",
+                alias |-> "",
+                typeCondition |-> "",
+                skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                selectionSet |-> <<>>
+              ]
+            >>
+          ]
+        >>
+      ]
+    >>,
+    fragments |-> <<>>,
+    variables |-> <<>>,
+    maxListLength |-> 2,
+    errorPropagation |-> TRUE,
+    invalidResults |-> FALSE
+  ],
   aliases |-> [
     schema |-> [
       query |-> "Query",
@@ -388,6 +507,170 @@ Fixtures == [
     fragments |-> <<>>,
     variables |-> <<>>,
     maxListLength |-> 1,
+    errorPropagation |-> TRUE,
+    invalidResults |-> FALSE
+  ],
+  conditionalMerge_on |-> [
+    schema |-> [
+      query |-> "Query",
+      mutation |-> "",
+      subscription |-> "",
+      types |-> (
+        ("Query" :> [
+          kind |-> "object",
+          fields |-> (
+            ("req" :> [name |-> "String", wrappers |-> <<"nonNull">>]) @@
+            ("opt" :> [name |-> "String", wrappers |-> <<>>])
+          ),
+          possibleTypes |-> {"Query"}
+        ]) @@
+        ("String" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("Boolean" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ])
+      )
+    ],
+    operationType |-> "query",
+    operation |-> <<
+      [
+        kind |-> "field",
+        name |-> "req",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
+        selectionSet |-> <<>>
+      ],
+      [
+        kind |-> "field",
+        name |-> "req",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        selectionSet |-> <<>>
+      ],
+      [
+        kind |-> "field",
+        name |-> "req",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        selectionSet |-> <<>>
+      ],
+      [
+        kind |-> "field",
+        name |-> "opt",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
+        selectionSet |-> <<>>
+      ],
+      [
+        kind |-> "field",
+        name |-> "opt",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        selectionSet |-> <<>>
+      ]
+    >>,
+    fragments |-> <<>>,
+    variables |-> (
+      ("show" :> TRUE)
+    ),
+    maxListLength |-> 0,
+    errorPropagation |-> TRUE,
+    invalidResults |-> FALSE
+  ],
+  conditionalMerge_off |-> [
+    schema |-> [
+      query |-> "Query",
+      mutation |-> "",
+      subscription |-> "",
+      types |-> (
+        ("Query" :> [
+          kind |-> "object",
+          fields |-> (
+            ("req" :> [name |-> "String", wrappers |-> <<"nonNull">>]) @@
+            ("opt" :> [name |-> "String", wrappers |-> <<>>])
+          ),
+          possibleTypes |-> {"Query"}
+        ]) @@
+        ("String" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("Boolean" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ])
+      )
+    ],
+    operationType |-> "query",
+    operation |-> <<
+      [
+        kind |-> "field",
+        name |-> "req",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
+        selectionSet |-> <<>>
+      ],
+      [
+        kind |-> "field",
+        name |-> "req",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        selectionSet |-> <<>>
+      ],
+      [
+        kind |-> "field",
+        name |-> "req",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        selectionSet |-> <<>>
+      ],
+      [
+        kind |-> "field",
+        name |-> "opt",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
+        selectionSet |-> <<>>
+      ],
+      [
+        kind |-> "field",
+        name |-> "opt",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        selectionSet |-> <<>>
+      ]
+    >>,
+    fragments |-> <<>>,
+    variables |-> (
+      ("show" :> FALSE)
+    ),
+    maxListLength |-> 0,
     errorPropagation |-> TRUE,
     invalidResults |-> FALSE
   ],
@@ -1074,6 +1357,88 @@ Fixtures == [
     errorPropagation |-> TRUE,
     invalidResults |-> TRUE
   ],
+  listPartialNull |-> [
+    schema |-> [
+      query |-> "Query",
+      mutation |-> "",
+      subscription |-> "",
+      types |-> (
+        ("Child" :> [
+          kind |-> "object",
+          fields |-> (
+            ("id" :> [name |-> "ID", wrappers |-> <<"nonNull">>])
+          ),
+          possibleTypes |-> {"Child"}
+        ]) @@
+        ("ID" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("Wrapper" :> [
+          kind |-> "object",
+          fields |-> (
+            ("child" :> [name |-> "Child", wrappers |-> <<"nonNull">>])
+          ),
+          possibleTypes |-> {"Wrapper"}
+        ]) @@
+        ("Query" :> [
+          kind |-> "object",
+          fields |-> (
+            ("wrappers" :> [name |-> "Wrapper", wrappers |-> <<"list">>])
+          ),
+          possibleTypes |-> {"Query"}
+        ]) @@
+        ("Boolean" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("String" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ])
+      )
+    ],
+    operationType |-> "query",
+    operation |-> <<
+      [
+        kind |-> "field",
+        name |-> "wrappers",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        selectionSet |-> <<
+          [
+            kind |-> "field",
+            name |-> "child",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            selectionSet |-> <<
+              [
+                kind |-> "field",
+                name |-> "id",
+                alias |-> "",
+                typeCondition |-> "",
+                skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                selectionSet |-> <<>>
+              ]
+            >>
+          ]
+        >>
+      ]
+    >>,
+    fragments |-> <<>>,
+    variables |-> <<>>,
+    maxListLength |-> 2,
+    errorPropagation |-> TRUE,
+    invalidResults |-> FALSE
+  ],
   lists |-> [
     schema |-> [
       query |-> "Query",
@@ -1578,6 +1943,54 @@ Fixtures == [
     ),
     variables |-> <<>>,
     maxListLength |-> 1,
+    errorPropagation |-> TRUE,
+    invalidResults |-> FALSE
+  ],
+  nestedLists |-> [
+    schema |-> [
+      query |-> "Query",
+      mutation |-> "",
+      subscription |-> "",
+      types |-> (
+        ("Query" :> [
+          kind |-> "object",
+          fields |-> (
+            ("rows" :> [name |-> "Int", wrappers |-> <<"list", "list", "nonNull">>])
+          ),
+          possibleTypes |-> {"Query"}
+        ]) @@
+        ("Int" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("Boolean" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("String" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ])
+      )
+    ],
+    operationType |-> "query",
+    operation |-> <<
+      [
+        kind |-> "field",
+        name |-> "rows",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        selectionSet |-> <<>>
+      ]
+    >>,
+    fragments |-> <<>>,
+    variables |-> <<>>,
+    maxListLength |-> 2,
     errorPropagation |-> TRUE,
     invalidResults |-> FALSE
   ],

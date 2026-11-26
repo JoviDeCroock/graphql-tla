@@ -975,6 +975,35 @@ for (const literal of ["1.7976931348623158e308", "-1.7976931348623158e308", "1.7
   add("literal", "float", `{ float(v: ${literal}) }`, "{}");
 }
 
+// §6.1 GetOperation precedes §6.1.2 CoerceVariableValues: ambiguous or unknown
+// operationName fails with a request error even when variables are missing or
+// invalid for one of the operations.
+const OPERATION_PRECEDENCE = [
+  ["query A($x: Int) { int(v: $x) } query B($y: Int!) { intNN(v: $y) }", [null, "C"], ["{}", '{"x": "bad", "y": "bad"}']],
+  ["query A($x: Int!) { intNN(v: $x) }", ["Missing"], ["{}", '{"x": "bad"}']],
+];
+for (const [document, names, variableSets] of OPERATION_PRECEDENCE) {
+  for (const operationName of names) {
+    for (const variables of variableSets) {
+      fresh("operation", "getOperation", document, variables, { operationName, spec: ["6.1"] });
+    }
+  }
+}
+
+// §3.10.1 + §6.1.2: @oneOf input objects with variable defaults vs explicit null
+// overrides (an omitted variable falls back to its non-null default and succeeds;
+// an explicit null overrides the default and fails for the field or accepts null
+// for the nullable @oneOf argument itself).
+const ONEOF_DEFAULTS = [
+  ['query($a: String! = "abc") { oneOfExample(arg: { a: $a }) }', ["{}", '{"a": null}', '{"a": "xyz"}']],
+  ['query($var: ExampleOneOfInputObject = { a: "abc" }) { oneOfExample(arg: $var) }', ["{}", '{"var": null}', '{"var": {"b": 7}}', '{"var": {"a": null}}']],
+];
+for (const [document, variableSets] of ONEOF_DEFAULTS) {
+  for (const variables of variableSets) {
+    fresh("oneOf", "oneOf", document, variables, { schema: "oneOf", spec: ["3.10.1", "6.1.2"], since: "September2025" });
+  }
+}
+
 // ---------------------------------------------------------------------------
 // TLA+ encodings for Coercion.tla (as in differential-coercion.mjs)
 

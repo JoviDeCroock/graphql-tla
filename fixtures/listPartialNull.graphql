@@ -1,0 +1,27 @@
+# Multi-row parent survival alongside a partial Non-Null composite child failure
+# (§3.11, §3.12, §6.4.3, §6.4.4): in `wrappers: [Wrapper]` with maxListLength 2,
+# when one element's Non-Null `child: Child!` returns null/errors (or its
+# Non-Null `id: ID!` fails), only that wrapper element becomes null while the
+# sibling wrapper's `child { id }` subtree still completes and appears in data.
+# maxListLength: 2
+# spec: 3.11, 3.12, 6.4.3, 6.4.4
+
+type Child {
+  id: ID!
+}
+
+type Wrapper {
+  child: Child!
+}
+
+type Query {
+  wrappers: [Wrapper]
+}
+
+query {
+  wrappers {
+    child {
+      id
+    }
+  }
+}
