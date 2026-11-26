@@ -6,6 +6,8 @@
 //
 // Usage: node scripts/check-conformance.mjs
 
+// Takes --checker out of argv and hands it to the runs below as TLA_CHECKER.
+import "../kit/checker.mjs";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

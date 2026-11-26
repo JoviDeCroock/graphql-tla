@@ -2,7 +2,7 @@
 // data TypeSystem.tla reads, values as TLA+ text, running tla-ts on a
 // module, and reading back the values it prints.
 
-import { spawn } from "node:child_process";
+import { runChecker } from "../checker.mjs";
 import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -10,7 +10,6 @@ import { fileURLToPath } from "node:url";
 import * as graphql from "graphql17";
 
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
-const cli = join(root, "node_modules/tla-ts/dist/cli.js");
 
 // At most this many tla-ts processes at once.
 export const WORKERS = 2;
@@ -423,13 +422,7 @@ export const evaluateModule = async (name, module, extra = {}) => {
     for (const [file, text] of Object.entries(extra)) writeFileSync(join(dir, file), text);
     writeFileSync(join(dir, `${name}.tla`), module);
     writeFileSync(join(dir, `${name}.cfg`), "INIT Init\nNEXT Next\n");
-    const { status, output } = await new Promise((done) => {
-      const child = spawn(process.execPath, ["--stack-size=3000", cli, "-workers", "1", `${name}.tla`], { cwd: dir });
-      let out = "";
-      child.stdout.on("data", (d) => (out += d));
-      child.stderr.on("data", (d) => (out += d));
-      child.on("close", (code) => done({ status: code, output: out }));
-    });
+    const { status, output } = await runChecker(["-workers", "1", `${name}.tla`], { cwd: dir, stack: "large" });
     const values = status === 0 ? printedValues(output) : [];
     if (status !== 0 || !values.some((v) => Array.isArray(v) && v[0] === "done")) {
       const lines = output.split("\n").filter((l) => /Error|error|Exception|Assumption/.test(l)).slice(0, 10);

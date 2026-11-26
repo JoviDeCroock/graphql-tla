@@ -56,7 +56,7 @@
 // Usage: node scripts/generate-vectors-validate.mjs [--check]
 //   --check  regenerate and fail if kit/validate/vectors.json differs
 
-import { spawn } from "node:child_process";
+import { runChecker } from "../kit/checker.mjs";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -65,7 +65,6 @@ import * as graphql16 from "graphql16";
 import * as graphql17 from "graphql17";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
-const cli = join(root, "node_modules/tla-ts/dist/cli.js");
 const OUT = join(root, "kit/validate/vectors.json");
 const CHECK = process.argv.includes("--check");
 const VERSIONS = [graphql16];
@@ -686,14 +685,7 @@ const { parse, print, buildSchema, validateSchema } = graphql16;
 // ---------------------------------------------------------------------------
 // Running tla-ts
 
-const runTla = (dir, name) =>
-  new Promise((done) => {
-    const child = spawn(process.execPath, [cli, "-workers", "1", "-config", `${name}.cfg`, `${name}.tla`], { cwd: dir });
-    let output = "";
-    child.stdout.on("data", (d) => (output += d));
-    child.stderr.on("data", (d) => (output += d));
-    child.on("close", (status) => done({ status, output }));
-  });
+const runTla = (dir, name) => runChecker(["-workers", "1", "-config", `${name}.cfg`, `${name}.tla`], { cwd: dir });
 
 const pool = async (items, lanes, worker) => {
   const results = new Array(items.length);

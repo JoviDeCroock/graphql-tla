@@ -35,7 +35,7 @@
 //              break GetOperation or a policy switch, which one operation
 //              per document under the default policy never reaches.
 
-import { spawn } from "node:child_process";
+import { runChecker } from "../kit/checker.mjs";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -44,7 +44,6 @@ import * as graphql16 from "graphql16";
 import * as graphql17 from "graphql17";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
-const cli = join(root, "node_modules/tla-ts/dist/cli.js");
 const VERSIONS = [graphql16, graphql17];
 
 const SDL = `
@@ -487,14 +486,7 @@ const controls = [
 // ---------------------------------------------------------------------------
 // Checking with tla-ts
 
-const tlc = (args, cwd) =>
-  new Promise((done) => {
-    const child = spawn(process.execPath, [cli, ...args], { cwd });
-    let output = "";
-    child.stdout.on("data", (chunk) => (output += chunk));
-    child.stderr.on("data", (chunk) => (output += chunk));
-    child.on("close", (status) => done({ status, output }));
-  });
+const tlc = (args, cwd) => runChecker(args, { cwd });
 
 const moduleText = `---- MODULE CoercionJs ----
 EXTENDS Coercion

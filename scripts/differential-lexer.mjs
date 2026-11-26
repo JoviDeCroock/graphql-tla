@@ -49,7 +49,7 @@
 //              specs/parser.mutants.mjs in a temporary copy of the specs and
 //              checks that the differential catches it.
 
-import { spawn } from "node:child_process";
+import { runChecker } from "../kit/checker.mjs";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -58,7 +58,6 @@ import * as graphql16 from "graphql16";
 import * as graphql17 from "graphql17";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
-const cli = join(root, "node_modules/tla-ts/dist/cli.js");
 const arg = (name, fallback) => {
   const index = process.argv.indexOf(name);
   return index === -1 ? fallback : Number(process.argv[index + 1]);
@@ -797,14 +796,7 @@ DiffInit == vector = 0
 ====
 `;
 
-const runTla = (dir, name) =>
-  new Promise((done) => {
-    const child = spawn(process.execPath, [cli, "-workers", "1", "-config", `${name}.cfg`, `${name}.tla`], { cwd: dir });
-    let output = "";
-    child.stdout.on("data", (chunk) => (output += chunk));
-    child.stderr.on("data", (chunk) => (output += chunk));
-    child.on("close", (status) => done({ status, output }));
-  });
+const runTla = (dir, name) => runChecker(["-workers", "1", "-config", `${name}.cfg`, `${name}.tla`], { cwd: dir });
 
 const indices = (output, label) => {
   const match = output.match(new RegExp(`<<\\s*"${label}",\\s*\\{([^}]*)\\}\\s*>>`));

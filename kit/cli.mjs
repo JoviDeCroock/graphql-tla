@@ -19,11 +19,17 @@
 //   --strict        fail on SHOULDs too (response key order)
 //   --report FILE   write the facts behind a conformance sheet as JSON
 //                   (also for check); scripts/conformance-sheet.mjs reads it
+//
+// For every command:
+//   --checker CMD   the TLA+ model checker to evaluate the references with,
+//                   instead of the bundled tla-ts (also TLA_CHECKER); see
+//                   kit/checker.mjs
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Adapter } from "./adapter.mjs";
+import "./checker.mjs";
 import { AREAS } from "./areas.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
@@ -38,6 +44,7 @@ const [command, area, file] = argv;
 const usage = () => {
   console.error('usage: graphql-tla run execution --adapter "<command>" [options]');
   console.error("       graphql-tla check execution <cases.jsonl> [--strict]");
+  console.error("       any command also takes --checker \"<command>\" (or TLA_CHECKER) to use another TLA+ model checker");
   console.error(`       graphql-tla run <${AREAS.filter((a) => a !== "execution").join("|")}> --adapter "<command>" [--strict] [--report FILE]`);
   process.exit(2);
 };

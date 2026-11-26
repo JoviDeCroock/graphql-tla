@@ -57,7 +57,7 @@
 //   --check  regenerates the vectors and fails if kit/coerce/vectors.json
 //            differs.
 
-import { spawn } from "node:child_process";
+import { runChecker } from "../kit/checker.mjs";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -67,7 +67,6 @@ import * as graphql17 from "graphql17";
 import { CHECK_IDS, CHECKS } from "../kit/coerce/checks.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
-const cli = join(root, "node_modules/tla-ts/dist/cli.js");
 const OUT = join(root, "kit/coerce/vectors.json");
 const WORKERS = 2;
 const SHARD_SIZE = 250;
@@ -1382,14 +1381,7 @@ OneState == vector = [group |-> "documents", n |-> 1]
 ====
 `;
 
-const tlc = (args, cwd) =>
-  new Promise((done) => {
-    const child = spawn(process.execPath, [cli, ...args], { cwd });
-    let output = "";
-    child.stdout.on("data", (chunk) => (output += chunk));
-    child.stderr.on("data", (chunk) => (output += chunk));
-    child.on("close", (status) => done({ status, output }));
-  });
+const tlc = (args, cwd) => runChecker(args, { cwd });
 
 const unescape = (s) => JSON.parse(`"${s}"`);
 
