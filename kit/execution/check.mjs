@@ -18,6 +18,7 @@ import * as graphql from "graphql17";
 import { REPORT_FORMAT, provenance, section } from "../report.mjs";
 import { CHECKS } from "./checks.mjs";
 import { REPORT_CONTROLS } from "./controls.mjs";
+import { isOutsideCheck, outsideCheck, outsideSpec } from "./outside.mjs";
 import { protocolControls } from "./protocol-controls.mjs";
 import { positions, startOf } from "./positions.mjs";
 
@@ -33,16 +34,19 @@ const LEVEL = new Map(CHECKS.map((c) => [c.id, c.level]));
 // Whether breaking a check fails the run. INFO checks never do.
 const isFatal = (id, strict) => LEVEL.get(id) === "MUST" || LEVEL.get(id) === "ADAPTER" || (strict && LEVEL.get(id) === "SHOULD");
 
-// A fixture that turns error propagation off runs graphql-js 17's
-// @experimental_disableErrorPropagation, which is outside the spec. What it
-// changes is the response, so each failure of the response (its data and
-// errors) counts under this INFO check instead of its own. Protocol
-// problems and the checks on resolver calls don't depend on propagation,
-// and keep their own checks and levels.
-export const OUTSIDE_SPEC = "disabledPropagation";
+// A fixture outside the spec (outside.mjs) runs something no release has:
+// graphql-js 17's @experimental_disableErrorPropagation, or the fragment
+// arguments proposal. What it changes is the response, so each failure of
+// the response (its data and errors) counts under the fixture's INFO check
+// instead of its own. Protocol problems and the checks on resolver calls
+// don't depend on it, and keep their own checks and levels.
 const KEEP_OUTSIDE_SPEC = new Set(["protocol", "callsOnce", "callsSelected", "callsReachable", "mutationFieldsOnce", "calledSerially", "parentValue"]);
-const outsideSpec = (fixture) => fixture?.errorPropagation === false;
-const gradedAs = (fixture, id) => (outsideSpec(fixture) && !KEEP_OUTSIDE_SPEC.has(id) ? OUTSIDE_SPEC : id);
+const gradedAs = (fixture, id) => {
+  const outside = outsideSpec(fixture);
+  return outside && !KEEP_OUTSIDE_SPEC.has(id) ? outside.check : id;
+};
+// The INFO check among these that says a failure is outside the spec, if any.
+const outsideAmong = (ids) => ids.find(isOutsideCheck);
 
 // ---------------------------------------------------------------------------
 // Canonical leaf values (docs/conformance.md)
@@ -1001,8 +1005,8 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
   const leniency = (id) =>
     isFatal(id, strict)
       ? ""
-      : id === OUTSIDE_SPEC
-        ? `: outside the spec, informational (${OUTSIDE_SPEC})`
+      : isOutsideCheck(id)
+        ? `: outside the spec, informational (${id})`
         : LEVEL.get(id) === "INFO"
           ? `: informational, no spec sentence requires it (${id})`
           : ": a SHOULD, fails with --strict";
@@ -1019,6 +1023,7 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
     });
   }
   let informational = 0;
+  const informationalChecks = new Set();
   for (const { key, count, raw, problem, id } of problems.values()) {
     const fatal = isFatal(id, strict);
     if (fatal) ok = false;
@@ -1067,7 +1072,7 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
     const ids = [...new Set(failures.map((f) => gradedAs(byId.get(example.case.fixture), f)))];
     const fatal = ids.some((id) => isFatal(id, strict));
     if (fatal) ok = false;
-    log(`${fatal ? "✗" : "!"} malformed, and also: ${key} (${plural(count, "distinct case")})${fatal ? "" : leniency(ids.includes(OUTSIDE_SPEC) ? OUTSIDE_SPEC : ids[0])}`);
+    log(`${fatal ? "✗" : "!"} malformed, and also: ${key} (${plural(count, "distinct case")})${fatal ? "" : leniency(outsideAmong(ids) ?? ids[0])}`);
     log(`    trace:    ${describeTrace(example.case.trace)}`);
     log(`    response: ${responseText(example.raw)}`);
     log(`    expected: data ${example.expected}`);
@@ -1080,9 +1085,11 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
     if (fatal) {
       ok = false;
       failing += count;
-    } else if (ids.includes(OUTSIDE_SPEC)) informational += count;
-    else warnings += count;
-    log(`${fatal ? "✗" : "!"} ${key} (${plural(count, "case")})${fatal ? "" : leniency(ids.includes(OUTSIDE_SPEC) ? OUTSIDE_SPEC : ids[0])}`);
+    } else if (outsideAmong(ids)) {
+      informational += count;
+      informationalChecks.add(outsideAmong(ids));
+    } else warnings += count;
+    log(`${fatal ? "✗" : "!"} ${key} (${plural(count, "case")})${fatal ? "" : leniency(outsideAmong(ids) ?? ids[0])}`);
     log(`    trace:    ${describeTrace(example.case.trace)}`);
     log(`    response: ${responseText(example.raw)}`);
     log(`    expected: data ${example.expected}`);
@@ -1126,7 +1133,7 @@ export const check = async (fixtures, rawCases, { strict = false, log = console.
   const passed = cases.length - failing - warnings - informational;
   const partialFailing = partialResults.filter((r) => r.failures.length > 0).length;
   const should = warnings ? `, ${warnings} more break only a SHOULD` : "";
-  const info = informational ? `, ${informational} more fail only outside the spec (${OUTSIDE_SPEC})` : "";
+  const info = informational ? `, ${informational} more fail only outside the spec (${[...informationalChecks].join(", ")})` : "";
   log(
     `${failing === 0 && cases.length > 0 ? "✓" : "✗"} ${passed} of ${cases.length} distinct well-formed cases satisfy the reference${should}${info}` +
       (malformed.length ? `; ${plural(malformed.length, "case")} malformed` : "") +
@@ -1267,23 +1274,23 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, partials = []
   for (const w of warnings) warningsOf.set(w.raw, [...(warningsOf.get(w.raw) ?? []), w]);
   const failuresByTla = new Map(cases.map((c, i) => [c.tla, results[i].failures]));
   // Whether a case in a fixture outside the spec broke something that
-  // counts under OUTSIDE_SPEC.
+  // counts under the fixture's INFO check.
   const brokeOutside = (raw, fixture) => {
     const m = malformedOf.get(raw);
-    if (m) return m.ids.some((id) => gradedAs(fixture, id) === OUTSIDE_SPEC);
+    if (m) return m.ids.some((id) => isOutsideCheck(gradedAs(fixture, id)));
     return (
-      (warningsOf.get(raw) ?? []).some((w) => w.id === OUTSIDE_SPEC) ||
-      (failuresByTla.get(tlaOf.get(raw)) ?? []).some((f) => gradedAs(fixture, f) === OUTSIDE_SPEC)
+      (warningsOf.get(raw) ?? []).some((w) => isOutsideCheck(w.id)) ||
+      (failuresByTla.get(tlaOf.get(raw)) ?? []).some((f) => isOutsideCheck(gradedAs(fixture, f)))
     );
   };
 
   // Checks made before the reference, over every case submitted. In a
-  // fixture outside the spec, the checks graded as OUTSIDE_SPEC apply only
-  // through it.
+  // fixture outside the spec, the checks graded as its INFO check apply
+  // only through it.
   for (const raw of rawCases) {
     const fixture = byId.get(raw.fixture);
     for (const check of CHECKS) {
-      if (check.reference || check.id === OUTSIDE_SPEC) continue;
+      if (check.reference || isOutsideCheck(check.id)) continue;
       if (gradedAs(fixture, check.id) !== check.id) continue;
       if (check.subscriptionOnly && fixture?.operationType !== "subscription") continue;
       // A stream's lifecycle case has only the lifecycle checks; every other
@@ -1293,19 +1300,20 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, partials = []
       if (APPLIES[check.id] && !APPLIES[check.id](raw, fixture)) continue;
       stats.get(check.id).cases++;
     }
-    if (outsideSpec(fixture)) {
-      stats.get(OUTSIDE_SPEC).cases++;
-      if (brokeOutside(raw, fixture)) stats.get(OUTSIDE_SPEC).failing.add(raw);
+    const outside = outsideSpec(fixture);
+    if (outside) {
+      stats.get(outside.check).cases++;
+      if (brokeOutside(raw, fixture)) stats.get(outside.check).failing.add(raw);
     }
     const m = malformedOf.get(raw);
     if (!m) continue;
     for (const i of countedProblems(fixture, m.ids)) {
       const id = gradedAs(fixture, m.ids[i]);
       const kind = problemKind(m.problems[i]);
-      if (id !== OUTSIDE_SPEC) stats.get(id).failing.add(raw);
+      if (!isOutsideCheck(id)) stats.get(id).failing.add(raw);
       found(`${id}\u0000${kind}`, raw, {
         checks: [id],
-        summary: id === OUTSIDE_SPEC ? `with error propagation off, ${m.ids[i]}: ${kind}` : kind,
+        summary: isOutsideCheck(id) ? `${outsideCheck(id).when}, ${m.ids[i]}: ${kind}` : kind,
         fixture: raw.fixture,
         problem: m.problems[i],
         example: example(raw),
@@ -1313,10 +1321,10 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, partials = []
     }
   }
   for (const { raw, id, check, text } of warnings) {
-    if (id !== OUTSIDE_SPEC) stats.get(id).failing.add(raw);
+    if (!isOutsideCheck(id)) stats.get(id).failing.add(raw);
     found(`${id}\u0000${problemKind(text)}`, raw, {
       checks: [id],
-      summary: id === OUTSIDE_SPEC ? `with error propagation off, ${check}: ${problemKind(text)}` : problemKind(text),
+      summary: isOutsideCheck(id) ? `${outsideCheck(id).when}, ${check}: ${problemKind(text)}` : problemKind(text),
       fixture: raw.fixture,
       problem: text,
       example: example(raw),
@@ -1327,7 +1335,7 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, partials = []
   // distinct malformed cases it could still check (only the clauses that
   // count for each). Every clause a case breaks counts against that clause;
   // the finding is the set of clauses it breaks. In a fixture outside the
-  // spec, the clauses graded as OUTSIDE_SPEC make a finding of their own.
+  // spec, the clauses graded as its INFO check make a finding of their own.
   const graded = (c, failures, expectedData, inScope) => {
     const fixture = byId.get(c.case.fixture);
     const mutation = fixture.operationType === "mutation";
@@ -1340,12 +1348,13 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, partials = []
       if (failures.includes(check.id)) stats.get(check.id).failing.add(c);
     }
     const own = failures.filter((f) => gradedAs(fixture, f) === f).sort();
-    const outside = failures.filter((f) => gradedAs(fixture, f) === OUTSIDE_SPEC).sort();
+    const outside = failures.filter((f) => isOutsideCheck(gradedAs(fixture, f))).sort();
     const expected = { expected: `data ${expectedData}` };
     if (outside.length > 0) {
-      found(`${OUTSIDE_SPEC},${outside.join(",")}`, c.raw, {
-        checks: [OUTSIDE_SPEC],
-        summary: `with error propagation off, breaks ${outside.join(", ")}`,
+      const { check, when } = outsideSpec(fixture);
+      found(`${check},${outside.join(",")}`, c.raw, {
+        checks: [check],
+        summary: `${when}, breaks ${outside.join(", ")}`,
         fixture: c.case.fixture,
         example: example(c.raw, expected),
       });
@@ -1405,7 +1414,8 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, partials = []
       .map((f) => {
         const skip = skipped.find((x) => x.fixture === f.id);
         const failing = membersIn(f.id, (x) => x.checks.some((id) => isFatal(id, strict)));
-        const informational = membersIn(f.id, (x) => x.checks.includes(OUTSIDE_SPEC));
+        const outside = outsideSpec(f);
+        const informational = membersIn(f.id, (x) => x.checks.some(isOutsideCheck));
         return {
           id: f.id,
           spec: f.spec.map(section),
@@ -1413,7 +1423,7 @@ const buildReport = ({ byId, rawCases, malformed, warnings, cases, partials = []
           ...(skip ? { reason: `needs ${skip.needs.join(", ")}` } : {}),
           cases: rawCases.filter((c) => c.fixture === f.id).length,
           failing,
-          ...(outsideSpec(f) ? { informational, note: `outside the spec (graphql-js 17's @experimental_disableErrorPropagation): its failures are informational, under ${OUTSIDE_SPEC}, except protocol problems and the checks on resolver calls` } : {}),
+          ...(outside ? { informational, note: `outside the spec (${outside.what}): its failures are informational, under ${outside.check}, except protocol problems and the checks on resolver calls` } : {}),
           ...(f.invalidResults && !capabilities.includes("invalid-results") ? { note: "without results of the wrong shape (no invalid-results capability)" } : {}),
         };
       }),

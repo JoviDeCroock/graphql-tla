@@ -15,6 +15,12 @@
 (*   §6.4.1 CoerceArgumentValues                                           *)
 (*   §7.1.3 request error result, as opposed to an execution error         *)
 (*                                                                         *)
+(* and from the fragment arguments proposal, graphql-spec#1081 at          *)
+(* dfd847524d25, which no release has: fragment variable values,           *)
+(* GetScopedVariableValues, and CoerceArgumentValues for the arguments of  *)
+(* a fragment spread (see "Fragment arguments" below). An operation with   *)
+(* no fragment spread is September 2026's.                                 *)
+(*                                                                         *)
 (* Everything here is a pure operator over plain data. The test vectors at *)
 (* the end (Coercion.cfg) check it against the spec's own examples, and    *)
 (* scripts/differential-coercion.mjs checks graphql-js 16 and 17 against   *)
@@ -58,7 +64,8 @@
 (*   operation  [type, name, variables, field, arguments]: "query" or      *)
 (*              "mutation", the name ("" when anonymous), the variable     *)
 (*              definitions, and one root field with its arguments as      *)
-(*              entries                                                    *)
+(*              entries. It may also have spreads: the fragment spreads    *)
+(*              the field is selected through (see "Fragment arguments")   *)
 (*   document   a sequence of operations (fragments aren't part of it)     *)
 (*   result     [ok, value]: a coerced value, or a failure                 *)
 (***************************************************************************)
@@ -608,10 +615,115 @@ CoerceArgumentValues(S, fieldName, argumentValues, vars) ==
   CoerceArgumentsFrom(S, S.fields[fieldName], argumentValues, vars, 1, {})
 
 -----------------------------------------------------------------------------
+(* Fragment arguments (graphql-spec#1081 at dfd847524d25; no release)       *)
+(*                                                                         *)
+(* A fragment may define variables, and a fragment spread gives them       *)
+(* values with its arguments. The proposal's §6.3.2: "The fragment         *)
+(* variable values of a fragment spread represent the variables in scope   *)
+(* within the referenced fragment as a result of that fragment spread.     *)
+(* They contain the following information: variableDefinitions: the        *)
+(* variable definitions of the fragment. values: an unordered map of the   *)
+(* coerced values for those variables, as provided by the arguments of the *)
+(* fragment spread or by default values."                                  *)
+
+FragmentVariableValues(variableDefinitions, values) ==
+  [variableDefinitions |-> variableDefinitions, values |-> values]
+\* "When collecting the fields of a selection set which is not within a
+\* fragment definition, fragmentVariables is not provided".
+NoFragmentVariables == FragmentVariableValues(<<>>, {})
+
+DefinesVariable(fragmentVariables, variableName) ==
+  \E i \in DOMAIN fragmentVariables.variableDefinitions :
+    fragmentVariables.variableDefinitions[i].name = variableName
+
+\* GetScopedVariableValues(variableName, variableValues, fragmentVariables):
+\* "If fragmentVariables is provided: ... If variableDefinitions defines a
+\* variable named variableName, return values. Return variableValues." Its
+\* Note: "A fragment variable shadows an operation variable of the same
+\* name even when no value was provided for it, in which case values will
+\* not provide a value for variableName."
+GetScopedVariableValues(variableName, variableValues, fragmentVariables) ==
+  IF DefinesVariable(fragmentVariables, variableName) THEN fragmentVariables.values ELSE variableValues
+
+\* The same lookup for every name at once: the fragment's values, and the
+\* operation's for the names the fragment doesn't define. A name has a value
+\* here exactly when GetScopedVariableValues provides one for it (the scope
+\* cases below check that), so the operators above, which look variables up
+\* in one map, read the proposal's scoped values from this one. That covers
+\* "A literal Value being coerced may contain a Variable ... The runtime
+\* value of each such variable is the value provided for its name in the
+\* result of GetScopedVariableValues(variableName, variableValues,
+\* fragmentVariables); if no such value is provided, then no runtime value
+\* is provided for that variable."
+ScopedVariableValues(variableValues, fragmentVariables) ==
+  {e \in variableValues : ~DefinesVariable(fragmentVariables, e.key)} \cup fragmentVariables.values
+
+\* CoerceArgumentValues(argumentDefinitions, argumentValues, variableValues,
+\* fragmentVariables), which the proposal makes of §6.4.1's algorithm: the
+\* same steps, with "Let scopedVariableValues be
+\* GetScopedVariableValues(variableName, variableValues, fragmentVariables)"
+\* where a variable is looked up.
+CoerceScopedArgumentValues(S, argumentDefinitions, argumentValues, variableValues, fragmentVariables) ==
+  CoerceArgumentsFrom(S, argumentDefinitions, argumentValues,
+                      ScopedVariableValues(variableValues, fragmentVariables), 1, {})
+
+\* CoerceFieldArgumentValues(objectType, field, variableValues,
+\* fragmentVariables): "Let argumentDefinitions be the arguments defined by
+\* objectType for the field named fieldName. Return
+\* CoerceArgumentValues(argumentDefinitions, argumentValues, variableValues,
+\* fragmentVariables)."
+CoerceFieldArgumentValues(S, fieldName, argumentValues, variableValues, fragmentVariables) ==
+  CoerceScopedArgumentValues(S, S.fields[fieldName], argumentValues, variableValues, fragmentVariables)
+
+\* A fragment spread the operation's field is selected through:
+\*   depth        how many of the operation's parents are above the spread:
+\*                0 for a spread in the root selection set, n for one in
+\*                the selection set of the nth parent
+\*   definitions  the variable definitions of the fragment it spreads
+\*   arguments    its arguments, as entries
+\* operation.spreads lists them from the operation down to the field, each
+\* inside the fragment of the one before; an operation without the field
+\* has none.
+Spread(depth, definitions, arguments) == [depth |-> depth, definitions |-> definitions, arguments |-> arguments]
+SpreadsOf(operation) == IF "spreads" \in DOMAIN operation THEN operation.spreads ELSE <<>>
+
+\* CollectFields, for the spreads on the way to the field. For each: "Let
+\* variableDefinitions be the variable definitions of fragment. Let
+\* argumentValues be the argument values provided in selection. Let values
+\* be the result of CoerceArgumentValues(variableDefinitions,
+\* argumentValues, variableValues, fragmentVariables). Let
+\* newFragmentVariables be new fragment variable values", and the
+\* fragment's selections are collected with those. "When coercing the
+\* arguments of a fragment spread, each variable definition is used as the
+\* argument definition of the same name, providing its expected type and
+\* default value." The arguments are coerced in the scope the spread is in,
+\* and the fragment's selections see only its own variables and the
+\* operation's: a fragment variable "may only be referenced within that
+\* fragment (non-transitively)".
+\*
+\* The result is [ok, fragmentVariables, depth]: the fragment variable
+\* values in scope where the field is selected, or, where a spread's
+\* arguments raise an execution error, the depth of that spread.
+RECURSIVE CollectSpreadsFrom(_, _, _, _, _)
+CollectSpreadsFrom(S, spreads, variableValues, i, fragmentVariables) ==
+  IF i > Len(spreads) THEN [ok |-> TRUE, fragmentVariables |-> fragmentVariables, depth |-> 0]
+  ELSE
+    LET spread == spreads[i]
+        values == CoerceScopedArgumentValues(S, spread.definitions, spread.arguments, variableValues, fragmentVariables)
+    IN IF ~values.ok THEN [ok |-> FALSE, fragmentVariables |-> NoFragmentVariables, depth |-> spread.depth]
+       ELSE CollectSpreadsFrom(S, spreads, variableValues, i + 1,
+                               FragmentVariableValues(spread.definitions, values.value.entries))
+
+CollectSpreads(S, operation, variableValues) ==
+  CollectSpreadsFrom(S, SpreadsOf(operation), variableValues, 1, NoFragmentVariables)
+
+-----------------------------------------------------------------------------
 (* §6.1 ExecuteRequest, up to the field's resolver                        *)
 (*                                                                         *)
 (* An outcome is [kind, args]: "requestError", "fieldError", or "resolved" *)
-(* with args the coerced argument map the resolver receives.               *)
+(* with args the coerced argument map the resolver receives. With fragment *)
+(* arguments there is a fourth, "spreadError": the arguments of a fragment *)
+(* spread on the way to the field raised an execution error.               *)
 
 Outcome(kind, args) == [kind |-> kind, args |-> args]
 
@@ -695,18 +807,38 @@ RootEntries(operation) ==
 \* but those name the error; §7.1.5 says what the response must be when it
 \* is raised before operation execution begins, and §6.2.3.1's Note agrees:
 \* "an error raised here will be a request error".
+\*
+\* With fragment arguments, CollectFields comes first wherever a selection
+\* set is executed, and coerces the arguments of the spreads it collects.
+\* For a subscription that is CreateSourceEventStream's CollectFields, so an
+\* error there is a request error like any other raised before operation
+\* execution begins. For a query or a mutation it is an execution error
+\* raised while a selection set is collected, and neither the field's
+\* arguments are coerced nor its resolver called: the "spreadError"
+\* outcome, whose response SpreadErrorData and SpreadErrorPositions give
+\* below. The field's own arguments are coerced with the fragment variable
+\* values of the innermost fragment it is selected in.
 RespondFrom(S, operation, request, source) ==
   LET coercedVariableValues == CoerceVariableValues(S, operation, request) IN
   IF ~coercedVariableValues.ok THEN Outcome("requestError", NullV)
   ELSE
-    LET args == CoerceArgumentValues(S, operation.field, operation.arguments,
-                                     coercedVariableValues.value.entries)
+    LET variableValues == coercedVariableValues.value.entries
+        collected == CollectSpreads(S, operation, variableValues)
+        args == CoerceFieldArgumentValues(S, operation.field, operation.arguments,
+                                          variableValues, collected.fragmentVariables)
     IN IF operation.type = "subscription"
        THEN IF RootEntries(operation) # 1 THEN Outcome("requestError", NullV)
+            ELSE IF ~collected.ok THEN Outcome("requestError", NullV)
             ELSE IF ~args.ok THEN Outcome("requestError", NullV)
             ELSE IF source = "raise" THEN Outcome("requestError", NullV)
             ELSE Outcome("resolved", args.value)
+       ELSE IF ~collected.ok THEN Outcome("spreadError", NullV)
        ELSE IF args.ok THEN Outcome("resolved", args.value) ELSE Outcome("fieldError", NullV)
+
+\* For a "spreadError" outcome: the depth of the spread whose arguments
+\* raised (see Spread).
+SpreadErrorDepth(S, operation, request) ==
+  CollectSpreads(S, operation, CoerceVariableValues(S, operation, request).value.entries).depth
 
 Respond(S, operation, request) == RespondFrom(S, operation, request, "stream")
 
@@ -742,11 +874,14 @@ ExecuteSource(S, given, operationName, request, source) ==
 SourceCalled(S, given, operationName, request) ==
   LET selected == GetOperation(given.operations, operationName)
       vars == CoerceVariableValues(S, selected.operation, request)
+      collected == CollectSpreads(S, selected.operation, vars.value.entries)
   IN /\ given.parsed /\ ~given.typeSystem /\ selected.ok
      /\ selected.operation.type = "subscription"
      /\ RootEntries(selected.operation) = 1
      /\ vars.ok
-     /\ CoerceArgumentValues(S, selected.operation.field, selected.operation.arguments, vars.value.entries).ok
+     /\ collected.ok
+     /\ CoerceFieldArgumentValues(S, selected.operation.field, selected.operation.arguments,
+                                  vars.value.entries, collected.fragmentVariables).ok
 
 -----------------------------------------------------------------------------
 (* §6.4.4 Handling Execution Errors, for a field below the root             *)
@@ -802,6 +937,47 @@ DataOf(operation, failed) ==
   LET d == SelectionData(operation.parents, operation.key, operation.nonNull, failed)
   IN IF d.ok THEN d.value ELSE NullV
 
+\* The same for a "spreadError" (fragment arguments): the execution error
+\* CollectFields raised for a spread `depth` parents down. CompleteValue was
+\* completing that parent when it collected the parent's sub-selection
+\* ("Let collectedFieldsMap be the result of calling
+\* CollectSubfields(objectType, fieldDetailsList, variableValues)"), so the
+\* parent's response position is the error's: each item's, for a list. The
+\* parent's own resolver has run, and no field below it executes. The
+\* proposal doesn't name the position: a fragment spread has none of its
+\* own, and this is the only one §6.4.4 can mean ("an error raised during
+\* field execution, value resolution or coercion, at a specific response
+\* position").
+SpreadErrorPositions(operation, depth) ==
+  IF depth = 0 THEN {}
+  ELSE LET above == SubSeq(operation.parents, 1, depth - 1)
+           s == operation.parents[depth]
+       IN IF s.list THEN {p \o <<i>> : p \in PathsBelow(above, s.key), i \in {0, 1}}
+          ELSE PathsBelow(above, s.key)
+
+\* The value of the selection set holding the first `depth` steps, where
+\* the last one's value fails, or Fail where that propagates.
+RECURSIVE SpreadErrorSelectionData(_, _)
+SpreadErrorSelectionData(steps, depth) ==
+  LET s == Head(steps)
+      inner == IF depth = 1 THEN Fail ELSE SpreadErrorSelectionData(Tail(steps), depth - 1)
+      item == AtPosition(IF s.list THEN s.itemNonNull ELSE s.nonNull, inner)
+      v == IF ~s.list THEN item
+           ELSE AtPosition(s.nonNull, IF item.ok THEN Ok(ListV(<<item.value, item.value>>)) ELSE Fail)
+  IN IF v.ok THEN Ok(ObjV({Entry(s.key, v.value)})) ELSE Fail
+
+\* The "data" entry. A spread in the root selection set (depth 0) has no
+\* response position above it at all, and the proposal doesn't say what the
+\* response is. Operation execution has begun, so this isn't a request
+\* error (§7.1.5), and §6.4.4's "If every response position from the root
+\* of the request to the source of the execution error has a Non-Null
+\* type, then the data entry in the execution result should be null" holds
+\* of none: data is null, no root field is executed, and the error has no
+\* path (SpreadErrorPositions is empty).
+SpreadErrorData(operation, depth) ==
+  IF depth = 0 THEN NullV
+  ELSE LET d == SpreadErrorSelectionData(operation.parents, depth) IN IF d.ok THEN d.value ELSE NullV
+
 -----------------------------------------------------------------------------
 (* §7.1 Response                                                           *)
 (*                                                                         *)
@@ -819,6 +995,13 @@ Valid(S, operation, request, response) ==
          \* No sentence says whether a request error may carry a path, so
          \* any path is accepted.
          /\ ~response.hasData
+         /\ Len(response.errors) > 0
+         /\ ~response.called
+    [] outcome.kind = "spreadError" ->
+         \* Fragment arguments: a spread in the root selection set whose
+         \* arguments raise. An execution result, so with a "data" entry
+         \* (null: SpreadErrorData), an error, and no resolver called.
+         /\ response.hasData
          /\ Len(response.errors) > 0
          /\ ~response.called
     [] outcome.kind = "fieldError" ->
@@ -1236,8 +1419,150 @@ SourceCases == <<
 >>
 
 \* Each initial state checks one section of examples.
+\* Fragment arguments (graphql-spec#1081). Each operation is written as the
+\* document it stands for.
+InSpreads(operation, spreads) ==
+  [type |-> operation.type, name |-> operation.name, variables |-> operation.variables,
+   parents |-> operation.parents, key |-> operation.key, field |-> operation.field,
+   nonNull |-> operation.nonNull, arguments |-> operation.arguments, others |-> operation.others,
+   spreads |-> spreads]
+VX == {Entry("v", VarV("x"))}
+\* query (variables) { ...F(arguments) }  fragment F(definitions) on Query { field(v: $x) }
+Spreading(variables, arguments, definitions, field, request) ==
+  Respond(ExampleSchema, InSpreads(Op(variables, field, VX), <<Spread(0, definitions, arguments)>>), request)
+Y(type) == <<Arg("y", type)>>
+GivenY(n) == {Entry("y", J(n))}
+PassY == {Entry("x", VarV("y"))}
+SpreadError == Outcome("spreadError", NullV)
+\* { ...A(a: outer) }  fragment A($a: Int) on Query { ...B(b: $a) }  fragment B(inner) on Query { field(v: $b) }
+Forwarding(outer, inner, field) ==
+  Respond(ExampleSchema,
+          InSpreads(Op(<<>>, field, {Entry("v", VarV("b"))}),
+                    <<Spread(0, <<Arg("a", IntT)>>, outer), Spread(0, inner, {Entry("b", VarV("a"))})>>), {})
+A3 == {Entry("a", I(3))}
+\* A field below `parents` whose spread, `depth` parents down, is
+\* ...F(x: $y) with fragment F($x: Int! = 5), and whose request has y null.
+Failing0(parents, depth) ==
+  InSpreads(OpAt("query", "", Y(IntT), parents, "int", "int", FALSE, VX, <<>>),
+            <<Spread(depth, X(NonNull(IntT), TRUE, I(5)), PassY)>>)
+ScopeOfF == FragmentVariableValues(<<Arg("x", IntT), Arg("z", IntT)>>, {Entry("x", N(1))})
+OperationValues == {Entry("x", N(8)), Entry("y", N(9)), Entry("z", N(7))}
+SameLookup(name) ==
+  LET scoped == GetScopedVariableValues(name, OperationValues, ScopeOfF)
+      all == ScopedVariableValues(OperationValues, ScopeOfF)
+  IN HasKey(all, name) = HasKey(scoped, name) /\ (HasKey(scoped, name) => Get(all, name) = Get(scoped, name))
+
+FragmentArgumentCases == <<
+  \* A spread's literal argument is the fragment variable's value.
+  Case(Spreading(<<>>, {Entry("x", I(1))}, X(IntT, FALSE, NullV), "int", {}), Resolved({Entry("v", N(1))})),
+  \* It is coerced to the variable's type: [Int] takes 1 as [1].
+  Case(Spreading(<<>>, {Entry("x", I(1))}, X(ListOf(IntT), FALSE, NullV), "ints", {}),
+       Resolved({Entry("v", ListV(<<N(1)>>))})),
+  \* No argument: the variable's default, coerced.
+  Case(Spreading(<<>>, {}, X(IntT, TRUE, I(5)), "int", {}), Resolved({Entry("v", N(5))})),
+  \* No argument and no default: the variable has no value, so the field's
+  \* argument has none either, or its own default.
+  Case(Spreading(<<>>, {}, X(IntT, FALSE, NullV), "int", {}), Resolved({})),
+  Case(Spreading(<<>>, {}, X(IntT, FALSE, NullV), "intDefault", {}), Resolved({Entry("v", N(7))})),
+  \* A fragment variable shadows the operation's variable of that name:
+  \* with a value, and "even when no value was provided for it".
+  Case(Spreading(X(IntT, FALSE, NullV), {Entry("x", I(1))}, X(IntT, FALSE, NullV), "int", {Entry("x", J(2))}),
+       Resolved({Entry("v", N(1))})),
+  Case(Spreading(X(IntT, FALSE, NullV), {}, X(IntT, FALSE, NullV), "int", {Entry("x", J(2))}), Resolved({})),
+  \* A variable the fragment doesn't define is the operation's.
+  Case(Respond(ExampleSchema,
+               InSpreads(Op(Y(IntT), "int", {Entry("v", VarV("y"))}), <<Spread(0, X(IntT, FALSE, NullV), {})>>),
+               GivenY(2)),
+       Resolved({Entry("v", N(2))})),
+  \* A spread's argument may be a variable of the scope the spread is in.
+  \* With no value there, the fragment variable's default applies, or it
+  \* has no value.
+  Case(Spreading(Y(IntT), PassY, X(IntT, TRUE, I(5)), "int", GivenY(2)), Resolved({Entry("v", N(2))})),
+  Case(Spreading(Y(IntT), PassY, X(IntT, TRUE, I(5)), "int", {}), Resolved({Entry("v", N(5))})),
+  Case(Spreading(Y(IntT), PassY, X(IntT, FALSE, NullV), "int", {}), Resolved({})),
+  \* A variable's value is added as it is, "not coerced" again: in an
+  \* invalid document, an Int for a [Int] variable stays 2.
+  Case(Spreading(Y(IntT), PassY, X(ListOf(IntT), FALSE, NullV), "ints", GivenY(2)), Resolved({Entry("v", N(2))})),
+  \* An explicit null is a value: the default doesn't apply, and a Non-Null
+  \* argument of the field then raises at the field.
+  Case(Spreading(<<>>, {Entry("x", NullV)}, X(IntT, TRUE, I(5)), "int", {}), Resolved({Entry("v", NullV)})),
+  Case(Spreading(<<>>, {Entry("x", NullV)}, X(IntT, TRUE, I(5)), "intNN", {}), FieldError),
+  \* A Non-Null fragment variable: null for it is an execution error where
+  \* the spread is collected, before the field. Validation allows `$y: Int`
+  \* for `$x: Int! = 5`, as for a field's argument with a default.
+  Case(Spreading(Y(IntT), PassY, X(NonNull(IntT), TRUE, I(5)), "int", {Entry("y", NullV)}), SpreadError),
+  Case(Spreading(Y(IntT), PassY, X(NonNull(IntT), TRUE, I(5)), "int", {}), Resolved({Entry("v", N(5))})),
+  Case(Spreading(<<>>, {}, X(NonNull(IntT), FALSE, NullV), "int", {}), SpreadError),
+  \* A literal the variable's type can't take.
+  Case(Spreading(<<>>, {Entry("x", Str("1"))}, X(IntT, FALSE, NullV), "int", {}), SpreadError),
+  \* Variables inside a literal are the spread's scope's too. One with no
+  \* value in a list: as for a field's argument (policy.missingListItem).
+  Case(Spreading(Y(IntT), {Entry("x", ListV(<<I(1), VarV("y")>>))}, X(ListOf(IntT), FALSE, NullV), "ints", GivenY(2)),
+       Resolved({Entry("v", ListV(<<N(1), N(2)>>))})),
+  Case(Spreading(Y(IntT), {Entry("x", ListV(<<I(1), VarV("y")>>))}, X(ListOf(IntT), FALSE, NullV), "ints", {}),
+       Resolved({Entry("v", ListV(<<N(1), NullV>>))})),
+  \* A fragment passes its variable on to the fragment it spreads.
+  Case(Forwarding(A3, <<Arg("b", IntT)>>, "int"), Resolved({Entry("v", N(3))})),
+  \* With no value, the inner variable's default applies; with null, null.
+  Case(Forwarding({}, <<Def("b", IntT, TRUE, I(4))>>, "int"), Resolved({Entry("v", N(4))})),
+  Case(Forwarding({Entry("a", NullV)}, <<Def("b", IntT, TRUE, I(4))>>, "int"), Resolved({Entry("v", NullV)})),
+  Case(Forwarding({Entry("a", NullV)}, <<Def("b", NonNull(IntT), TRUE, I(4))>>, "int"), SpreadError),
+  \* But the inner fragment doesn't see the outer one's variables: its $a
+  \* is the operation's.
+  Case(Respond(ExampleSchema,
+               InSpreads(Op(<<Arg("a", IntT)>>, "int", {Entry("v", VarV("a"))}),
+                         <<Spread(0, <<Arg("a", IntT)>>, A3), Spread(0, <<Arg("b", IntT)>>, {Entry("b", VarV("a"))})>>),
+               {Entry("a", J(9))}),
+       Resolved({Entry("v", N(9))})),
+  \* GetScopedVariableValues, name by name, is ScopedVariableValues: a name
+  \* with a value in the fragment, one the fragment defines without a
+  \* value, one only the operation has, and one nobody has.
+  Case(SameLookup("x") /\ SameLookup("z") /\ SameLookup("y") /\ SameLookup("w"), TRUE),
+  Case(HasKey(ScopedVariableValues(OperationValues, ScopeOfF), "z"), FALSE),
+  \* With no fragment variables, the field's arguments are §6.4.1's.
+  Case(CoerceFieldArgumentValues(ExampleSchema, "int", VX, OperationValues, NoFragmentVariables),
+       CoerceArgumentValues(ExampleSchema, "int", VX, OperationValues)),
+  \* Where a spread error goes. In a field's sub-selection: that field's
+  \* position, each item's for a list, with §6.4.4's propagation from there.
+  Case(SpreadErrorDepth(ExampleSchema, Failing0(<<Nested>>, 1), {Entry("y", NullV)}), 1),
+  Case(Respond(ExampleSchema, Failing0(<<Nested>>, 1), {Entry("y", NullV)}), SpreadError),
+  Case(SpreadErrorPositions(Failing0(<<Nested>>, 1), 1), {<<"nested">>}),
+  Case(SpreadErrorData(Failing0(<<Nested>>, 1), 1), O1("nested", NullV)),
+  Case(SpreadErrorData(Failing0(<<NestedNN>>, 1), 1), NullV),
+  Case(SpreadErrorPositions(Failing0(<<Items>>, 1), 1), {<<"items", 0>>, <<"items", 1>>}),
+  Case(SpreadErrorData(Failing0(<<Items>>, 1), 1), O1("items", ListV(<<NullV, NullV>>))),
+  Case(SpreadErrorData(Failing0(<<ItemsNN>>, 1), 1), O1("itemsNN", NullV)),
+  \* The spread is in the second parent's selection set: the first is kept.
+  Case(SpreadErrorPositions(Failing0(<<Items, Nested>>, 2), 2), {<<"items", 0, "nested">>, <<"items", 1, "nested">>}),
+  Case(SpreadErrorData(Failing0(<<Nested, NestedNN>>, 2), 2), O1("nested", NullV)),
+  Case(SpreadErrorData(Failing0(<<NestedNN, Nested>>, 2), 2), O1("nestedNN", O1("nested", NullV))),
+  \* In the root selection set: no position, and data is null.
+  Case(SpreadErrorDepth(ExampleSchema, Failing0(<<Nested>>, 0), {Entry("y", NullV)}), 0),
+  Case(SpreadErrorPositions(Failing0(<<Nested>>, 0), 0), {}),
+  Case(SpreadErrorData(Failing0(<<Nested>>, 0), 0), NullV),
+  \* Its response is an execution result with an error and no resolver
+  \* call; a request error result, or a field error at the field, isn't.
+  Case(Valid(ExampleSchema, Failing0(<<>>, 0), {Entry("y", NullV)}, Response(TRUE, FALSE, <<<<>>>>, FALSE, NullV)), TRUE),
+  Case(Valid(ExampleSchema, Failing0(<<>>, 0), {Entry("y", NullV)}, Response(FALSE, FALSE, <<<<>>>>, FALSE, NullV)), FALSE),
+  Case(Valid(ExampleSchema, Failing0(<<>>, 0), {Entry("y", NullV)}, Response(TRUE, FALSE, <<>>, TRUE, ObjV({Entry("v", N(5))}))), FALSE),
+  \* A subscription collects its root selection set in
+  \* CreateSourceEventStream: a request error, and no source stream.
+  Case(Respond(ExampleSchema,
+               InSpreads(Sub(Y(IntT), "int", "int", VX, <<>>), <<Spread(0, X(NonNull(IntT), TRUE, I(5)), PassY)>>),
+               {Entry("y", NullV)}),
+       RequestError),
+  Case(SourceCalled(ExampleSchema,
+                    Doc(<<InSpreads(Sub(Y(IntT), "int", "int", VX, <<>>), <<Spread(0, X(NonNull(IntT), TRUE, I(5)), PassY)>>)>>),
+                    NoName, {Entry("y", NullV)}),
+       FALSE),
+  Case(SourceCalled(ExampleSchema,
+                    Doc(<<InSpreads(Sub(Y(IntT), "int", "int", VX, <<>>), <<Spread(0, X(NonNull(IntT), TRUE, I(5)), PassY)>>)>>),
+                    NoName, {}),
+       TRUE)
+>>
+
 VARIABLE section
-Sections == {"scalar", "enum", "list", "inputObject", "oneOf", "variables", "arguments", "operation", "response", "path", "subscription", "source"}
+Sections == {"scalar", "enum", "list", "inputObject", "oneOf", "variables", "arguments", "operation", "response", "path", "subscription", "source", "fragmentArguments"}
 Init == section \in Sections
 Next == UNCHANGED section
 
@@ -1253,4 +1578,5 @@ ResponseExamples == section = "response" => Failing(ResponseCases) = {}
 PathExamples == section = "path" => Failing(PathCases) = {}
 SubscriptionExamples == section = "subscription" => Failing(SubscriptionCases) = {}
 SourceExamples == section = "source" => Failing(SourceCases) = {}
+FragmentArgumentExamples == section = "fragmentArguments" => Failing(FragmentArgumentCases) = {}
 ====

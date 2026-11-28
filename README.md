@@ -11,6 +11,7 @@
   - the response format (§7).
 - **A conformance kit**, [`kit/`](kit), that drives a GraphQL implementation through a small adapter and checks every answer against the references: execution responses, and in the other areas parsing, validation, coercion, schema validity, introspection and schema coordinates. Ten adapters cover eleven implementations (graphql-js 16 and 17 share one), and the [conformance sheet](conformance/README.md) records what each one passes and breaks.
 - **Models of behaviour over time:** mutations, subscriptions, `@defer` and `@stream`.
+- **One proposal, stated next to the spec:** fragment arguments ([graphql-spec#1081](https://github.com/graphql/graphql-spec/pull/1081)), in the parser, validation, coercion and execution references, switched off for everything that grades September 2026. See [docs/fragment-arguments.md](docs/fragment-arguments.md).
 
 **Editions.** The kit grades the [September 2026 edition](https://spec.graphql.org/September2026/), the latest release. Some of its rules are newer than the October 2021 edition: every one of them first appeared in September 2025 or September 2026, and the kit labels the vectors, checks and findings that rely on one with that release ("since September 2025", "new in September 2026"). Where September 2025 or October 2021 gives a rule another level (a SHOULD where September 2026 has a MUST, for example), the check says so, and `introspect` can also grade an implementation's October 2021 or September 2025 introspection types. That way an implementation of an older edition can tell which of its failures that edition shares. Section numbers and links ([`kit/spec-sections.json`](kit/spec-sections.json)) are September 2026's. The references were written from the working draft at graphql/graphql-spec@bfcc722b32f4, which differs from September 2026 only editorially and numbers its sections the same.
 
@@ -42,7 +43,7 @@ fixtures/*.graphql ──generate──▶ specs/lib/fixtures.ts ──▶ specs
 | Coercion | [`Coercion.tla`](specs/Coercion.tla) | §3.5 and §3.9–§3.12 input coercion, `GetOperation`, `CoerceVariableValues`, `CoerceArgumentValues`, a subscription's source stream (`CreateSourceEventStream`), and request errors (§7.1). |
 | Scenarios | [`mutation.ts`](specs/mutation.ts), [`subscription.ts`](specs/subscription.ts), [`defer.ts`](specs/defer.ts), [`stream.ts`](specs/stream.ts) | Step-by-step models of behaviour over time. |
 
-Fixtures are plain GraphQL. Each [`fixtures/*.graphql`](fixtures) file holds a schema, one operation and its fragments, plus optional headers: `# variables:` (the variable values), `# variants:` (several sets of variable values, each its own fixture, named `<file>_<variant>`), `# maxListLength:`, `# invalidResults:` (resolvers may return values of the wrong shape) and `# spec:` (the sections it exercises). The 23 files make 27 fixtures:
+Fixtures are plain GraphQL. Each [`fixtures/*.graphql`](fixtures) file holds a schema, one operation and its fragments, plus optional headers: `# variables:` (the variable values), `# variants:` (several sets of variable values, each its own fixture, named `<file>_<variant>`), `# maxListLength:`, `# invalidResults:` (resolvers may return values of the wrong shape) and `# spec:` (the sections it exercises). The 26 files make 31 fixtures:
 
 - `nullPropagation`: Non-Null chains and `data: null`.
 - `lists`: `[Post!]` and `[String]!`, with items completing in parallel.
@@ -67,6 +68,7 @@ Fixtures are plain GraphQL. Each [`fixtures/*.graphql`](fixtures) file holds a s
 - `subscription`: one subscription event.
 - `subscriptionAlias`: an aliased root field selected twice, once through a fragment.
 - `noPropagation`: execution without error propagation (graphql-js 17's `@experimental_disableErrorPropagation`).
+- `fragmentArguments` (two variants), `fragmentArgumentsDetails`, `fragmentArgumentsNull`: the fragment arguments proposal (graphql-spec#1081). A fragment's variables with defaults, shadowing and forwarding; a field selected both by the operation and inside a fragment, whose sub-selections keep their own variables; and a null for a Non-Null fragment variable. No release has these, so they run only for adapters with `fragment-arguments`, and their failures are informational.
 
 ## Running
 
@@ -99,7 +101,7 @@ The kit has seven areas. Each checks one part of the spec against its TLA+ refer
 
 | Area | Spec | Reference | How | Checks |
 | --- | --- | --- | --- | --- |
-| [`execution`](docs/conformance.md) | §6, §7, and §3's result coercion | `Reference.tla` | drives your resolvers through 27 fixtures, every outcome and schedule, and checks each response against every response the spec allows; with capabilities, also subscription streams (§6.2.3), the value each resolver was called on, and custom scalar and ID results | 47 |
+| [`execution`](docs/conformance.md) | §6, §7, and §3's result coercion | `Reference.tla` | drives your resolvers through 31 fixtures, every outcome and schedule, and checks each response against every response the spec allows; with capabilities, also subscription streams (§6.2.3), the value each resolver was called on, and custom scalar and ID results | 47 |
 | [`parse`](docs/kit/parse.md) | §2, and §3's type system grammar | `Lexer.tla`, `Parser.tla` | accept or reject 2,847 source texts, mostly in minimal pairs; 713 of them type system documents (capability `parse-sdl`), and 20 crash probes | 51 |
 | [`validate`](docs/kit/validate.md) | §5, §2.2 | `Validation.tla` | 3,370 documents, each breaking one rule (two in 27 documented cases) or none, so each rule gets its own verdict, plus copies with descriptions and comments that must get the same verdict | 36 |
 | [`coerce`](docs/kit/coerce.md) | §2.10.4, §3.5, §3.9–§3.12, §6.1, §6.2.3.1, §6.4.1, §7.1 | `Coercion.tla` | 2,244 requests with variables and literals: a request error, a field error, or the coerced arguments; also operation selection, a subscription's source stream, and the shape of every response | 42 |
@@ -124,7 +126,7 @@ An adapter is a small program that speaks newline-delimited JSON. It builds the 
 | [`async-graphql`](adapters/async-graphql) | async-graphql 7.0.17, dynamic schemas | Execution only. Resolver errors have no `path` (§7.1.6, 13819 cases). Errors don't stop at the nearest nullable field, so any error nulls all of `data` (§6.4.4, 1275 cases). Fields aren't merged, so a field selected twice resolves twice, a mutation root field included (§6.3.4, 411). A null object or list item is completed as an object (§6.4.3), an integer ID is returned as a number (§3.5.5, 173), and an Int outside 32 bits is passed through (§3.5.1, a SHOULD, 135). The response stream ends after any event whose result has an error (§6.2.3.2, a SHOULD, 23 streams). |
 | [`apollo-kotlin`](adapters/apollo-kotlin) | Apollo Kotlin apollo-execution 5.2.0 (JVM) | Takes part in all seven areas. In execution, an unknown enum value is passed through and a non-finite Float leaves the client without a response (§3.5, `resultCoercion`, 701 cases); a propagating Non-Null error drops the errors of earlier mutation root fields (`serialErrorsKept`, 60); execution errors have no `locations` (a SHOULD). Every request error carries `"data": null` (§7.1.3, 1621 coerce vectors), and an argument's default literal reaches the resolver uncoerced. Validation has no Single Root Field rule (§5.2.4.1, 62) and drops Lone Anonymous Operation and All Variables Used to warnings; the schema builder leaves most §3 type validation rules unchecked; `__type(name:)` raises for an unknown type (§4.2.1); coordinates are lexed with the document lexer, so ignored tokens are accepted inside them (§2.14, 25). |
 
-The kit checks the checker too. Every execution run evaluates 87 negative controls: 50 broken variants of cases recorded from graphql-js ([`kit/execution/controls.json`](kit/execution/controls.json)), 27 made at check time for checks the recordings can't reach (parent values, streams, locations, repeated keys, custom scalars), and 10 report controls. Each must be caught by the clause or check it names. The other areas run a self-test of their own on every run: 10 controls in `parse`, 15 in `validate`, 12 in `coordinate`, 353 in `introspect`, 1015 in `schema` and 38,540 generated ones in `coerce`.
+The kit checks the checker too. Every execution run evaluates 88 negative controls: 50 broken variants of cases recorded from graphql-js ([`kit/execution/controls.json`](kit/execution/controls.json)), 27 made at check time for checks the recordings can't reach (parent values, streams, locations, repeated keys, custom scalars), and 11 report controls. Each must be caught by the clause or check it names. The other areas run a self-test of their own on every run: 10 controls in `parse`, 15 in `validate`, 12 in `coordinate`, 353 in `introspect`, 1015 in `schema` and 38,540 generated ones in `coerce`.
 
 **[The conformance sheet](conformance/README.md)** shows what each implementation was checked against and what it breaks, by spec section and by check, with the shortest failing case for each failure. Every cell is a count from a kit report (`--report`); `npm run conformance` regenerates it.
 
@@ -132,7 +134,7 @@ The kit checks the checker too. Every execution run evaluates 87 negative contro
 
 ### Execution
 
-Across the 27 fixtures, the executor's three variants (errors under a nulled position reported, dropped, or dropped with their resolvers cancelled), every schedule and every combination of resolver outcomes, `ExecutionConformance.tla` checks six properties:
+Across the 31 fixtures, the executor's three variants (errors under a nulled position reported, dropped, or dropped with their resolvers cancelled), every schedule and every combination of resolver outcomes, `ExecutionConformance.tla` checks six properties:
 
 - **`ResponseIsValid`:** the response sent satisfies `Reference!Valid` for the resolvers settled at that moment.
 - **`ResponseStaysValid`:** it stays valid as abandoned resolvers keep settling.
@@ -162,7 +164,7 @@ For each fixture, the kit tries every combination of resolver outcomes in two se
 
 `Lexer.tla` and `Parser.tla` are hand-written references for §2. They cover the lexical grammar with its static semantics: escapes, surrogate pairs and `BlockStringValue()`. They also cover the grammar of executable documents, following September 2026's `SelectionSet : { Selection* }`, and the type system language: every type system definition and extension, including September 2026's directives on directive definitions and `extend directive`. Each has hand-written vectors and mutants.
 
-`scripts/differential-lexer.mjs` lexes about 51,000 strings, parses about 43,000 executable documents and 9,600 type system sources with graphql-js 16 and 17. tla-ts checks that every token sequence and parse tree matches the reference. Error positions aren't compared, only success versus failure. There are three known discrepancies:
+`scripts/differential-lexer.mjs` lexes about 51,000 strings, parses about 43,000 executable documents and 9,600 type system sources with graphql-js 16 and 17. tla-ts checks that every token sequence and parse tree matches the reference. It also parses about 46,000 documents with graphql-js 17's `experimentalFragmentArguments` and checks them against `ParseExecutableWith(source, {FragmentArguments})`, the grammar of the fragment arguments proposal ([docs/fragment-arguments.md](docs/fragment-arguments.md)); `ParseExecutable`, September 2026's, rejects that syntax, as both graphql-js versions do without the flag. Error positions aren't compared, only success versus failure. There are three known discrepancies:
 
 - **Long escapes:** graphql-js rejects a variable-width escape with more than 8 hex digits (`"\u{000000041}"`), which `EscapedUnicode :: { HexDigit+ }` allows.
 - **Empty selection sets:** graphql-js 16 rejects `{}`, which September 2026 allows (graphql-spec#1227). graphql-js 17 accepts it.
@@ -254,7 +256,7 @@ Every resolver settles in its own step. Each `@defer` may be honored or inlined,
 
 ## Mutants
 
-A property that no bug can break proves nothing. Each `specs/*.mutants.mjs` lists realistic bugs, 302 in all over 130 properties. For example:
+A property that no bug can break proves nothing. Each `specs/*.mutants.mjs` lists realistic bugs, 354 in all over 135 properties. For example:
 
 - nulling a failing Non-Null field instead of its parent;
 - filtering errors against the final null set, which drops a mutation's earlier errors;

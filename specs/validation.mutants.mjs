@@ -40,15 +40,15 @@ export default [
   },
   {
     name: "merging compares argument names but not values",
-    find: "/\\ ArgumentsOf(a.field) = ArgumentsOf(b.field)",
-    replace: "/\\ {x.name : x \\in ArgumentsOf(a.field)} = {x.name : x \\in ArgumentsOf(b.field)}",
+    find: "/\\ ArgumentsOf(a.selection) = ArgumentsOf(b.selection)",
+    replace: "/\\ {x.name : x \\in ArgumentsOf(a.selection)} = {x.name : x \\in ArgumentsOf(b.selection)}",
     file,
     property: "FieldExamplesHold",
     rules: ["FieldSelectionMerging"],
   },
   {
     name: "merging doesn't recurse into the merged selection set",
-    find: "/\\ fuel > 0 => FieldsCanMerge(S, D, SubfieldsOf(S, D, a) \\cup SubfieldsOf(S, D, b), fuel - 1)",
+    find: "/\\ fuel > 0 => MembersCanMerge(S, D, SubmembersOf(S, D, a) \\cup SubmembersOf(S, D, b), fuel - 1)",
     replace: "/\\ TRUE",
     file,
     property: "FieldExamplesHold",

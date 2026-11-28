@@ -17,7 +17,11 @@ EXTENDS Reference, Fixtures
 \* parent, whatever the resolvers that haven't settled produce. Only a
 \* Non-Null position propagates (§6.4.4), and only if its resolver hasn't
 \* settled, or a Non-Null position under it may still raise. A position
-\* that has completed can't raise any more.
+\* that has completed can't raise any more. `fields` are field details:
+\* each field with the fragment variables it was selected under (the
+\* fragment arguments proposal, graphql-spec#1081; none without it). An
+\* object whose sub-selection can't be collected, because a fragment
+\* spread's arguments can't be coerced, has raised already.
 RECURSIVE MayRaise(_, _, _, _, _)
 MayRaise(fx, O, path, type, fields) ==
   IF ~Propagates(fx, type) THEN FALSE
@@ -34,12 +38,14 @@ MayRaise(fx, O, path, type, fields) ==
               LET objectType == ObjectTypeOf(fx, inner, outcome) IN
               IF objectType = NoObjectType THEN FALSE
               ELSE
-                LET grouped == Executed(fx, objectType, CollectSubfields(fx, objectType, fields)) IN
-                \E j \in DOMAIN grouped :
-                  IF grouped[j].fields[1].name = "__typename" THEN FALSE
-                  ELSE MayRaise(fx, O, Append(path, grouped[j].key),
-                                FieldType(fx, objectType, grouped[j].fields[1].name),
-                                grouped[j].fields)
+                LET collected == CollectSubfields(fx, objectType, fields)
+                    grouped == Executed(fx, objectType, collected.grouped)
+                IN IF collected.failed THEN TRUE
+                   ELSE \E j \in DOMAIN grouped :
+                     IF IsTypename(grouped[j]) THEN FALSE
+                     ELSE MayRaise(fx, O, Append(path, grouped[j].key),
+                                   FieldType(fx, objectType, grouped[j].fields[1].field.name),
+                                   grouped[j].fields)
          [] OTHER -> FALSE
 
 \* Whether data is null in a response sent while execution is pending,
@@ -55,9 +61,9 @@ DataNulledEarly(fx, O, data) ==
   /\ data.kind = "null"
   /\ ExecuteQuery(fx, O).kind = "pending"
   /\ \A i \in DOMAIN grouped :
-       IF grouped[i].fields[1].name = "__typename" THEN TRUE
+       IF IsTypename(grouped[i]) THEN TRUE
        ELSE ~MayRaise(fx, O, <<grouped[i].key>>,
-                      FieldType(fx, RootType(fx), grouped[i].fields[1].name),
+                      FieldType(fx, RootType(fx), grouped[i].fields[1].field.name),
                       grouped[i].fields)
 
 \* The clauses of Reference!Clauses a case breaks, plus "calledSerially" if

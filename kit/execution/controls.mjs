@@ -5,6 +5,8 @@
 // the clause it names or be rejected as malformed. That shows the checker
 // can catch each kind of bug, independently of what the implementation did.
 
+import { outsideSpec as outside } from "./outside.mjs";
+
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const isMap = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const rootCalls = (c) => c.trace.map((e, i) => [e, i]).filter(([e]) => e.call && e.call.length === 1);
@@ -505,7 +507,12 @@ export const CONTROLS = [
 const lineZero = (c) => ({ ...c, response: { ...c.response, errors: c.response.errors.map((e) => ({ ...e, locations: [{ line: 0, column: 1 }] })) } });
 const check = (report, id) => report.checks.find((c) => c.id === id);
 const fixtureOf = (report, id) => report.fixtures.find((f) => f.id === id);
-const outsideSpec = (fixture) => fixture.errorPropagation === false;
+// In a fixture outside the spec (outside.mjs), a failure of the response is
+// informational. The controls that need such a fixture take the one with
+// error propagation off, so the corpus doesn't depend on which kinds exist.
+const outsideSpec = (fixture) => Boolean(outside(fixture));
+const propagationOff = (fixture) => fixture.errorPropagation === false;
+const withFragmentArguments = (fixture) => outside(fixture)?.check === "fragmentArguments";
 const hasErrors = (c) => c.response?.errors?.length > 0;
 
 // Report controls: what a single case can't show, how the report counts
@@ -519,7 +526,7 @@ export const REPORT_CONTROLS = [
   {
     name: "a SHOULD warning in a normal fixture, after the same warning outside the spec",
     strict: true,
-    bases: [(c, fixture) => outsideSpec(fixture) && hasErrors(c), (c, fixture) => !outsideSpec(fixture) && hasErrors(c)],
+    bases: [(c, fixture) => propagationOff(fixture) && hasErrors(c), (c, fixture) => !outsideSpec(fixture) && hasErrors(c)],
     make: (bases) => bases.map(lineZero),
     expect: (report, [, normal]) => {
       const problems = [];
@@ -662,7 +669,7 @@ export const REPORT_CONTROLS = [
   {
     name: "a root field called twice with different types, outside the spec",
     strict: false,
-    bases: [(c, fixture) => outsideSpec(fixture) && c.trace.some((e) => e.call?.length === 1)],
+    bases: [(c, fixture) => propagationOff(fixture) && c.trace.some((e) => e.call?.length === 1)],
     make: ([c]) => {
       const call = c.trace.find((e) => e.call?.length === 1);
       return [{ ...c, trace: [...c.trace, { ...call, type: call.type === "ID!" ? "String!" : "ID!" }] }];
@@ -672,6 +679,30 @@ export const REPORT_CONTROLS = [
       if (report.adapterProblems !== 1) problems.push(`adapterProblems is ${report.adapterProblems}, not 1`);
       if (check(report, "callsOnce").failing !== 1) problems.push(`callsOnce fails on ${check(report, "callsOnce").failing} cases, not 1`);
       if (fixtureOf(report, c.fixture).status !== "fail") problems.push(`${c.fixture} passes`);
+      return problems.join("; ");
+    },
+  },
+  {
+    name: "a dropped error in a fragment arguments fixture is informational, and a call it doesn't select is not",
+    strict: true,
+    bases: [(c, fixture) => withFragmentArguments(fixture) && hasErrors(c), (c, fixture) => withFragmentArguments(fixture) && c.trace.some((e) => e.call?.length === 1)],
+    // The first case without its errors; the second with a root resolver
+    // called at a field the operation doesn't select.
+    make: ([dropped, called]) => {
+      const call = called.trace.find((e) => e.call?.length === 1);
+      return [
+        { ...dropped, response: withoutErrors(dropped.response, () => false) },
+        { ...called, trace: [...called.trace, { ...call, call: ["notSelected"] }] },
+      ];
+    },
+    expect: (report, [dropped]) => {
+      const problems = [];
+      const info = check(report, "fragmentArguments");
+      if (info.failing !== 1 || info.cases !== 2) problems.push(`fragmentArguments fails on ${info.failing} of ${info.cases} cases, not 1 of 2`);
+      if (check(report, "nullsExplained").cases !== 0) problems.push(`nullsExplained was graded on ${check(report, "nullsExplained").cases} cases of a fixture outside the spec`);
+      if (check(report, "callsSelected").failing !== 1) problems.push(`callsSelected fails on ${check(report, "callsSelected").failing} cases, not 1`);
+      if (fixtureOf(report, dropped.fixture).status !== "pass") problems.push(`${dropped.fixture} fails, though its only response failure is informational`);
+      if (!report.findings.some((f) => f.checks.includes("fragmentArguments") && f.summary.startsWith("with fragment arguments, "))) problems.push("no finding says \"with fragment arguments\"");
       return problems.join("; ");
     },
   },

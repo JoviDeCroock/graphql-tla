@@ -13,6 +13,10 @@
 (* document grammars: ExecutableDocument, TypeSystemDocument,              *)
 (* TypeSystemExtensionDocument or Document.                                *)
 (*                                                                         *)
+(* Both read the September 2026 grammar. ParseExecutableWith and           *)
+(* ParseDocumentWith also take a set of proposals, grammar that no release *)
+(* has yet (see Proposals below): fragment arguments, graphql-spec#1081.   *)
+(*                                                                         *)
 (* Data shapes (uniform, since TLC can't compare records of different      *)
 (* shapes):                                                                *)
 (*   node    [kind, text, children]  kind is the production, text its      *)
@@ -23,12 +27,13 @@
 (*     OperationDefinition  text: query, mutation or subscription;         *)
 (*                          <<Description, Name, VariablesDefinition,      *)
 (*                            Directives, SelectionSet>>                   *)
-(*     FragmentDefinition   text: the name; <<Description, NamedType,      *)
-(*                            Directives, SelectionSet>>                   *)
+(*     FragmentDefinition   text: the name; <<Description,                 *)
+(*                            VariablesDefinition, NamedType, Directives,  *)
+(*                            SelectionSet>>                               *)
 (*     SelectionSet         selections                                     *)
 (*     Field                text: the name; <<alias Name, Arguments,       *)
 (*                            Directives, SelectionSet>>                   *)
-(*     FragmentSpread       text: the name; <<Directives>>                 *)
+(*     FragmentSpread       text: the name; <<Arguments, Directives>>      *)
 (*     InlineFragment       <<NamedType, Directives, SelectionSet>>        *)
 (*     VariableDefinition   <<Description, Variable, Type, default value,  *)
 (*                            Directives>>                                 *)
@@ -233,6 +238,24 @@ OptionalVariablesDefinition(toks, k) ==
   ELSE Done(Items("VariablesDefinition", <<>>), k)
 
 -----------------------------------------------------------------------------
+(* Proposals *)
+
+\* Grammar that isn't in the September 2026 edition, which the productions
+\* below read only when its name is in `proposals`. With none, they read
+\* September 2026 exactly.
+\*
+\*   "fragmentArguments"  graphql-spec#1081 (at dfd847524d25), §2.9:
+\*       FragmentSpread : ... FragmentName Arguments? Directives?
+\*       FragmentDefinition : Description? fragment FragmentName
+\*         VariablesDefinition? TypeCondition Directives? SelectionSet
+\*     where September 2026 has neither Arguments? nor
+\*     VariablesDefinition?. Both lists are in the tree either way, and
+\*     empty without the proposal.
+FragmentArguments == "fragmentArguments"
+Proposals == {FragmentArguments}
+September2026 == {}
+
+-----------------------------------------------------------------------------
 (* §2.5 Selection Sets, §2.6 Fields, §2.9 Fragments *)
 
 \* FragmentName : Name but not `on`
@@ -241,38 +264,38 @@ FragmentName(toks, k) == IF IsKeyword(toks, k, KwOn) THEN Fail(k) ELSE NameNode(
 \* TypeCondition : on NamedType
 TypeCondition(toks, k) == IF IsKeyword(toks, k, KwOn) THEN NamedType(toks, k + 1) ELSE Fail(k)
 
-RECURSIVE SelectionSet(_, _), Selections(_, _, _), Selection(_, _), Field(_, _),
-          FragmentSpread(_, _), InlineFragment(_, _)
+RECURSIVE SelectionSet(_, _, _), Selections(_, _, _, _), Selection(_, _, _), Field(_, _, _),
+          FragmentSpread(_, _, _), InlineFragment(_, _, _)
 
 \* SelectionSet : { Selection* }
 \* An empty selection set is new in September 2026 (graphql-spec#1227);
 \* October 2021 and September 2025 have { Selection+ }.
-SelectionSet(toks, k) ==
-  IF IsPunctuator(toks, k, LBrace) THEN Selections(toks, k + 1, <<>>) ELSE Fail(k)
+SelectionSet(toks, k, proposals) ==
+  IF IsPunctuator(toks, k, LBrace) THEN Selections(toks, k + 1, proposals, <<>>) ELSE Fail(k)
 
-Selections(toks, k, items) ==
+Selections(toks, k, proposals, items) ==
   IF IsPunctuator(toks, k, RBrace) THEN Done(Items("SelectionSet", items), k + 1)
-  ELSE LET selection == Selection(toks, k) IN
-       IF selection.ok THEN Selections(toks, selection.next, Append(items, selection.node))
+  ELSE LET selection == Selection(toks, k, proposals) IN
+       IF selection.ok THEN Selections(toks, selection.next, proposals, Append(items, selection.node))
        ELSE selection
 
 \* Selection : Field | FragmentSpread | InlineFragment
 \* After `...`, a Name other than `on` can only start a FragmentSpread, since
 \* FragmentName is "Name but not `on`"; anything else is an InlineFragment.
-Selection(toks, k) ==
-  CASE ~IsSpread(toks, k) -> Field(toks, k)
-    [] IsName(toks, k + 1) /\ ~IsKeyword(toks, k + 1, KwOn) -> FragmentSpread(toks, k)
-    [] OTHER -> InlineFragment(toks, k)
+Selection(toks, k, proposals) ==
+  CASE ~IsSpread(toks, k) -> Field(toks, k, proposals)
+    [] IsName(toks, k + 1) /\ ~IsKeyword(toks, k + 1, KwOn) -> FragmentSpread(toks, k, proposals)
+    [] OTHER -> InlineFragment(toks, k, proposals)
 
 \* Field : Alias? Name Arguments? Directives? SelectionSet?
 \* Alias : Name :
-Field(toks, k) ==
+Field(toks, k, proposals) ==
   LET aliased == IsName(toks, k) /\ IsPunctuator(toks, k + 1, Colon)
       alias == IF aliased THEN NameNode(toks, k) ELSE Done(NoNode, k)
       name == NameNode(toks, alias.next + (IF aliased THEN 1 ELSE 0))
       arguments == OptionalArguments(toks, name.next, FALSE)
       directives == OptionalDirectives(toks, arguments.next, FALSE)
-      set == IF IsPunctuator(toks, directives.next, LBrace) THEN SelectionSet(toks, directives.next)
+      set == IF IsPunctuator(toks, directives.next, LBrace) THEN SelectionSet(toks, directives.next, proposals)
              ELSE Done(NoNode, directives.next)
   IN CASE ~name.ok -> name
        [] ~arguments.ok -> arguments
@@ -283,19 +306,27 @@ Field(toks, k) ==
                  set.next)
 
 \* FragmentSpread : ... FragmentName Directives?
-FragmentSpread(toks, k) ==
+\* With fragment arguments: ... FragmentName Arguments? Directives?
+\* The arguments aren't [Const]: a spread's argument may be a variable.
+\* Without the proposal, a ( after the name is left where it is, and no
+\* production takes it.
+FragmentSpread(toks, k, proposals) ==
   LET name == FragmentName(toks, k + 1)
-      directives == OptionalDirectives(toks, name.next, FALSE)
+      arguments == IF FragmentArguments \in proposals THEN OptionalArguments(toks, name.next, FALSE)
+                   ELSE Done(Items("Arguments", <<>>), name.next)
+      directives == OptionalDirectives(toks, arguments.next, FALSE)
   IN CASE ~name.ok -> name
+       [] ~arguments.ok -> arguments
        [] ~directives.ok -> directives
-       [] OTHER -> Done(Node("FragmentSpread", name.node.text, <<directives.node>>), directives.next)
+       [] OTHER ->
+            Done(Node("FragmentSpread", name.node.text, <<arguments.node, directives.node>>), directives.next)
 
 \* InlineFragment : ... TypeCondition? Directives? SelectionSet
-InlineFragment(toks, k) ==
+InlineFragment(toks, k, proposals) ==
   LET condition == IF IsKeyword(toks, k + 1, KwOn) THEN TypeCondition(toks, k + 1)
                    ELSE Done(NoNode, k + 1)
       directives == OptionalDirectives(toks, condition.next, FALSE)
-      set == SelectionSet(toks, directives.next)
+      set == SelectionSet(toks, directives.next, proposals)
   IN CASE ~condition.ok -> condition
        [] ~directives.ok -> directives
        [] ~set.ok -> set
@@ -306,8 +337,8 @@ InlineFragment(toks, k) ==
 (* §2.3 Document, §2.4 Operations, §2.9 Fragments *)
 
 \* OperationDefinition : SelectionSet   (query shorthand)
-ShorthandQuery(toks, k) ==
-  LET set == SelectionSet(toks, k) IN
+ShorthandQuery(toks, k, proposals) ==
+  LET set == SelectionSet(toks, k, proposals) IN
   IF ~set.ok THEN set
   ELSE Done(Node("OperationDefinition", KwQuery,
                  <<NoNode, NoNode, Items("VariablesDefinition", <<>>), Items("Directives", <<>>), set.node>>),
@@ -315,13 +346,13 @@ ShorthandQuery(toks, k) ==
 
 \* OperationDefinition :
 \*   Description? OperationType Name? VariablesDefinition? Directives? SelectionSet
-OperationDefinition(toks, k) ==
+OperationDefinition(toks, k, proposals) ==
   LET description == OptionalDescription(toks, k)
       type == description.next
       name == IF IsName(toks, type + 1) THEN NameNode(toks, type + 1) ELSE Done(NoNode, type + 1)
       variables == OptionalVariablesDefinition(toks, name.next)
       directives == OptionalDirectives(toks, variables.next, FALSE)
-      set == SelectionSet(toks, directives.next)
+      set == SelectionSet(toks, directives.next, proposals)
   IN CASE ~variables.ok -> variables
        [] ~directives.ok -> directives
        [] ~set.ok -> set
@@ -332,48 +363,59 @@ OperationDefinition(toks, k) ==
 
 \* FragmentDefinition :
 \*   Description? fragment FragmentName TypeCondition Directives? SelectionSet
-FragmentDefinition(toks, k) ==
+\* With fragment arguments:
+\*   Description? fragment FragmentName VariablesDefinition? TypeCondition
+\*     Directives? SelectionSet
+\* Without the proposal, a ( after the name isn't `on`, so TypeCondition
+\* fails there.
+FragmentDefinition(toks, k, proposals) ==
   LET description == OptionalDescription(toks, k)
       name == FragmentName(toks, description.next + 1)
-      condition == TypeCondition(toks, name.next)
+      variables == IF FragmentArguments \in proposals THEN OptionalVariablesDefinition(toks, name.next)
+                   ELSE Done(Items("VariablesDefinition", <<>>), name.next)
+      condition == TypeCondition(toks, variables.next)
       directives == OptionalDirectives(toks, condition.next, FALSE)
-      set == SelectionSet(toks, directives.next)
+      set == SelectionSet(toks, directives.next, proposals)
   IN CASE ~name.ok -> name
+       [] ~variables.ok -> variables
        [] ~condition.ok -> condition
        [] ~directives.ok -> directives
        [] ~set.ok -> set
        [] OTHER ->
             Done(Node("FragmentDefinition", name.node.text,
-                      <<description.node, condition.node, directives.node, set.node>>),
+                      <<description.node, variables.node, condition.node, directives.node, set.node>>),
                  set.next)
 
 \* ExecutableDefinition : OperationDefinition | FragmentDefinition
 \* A Description is followed by the definition's keyword. "Descriptions are
 \* not permitted on query shorthand."
-ExecutableDefinition(toks, k) ==
+ExecutableDefinition(toks, k, proposals) ==
   LET keyword == IF IsString(toks, k) THEN k + 1 ELSE k IN
-  CASE IsPunctuator(toks, k, LBrace) -> ShorthandQuery(toks, k)
-    [] IsName(toks, keyword) /\ Tk(toks, keyword).value \in OperationTypes -> OperationDefinition(toks, k)
-    [] IsKeyword(toks, keyword, KwFragment) -> FragmentDefinition(toks, k)
+  CASE IsPunctuator(toks, k, LBrace) -> ShorthandQuery(toks, k, proposals)
+    [] IsName(toks, keyword) /\ Tk(toks, keyword).value \in OperationTypes -> OperationDefinition(toks, k, proposals)
+    [] IsKeyword(toks, keyword, KwFragment) -> FragmentDefinition(toks, k, proposals)
     [] OTHER -> Fail(keyword)
 
-RECURSIVE Definitions(_, _, _)
-Definitions(toks, k, items) ==
+RECURSIVE Definitions(_, _, _, _)
+Definitions(toks, k, proposals, items) ==
   IF k > Len(toks) THEN Done(Items("Document", items), k)
-  ELSE LET definition == ExecutableDefinition(toks, k) IN
-       IF definition.ok THEN Definitions(toks, definition.next, Append(items, definition.node))
+  ELSE LET definition == ExecutableDefinition(toks, k, proposals) IN
+       IF definition.ok THEN Definitions(toks, definition.next, proposals, Append(items, definition.node))
        ELSE definition
 
 \* ExecutableDocument : ExecutableDefinition+
-ExecutableDocument(toks) == IF toks = <<>> THEN Fail(1) ELSE Definitions(toks, 1, <<>>)
+ExecutableDocument(toks, proposals) == IF toks = <<>> THEN Fail(1) ELSE Definitions(toks, 1, proposals, <<>>)
 
-\* The parse tree of a source text, or [ok |-> FALSE, node |-> NoNode] for a
-\* lexical or syntax error.
-ParseExecutable(src) ==
+\* The parse tree of a source text read with the given proposals, or
+\* [ok |-> FALSE, node |-> NoNode] for a lexical or syntax error.
+ParseExecutableWith(src, proposals) ==
   LET lexed == Lex(src) IN
   IF ~lexed.ok THEN [ok |-> FALSE, node |-> NoNode]
-  ELSE LET parsed == ExecutableDocument(lexed.tokens) IN
+  ELSE LET parsed == ExecutableDocument(lexed.tokens, proposals) IN
        [ok |-> parsed.ok, node |-> parsed.node]
+
+\* The same for the September 2026 edition, with no proposal.
+ParseExecutable(src) == ParseExecutableWith(src, September2026)
 
 -----------------------------------------------------------------------------
 (* §3 Type System: the type system definition language, written by hand   *)
@@ -752,33 +794,40 @@ Grammars == {"executable", "typeSystem", "typeSystemExtension", "document"}
 \* disjoint tokens, after an optional Description: {, an operation type or
 \* `fragment` for an executable definition; `extend`, with no Description,
 \* for an extension; a type system keyword otherwise.
-DefinitionOf(toks, k, grammar) ==
+DefinitionOf(toks, k, grammar, proposals) ==
   LET keyword == IF IsString(toks, k) THEN k + 1 ELSE k
       executable == \/ IsPunctuator(toks, k, LBrace)
                     \/ IsName(toks, keyword) /\ Tk(toks, keyword).value \in OperationTypes \cup {KwFragment}
-  IN CASE executable -> IF grammar \in {"executable", "document"} THEN ExecutableDefinition(toks, k) ELSE Fail(keyword)
+  IN CASE executable ->
+            IF grammar \in {"executable", "document"} THEN ExecutableDefinition(toks, k, proposals) ELSE Fail(keyword)
        [] IsKeyword(toks, k, KwExtend) ->
             IF grammar \in {"typeSystemExtension", "document"} THEN TypeSystemExtension(toks, k) ELSE Fail(k)
        [] OTHER -> IF grammar = "executable" THEN Fail(keyword) ELSE TypeSystemDefinition(toks, k)
 
-RECURSIVE DefinitionsOf(_, _, _, _)
-DefinitionsOf(toks, k, grammar, items) ==
+RECURSIVE DefinitionsOf(_, _, _, _, _)
+DefinitionsOf(toks, k, grammar, proposals, items) ==
   IF k > Len(toks) THEN Done(Items("Document", items), k)
-  ELSE LET definition == DefinitionOf(toks, k, grammar) IN
-       IF definition.ok THEN DefinitionsOf(toks, definition.next, grammar, Append(items, definition.node))
+  ELSE LET definition == DefinitionOf(toks, k, grammar, proposals) IN
+       IF definition.ok
+       THEN DefinitionsOf(toks, definition.next, grammar, proposals, Append(items, definition.node))
        ELSE definition
 
 \* Each grammar's document is one or more definitions.
-DocumentOf(toks, grammar) == IF toks = <<>> THEN Fail(1) ELSE DefinitionsOf(toks, 1, grammar, <<>>)
+DocumentOf(toks, grammar, proposals) ==
+  IF toks = <<>> THEN Fail(1) ELSE DefinitionsOf(toks, 1, grammar, proposals, <<>>)
 
-\* The parse tree of a source text read as grammar (one of Grammars), or
-\* [ok |-> FALSE, node |-> NoNode] for a lexical or syntax error.
-\* ParseDocument(src, "executable") is ParseExecutable(src).
-ParseDocument(src, grammar) ==
+\* The parse tree of a source text read as grammar (one of Grammars) with
+\* the given proposals, or [ok |-> FALSE, node |-> NoNode] for a lexical or
+\* syntax error. The proposals only change executable definitions.
+ParseDocumentWith(src, grammar, proposals) ==
   LET lexed == Lex(src) IN
   IF ~lexed.ok THEN [ok |-> FALSE, node |-> NoNode]
-  ELSE LET parsed == DocumentOf(lexed.tokens, grammar) IN
+  ELSE LET parsed == DocumentOf(lexed.tokens, grammar, proposals) IN
        [ok |-> parsed.ok, node |-> parsed.node]
+
+\* The same for the September 2026 edition, with no proposal.
+\* ParseDocument(src, "executable") is ParseExecutable(src).
+ParseDocument(src, grammar) == ParseDocumentWith(src, grammar, September2026)
 
 -----------------------------------------------------------------------------
 (* Hand-written vectors, checked by Parser.cfg *)
@@ -814,7 +863,7 @@ DocumentVectors == <<
                       Sel(<<Leaf("a")>>)>>)>>)),
   Parses("\"\"\"\n  d\n\"\"\" fragment F on T {a}",
          Doc(<<Node("FragmentDefinition", Text("F"),
-                    <<Node("BlockString", Text("d"), <<>>), Named("T"), NoDirectives,
+                    <<Node("BlockString", Text("d"), <<>>), NoVariables, Named("T"), NoDirectives,
                       Sel(<<Leaf("a")>>)>>)>>)),
   \* "Descriptions are not permitted on query shorthand."
   Rejects("\"d\" {a}"),
@@ -847,7 +896,8 @@ SelectionVectors == <<
   Rejects("{a @}"),
   Rejects("{a @d()}"),
   Parses("{...F @d}", Doc(<<Query(<<Node("FragmentSpread", Text("F"),
-                                         <<Items("Directives", <<Node("Directive", Text("d"), <<NoArguments>>)>>)>>)>>)>>)),
+                                         <<NoArguments,
+                                           Items("Directives", <<Node("Directive", Text("d"), <<NoArguments>>)>>)>>)>>)>>)),
   Parses("{... on T {a}}", Doc(<<Query(<<Node("InlineFragment", <<>>,
                                               <<Named("T"), NoDirectives, Sel(<<Leaf("a")>>)>>)>>)>>)),
   Parses("{... @d {a}}", NoNode),
@@ -864,6 +914,7 @@ SelectionVectors == <<
   Rejects("fragment F T {a}"),
   Rejects("fragment F on T"),
   Rejects("fragment F on T @d"),
+  \* September 2026 has no fragment arguments (see Proposals).
   Rejects("fragment F($a: Int) on T {a}"),
   Rejects("{a"),
   Rejects("{a}}"),
@@ -1294,6 +1345,83 @@ DocumentGrammarVectors == <<
   Accepts("document", "extend scalar S @d {a}", NoNode)
 >>
 
+\* Fragment arguments (graphql-spec#1081): each source is read with the
+\* proposal, as an ExecutableDocument unless the vector names a grammar.
+\* None of these sources is a September 2026 document: FragmentArgumentsAreNew
+\* checks that the ones accepted here are rejected without the proposal.
+Proposed(grammar, source, tree) == [grammar |-> grammar, source |-> Text(source), ok |-> TRUE, tree |-> tree]
+NotProposed(grammar, source) == [grammar |-> grammar, source |-> Text(source), ok |-> FALSE, tree |-> NoNode]
+Arg(name, value) == Node("Argument", Text(name), <<value>>)
+IntNode(text) == Node("IntValue", Text(text), <<>>)
+VarNode(name) == Node("Variable", Text(name), <<>>)
+VarDefNode(name, type, default) ==
+  Node("VariableDefinition", <<>>, <<NoNode, VarNode(name), type, default, NoDirectives>>)
+SpreadWith(name, arguments) == Node("FragmentSpread", Text(name), <<Items("Arguments", arguments), NoDirectives>>)
+
+FragmentArgumentVectors == <<
+  \* FragmentDefinition : Description? fragment FragmentName
+  \*   VariablesDefinition? TypeCondition Directives? SelectionSet
+  Proposed("executable", "fragment F($a: Int) on T {a}",
+           Doc(<<Node("FragmentDefinition", Text("F"),
+                      <<NoNode, Items("VariablesDefinition", <<VarDefNode("a", Named("Int"), NoNode)>>),
+                        Named("T"), NoDirectives, Sel(<<Leaf("a")>>)>>)>>)),
+  Proposed("executable", "fragment F($a: Int! = 50, $b: [T]) on T @d {a}",
+           Doc(<<Node("FragmentDefinition", Text("F"),
+                      <<NoNode,
+                        Items("VariablesDefinition",
+                              <<VarDefNode("a", Node("NonNullType", <<>>, <<Named("Int")>>), IntNode("50")),
+                                VarDefNode("b", Node("ListType", <<>>, <<Named("T")>>), NoNode)>>),
+                        Named("T"), Items("Directives", <<Node("Directive", Text("d"), <<NoArguments>>)>>),
+                        Sel(<<Leaf("a")>>)>>)>>)),
+  \* A VariableDefinition is the operation's: Description? Variable : Type
+  \* DefaultValue? Directives[Const]?
+  Proposed("executable", "\"d\" fragment F(\"e\" $a: Int = 1 @x(y: 2)) on T {a}", NoNode),
+  Proposed("executable", "fragment F ( $on: Int , $fragment: Int ) on on {a}", NoNode),
+  NotProposed("executable", "fragment F() on T {a}"),
+  NotProposed("executable", "fragment F($a) on T {a}"),
+  NotProposed("executable", "fragment F($a: Int = $b) on T {a}"),
+  NotProposed("executable", "fragment F($a: Int @x(y: $b)) on T {a}"),
+  NotProposed("executable", "fragment F(a: Int) on T {a}"),
+  \* The variables come before the type condition, and once.
+  NotProposed("executable", "fragment F on T ($a: Int) {a}"),
+  NotProposed("executable", "fragment F($a: Int)($b: Int) on T {a}"),
+  NotProposed("executable", "fragment F($a: Int) {a}"),
+  NotProposed("executable", "fragment F($a: Int) on T"),
+  \* FragmentName : Name but not `on`, with or without variables.
+  NotProposed("executable", "fragment ($a: Int) on T {a}"),
+  NotProposed("executable", "fragment on($a: Int) on T {a}"),
+  \* FragmentSpread : ... FragmentName Arguments? Directives?
+  Proposed("executable", "{...F(a: 1)}", Doc(<<Query(<<SpreadWith("F", <<Arg("a", IntNode("1"))>>)>>)>>)),
+  \* Arguments, not Arguments[Const]: a spread's argument may be a variable,
+  \* at any depth.
+  Proposed("executable", "{...F(a: $v, b: [$w])}",
+           Doc(<<Query(<<SpreadWith("F", <<Arg("a", VarNode("v")),
+                                           Arg("b", Items("ListValue", <<VarNode("w")>>))>>)>>)>>)),
+  Proposed("executable", "{...F(a: {k: $v}) @d(x: $v)}", NoNode),
+  Proposed("executable", "{...F (a: 1 a: 2)}", NoNode),
+  NotProposed("executable", "{...F()}"),
+  NotProposed("executable", "{...F(a)}"),
+  NotProposed("executable", "{...F(a:)}"),
+  NotProposed("executable", "{...F($a: 1)}"),
+  NotProposed("executable", "{...F(a: 1)(b: 2)}"),
+  \* The arguments come before the directives: after @d(x: 1), a ( starts
+  \* no selection.
+  NotProposed("executable", "{...F @d(x: 1) (a: 1)}"),
+  \* A spread has no selection set, and an inline fragment no arguments.
+  NotProposed("executable", "{...F(a: 1) {b}}"),
+  NotProposed("executable", "{... on T(a: 1) {a}}"),
+  NotProposed("executable", "{...(a: 1) {a}}"),
+  NotProposed("executable", "{...on(a: 1)}"),
+  \* A spread forwards its fragment's variables to another spread.
+  Proposed("executable",
+           "query Q($a: Int) {...F(a: $a)} fragment F($a: Int) on Q {f(x: $a) ...G(b: $a)} fragment G($b: Int) on Q {g(y: $b)}",
+           NoNode),
+  \* Only executable definitions change.
+  Proposed("document", "type T { a: Int } fragment F($a: Int) on T {a} {...F(a: 1)}", NoNode),
+  NotProposed("typeSystem", "fragment F($a: Int) on T {a}"),
+  NotProposed("typeSystemExtension", "extend type T @d fragment F($a: Int) on T {a}")
+>>
+
 ParserVectors == [Documents |-> DocumentVectors, Selections |-> SelectionVectors,
                   Values |-> ValueVectors, Variables |-> VariableVectors, Edges |-> EdgeVectors]
 
@@ -1312,10 +1440,11 @@ EdgesParse == ParserVectorPasses("Edges")
 GrammarVectors == [TypeSystem |-> TypeSystemVectors, Extensions |-> ExtensionVectors,
                    DocumentGrammars |-> DocumentGrammarVectors]
 
-\* The vectors of both kinds, each initial state one vector.
+\* The vectors of every kind, each initial state one vector.
 AllVectorsInit ==
   \/ ParserInit
   \/ vector \in UNION {{[group |-> g, n |-> n] : n \in DOMAIN GrammarVectors[g]} : g \in DOMAIN GrammarVectors}
+  \/ vector \in {[group |-> "FragmentArguments", n |-> n] : n \in DOMAIN FragmentArgumentVectors}
 
 GrammarVectorPasses(group) == vector.group = group => GrammarPasses(GrammarVectors[group][vector.n])
 
@@ -1329,5 +1458,33 @@ ExecutableGrammarAgrees ==
   vector.group \in DOMAIN ParserVectors =>
     LET source == ParserVectors[vector.group][vector.n].source IN
     ParseDocument(source, "executable") = ParseExecutable(source)
+
+\* Fragment arguments. FragmentArgumentsParse: each of the proposal's
+\* vectors reads as it says, with the proposal.
+WithFragmentArguments == {FragmentArguments}
+FragmentArgumentsParse ==
+  vector.group = "FragmentArguments" =>
+    LET v == FragmentArgumentVectors[vector.n]
+        parsed == ParseDocumentWith(v.source, v.grammar, WithFragmentArguments)
+    IN parsed.ok = v.ok /\ (v.tree # NoNode => parsed.node = v.tree)
+
+\* FragmentArgumentsAreNew: none of those vectors is a September 2026
+\* document, whatever the proposal makes of it.
+FragmentArgumentsAreNew ==
+  vector.group = "FragmentArguments" =>
+    LET v == FragmentArgumentVectors[vector.n] IN ~ParseDocument(v.source, v.grammar).ok
+
+\* FragmentArgumentsOnlyAdd: the proposal's grammar contains September
+\* 2026's. Every vector of this module that September 2026 accepts reads
+\* as the same tree with the proposal.
+FragmentArgumentsOnlyAdd ==
+  LET agrees(source, grammar) ==
+        LET released == ParseDocument(source, grammar) IN
+        released.ok => ParseDocumentWith(source, grammar, WithFragmentArguments) = released
+  IN CASE vector.group \in DOMAIN ParserVectors ->
+            agrees(ParserVectors[vector.group][vector.n].source, "executable")
+       [] vector.group \in DOMAIN GrammarVectors ->
+            LET v == GrammarVectors[vector.group][vector.n] IN agrees(v.source, v.grammar)
+       [] OTHER -> TRUE
 
 =============================================================================

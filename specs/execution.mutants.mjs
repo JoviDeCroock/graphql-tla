@@ -41,14 +41,14 @@ export default [
   },
   {
     name: "ignores @include",
-    find: "!(selection.include.kind !== \"absent\" && !ifValue(selection.include))",
+    find: "!(selection.include.kind !== \"absent\" && !ifValue(selection.include, scope))",
     replace: "true",
     module,
     property: "ResponseIsValid",
   },
   {
     name: "ignores @skip",
-    find: "!(selection.skip.kind !== \"absent\" && ifValue(selection.skip)) &&",
+    find: "!(selection.skip.kind !== \"absent\" && ifValue(selection.skip, scope)) &&",
     replace: "",
     module,
     property: "ResponseIsValid",
@@ -62,8 +62,8 @@ export default [
   },
   {
     name: "merges only the first field's sub-selection into the collected subfields",
-    find: "collect(objectType, fields[i].selectionSet, 0, { groups, visited: new Set<string>() }).groups,",
-    replace: "collect(objectType, fields[0].selectionSet, 0, { groups, visited: new Set<string>() }).groups,",
+    find: "collect(objectType, fields[i].field.selectionSet, fields[i].scope, 0, {",
+    replace: "collect(objectType, fields[0].field.selectionSet, fields[0].scope, 0, {",
     module,
     property: "ResponseIsValid",
   },
@@ -77,8 +77,8 @@ export default [
   },
   {
     name: "reads a variable in @skip or @include as false",
-    find: "condition.kind === \"literal\" ? condition.value : fx().variables.get(condition.variable)!;",
-    replace: "condition.kind === \"literal\" ? condition.value : false;",
+    find: "    : hasValue(scope, condition.variable) && valueOf(scope, condition.variable) === \"true\";",
+    replace: "    : false;",
     module,
     property: "ResponseIsValid",
   },
@@ -196,4 +196,49 @@ export default [
     module,
     property: "ResponseIsValid",
   },
+  // Fragment arguments (graphql-spec#1081): the fragmentArguments fixtures.
+  ...[
+    {
+      name: "reads the operation's variable where the fragment defines one of that name",
+      find: 'const isLocal = (scope: Scope, name: string) =>\n  scope.fragment !== "" &&',
+      replace: 'const isLocal = (scope: Scope, name: string) =>\n  scope.fragment !== "" && !fx().variables.has(name) &&',
+    },
+    {
+      name: "ignores a fragment variable's default when the spread gives no argument",
+      find: "    : definition.hasDefault\n      ? { ok: true,",
+      replace: "    : false\n      ? { ok: true,",
+    },
+    {
+      name: "uses a fragment variable's default only when the spread has no argument, not when its variable has no value",
+      find: "    : definition.hasDefault\n      ? { ok: true,",
+      replace: "    : definition.hasDefault && !args.some((a) => a.name === definition.name)\n      ? { ok: true,",
+    },
+    {
+      name: "gives a Non-Null fragment variable its default when the spread passes null",
+      find: '    ? definition.nonNull && givenValue(args, definition.name, scope) === "null"\n      ? { ok: false, values: bound.values }',
+      replace:
+        '    ? definition.nonNull && givenValue(args, definition.name, scope) === "null"\n      ? { ok: true, values: [...bound.values, { name: definition.name, value: definition.default }] }',
+    },
+    {
+      name: "reads a spread's variable argument in the scope of the fragment it spreads",
+      find: "bind(fx().fragments.get(selection.name)!.variableDefinitions, selection.arguments, scope, 0, {",
+      replace:
+        "bind(fx().fragments.get(selection.name)!.variableDefinitions, selection.arguments, { fragment: selection.name, values: [] }, 0, {",
+    },
+    {
+      name: "collects every field of a field set in the scope of the first",
+      find: "collect(objectType, fields[i].field.selectionSet, fields[i].scope, 0, {",
+      replace: "collect(objectType, fields[i].field.selectionSet, fields[0].scope, 0, {",
+    },
+    {
+      name: "skips a spread whose arguments are refused, and collects the rest of the selection set",
+      find: "    : { groups: acc.groups, visited: acc.visited, failed: true };",
+      replace: "    : { groups: acc.groups, visited: acc.visited, failed: false };",
+    },
+    {
+      name: "gives an object whose sub-selection can't be collected no fields, instead of an error",
+      find: "  cannotCollect(positionOf(path), outcome) ||\n",
+      replace: "",
+    },
+  ].map((mutant) => ({ ...mutant, module, property: "ResponseIsValid" })),
 ];

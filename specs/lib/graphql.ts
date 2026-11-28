@@ -26,6 +26,31 @@ export type Condition = {
   variable: string;
 };
 
+// A Boolean value as fragment variables hold it: "true", "false" or "null".
+// A variable with no value has no entry at all.
+export type Value = string;
+
+// An argument of a fragment spread (the fragment arguments proposal,
+// graphql-spec#1081): a literal, or a variable of the scope the spread is in.
+export type SpreadArgument = {
+  name: string;
+  kind: "literal" | "variable";
+  // The literal. "" for a variable.
+  value: Value;
+  // The variable's name. "" for a literal.
+  variable: string;
+};
+
+// A fragment's variable definition (the same proposal). Every fragment
+// variable in a fixture is Boolean or Boolean!.
+export type FragmentVariable = {
+  name: string;
+  nonNull: boolean;
+  hasDefault: boolean;
+  // "" without a default.
+  default: Value;
+};
+
 export type Selection = {
   kind: "field" | "inlineFragment" | "fragmentSpread";
   // The field or fragment name. "" for an inline fragment.
@@ -35,10 +60,16 @@ export type Selection = {
   typeCondition: string;
   skip: Condition;
   include: Condition;
+  // A fragment spread's arguments. [] for anything else.
+  arguments: SpreadArgument[];
   selectionSet: Selection[];
 };
 
-export type Fragment = { typeCondition: string; selectionSet: Selection[] };
+export type Fragment = {
+  typeCondition: string;
+  variableDefinitions: FragmentVariable[];
+  selectionSet: Selection[];
+};
 
 export type Fixture = {
   // Root operation type names; "" when the schema has no such root.

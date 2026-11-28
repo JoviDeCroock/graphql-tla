@@ -3,6 +3,12 @@
 (* GraphQL query execution, written by hand from the spec's algorithms     *)
 (* (https://spec.graphql.org/September2026/, §6.3 and §6.4).                *)
 (*                                                                         *)
+(* Field collection also follows the fragment arguments proposal,          *)
+(* graphql-spec#1081 at dfd847524d25: a fragment may define variables and  *)
+(* a fragment spread may give them values. No release has that syntax, and *)
+(* for a query without it CollectFields here is September 2026's: with no  *)
+(* fragment variables, every variable is the operation's.                  *)
+(*                                                                         *)
 (* Everything here is a pure operator over plain data:                     *)
 (*                                                                         *)
 (*   fx  a fixture: a schema, one query, its fragments and variables, as   *)
@@ -18,7 +24,13 @@
 (*   type ref    [name, wrappers]          [Post!]! = <<"nonNull","list",  *)
 (*                                         "nonNull">> around "Post"       *)
 (*   selection   [kind, name, alias, typeCondition, skip, include,         *)
-(*                selectionSet]                                            *)
+(*                arguments, selectionSet]; arguments are a fragment       *)
+(*                spread's, each [name, kind, value, variable]             *)
+(*   fragment    [typeCondition, variableDefinitions, selectionSet];       *)
+(*                a variable definition is [name, nonNull, hasDefault,     *)
+(*                default]                                                 *)
+(*   field detail  [field, fragmentVariables]: a field selection and the   *)
+(*                variables in scope where it was selected                 *)
 (*   outcome     [kind, type, length]   kind \in {"object", "leaf",        *)
 (*                                      "list", "null", "error"}           *)
 (*   json        [kind, value, entries, items]  kind \in {"null", "leaf",  *)
@@ -56,17 +68,99 @@ Propagates(fx, type) == fx.errorPropagation /\ IsNonNull(type)
 -----------------------------------------------------------------------------
 (* §6.3.2 Field Collection *)
 
-\* The `if` argument of @skip or @include.
-IfValue(fx, condition) ==
-  IF condition.kind = "literal" THEN condition.value ELSE fx.variables[condition.variable]
+\* Variable values. A fixture's operation variables are Booleans, and its
+\* fragment variables are Boolean or Boolean!, so a value is "true", "false"
+\* or "null", and a map of values is a function on the names that have one.
+OperationVariableValues(fx) ==
+  [name \in DOMAIN fx.variables |-> IF fx.variables[name] THEN "true" ELSE "false"]
 
-\* CollectFields skips a selection when "skipDirective's if argument is true
-\* or is a variable in variableValues with the value true", and when
-\* "includeDirective's if argument is not true and is not a variable in
-\* variableValues with the value true".
-IsIncluded(fx, selection) ==
-  /\ ~(selection.skip.kind # "absent" /\ IfValue(fx, selection.skip))
-  /\ ~(selection.include.kind # "absent" /\ ~IfValue(fx, selection.include))
+\* The proposal: "The fragment variable values of a fragment spread
+\* represent the variables in scope within the referenced fragment as a
+\* result of that fragment spread", with its variableDefinitions (here the
+\* names they define) and "an unordered map of the coerced values for those
+\* variables, as provided by the arguments of the fragment spread or by
+\* default values". NoFragmentVariables is its "fragmentVariables is not
+\* provided", for "a selection set which is not within a fragment
+\* definition".
+FragmentVariables(defined, values) == [defined |-> defined, values |-> values]
+NoFragmentVariables == FragmentVariables({}, <<>>)
+
+\* GetScopedVariableValues(variableName, variableValues, fragmentVariables):
+\* "If variableDefinitions defines a variable named variableName, return
+\* values. Return variableValues." So "A fragment variable shadows an
+\* operation variable of the same name even when no value was provided for
+\* it".
+GetScopedVariableValues(variableName, variableValues, fragmentVariables) ==
+  IF variableName \in fragmentVariables.defined THEN fragmentVariables.values ELSE variableValues
+
+ScopedValues(fx, variableName, fragmentVariables) ==
+  GetScopedVariableValues(variableName, OperationVariableValues(fx), fragmentVariables)
+
+\* Whether the `if` argument of @skip or @include is true: "If skipIf is a
+\* Variable: ... If scopedVariableValues provides the value true for the
+\* name variableName" and "Otherwise if skipIf is true". A variable with no
+\* value, or with null, doesn't provide true.
+IfIsTrue(fx, condition, fragmentVariables) ==
+  IF condition.kind = "literal" THEN condition.value
+  ELSE LET scoped == ScopedValues(fx, condition.variable, fragmentVariables)
+       IN condition.variable \in DOMAIN scoped /\ scoped[condition.variable] = "true"
+
+\* CollectFields skips a selection whose @skip `if` is true, and one whose
+\* @include `if` isn't: "If scopedVariableValues does not provide the value
+\* true for the name variableName, continue with the next selection" and
+\* "Otherwise if includeIf is not true".
+IsIncluded(fx, selection, fragmentVariables) ==
+  /\ ~(selection.skip.kind # "absent" /\ IfIsTrue(fx, selection.skip, fragmentVariables))
+  /\ ~(selection.include.kind # "absent" /\ ~IfIsTrue(fx, selection.include, fragmentVariables))
+
+\* §6.4.1 CoerceArgumentValues(argumentDefinitions, argumentValues,
+\* variableValues, fragmentVariables) for the arguments of a fragment spread:
+\* "each variable definition is used as the argument definition of the same
+\* name, providing its expected type and default value." The result is
+\* [ok, values]; ok is FALSE where the algorithm says "raise an execution
+\* error". The variables in the arguments are those of the scope the spread
+\* is in, not of the fragment it refers to. A Boolean literal or an already
+\* coerced variable value needs no coercion of its own.
+NoArgument == [name |-> "", kind |-> "literal", value |-> "", variable |-> ""]
+ArgumentNamed(arguments, name) ==
+  IF \E i \in DOMAIN arguments : arguments[i].name = name
+  THEN arguments[CHOOSE i \in DOMAIN arguments : arguments[i].name = name]
+  ELSE NoArgument
+
+RECURSIVE CoerceSpreadArgumentsFrom(_, _, _, _, _, _)
+CoerceSpreadArgumentsFrom(fx, definitions, arguments, fragmentVariables, i, values) ==
+  IF i > Len(definitions) THEN [ok |-> TRUE, values |-> values]
+  ELSE
+    LET definition == definitions[i]
+        argumentName == definition.name
+        argumentValue == ArgumentNamed(arguments, argumentName)
+        provided == argumentValue # NoArgument
+        isVariable == provided /\ argumentValue.kind = "variable"
+        scoped == ScopedValues(fx, argumentValue.variable, fragmentVariables)
+        \* "If argumentValue is a Variable: ... If scopedVariableValues
+        \* provides a value for the name variableName: Let hasValue be
+        \* true. ... Otherwise if argumentValues provides a value for the
+        \* name argumentName. Let hasValue be true."
+        hasValue == IF isVariable THEN argumentValue.variable \in DOMAIN scoped ELSE provided
+        value == IF ~hasValue THEN "null"
+                 ELSE IF isVariable THEN scoped[argumentValue.variable]
+                 ELSE argumentValue.value
+        continue(next) == CoerceSpreadArgumentsFrom(fx, definitions, arguments, fragmentVariables, i + 1, next)
+    IN IF ~hasValue /\ definition.hasDefault
+       \* "If hasValue is not true and defaultValue exists (including
+       \* null)": the default is the value.
+       THEN continue((argumentName :> definition.default) @@ values)
+       \* "Otherwise if argumentType is a Non-Nullable type, and either
+       \* hasValue is not true or value is null, raise an execution error."
+       ELSE IF definition.nonNull /\ (~hasValue \/ value = "null") THEN [ok |-> FALSE, values |-> values]
+       \* "Otherwise if hasValue is true": null stays null, and a variable's
+       \* value is added as it is.
+       ELSE IF hasValue THEN continue((argumentName :> value) @@ values)
+       \* No entry: the fragment variable has no value.
+       ELSE continue(values)
+
+CoerceSpreadArguments(fx, fragment, spread, fragmentVariables) ==
+  CoerceSpreadArgumentsFrom(fx, fragment.variableDefinitions, spread.arguments, fragmentVariables, 1, <<>>)
 
 \* DoesFragmentTypeApply(objectType, fragmentType)
 DoesFragmentTypeApply(fx, objectType, fragmentType) ==
@@ -77,9 +171,13 @@ DoesFragmentTypeApply(fx, objectType, fragmentType) ==
 
 ResponseKey(field) == IF field.alias = "" THEN field.name ELSE field.alias
 
+\* The proposal's field detail: "used to correlate a field in a selection
+\* set with the variables in scope where that field was selected."
+FieldDetail(field, fragmentVariables) == [field |-> field, fragmentVariables |-> fragmentVariables]
+
 \* The collected fields map is a sequence of [key, fields], ordered by when
-\* each response key first appears ("Add selection to the
-\* fieldsForResponseName").
+\* each response key first appears; fields is the field set, a sequence of
+\* field details ("Add fieldDetails to the fieldsForResponseName").
 AppendField(grouped, key, field) ==
   IF \E i \in DOMAIN grouped : grouped[i].key = key
   THEN [i \in DOMAIN grouped |->
@@ -88,20 +186,31 @@ AppendField(grouped, key, field) ==
           ELSE grouped[i]]
   ELSE Append(grouped, [key |-> key, fields |-> <<field>>])
 
-\* CollectFields over selections[i..], threading the collected fields and
-\* visitedFragments through the walk as the spec's algorithm does: "If
+\* CollectFields(objectType, selectionSet, variableValues,
+\* fragmentVariables, visitedFragments) over selections[i..], threading
+\* [grouped, visited, failed] through the walk as the spec's algorithm
+\* threads the collected fields and visitedFragments: "If
 \* fragmentSpreadName is in visitedFragments, continue with the next
-\* selection".
-RECURSIVE CollectFrom(_, _, _, _, _)
-CollectFrom(fx, objectType, selections, i, acc) ==
-  IF i > Len(selections) THEN acc
+\* selection". failed says that coercing a spread's arguments raised an
+\* execution error, which ends the collection.
+\*
+\* A fragment spread is collected in this order: @skip and @include, in the
+\* scope the spread is in; visitedFragments; the fragment's type condition;
+\* and only then CoerceArgumentValues. So a spread that is skipped, already
+\* visited, or of a type that doesn't apply raises nothing, and one that is
+\* collected raises whether or not its fragment then uses the variable.
+\* The fragment's selections are collected with the new fragment variable
+\* values; an inline fragment's with the ones it is in.
+RECURSIVE CollectFrom(_, _, _, _, _, _)
+CollectFrom(fx, objectType, selections, fragmentVariables, i, acc) ==
+  IF i > Len(selections) \/ acc.failed THEN acc
   ELSE
     LET selection == selections[i]
         next ==
-          IF ~IsIncluded(fx, selection) THEN acc
+          IF ~IsIncluded(fx, selection, fragmentVariables) THEN acc
           ELSE CASE selection.kind = "field" ->
                       [acc EXCEPT !.grouped =
-                         AppendField(@, ResponseKey(selection), selection)]
+                         AppendField(@, ResponseKey(selection), FieldDetail(selection, fragmentVariables))]
                  [] selection.kind = "fragmentSpread" ->
                       IF selection.name \in acc.visited THEN acc
                       ELSE
@@ -115,28 +224,41 @@ CollectFrom(fx, objectType, selections, i, acc) ==
                              LET fragment == fx.fragments[selection.name] IN
                              IF ~DoesFragmentTypeApply(fx, objectType, fragment.typeCondition)
                              THEN visited
-                             ELSE CollectFrom(fx, objectType, fragment.selectionSet, 1, visited)
+                             ELSE
+                               LET coerced == CoerceSpreadArguments(fx, fragment, selection, fragmentVariables)
+                                   defined == {fragment.variableDefinitions[d].name
+                                               : d \in DOMAIN fragment.variableDefinitions}
+                               IN IF ~coerced.ok THEN [visited EXCEPT !.failed = TRUE]
+                                  ELSE CollectFrom(fx, objectType, fragment.selectionSet,
+                                                   FragmentVariables(defined, coerced.values), 1, visited)
                  [] OTHER ->
                       IF /\ selection.typeCondition # ""
                          /\ ~DoesFragmentTypeApply(fx, objectType, selection.typeCondition)
                       THEN acc
-                      ELSE CollectFrom(fx, objectType, selection.selectionSet, 1, acc)
-    IN CollectFrom(fx, objectType, selections, i + 1, next)
+                      ELSE CollectFrom(fx, objectType, selection.selectionSet, fragmentVariables, 1, acc)
+    IN CollectFrom(fx, objectType, selections, fragmentVariables, i + 1, next)
 
-CollectFields(fx, objectType, selectionSet) ==
-  CollectFrom(fx, objectType, selectionSet, 1, [grouped |-> <<>>, visited |-> {}]).grouped
+\* The result is [grouped, failed]: the collected fields map, or failed.
+Collected(acc) == [grouped |-> acc.grouped, failed |-> acc.failed]
 
-\* CollectSubfields(objectType, fields): each field's selection set is
-\* collected with its own visitedFragments, into one grouped field set.
+CollectFields(fx, objectType, selectionSet, fragmentVariables) ==
+  Collected(CollectFrom(fx, objectType, selectionSet, fragmentVariables, 1,
+                        [grouped |-> <<>>, visited |-> {}, failed |-> FALSE]))
+
+\* CollectSubfields(objectType, fieldDetailsList, variableValues): each
+\* field's selection set is collected with its own visitedFragments, and
+\* with the fragment variables of its own field detail ("Let field and
+\* fragmentVariables be the corresponding entries on fieldDetails"), into
+\* one collected fields map.
 RECURSIVE CollectSubfieldsFrom(_, _, _, _, _)
-CollectSubfieldsFrom(fx, objectType, fields, i, grouped) ==
-  IF i > Len(fields) THEN grouped
+CollectSubfieldsFrom(fx, objectType, fields, i, collected) ==
+  IF i > Len(fields) \/ collected.failed THEN collected
   ELSE CollectSubfieldsFrom(fx, objectType, fields, i + 1,
-         CollectFrom(fx, objectType, fields[i].selectionSet, 1,
-                     [grouped |-> grouped, visited |-> {}]).grouped)
+         Collected(CollectFrom(fx, objectType, fields[i].field.selectionSet, fields[i].fragmentVariables, 1,
+                               [grouped |-> collected.grouped, visited |-> {}, failed |-> FALSE])))
 
 CollectSubfields(fx, objectType, fields) ==
-  CollectSubfieldsFrom(fx, objectType, fields, 1, <<>>)
+  CollectSubfieldsFrom(fx, objectType, fields, 1, [grouped |-> <<>>, failed |-> FALSE])
 
 \* ExecuteCollectedFields (§6.3.3) executes an entry, and gives it a place in
 \* the result map, only "If fieldType is defined": if objectType has a field
@@ -144,9 +266,9 @@ CollectSubfields(fx, objectType, fields) ==
 \* object type (§4.1). An undefined field only gets here in a document that
 \* breaks §5.3.1 (Field Selections), and every fixture is valid. (Fixtures
 \* don't select __schema or __type; the introspect area covers those.)
-IsTypename(group) == group.fields[1].name = "__typename"
+IsTypename(group) == group.fields[1].field.name = "__typename"
 IsDefined(fx, objectType, group) ==
-  IsTypename(group) \/ group.fields[1].name \in DOMAIN TypeDef(fx, objectType).fields
+  IsTypename(group) \/ group.fields[1].field.name \in DOMAIN TypeDef(fx, objectType).fields
 
 \* The entries of a collected fields map that ExecuteCollectedFields
 \* executes, in order.
@@ -232,10 +354,10 @@ RECURSIVE CompletePosition(_, _, _, _, _), CompleteNullable(_, _, _, _, _), Comp
 \* executed.
 CompleteFields(fx, O, path, objectType, grouped) ==
   [i \in DOMAIN grouped |->
-     IF grouped[i].fields[1].name = "__typename"
+     IF IsTypename(grouped[i])
      THEN Result("value", [LeafJson EXCEPT !.value = objectType], {}, {}, {})
      ELSE CompletePosition(fx, O, Append(path, grouped[i].key),
-                           FieldType(fx, objectType, grouped[i].fields[1].name),
+                           FieldType(fx, objectType, grouped[i].fields[1].field.name),
                            grouped[i].fields)]
 
 ObjectJson(grouped, results) ==
@@ -289,9 +411,20 @@ CompleteNullable(fx, O, path, type, fields) ==
            \* CompleteValue for an object: collect the subfields for
            \* objectType and execute them (ExecuteCollectedFields).
            LET objectType == ObjectTypeOf(fx, type, outcome)
-               grouped == Executed(fx, objectType, CollectSubfields(fx, objectType, fields))
+               collected == CollectSubfields(fx, objectType, fields)
+               grouped == Executed(fx, objectType, collected.grouped)
                children == CompleteFields(fx, O, path, objectType, grouped)
-           IN Combine(path, children, ObjectJson(grouped, children))
+           IN IF collected.failed
+              \* CollectSubfields raised an execution error: the arguments
+              \* of a fragment spread couldn't be coerced. CompleteValue
+              \* was completing this position, so it is the response
+              \* position of the error (§6.4.4: "an error raised during
+              \* field execution, value resolution or coercion, at a
+              \* specific response position"), and none of its fields is
+              \* executed. The proposal doesn't say so in as many words:
+              \* a fragment spread has no response position of its own.
+              THEN Result("error", NullJson, {path}, {path}, {})
+              ELSE Combine(path, children, ObjectJson(grouped, children))
 
 \* §6.2 ExecuteQuery, ExecuteMutation, and ExecuteSubscriptionEvent for one
 \* event, then §6.3.1 ExecuteRootSelectionSet and §6.4.4: "If every
@@ -300,13 +433,30 @@ CompleteNullable(fx, O, path, type, fields) ==
 \* "nulled" position at path <<>> for the purposes of `nulls`. Serial and
 \* normal execution complete to the same value; SeriallyExecuted below is
 \* what tells them apart.
-RootGroups(fx) == Executed(fx, RootType(fx), CollectFields(fx, RootType(fx), fx.operation))
+\*
+\* ExecuteRootSelectionSet collects the root selection set "not within a
+\* fragment definition", so with no fragment variables. If that collection
+\* raises (a fragment spread's arguments), no root field is executed, and
+\* the proposal doesn't say what the response is: there is no response
+\* position for §6.4.4 to null. This takes the reading with the least
+\* invented: operation execution has begun, so it is an execution error and
+\* not a request error (§7.1.5), and "If every response position from the
+\* root of the request to the source of the execution error has a Non-Null
+\* type" holds of none, so data is null, with the error at the root, <<>>.
+\* No fixture gets here (scripts/generate-fixtures.mjs refuses one), so the
+\* kit never grades it. Coercion.tla states the same reading for a request
+\* with variables (its "spreadError" outcome at depth 0).
+RootCollected(fx) == CollectFields(fx, RootType(fx), fx.operation, NoFragmentVariables)
+RootGroups(fx) ==
+  IF RootCollected(fx).failed THEN <<>> ELSE Executed(fx, RootType(fx), RootCollected(fx).grouped)
 
 ExecuteQuery(fx, O) ==
   LET grouped == RootGroups(fx)
       fields == CompleteFields(fx, O, <<>>, RootType(fx), grouped)
       data == Combine(<<>>, fields, ObjectJson(grouped, fields))
-  IN IF data.kind = "error"
+  IN IF RootCollected(fx).failed
+     THEN Result("nulled", NullJson, {<<>>}, {<<>>}, {[path |-> <<>>, cause |-> {<<>>}]})
+     ELSE IF data.kind = "error"
      THEN Result("nulled", NullJson, data.raised, data.cause,
                  {[path |-> <<>>, cause |-> data.cause]})
      ELSE data

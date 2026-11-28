@@ -642,7 +642,7 @@ A nullable variable with a non-null default may be used for `if: Boolean!` (§5.
 
 So for `query($s: Boolean = false) { a @skip(if: $s) b }` with `{"s": null}` the text keeps `a` (null is not true), and `@include(if: $s)` would drop it. graphql-js 16 and 17 instead coerce the directive's arguments and answer `{"errors": [{"message": "Argument \"if\" of non-null type \"Boolean!\" must not be null." …}], "data": null}`. Nothing says whether `if` must be coerced as an argument (which would raise an error) or read as CollectFields reads it.
 
-**Kit today:** not graded. `Reference.tla`'s `IfValue` only takes Booleans, and no fixture sends a null for a directive's variable.
+**Kit today:** not graded, and no fixture sends a null for a directive's variable. The fragment arguments proposal (graphql-spec#1081) makes the case reachable from literals alone, `...F(b: null)` with `fragment F($b: Boolean = false) on T { a @include(if: $b) }`; `Reference.tla` and `specs/execution.ts` read it as CollectFields does (null is not true), and no fixture gets there ([fragment-arguments.md](fragment-arguments.md)).
 
 ---
 

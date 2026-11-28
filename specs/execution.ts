@@ -25,19 +25,47 @@
  * that every behavior of every variant, on every fixture, refines
  * specs/GraphQLResponse.tla: one response, sent once, valid by
  * Reference!Valid at the moment it's sent.
+ *
+ * Fragments may take arguments (graphql-spec#1081, a proposal no release
+ * has): a fragment defines variables, a spread gives them values, and a
+ * selection inside the fragment reads them before the operation's. The
+ * executor keeps, with every collected field, the scope it was selected in.
  */
 
 import { FIXTURES, type FixtureId } from "./lib/fixtures";
-import type { Condition, Fixture, Json, Outcome, Path, Selection, TypeRef } from "./lib/graphql";
+import type {
+  Condition,
+  Fixture,
+  FragmentVariable,
+  Json,
+  Outcome,
+  Path,
+  Selection,
+  SpreadArgument,
+  TypeRef,
+} from "./lib/graphql";
 
 type Variant = "reportAll" | "filterNulled" | "cancelNulled";
 
+// The variables a selection sees besides the operation's: the fragment it
+// is in ("" outside any fragment) and the values that fragment's variables
+// got from the spread. A variable the fragment defines may have none.
+type Binding = { name: string; value: string };
+type Scope = { fragment: string; values: Binding[] };
+
+// A collected field: the selection, and the scope it was selected in.
+type Selected = { field: Selection; scope: Scope };
+
 // A grouped field set entry: a response key and the fields selected under it.
-type Group = { key: string; fields: Selection[] };
-type Collected = { groups: Group[]; visited: Set<string> };
+type Group = { key: string; fields: Selected[] };
+// failed: a fragment spread's arguments couldn't be coerced.
+type Collected = { groups: Group[]; visited: Set<string>; failed: boolean };
+
+// The values a spread gives its fragment's variables, unless one is refused.
+type Bound = { ok: boolean; values: Binding[] };
 
 // A response position: its declared type and the fields that select it.
-type Position = { type: TypeRef; fields: Selection[] };
+type Position = { type: TypeRef; fields: Selected[] };
 
 // The status of a position: settled to a value, a resolver null, nulled by a
 // field error at or below it, a field error that propagates to its parent,
@@ -86,59 +114,135 @@ const itemType = (listType: TypeRef): TypeRef => ({
   wrappers: listType.wrappers.slice(1),
 });
 
-const ifValue = (condition: Condition) =>
-  condition.kind === "literal" ? condition.value : fx().variables.get(condition.variable)!;
+// The scope of the operation's own selections.
+const OPERATION: Scope = { fragment: "", values: [] };
 
-const isIncluded = (selection: Selection) =>
-  !(selection.skip.kind !== "absent" && ifValue(selection.skip)) &&
-  !(selection.include.kind !== "absent" && !ifValue(selection.include));
+// Whether the scope's fragment defines this variable. If it does, the
+// operation's variable of that name is out of sight, value or no value.
+const isLocal = (scope: Scope, name: string) =>
+  scope.fragment !== "" && fx().fragments.get(scope.fragment)!.variableDefinitions.some((d) => d.name === name);
+
+const hasValue = (scope: Scope, name: string) =>
+  isLocal(scope, name) ? scope.values.some((b) => b.name === name) : fx().variables.has(name);
+
+// "true", "false" or "null". Only for a variable that has a value.
+const valueOf = (scope: Scope, name: string): string =>
+  isLocal(scope, name)
+    ? scope.values.find((b) => b.name === name)!.value
+    : fx().variables.get(name)!
+      ? "true"
+      : "false";
+
+// A variable with no value, or with null, isn't true.
+const ifValue = (condition: Condition, scope: Scope) =>
+  condition.kind === "literal"
+    ? condition.value
+    : hasValue(scope, condition.variable) && valueOf(scope, condition.variable) === "true";
+
+const isIncluded = (selection: Selection, scope: Scope) =>
+  !(selection.skip.kind !== "absent" && ifValue(selection.skip, scope)) &&
+  !(selection.include.kind !== "absent" && !ifValue(selection.include, scope));
+
+// Whether a spread gives a variable a value: a literal, or a variable of
+// the spread's own scope that has one.
+const isGiven = (args: SpreadArgument[], name: string, scope: Scope) =>
+  args.some((a) => a.name === name && (a.kind === "literal" || hasValue(scope, a.variable)));
+
+const givenValue = (args: SpreadArgument[], name: string, scope: Scope): string =>
+  args.find((a) => a.name === name)!.kind === "literal"
+    ? args.find((a) => a.name === name)!.value
+    : valueOf(scope, args.find((a) => a.name === name)!.variable);
+
+// One fragment variable: the value the spread gives it, else its default,
+// else nothing. A Non-Null variable takes neither null nor nothing.
+const bindOne = (definition: FragmentVariable, args: SpreadArgument[], scope: Scope, bound: Bound): Bound =>
+  isGiven(args, definition.name, scope)
+    ? definition.nonNull && givenValue(args, definition.name, scope) === "null"
+      ? { ok: false, values: bound.values }
+      : { ok: true, values: [...bound.values, { name: definition.name, value: givenValue(args, definition.name, scope) }] }
+    : definition.hasDefault
+      ? { ok: true, values: [...bound.values, { name: definition.name, value: definition.default }] }
+      : { ok: !definition.nonNull, values: bound.values };
+
+const bind = (definitions: FragmentVariable[], args: SpreadArgument[], scope: Scope, i: number, bound: Bound): Bound =>
+  i >= definitions.length || !bound.ok
+    ? bound
+    : bind(definitions, args, scope, i + 1, bindOne(definitions[i], args, scope, bound));
 
 const applies = (objectType: string, condition: string) =>
   fx().schema.types.get(condition)!.kind === "object"
     ? objectType === condition
     : fx().schema.types.get(condition)!.possibleTypes.has(objectType);
 
-const addField = (groups: Group[], key: string, field: Selection): Group[] =>
+const addField = (groups: Group[], key: string, field: Selected): Group[] =>
   groups.some((g) => g.key === key)
     ? groups.map((g) => (g.key === key ? { key: g.key, fields: [...g.fields, field] } : g))
     : [...groups, { key, fields: [field] }];
 
-const collect = (objectType: string, selections: Selection[], i: number, acc: Collected): Collected =>
-  i >= selections.length
+// Once a spread's arguments are refused, nothing more is collected.
+const collect = (objectType: string, selections: Selection[], scope: Scope, i: number, acc: Collected): Collected =>
+  i >= selections.length || acc.failed
     ? acc
-    : collect(objectType, selections, i + 1, collectOne(objectType, selections[i], acc));
+    : collect(objectType, selections, scope, i + 1, collectOne(objectType, selections[i], scope, acc));
 
-const collectOne = (objectType: string, selection: Selection, acc: Collected): Collected =>
-  !isIncluded(selection)
+const collectOne = (objectType: string, selection: Selection, scope: Scope, acc: Collected): Collected =>
+  !isIncluded(selection, scope)
     ? acc
     : selection.kind === "field"
       ? {
-          groups: addField(acc.groups, selection.alias === "" ? selection.name : selection.alias, selection),
+          groups: addField(acc.groups, selection.alias === "" ? selection.name : selection.alias, { field: selection, scope }),
           visited: acc.visited,
+          failed: false,
         }
       : selection.kind === "inlineFragment"
         ? selection.typeCondition !== "" && !applies(objectType, selection.typeCondition)
           ? acc
-          : collect(objectType, selection.selectionSet, 0, acc)
+          : collect(objectType, selection.selectionSet, scope, 0, acc)
         : acc.visited.has(selection.name)
           ? acc
           : applies(objectType, fx().fragments.get(selection.name)!.typeCondition)
-            ? collect(objectType, fx().fragments.get(selection.name)!.selectionSet, 0, {
-                groups: acc.groups,
-                visited: acc.visited.union(new Set([selection.name])),
-              })
-            : { groups: acc.groups, visited: acc.visited.union(new Set([selection.name])) };
+            ? collectFragment(
+                objectType,
+                selection,
+                bind(fx().fragments.get(selection.name)!.variableDefinitions, selection.arguments, scope, 0, {
+                  ok: true,
+                  values: [],
+                }),
+                acc,
+              )
+            : { groups: acc.groups, visited: acc.visited.union(new Set([selection.name])), failed: false };
 
-// Each field's sub-selection is collected with its own visited fragments.
-const collectSubfields = (objectType: string, fields: Selection[], i: number, groups: Group[]): Group[] =>
-  i >= fields.length
-    ? groups
+// A spread whose arguments were coerced: its fragment's selections, in the
+// fragment's own scope.
+const collectFragment = (objectType: string, selection: Selection, bound: Bound, acc: Collected): Collected =>
+  bound.ok
+    ? collect(
+        objectType,
+        fx().fragments.get(selection.name)!.selectionSet,
+        { fragment: selection.name, values: bound.values },
+        0,
+        { groups: acc.groups, visited: acc.visited.union(new Set([selection.name])), failed: false },
+      )
+    : { groups: acc.groups, visited: acc.visited, failed: true };
+
+// Each field's sub-selection is collected with its own visited fragments,
+// in the scope that field was selected in.
+const collectSubfields = (objectType: string, fields: Selected[], i: number, acc: Collected): Collected =>
+  i >= fields.length || acc.failed
+    ? acc
     : collectSubfields(
         objectType,
         fields,
         i + 1,
-        collect(objectType, fields[i].selectionSet, 0, { groups, visited: new Set<string>() }).groups,
+        collect(objectType, fields[i].field.selectionSet, fields[i].scope, 0, {
+          groups: acc.groups,
+          visited: new Set<string>(),
+          failed: false,
+        }),
       );
+
+const subfields = (objectType: string, fields: Selected[]): Collected =>
+  collectSubfields(objectType, fields, 0, { groups: [], visited: new Set<string>(), failed: false });
 
 // §6.2: the root type for the operation's type.
 const rootType = () =>
@@ -148,14 +252,16 @@ const rootType = () =>
       ? fx().schema.mutation
       : fx().schema.subscription;
 
+// The root selection set of a fixture always collects: no fixture has a
+// spread there whose arguments are refused (scripts/generate-fixtures.mjs).
 const rootGroups = () =>
-  collect(rootType(), fx().operation, 0, { groups: [], visited: new Set<string>() }).groups;
+  collect(rootType(), fx().operation, OPERATION, 0, { groups: [], visited: new Set<string>(), failed: false }).groups;
 
 // __typename is answered from the runtime type, without a resolver.
-const isTypename = (group: Group) => group.fields[0].name === "__typename";
+const isTypename = (group: Group) => group.fields[0].field.name === "__typename";
 
 const fieldType = (objectType: string, group: Group) =>
-  fx().schema.types.get(objectType)!.fields.get(group.fields[0].name)!;
+  fx().schema.types.get(objectType)!.fields.get(group.fields[0].field.name)!;
 
 // Whether an execution error at a position of this type propagates to its
 // parent. Off for every position under @experimental_disableErrorPropagation.
@@ -166,8 +272,7 @@ const propagates = (type: TypeRef) => isNonNull(type) && fx().errorPropagation;
 // ---------------------------------------------------------------------------
 
 // The groups under a settled object position.
-const groupsOf = (path: Path, position: Position) =>
-  collectSubfields(outcomes.get(path)!.type, position.fields, 0, []);
+const groupsOf = (path: Path, position: Position) => subfields(outcomes.get(path)!.type, position.fields).groups;
 
 const positionOf = (path: Path): Position =>
   path.length === 1
@@ -208,16 +313,23 @@ const isWrongShape = (position: Position, outcome: Outcome) =>
     (outcome.kind === "object" &&
       !fx().schema.types.get(position.type.name)!.possibleTypes.has(outcome.type)));
 
+// An object whose sub-selection can't be collected: a fragment spread in
+// it, of a fragment that applies to the object's type, has arguments that
+// are refused. The object's own position is where that error is.
+const cannotCollect = (position: Position, outcome: Outcome) =>
+  outcome.kind === "object" && !isWrongShape(position, outcome) && subfields(outcome.type, position.fields).failed;
+
 // The child positions an object or list outcome creates, in order. A result
-// of the wrong shape has none.
+// of the wrong shape has none, nor has an object whose sub-selection can't
+// be collected.
 const childPaths = (path: Path, position: Position, outcome: Outcome): Path[] =>
-  isWrongShape(position, outcome)
+  isWrongShape(position, outcome) || cannotCollect(position, outcome)
     ? []
     : outcome.kind === "list"
       ? Array.from({ length: outcome.length }, (_, i) => [...path, `${i}`])
       : outcome.kind === "object"
-        ? collectSubfields(outcome.type, position.fields, 0, [])
-            .filter((g) => !isTypename(g))
+        ? subfields(outcome.type, position.fields)
+            .groups.filter((g) => !isTypename(g))
             .map((g) => [...path, g.key])
         : [];
 
@@ -274,10 +386,12 @@ const choicesFor = (position: Position): Set<Outcome> =>
 // ---------------------------------------------------------------------------
 
 // An execution error raised at this position: an error, a result of the
-// wrong shape, or null where the type is Non-Null.
+// wrong shape, null where the type is Non-Null, or an object whose
+// sub-selection can't be collected.
 const raisesError = (path: Path, outcome: Outcome) =>
   outcome.kind === "error" ||
   isWrongShape(positionOf(path), outcome) ||
+  cannotCollect(positionOf(path), outcome) ||
   (outcome.kind === "null" && isNonNull(positionOf(path).type));
 
 // What an execution error at or below this position makes it.

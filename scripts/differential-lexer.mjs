@@ -30,6 +30,17 @@
 // from §2.10.4's "When producing a StringValue" text, and tla-ts checks that
 // IsWellPrintedString in Lexer.tla judges it the same way.
 //
+// Fragment arguments (graphql-spec#1081, a proposal and not part of
+// September 2026): Parser.tla's vectors for it, short token sequences after a
+// spread's and a fragment's name, and seeded random documents and one-token
+// mutations of them from the same generator with the proposal's syntax
+// switched on. Each is parsed by graphql-js 17 with
+// experimentalFragmentArguments (graphql-js 16 has no such parser), and
+// tla-ts checks ParseExecutableWith(source, {FragmentArguments}) gives the
+// same tree, or also fails. The parser cases above read the same vectors
+// without the proposal, where both graphql-js versions must reject the new
+// syntax, as ParseExecutable does.
+//
 // Error positions are not compared, only success versus failure. They
 // legitimately differ: the reference counts code points from 1, graphql-js
 // counts UTF-16 code units from 0, and they may report different points of
@@ -75,10 +86,13 @@ const mulberry32 = (seed) => () => {
   t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 };
+// The draws a generator makes, from one random stream.
+const dice = (random) => {
+  const int = (n) => Math.floor(random() * n);
+  return { int, pick: (items) => items[int(items.length)], chance: (p) => random() < p };
+};
 const rnd = mulberry32(SEED);
-const int = (n) => Math.floor(rnd() * n);
-const pick = (items) => items[int(items.length)];
-const chance = (p) => rnd() < p;
+const { int, pick, chance } = dice(rnd);
 const range = (n) => Array.from({ length: n }, (_, i) => i);
 
 // Every sequence of up to maxLength atoms.
@@ -154,8 +168,11 @@ const NAMES = ["a", "b", "on", "query", "fragment", "true", "null", "Foo", "_x",
 const NOT_ON = NAMES.filter((n) => n !== "on");
 const STRINGS = ['"s"', '""', '"\\u00e9\\n"', '"""\n  block\n"""', '""""""'];
 
-// A random token sequence over the executable grammar, mostly valid.
-const document = () => {
+// A random token sequence over the executable grammar, mostly valid. With
+// `proposal`, a fragment may define variables and a spread may have
+// arguments (graphql-spec#1081); without it, the draws are the same as they
+// were before the proposal was added.
+const documentFrom = ({ int, pick, chance }, proposal) => {
   const name = () => pick(NAMES);
   const value = (depth, isConst) => {
     const kinds = ["int", "float", "string", "bool", "null", "enum"];
@@ -197,7 +214,7 @@ const document = () => {
         ...(depth < 3 && chance(0.4) ? selectionSet(depth + 1) : []),
       ];
     }
-    if (k < 8) return ["...", pick(NOT_ON), ...directives(false)];
+    if (k < 8) return ["...", pick(NOT_ON), ...(proposal ? args(false) : []), ...directives(false)];
     return ["...", ...(chance(0.6) ? ["on", pick(["T", "on"])] : []), ...directives(false), ...selectionSet(depth + 1)];
   };
   const variables = () =>
@@ -221,16 +238,21 @@ const document = () => {
         ...variables(), ...directives(false), ...selectionSet(0),
       ];
     }
-    return [...description(), "fragment", chance(0.05) ? "on" : pick(NOT_ON), "on", pick(["T", "on"]), ...directives(false), ...selectionSet(0)];
+    return [
+      ...description(), "fragment", chance(0.05) ? "on" : pick(NOT_ON), ...(proposal ? variables() : []),
+      "on", pick(["T", "on"]), ...directives(false), ...selectionSet(0),
+    ];
   };
   return range(1 + int(2)).flatMap(() => definition());
 };
+const document = () => documentFrom({ int, pick, chance }, false);
 
 const TOKEN_POOL = ["{", "}", "(", ")", "[", "]", ":", "$", "@", "!", "=", "...", "a", "on", "query", "fragment", "1", '"s"', "null"];
 const SEPARATORS = [" ", " ", " ", ",", "\n", "\t", " #c\n", "\r\n", "\uFEFF"];
-const spaced = (tokens) => tokens.map((t, i) => (i === 0 ? t : pick(SEPARATORS) + t)).join("");
+const spacedFrom = ({ pick }) => (tokens) => tokens.map((t, i) => (i === 0 ? t : pick(SEPARATORS) + t)).join("");
+const spaced = spacedFrom({ pick });
 
-const mutate = (tokens) => {
+const mutateFrom = ({ int, pick }) => (tokens) => {
   const out = [...tokens];
   const i = int(out.length);
   switch (int(5)) {
@@ -242,6 +264,12 @@ const mutate = (tokens) => {
   }
   return out;
 };
+const mutate = mutateFrom({ int, pick });
+
+// The sources of Parser.tla's fragment argument vectors that are read as an
+// ExecutableDocument.
+const proposalVectors = () =>
+  vectorSources(/(?:Proposed|NotProposed)\("executable",\s*"((?:[^"\\]|\\.)*)"/g, "Parser.tla");
 
 const parserInputs = () => {
   const inputs = new Set([
@@ -251,12 +279,39 @@ const parserInputs = () => {
     ...words(["(", ")", "x", ":", "1", "@", "d", "{", "}", "...", "on", "$"].map((t) => `${t} `), 3).map((w) => `{a ${w}}`),
     ...words(["on", "F", "T", "@", "d", "(", ")", "$", "{", "}"].map((t) => `${t} `), 3).map((w) => `fragment ${w}{a}`),
     ...vectorSources(/(?:Parses|Rejects)\("((?:[^"\\]|\\.)*)"/g, "Parser.tla"),
+    ...proposalVectors(),
   ]);
   inputs.add("query ($a: [Int!]! = [1], $b: String @d(x: 2)) @e { a: b(x: [1, 2.5, \"s\", E, null, {k: $v}]) ...F ... on T {c} }");
   for (let i = 0; i < RANDOM; i++) {
     const tokens = document();
     inputs.add(spaced(tokens));
     inputs.add(spaced(mutate(tokens)));
+  }
+  return [...inputs];
+};
+
+// Fragment arguments (graphql-spec#1081), read with the proposal. These have
+// their own random stream, so the inputs above are what they were without
+// them.
+const proposalDice = dice(mulberry32(SEED + 2000));
+
+const proposalInputs = () => {
+  const inputs = new Set([
+    ...proposalVectors(),
+    // September 2026's own vectors: the proposal only adds syntax.
+    ...vectorSources(/(?:Parses|Rejects)\("((?:[^"\\]|\\.)*)"/g, "Parser.tla"),
+    // After a spread's name, and after a fragment's name.
+    ...words(["(", ")", "x", ":", "1", "$", "@", "d", "{", "}", "on"].map((t) => `${t} `), 4).map((w) => `{...F ${w}}`),
+    ...words(["(", ")", "$", "x", ":", "Int", "!", "=", "1", "@", "on", "T"].map((t) => `${t} `), 4).map((w) => `fragment F ${w}{a}`),
+    ...words(["on", "F", "T", "@", "d", "(", ")", "$", "{", "}"].map((t) => `${t} `), 3).map((w) => `fragment ${w}{a}`),
+  ]);
+  inputs.add("fragment F($a: [Int!]! = [1], \"d\" $b: String = \"s\" @d(x: 2)) on T @e { a(x: $a) ...G(a: [1, 2.5, \"s\", E, null, {k: $b}], b: $a) @d ... on T {c} }");
+  const spacedHere = spacedFrom(proposalDice);
+  const mutateHere = mutateFrom(proposalDice);
+  for (let i = 0; i < RANDOM; i++) {
+    const tokens = documentFrom(proposalDice, true);
+    inputs.add(spacedHere(tokens));
+    inputs.add(spacedHere(mutateHere(tokens)));
   }
   return [...inputs];
 };
@@ -526,27 +581,31 @@ const selection = (s) => {
       s.selectionSet ? selectionSet(s.selectionSet) : NONE,
     ]);
   }
-  if (s.kind === "FragmentSpread") return node("FragmentSpread", s.name.value, [directives(s.directives)]);
+  // A spread's arguments and a fragment's variables are graphql-spec#1081.
+  // Without the proposal both are empty, as in Parser.tla.
+  if (s.kind === "FragmentSpread") return node("FragmentSpread", s.name.value, [args(s.arguments), directives(s.directives)]);
   return node("InlineFragment", "", [
     s.typeCondition ? node("NamedType", s.typeCondition.name.value) : NONE,
     directives(s.directives),
     selectionSet(s.selectionSet),
   ]);
 };
+const variablesDefinition = (list) =>
+  node("VariablesDefinition", "", (list ?? []).map((v) =>
+    node("VariableDefinition", "", [
+      description(v.description),
+      node("Variable", v.variable.name.value),
+      type(v.type),
+      v.defaultValue ? value(v.defaultValue) : NONE,
+      directives(v.directives),
+    ]),
+  ));
 const definition = (d) => {
   if (d.kind === "OperationDefinition") {
     return node("OperationDefinition", d.operation, [
       description(d.description),
       d.name ? node("Name", d.name.value) : NONE,
-      node("VariablesDefinition", "", (d.variableDefinitions ?? []).map((v) =>
-        node("VariableDefinition", "", [
-          description(v.description),
-          node("Variable", v.variable.name.value),
-          type(v.type),
-          v.defaultValue ? value(v.defaultValue) : NONE,
-          directives(v.directives),
-        ]),
-      )),
+      variablesDefinition(d.variableDefinitions),
       directives(d.directives),
       selectionSet(d.selectionSet),
     ]);
@@ -554,6 +613,7 @@ const definition = (d) => {
   if (d.kind === "FragmentDefinition") {
     return node("FragmentDefinition", d.name.value, [
       description(d.description),
+      variablesDefinition(d.variableDefinitions),
       node("NamedType", d.typeCondition.name.value),
       directives(d.directives),
       selectionSet(d.selectionSet),
@@ -628,10 +688,10 @@ const ALLOWED = {
 
 // graphql-js's parse, read as one of ParseDocument's grammars: the tree if
 // every definition is of a kind the grammar allows, and a failure otherwise.
-const documentWith = (graphql, source, grammar) => {
+const documentWith = (graphql, source, grammar, options = {}) => {
   let parsed;
   try {
-    parsed = graphql.parse(source, { noLocation: true });
+    parsed = graphql.parse(source, { noLocation: true, ...options });
   } catch (error) {
     if (error instanceof graphql.GraphQLError) return { ok: false, tree: NONE, message: error.message };
     throw error;
@@ -644,10 +704,15 @@ const documentWith = (graphql, source, grammar) => {
 // As an ExecutableDocument. A source graphql-js parses into type system
 // definitions is not one, and is skipped here: the type system inputs
 // below read it as the other grammars.
-const parseWith = (graphql, source) => {
-  const result = documentWith(graphql, source, "executable");
+const parseWith = (graphql, source, options) => {
+  const result = documentWith(graphql, source, "executable", options);
   return result.parsed && !result.ok ? { skip: true } : result;
 };
+
+// As an ExecutableDocument with fragment arguments (graphql-spec#1081), which
+// only graphql-js 17 reads, behind a flag.
+const PROPOSAL_VERSIONS = [graphql17];
+const proposalWith = (graphql, source) => parseWith(graphql, source, { experimentalFragmentArguments: true });
 
 const hasNode = (tree, test) => test(tree) || tree.children.some((c) => hasNode(c, test));
 const hasEmptySelectionSet = (tree) =>
@@ -715,14 +780,20 @@ const expectationKey = (kind, r) =>
 
 // One case per distinct (source, graphql-js result, alternative). An "sdl"
 // input is a [source, grammar] pair.
+const RUN = {
+  lex: lexWith,
+  parse: (graphql, source) => parseWith(graphql, source),
+  proposal: proposalWith,
+  sdl: (graphql, [source, grammar]) => documentWith(graphql, source, grammar),
+};
 const buildCases = (kind, inputs) => {
-  const run = kind === "lex" ? lexWith : kind === "parse" ? parseWith : (graphql, [source, grammar]) => documentWith(graphql, source, grammar);
+  const run = RUN[kind];
   const cases = [];
   let skipped = 0;
   for (const input of inputs) {
     const [source, grammar] = kind === "sdl" ? input : [input, undefined];
     const byKey = new Map();
-    for (const graphql of VERSIONS) {
+    for (const graphql of kind === "proposal" ? PROPOSAL_VERSIONS : VERSIONS) {
       const result = run(graphql, input);
       if (result.skip) {
         skipped++;
@@ -761,9 +832,9 @@ const caseToTla = (c) => {
         `altOk |-> ${alt.ok ? "TRUE" : "FALSE"}, altNode |-> ${treeToTla(alt.tree)}]`;
 };
 
-const KINDS_CHECKED = ["lex", "parse", "sdl", "print"];
+const KINDS_CHECKED = ["lex", "parse", "proposal", "sdl", "print"];
 
-// cases: { lex, parse, sdl, print }, each a list of cases of that kind.
+// cases: { lex, parse, proposal, sdl, print }, each a list of cases of that kind.
 const moduleFor = (name, cases) => `---- MODULE ${name} ----
 EXTENDS Parser, TLC
 
@@ -772,23 +843,28 @@ Nd(k, t, c) == [kind |-> k, text |-> t, children |-> c]
 
 LexCases == ${seq(cases.lex.map(caseToTla))}
 ParseCases == ${seq(cases.parse.map(caseToTla))}
+ProposalCases == ${seq(cases.proposal.map(caseToTla))}
 SdlCases == ${seq(cases.sdl.map(caseToTla))}
 PrintCases == ${seq(cases.print.map(caseToTla))}
 
 LexMatches(c, ok, tokens) == LET lexed == Lex(c.src) IN lexed.ok = ok /\\ lexed.tokens = tokens
 ParseMatches(c, ok, tree) == ParseExecutable(c.src) = [ok |-> ok, node |-> tree]
+ProposalMatches(c, ok, tree) == ParseExecutableWith(c.src, {FragmentArguments}) = [ok |-> ok, node |-> tree]
 SdlMatches(c, ok, tree) == ParseDocument(c.src, c.g) = [ok |-> ok, node |-> tree]
 
 LexDiffers == {i \\in DOMAIN LexCases : ~LexMatches(LexCases[i], LexCases[i].ok, LexCases[i].tokens)}
 ParseDiffers == {i \\in DOMAIN ParseCases : ~ParseMatches(ParseCases[i], ParseCases[i].ok, ParseCases[i].node)}
+ProposalDiffers == {i \\in DOMAIN ProposalCases : ~ProposalMatches(ProposalCases[i], ProposalCases[i].ok, ProposalCases[i].node)}
 SdlDiffers == {i \\in DOMAIN SdlCases : ~SdlMatches(SdlCases[i], SdlCases[i].ok, SdlCases[i].node)}
 PrintDiffers == {i \\in DOMAIN PrintCases : IsWellPrintedString(PrintCases[i].text, PrintCases[i].printed) # PrintCases[i].well}
 LexUnexplained == {i \\in LexDiffers : ~LexMatches(LexCases[i], LexCases[i].altOk, LexCases[i].altTokens)}
 ParseUnexplained == {i \\in ParseDiffers : ~ParseMatches(ParseCases[i], ParseCases[i].altOk, ParseCases[i].altNode)}
+ProposalUnexplained == {i \\in ProposalDiffers : ~ProposalMatches(ProposalCases[i], ProposalCases[i].altOk, ProposalCases[i].altNode)}
 SdlUnexplained == {i \\in SdlDiffers : ~SdlMatches(SdlCases[i], SdlCases[i].altOk, SdlCases[i].altNode)}
 
 ASSUME PrintT(<<"lex differs", LexDiffers>>) /\\ PrintT(<<"lex unexplained", LexUnexplained>>)
 ASSUME PrintT(<<"parse differs", ParseDiffers>>) /\\ PrintT(<<"parse unexplained", ParseUnexplained>>)
+ASSUME PrintT(<<"proposal differs", ProposalDiffers>>) /\\ PrintT(<<"proposal unexplained", ProposalUnexplained>>)
 ASSUME PrintT(<<"sdl differs", SdlDiffers>>) /\\ PrintT(<<"sdl unexplained", SdlUnexplained>>)
 ASSUME PrintT(<<"print differs", PrintDiffers>>) /\\ PrintT(<<"print unexplained", PrintDiffers>>)
 
@@ -859,7 +935,7 @@ const byKind = (cases) => Object.fromEntries(KINDS_CHECKED.map((kind) => [kind, 
 
 // Negative controls: plausible ways a graphql-js result could be wrong, made
 // from cases where graphql-js and the reference agree.
-const controls = (lexCases, parseCases, sdlCases, printCases) => {
+const controls = (lexCases, parseCases, proposalCases, sdlCases, printCases) => {
   const out = [];
   const add = (name, c, result) => out.push({ ...c, name, result, alternative: undefined });
   const lexOk = lexCases.filter((c) => c.result.ok && c.result.tokens.length > 0);
@@ -919,6 +995,46 @@ const controls = (lexCases, parseCases, sdlCases, printCases) => {
   if (constVar && parseOk[0]) add("a variable in a constant value is accepted", constVar, parseOk[0].result);
   if (parseOk[0]) add("a parsed document reported as an error", parseOk[0], { ok: false, tree: NONE });
 
+  // Fragment arguments (graphql-spec#1081).
+  const proposalOk = proposalCases.filter((c) => c.result.ok);
+  const hasArguments = (t) => t.kind === "FragmentSpread" && t.children[0].children.length > 0;
+  const hasVariables = (t) => t.kind === "FragmentDefinition" && t.children[1].children.length > 0;
+  const withArguments = proposalOk.find((c) => hasNode(c.result.tree, hasArguments));
+  if (withArguments) {
+    add("a spread's arguments are dropped", withArguments, {
+      ok: true,
+      tree: rewrite(withArguments.result.tree, (t) => (hasArguments(t) ? { ...t, children: [node("Arguments"), t.children[1]] } : t)),
+    });
+    add("a document with fragment arguments reported as an error", withArguments, { ok: false, tree: NONE });
+  }
+  const withVariables = proposalOk.find((c) => hasNode(c.result.tree, hasVariables));
+  if (withVariables) {
+    add("a fragment's variables are dropped", withVariables, {
+      ok: true,
+      tree: rewrite(withVariables.result.tree, (t) =>
+        hasVariables(t) ? { ...t, children: [t.children[0], node("VariablesDefinition"), ...t.children.slice(2)] } : t,
+      ),
+    });
+  }
+  const twoArguments = proposalOk.find((c) => hasNode(c.result.tree, (t) => t.kind === "FragmentSpread" && t.children[0].children.length > 1));
+  if (twoArguments) {
+    add("a spread's arguments are reordered", twoArguments, {
+      ok: true,
+      tree: rewrite(twoArguments.result.tree, (t) =>
+        t.kind === "FragmentSpread" ? { ...t, children: [{ ...t.children[0], children: [...t.children[0].children].reverse() }, t.children[1]] } : t,
+      ),
+    });
+  }
+  const noSuchSyntax = proposalCases.find((c) => !c.result.ok && c.source === "{...F ( ) }");
+  if (noSuchSyntax && withArguments) add("a spread with no arguments between its parentheses is accepted", noSuchSyntax, withArguments.result);
+  // The same source without the proposal: September 2026 has no such syntax.
+  const rejected = new Map(parseCases.filter((c) => !c.result.ok).map((c) => [c.source, c]));
+  const alsoRead = (test) => proposalOk.find((c) => rejected.has(c.source) && hasNode(c.result.tree, test));
+  const argumentsRead = alsoRead(hasArguments);
+  if (argumentsRead) add("a spread's arguments are read without the proposal", rejected.get(argumentsRead.source), argumentsRead.result);
+  const variablesRead = alsoRead(hasVariables);
+  if (variablesRead) add("a fragment's variables are read without the proposal", rejected.get(variablesRead.source), variablesRead.result);
+
   const sdlOk = sdlCases.filter((c) => c.result.ok);
   const twoFields = sdlOk.find((c) => hasNode(c.result.tree, (t) => t.kind === "FieldsDefinition" && t.children.length > 1));
   if (twoFields) {
@@ -969,9 +1085,11 @@ const lex = buildCases("lex", lexerInputs());
 const parse = buildCases("parse", parserInputs());
 const lexCases = shuffle(lex.cases);
 const parseCases = shuffle(parse.cases);
+const proposal = buildCases("proposal", proposalInputs());
+const proposalCases = shuffle(proposal.cases);
 const sdlCases = shuffle(buildCases("sdl", sdlInputs()).cases);
 const printCases = shuffle(printInputs());
-const allChunks = chunks({ lex: lexCases, parse: parseCases, sdl: sdlCases, print: printCases });
+const allChunks = chunks({ lex: lexCases, parse: parseCases, proposal: proposalCases, sdl: sdlCases, print: printCases });
 
 const fresh = () => {
   const dir = mkdtempSync(join(tmpdir(), "differential-"));
@@ -1002,6 +1120,7 @@ if (!MUTANTS) {
     const distinct = (cases) => new Set(cases.map((c) => c.source)).size;
     console.log(`  lexer: ${distinct(lexCases)} inputs, ${lexCases.length} cases (one per distinct graphql-js result)`);
     console.log(`  parser: ${distinct(parseCases)} inputs, ${parseCases.length} cases, ${parse.skipped} type system results left to the type system cases`);
+    console.log(`  fragment arguments (graphql-spec#1081, graphql-js ${PROPOSAL_VERSIONS.map((g) => g.version).join(", ")} with experimentalFragmentArguments): ${distinct(proposalCases)} inputs, ${proposalCases.filter((c) => c.result.ok).length} parsed, ${proposal.skipped} type system results skipped`);
     console.log(`  type system: ${new Set(sdlCases.map((c) => `${c.grammar}\u0000${c.source}`)).size} inputs (source and grammar), ${sdlCases.length} cases`);
     console.log(`  printing: ${printCases.length} printed strings from ${PRINTERS.length} printers, ${printCases.filter((c) => c.well).length} judged well printed`);
 
@@ -1010,7 +1129,7 @@ if (!MUTANTS) {
       failed = true;
     }
     if (unexplained.length === 0) {
-      console.log(`✓ every graphql-js 16 and 17 result agrees with Lexer.tla and Parser.tla, except the known discrepancies, and every printed string is judged as IsWellPrintedString judges it`);
+      console.log(`✓ every graphql-js 16 and 17 result agrees with Lexer.tla and Parser.tla, except the known discrepancies, graphql-js 17's fragment arguments agree with ParseExecutableWith, and every printed string is judged as IsWellPrintedString judges it`);
     }
     for (const k of KNOWN) {
       const seen = differs.filter((c) => c.known === k.id && !unexplained.includes(c));
@@ -1026,7 +1145,7 @@ if (!MUTANTS) {
     }
 
     const agreeing = (cases) => cases.filter((c) => !differs.includes(c));
-    const negative = controls(agreeing(lexCases), agreeing(parseCases), agreeing(sdlCases), agreeing(printCases));
+    const negative = controls(agreeing(lexCases), agreeing(parseCases), agreeing(proposalCases), agreeing(sdlCases), agreeing(printCases));
     const check = await checkChunk(dir, "Controls", byKind(negative));
     if (check.error) {
       console.log(`✗ tla-ts failed on the controls: ${check.error}`);
