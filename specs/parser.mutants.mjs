@@ -8,15 +8,15 @@ const file = "Parser.tla";
 export default [
   {
     name: "accepts an empty document",
-    find: "ExecutableDocument(toks) == IF toks = <<>> THEN Fail(1) ELSE Definitions(toks, 1, <<>>)",
-    replace: "ExecutableDocument(toks) == Definitions(toks, 1, <<>>)",
+    find: "ExecutableDocument(toks, proposals) == IF toks = <<>> THEN Fail(1) ELSE Definitions(toks, 1, proposals, <<>>)",
+    replace: "ExecutableDocument(toks, proposals) == Definitions(toks, 1, proposals, <<>>)",
     file,
     property: "DocumentsParse",
   },
   {
     name: "allows a description on query shorthand",
-    find: "  CASE IsPunctuator(toks, k, LBrace) -> ShorthandQuery(toks, k)",
-    replace: "  CASE IsPunctuator(toks, keyword, LBrace) -> ShorthandQuery(toks, keyword)",
+    find: "  CASE IsPunctuator(toks, k, LBrace) -> ShorthandQuery(toks, k, proposals)",
+    replace: "  CASE IsPunctuator(toks, keyword, LBrace) -> ShorthandQuery(toks, keyword, proposals)",
     file,
     property: "DocumentsParse",
   },
@@ -168,5 +168,36 @@ export default [
     replace: "  IF IsPunctuator(toks, k, Dollar) /\\ IsName(toks, k + 1) /\\ Tk(toks, k + 1).value \\notin OperationTypes\n",
     file,
     property: "EdgesParse",
+  },
+  // Fragment arguments (graphql-spec#1081), read only with the proposal.
+  {
+    name: "a spread's arguments are constant, like a variable's default (...F(a: $v))",
+    find: "      arguments == IF FragmentArguments \\in proposals THEN OptionalArguments(toks, name.next, FALSE)",
+    replace: "      arguments == IF FragmentArguments \\in proposals THEN OptionalArguments(toks, name.next, TRUE)",
+    file,
+    property: "FragmentArgumentsParse",
+  },
+  {
+    name: "a fragment's variables are parsed and then left out of its definition",
+    find: "                      <<description.node, variables.node, condition.node, directives.node, set.node>>),",
+    replace:
+      '                      <<description.node, Items("VariablesDefinition", <<>>), condition.node, directives.node, set.node>>),',
+    file,
+    property: "FragmentArgumentsParse",
+  },
+  {
+    name: "reads a spread's arguments without the proposal, so September 2026 accepts ...F(a: 1)",
+    find: "      arguments == IF FragmentArguments \\in proposals THEN OptionalArguments(toks, name.next, FALSE)",
+    replace: "      arguments == IF TRUE THEN OptionalArguments(toks, name.next, FALSE)",
+    file,
+    property: "FragmentArgumentsAreNew",
+  },
+  {
+    name: "with the proposal, a fragment definition must have variables",
+    find: "      variables == IF FragmentArguments \\in proposals THEN OptionalVariablesDefinition(toks, name.next)",
+    replace:
+      "      variables == IF FragmentArguments \\in proposals\n                   THEN (IF IsPunctuator(toks, name.next, LParen) THEN VariableDefinitions(toks, name.next + 1, <<>>) ELSE Fail(name.next))",
+    file,
+    property: "FragmentArgumentsOnlyAdd",
   },
 ];
