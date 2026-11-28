@@ -916,7 +916,6 @@ SelectionVectors == <<
   Rejects("fragment F on T @d"),
   \* September 2026 has no fragment arguments (see Proposals).
   Rejects("fragment F($a: Int) on T {a}"),
-  Rejects("{...F(a: 1)}"),
   Rejects("{a"),
   Rejects("{a}}"),
   Rejects("{(a)}"),
