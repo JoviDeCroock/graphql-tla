@@ -5755,6 +5755,75 @@
      }
     }
    ]
+  },
+  {
+   "name": "a dropped error in a fragment arguments fixture is informational, and a call it doesn't select is not",
+   "cases": [
+    {
+     "v": 1,
+     "fixture": "fragmentArgumentsDetails",
+     "trace": [
+      {
+       "call": [
+        "user"
+       ],
+       "type": "User",
+       "after": 0,
+       "parent": "root"
+      },
+      {
+       "settle": [
+        "user"
+       ],
+       "outcome": {
+        "kind": "error"
+       }
+      }
+     ],
+     "initialValue": "root",
+     "response": {
+      "data": {
+       "user": null
+      }
+     }
+    },
+    {
+     "v": 1,
+     "fixture": "fragmentArgumentsDetails",
+     "trace": [
+      {
+       "call": [
+        "user"
+       ],
+       "type": "User",
+       "after": 0,
+       "parent": "root"
+      },
+      {
+       "settle": [
+        "user"
+       ],
+       "outcome": {
+        "kind": "null"
+       }
+      },
+      {
+       "call": [
+        "notSelected"
+       ],
+       "type": "User",
+       "after": 0,
+       "parent": "root"
+      }
+     ],
+     "initialValue": "root",
+     "response": {
+      "data": {
+       "user": null
+      }
+     }
+    }
+   ]
   }
  ]
 }

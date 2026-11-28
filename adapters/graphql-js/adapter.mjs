@@ -76,8 +76,10 @@ send({
     "custom-scalar-results",
     "scalar-results",
     "custom-directives",
-    // @experimental_disableErrorPropagation is new in graphql-js 17.
-    ...(version === "16" ? [] : ["error-propagation-off"]),
+    // @experimental_disableErrorPropagation is new in graphql-js 17, and so
+    // is its experimental parser and executor for fragment arguments
+    // (graphql-spec#1081).
+    ...(version === "16" ? [] : ["error-propagation-off", "fragment-arguments"]),
     ...areaCapabilities,
   ],
 });
@@ -170,7 +172,9 @@ const start = (message) => {
   const { id } = message;
   const schema = graphql.buildSchema(message.schema);
   coerceCustomScalars(schema);
-  let document = graphql.parse(message.document);
+  // Only a fixture that requires fragment-arguments has the proposal's
+  // syntax, and graphql-js 16, which doesn't claim it, is never sent one.
+  let document = graphql.parse(message.document, { experimentalFragmentArguments: true });
   if (!message.errorPropagation) {
     const directive = { kind: graphql.Kind.DIRECTIVE, name: { kind: graphql.Kind.NAME, value: "experimental_disableErrorPropagation" }, arguments: [] };
     document = {

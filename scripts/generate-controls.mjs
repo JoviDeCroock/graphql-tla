@@ -9,9 +9,10 @@
 // them are stored after checking that their report is right. The corpus is
 // committed, so the controls don't depend on the implementation under
 // test. The corpus also keeps the bases kit/execution/protocol-controls.mjs
-// derives its controls from (KEPT_BASES). Fixtures outside the spec (error propagation off) give no bases for
-// controls, since their failures are only informational, but report
-// controls use them.
+// derives its controls from (KEPT_BASES). Fixtures outside the spec (error
+// propagation off, fragment arguments: kit/execution/outside.mjs) give no
+// bases for controls, since their failures are only informational, but
+// report controls use them.
 //
 // Usage: node scripts/generate-controls.mjs
 
@@ -22,6 +23,7 @@ import { Adapter } from "../kit/adapter.mjs";
 import { CASE_FORMAT, caseToTla, controlCaught, evaluate, judgeReportControl, normalize } from "../kit/execution/check.mjs";
 import { CONTROLS, REPORT_CONTROLS } from "../kit/execution/controls.mjs";
 import { Driver, exhaustive, random } from "../kit/execution/drive.mjs";
+import { outsideSpec } from "../kit/execution/outside.mjs";
 import { loadFixtures } from "../kit/fixtures.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../..");
@@ -56,7 +58,7 @@ const candidates = recorded
   .sort((a, b) => a.raw.trace.length - b.raw.trace.length);
 const verdicts = await evaluate(candidates.map((c) => c.prepared.tla));
 const passingAll = candidates.filter((_, i) => verdicts[i].failures.length === 0).map((c) => c.raw);
-const passing = passingAll.filter((raw) => byId.get(raw.fixture).errorPropagation);
+const passing = passingAll.filter((raw) => !outsideSpec(byId.get(raw.fixture)));
 console.log(`${recorded.length} runs, ${passingAll.length} distinct passing cases, ${passing.length} in fixtures inside the spec`);
 
 const bases = [];

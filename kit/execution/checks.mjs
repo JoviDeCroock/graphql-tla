@@ -440,4 +440,15 @@ export const CHECKS = [
     basis:
       "Not a GraphQL rule: no release (October 2021, September 2025, September 2026) has execution without error propagation. §6.4.4 says: \"Since Non-Null response positions cannot be null, execution errors are propagated to be handled by the parent response position.\" Every failure of the noPropagation fixture's response (its data and errors) counts here, never against a spec section, and never fails the run. Turning propagation off doesn't change which resolvers run, so protocol problems and the checks on calls (callsOnce, callsSelected, callsReachable, mutationFieldsOnce, calledSerially) keep their own checks.",
   },
+  // Outside the spec: every failure of the response in a fixture that uses
+  // fragment arguments counts here instead of against its own check.
+  {
+    id: "fragmentArguments",
+    level: "INFO",
+    spec: [],
+    requires: ["fragment-arguments"],
+    title: "With fragment arguments, a fragment's variables take the values its spread gives them (the proposal graphql-spec#1081)",
+    basis:
+      "Not a GraphQL rule: no release (October 2021, September 2025, September 2026) has fragment arguments. They are a proposal, graphql-spec#1081, whose CollectFields coerces a fragment spread's arguments into fragment variables (CoerceArgumentValues with the fragment's variable definitions), reads @skip and @include through GetScopedVariableValues, where a fragment's variable hides the operation's variable of the same name, and keeps each collected field with the fragment variables it was selected under (field details). Every failure of the response (its data and errors) in a fixture that uses them counts here, never against a spec section, and never fails the run. The reference takes the proposal's text at the commit docs/fragment-arguments.md names, and that page lists where the text leaves a choice: where the error goes when a spread's arguments can't be coerced is one. Protocol problems and the checks on calls (callsOnce, callsSelected, callsReachable, mutationFieldsOnce, calledSerially) keep their own checks.",
+  },
 ];
