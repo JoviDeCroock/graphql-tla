@@ -181,12 +181,12 @@ stream:   cancelled while an event executes: kit emits event 1; result for event
 
 ## Parse
 
-- **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, error-propagation-off, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
+- **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, error-propagation-off, fragment-arguments, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
 - **Cases:** 2847 submitted, 2819 distinct, 0 malformed
 - **Vectors relying on rules after October 2021:** since September 2025, 2 of 130 vectors failing; new in September 2026, 0 of 31 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (10 negative controls)
-- **Run:** kit 0625b35d64dd, 2026-11-16, strict
+- **Run:** kit 047373eef58a, 2026-11-28, strict
 
 ### Findings
 
@@ -325,13 +325,13 @@ expected: {"ok":true}
 
 ## Validate
 
-- **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, error-propagation-off, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
+- **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, error-propagation-off, fragment-arguments, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
 - **Cases:** 3357 submitted, 3357 distinct, 0 malformed
 - **Vectors:** 3357 of 3370 graded (not graded: 13 unspecified)
 - **Vectors relying on rules after October 2021:** since September 2025, 2 of 248 vectors failing; new in September 2026, 0 of 3 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (15 negative controls)
-- **Run:** kit 0625b35d64dd, 2026-11-16, strict
+- **Run:** kit 047373eef58a, 2026-11-28, strict
 
 ### Findings
 
@@ -472,12 +472,12 @@ expected: invalid: AllVariableUsagesAreAllowed ["cat"]
 
 ## Coerce
 
-- **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, error-propagation-off, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
+- **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, error-propagation-off, fragment-arguments, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
 - **Cases:** 2244 submitted, 2244 distinct, 0 malformed
 - **Vectors relying on rules after October 2021:** since September 2025, 0 of 64 vectors failing; new in September 2026, 0 of 9 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (38540 negative controls)
-- **Run:** kit 240a580eae23, 2026-11-26, strict
+- **Run:** kit 047373eef58a, 2026-11-28, strict
 
 ### Findings
 
@@ -646,13 +646,13 @@ expected: a request error
 
 ## Schema
 
-- **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, error-propagation-off, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
+- **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, error-propagation-off, fragment-arguments, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
 - **Cases:** 501 submitted, 501 distinct, 0 malformed
 - **Vectors:** 501 of 505 graded (not graded: 4 unspecified)
 - **Vectors relying on rules after October 2021:** since September 2025, 3 of 67 vectors failing; new in September 2026, 8 of 31 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (1015 negative controls)
-- **Run:** kit 0625b35d64dd, 2026-11-16, strict
+- **Run:** kit 047373eef58a, 2026-11-28, strict
 
 ### Findings
 
@@ -945,14 +945,14 @@ expected: invalid: breaks DIRECTIVE_EXTENSION_USES_PREVIOUS and no other rule
 
 ## Introspect
 
-- **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, error-propagation-off, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
+- **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, error-propagation-off, fragment-arguments, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
 - **Cases:** 71 submitted, 71 distinct, 0 malformed
 - **Vectors:** 71 of 71 graded
 - **Profile:** the September 2026 edition's introspection types (latest release)
 - **Vectors relying on rules after October 2021:** since September 2025, 12 of 19 vectors failing; new in September 2026, 4 of 7 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (353 negative controls)
-- **Run:** kit 0625b35d64dd, 2026-11-16, strict
+- **Run:** kit 047373eef58a, 2026-11-28, strict
 
 ### Findings
 
@@ -1052,13 +1052,13 @@ expected: {"kind":"ENUM","name":"__DirectiveLocation","description":null,"specif
 
 ## Coordinate
 
-- **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, error-propagation-off, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
+- **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, error-propagation-off, fragment-arguments, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
 - **Cases:** 210 submitted, 210 distinct, 0 malformed
 - **Vectors:** 210 of 210 graded
 - **Vectors relying on rules after October 2021:** since September 2025, 0 of 210 vectors failing
 - **Adapter problems:** none
 - **Checker self-test:** passed (12 negative controls)
-- **Run:** kit 0625b35d64dd, 2026-11-16, strict
+- **Run:** kit 047373eef58a, 2026-11-28, strict
 
 ### Findings
 
