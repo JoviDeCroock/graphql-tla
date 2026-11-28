@@ -1,0 +1,38 @@
+# Outside every release: fragment arguments (graphql-spec#1081), and the
+# field details its CollectSubfields keeps. `friend` is selected twice, by
+# the operation and inside Friend, so its field set has two entries, each
+# with the variables in scope where it was selected. Its sub-selections are
+# collected entry by entry: `name` from the operation's, and from Friend's,
+# where $email is true, `email` but not the inline fragment's `name`. A
+# fragment's variables stay in scope under the fields and inline fragments
+# inside it. The fixture cites no section, and the kit reports its failures
+# under the informational fragmentArguments check.
+# maxListLength: 0
+
+type Query {
+  user: User
+}
+
+type User {
+  name: String
+  email: String
+  friend: User
+}
+
+query {
+  user {
+    friend {
+      name
+    }
+    ...Friend(email: true)
+  }
+}
+
+fragment Friend($email: Boolean!) on User {
+  friend {
+    email @include(if: $email)
+    ... on User {
+      name @skip(if: $email)
+    }
+  }
+}

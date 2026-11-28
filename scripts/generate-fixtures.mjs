@@ -14,6 +14,10 @@
 //                                   these values over `variables`, as the
 //                                   fixtures <file>_on and <file>_off
 //   # maxListLength: 2              the longest list a resolver may return
+// A fixture may use fragment arguments (graphql-spec#1081): Boolean fragment
+// variables, and spread arguments that are true, false, null or a variable.
+// That is all @skip and @include can read, and field arguments aren't part
+// of this data.
 // and the kit reads `# invalidResults: true` and `# spec: 6.3.2, 3.8` (the
 // sections a fixture exercises, for the conformance sheet). kit/fixtures.mjs
 // expands variants the same way (fixtureVariants), so a variant is an
@@ -24,7 +28,7 @@
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { fixtureVariants } from "../kit/fixtures.mjs";
+import { PARSE_OPTIONS, fixtureVariants } from "../kit/fixtures.mjs";
 import {
   Kind,
   buildASTSchema,
@@ -60,7 +64,45 @@ const directive = (node, name) => {
     : { kind: "literal", value: arg.value, variable: "" };
 };
 
-const selections = (selectionSet) =>
+// A Boolean value as the specs hold it: "true", "false" or "null".
+const booleanText = (file, node, where) => {
+  if (node.kind === Kind.BOOLEAN) return String(node.value);
+  if (node.kind === Kind.NULL) return "null";
+  throw new Error(`${file}: ${where} must be true, false or null: the specs model only Boolean fragment variables`);
+};
+
+// A fragment spread's arguments (the fragment arguments proposal): each a
+// literal, or a variable of the scope the spread is in.
+const spreadArguments = (file, node) =>
+  (node.kind === Kind.FRAGMENT_SPREAD ? (node.arguments ?? []) : []).map((argument) =>
+    argument.value.kind === Kind.VARIABLE
+      ? { name: argument.name.value, kind: "variable", value: "", variable: argument.value.name.value }
+      : {
+          name: argument.name.value,
+          kind: "literal",
+          value: booleanText(file, argument.value, `...${node.name.value}(${argument.name.value}:)`),
+          variable: "",
+        },
+  );
+
+// A fragment's variable definitions (the same proposal).
+const fragmentVariables = (file, definition) =>
+  (definition.variableDefinitions ?? []).map((v) => {
+    const name = v.variable.name.value;
+    const nonNull = v.type.kind === Kind.NON_NULL_TYPE;
+    const named = nonNull ? v.type.type : v.type;
+    if (named.kind !== Kind.NAMED_TYPE || named.name.value !== "Boolean") {
+      throw new Error(`${file}: $${name} of ${definition.name.value} isn't Boolean or Boolean!: the specs model only Boolean fragment variables`);
+    }
+    return {
+      name,
+      nonNull,
+      hasDefault: v.defaultValue !== undefined,
+      default: v.defaultValue ? booleanText(file, v.defaultValue, `the default of $${name}`) : "",
+    };
+  });
+
+const selections = (file, selectionSet) =>
   (selectionSet?.selections ?? []).map((node) => ({
     kind:
       node.kind === Kind.FIELD
@@ -73,7 +115,8 @@ const selections = (selectionSet) =>
     typeCondition: node.typeCondition?.name.value ?? "",
     skip: directive(node, "skip"),
     include: directive(node, "include"),
-    selectionSet: selections(node.selectionSet),
+    arguments: spreadArguments(file, node),
+    selectionSet: selections(file, node.selectionSet),
   }));
 
 const readFixture = (file) =>
@@ -83,7 +126,7 @@ const readFixture = (file) =>
 
 const readVariant = (file, id, headerVariables) => {
   const text = readFileSync(join(fixturesDir, file), "utf8");
-  const document = parse(text);
+  const document = parse(text, PARSE_OPTIONS);
   const definitions = document.definitions.filter(
     (d) => d.kind !== Kind.OPERATION_DEFINITION && d.kind !== Kind.FRAGMENT_DEFINITION,
   );
@@ -137,8 +180,33 @@ const readVariant = (file, id, headerVariables) => {
     if (definition.kind !== Kind.FRAGMENT_DEFINITION) continue;
     fragments[definition.name.value] = {
       typeCondition: definition.typeCondition.name.value,
-      selectionSet: selections(definition.selectionSet),
+      variableDefinitions: fragmentVariables(file, definition),
+      selectionSet: selections(file, definition.selectionSet),
     };
+  }
+
+  // Coercing a spread's arguments can raise an execution error. Under a
+  // field, the error is that field's. In the root selection set there is no
+  // field for it to be, and the proposal doesn't say what the response is
+  // (docs/fragment-arguments.md). Reference.tla takes a reading, but the
+  // executor in specs/execution.ts doesn't model one, so no fixture may get
+  // there: the root selection set must not reach a fragment with variables
+  // except through a field.
+  const reached = new Set();
+  const rootFragments = (list) => {
+    for (const selection of list) {
+      if (selection.kind === "inlineFragment") rootFragments(selection.selectionSet);
+      if (selection.kind !== "fragmentSpread" || reached.has(selection.name)) continue;
+      reached.add(selection.name);
+      rootFragments(fragments[selection.name]?.selectionSet ?? []);
+    }
+  };
+  const rootSelections = selections(file, operation.selectionSet);
+  rootFragments(rootSelections);
+  for (const name of reached) {
+    if ((fragments[name]?.variableDefinitions ?? []).length > 0) {
+      throw new Error(`${file}: the root selection set spreads ${name}, which defines variables; spread it under a field instead`);
+    }
   }
 
   return {
@@ -151,7 +219,7 @@ const readVariant = (file, id, headerVariables) => {
         types,
       },
       operationType: operation.operation,
-      operation: selections(operation.selectionSet),
+      operation: rootSelections,
       fragments,
       variables,
       maxListLength: Number(header("maxListLength") ?? 2),

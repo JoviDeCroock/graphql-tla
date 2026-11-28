@@ -6,15 +6,38 @@
 // `errorPropagation` flag, so an adapter for another implementation never
 // sees a directive it doesn't know.
 //
+// A fixture may use fragment arguments (graphql-spec#1081: variables on a
+// fragment definition, arguments on a fragment spread), which no release
+// has. The files are parsed with graphql-js 17's experimental support for
+// that syntax, and such a fixture requires the `fragment-arguments`
+// capability, so an adapter whose implementation can't parse it never sees
+// it.
+//
 // A file with a `# variants:` header is several fixtures: one per variant,
 // with the same schema and document and its own variable values. An
 // adapter sees each as an ordinary fixture with its own id.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { basename, join } from "node:path";
-import { Kind, buildASTSchema, parse, print } from "graphql17";
+import { Kind, buildASTSchema, parse, print, visit } from "graphql17";
 
 export const DISABLE_PROPAGATION = "experimental_disableErrorPropagation";
+
+// How every fixture file, and every fixture's document, is parsed.
+export const PARSE_OPTIONS = { experimentalFragmentArguments: true };
+
+// The capability a fixture that uses fragment arguments requires.
+export const FRAGMENT_ARGUMENTS = "fragment-arguments";
+
+// Whether an executable definition uses the fragment arguments proposal.
+const usesFragmentArguments = (definition) => {
+  let found = false;
+  visit(definition, {
+    FragmentDefinition: (node) => void (found ||= (node.variableDefinitions ?? []).length > 0),
+    FragmentSpread: (node) => void (found ||= (node.arguments ?? []).length > 0),
+  });
+  return found;
+};
 
 const headerOf = (text) => (key) => text.match(new RegExp(`^# ${key}: (.*)$`, "m"))?.[1];
 
@@ -43,7 +66,7 @@ export const loadFixtures = (dir) =>
     .sort()
     .flatMap((file) => {
       const text = readFileSync(join(dir, file), "utf8");
-      const parsed = parse(text);
+      const parsed = parse(text, PARSE_OPTIONS);
       const isExecutable = (d) =>
         d.kind === Kind.OPERATION_DEFINITION || d.kind === Kind.FRAGMENT_DEFINITION;
       const typeDefinitions = parsed.definitions.filter((d) => !isExecutable(d));
@@ -58,6 +81,7 @@ export const loadFixtures = (dir) =>
       const sdl = print({ kind: Kind.DOCUMENT, definitions: typeDefinitions });
       const operationType = operation.operation;
       const invalidResults = header("invalidResults") === "true";
+      const fragmentArguments = executable.some(usesFragmentArguments);
       return fixtureVariants(basename(file, ".graphql"), text).map(({ id, variables }) => ({
         id,
         sdl,
@@ -76,6 +100,7 @@ export const loadFixtures = (dir) =>
         requires: [
           ...(operationType === "query" ? [] : [operationType]),
           ...(errorPropagation ? [] : ["error-propagation-off"]),
+          ...(fragmentArguments ? [FRAGMENT_ARGUMENTS] : []),
         ],
       }));
     });

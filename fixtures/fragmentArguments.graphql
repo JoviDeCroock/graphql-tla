@@ -1,0 +1,45 @@
+# Outside every release: fragment arguments (graphql-spec#1081). A fragment
+# defines variables and a spread gives them values, which CollectFields
+# reads for @skip and @include inside the fragment. Card is spread twice,
+# under two fields, with and without arguments, so one fragment collects
+# different fields in each place; its `email` variable takes a literal, and
+# then its default. Card's own $flag shadows the operation's: under `viewer`
+# it is Card's default, true, whatever the request's $flag is, and under
+# `user` it is the request's only because the spread passes it on. Card
+# forwards $flag to Bio's $show. With $flag true, `user.bio` is selected
+# twice, once inside Bio and once by the operation, and collected once.
+# The fixture cites no section, and the kit reports its failures under the
+# informational fragmentArguments check.
+# variants: {"on": {"flag": true}, "off": {"flag": false}}
+# maxListLength: 0
+
+type Query {
+  user: User
+  viewer: User
+}
+
+type User {
+  name: String
+  email: String
+  bio: String
+}
+
+query ($flag: Boolean!) {
+  user {
+    ...Card(email: true, flag: $flag)
+    bio @include(if: $flag)
+  }
+  viewer {
+    ...Card
+  }
+}
+
+fragment Card($email: Boolean! = false, $flag: Boolean! = true) on User {
+  name @skip(if: $flag)
+  email @include(if: $email)
+  ...Bio(show: $flag)
+}
+
+fragment Bio($show: Boolean!) on User {
+  bio @include(if: $show)
+}

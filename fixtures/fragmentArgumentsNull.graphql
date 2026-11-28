@@ -1,0 +1,40 @@
+# Outside every release: fragment arguments (graphql-spec#1081), with no
+# value and with null. Under `user`, Outer is spread without an argument,
+# so its $show has no value; passed on to Inner's $on, that leaves $on its
+# default, true, and `email` is collected. Under `viewer`, $show is null:
+# Inner's $on is Non-Null, so coercing the spread's arguments raises an
+# execution error while `viewer`'s sub-selection is collected. A fragment
+# spread has no response position, so the error is `viewer`'s: its resolver
+# has run, none of its fields is executed, and it is null with an error at
+# its path. The proposal doesn't say where that error goes in so many
+# words (docs/fragment-arguments.md). The fixture cites no section, and the
+# kit reports its failures under the informational fragmentArguments check.
+# maxListLength: 0
+
+type Query {
+  user: User
+  viewer: User
+}
+
+type User {
+  name: String
+  email: String
+}
+
+query {
+  user {
+    ...Outer
+  }
+  viewer {
+    ...Outer(show: null)
+  }
+}
+
+fragment Outer($show: Boolean) on User {
+  name
+  ...Inner(on: $show)
+}
+
+fragment Inner($on: Boolean! = true) on User {
+  email @include(if: $on)
+}

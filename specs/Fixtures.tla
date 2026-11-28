@@ -78,6 +78,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "inlineFragment",
@@ -86,6 +87,7 @@ Fixtures == [
             typeCondition |-> "SearchResult",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -94,6 +96,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -105,6 +108,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ],
           [
@@ -114,6 +118,7 @@ Fixtures == [
             typeCondition |-> "Node",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "inlineFragment",
@@ -122,6 +127,7 @@ Fixtures == [
                 typeCondition |-> "User",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<
                   [
                     kind |-> "field",
@@ -130,6 +136,7 @@ Fixtures == [
                     typeCondition |-> "",
                     skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                     include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                    arguments |-> <<>>,
                     selectionSet |-> <<
                       [
                         kind |-> "field",
@@ -138,6 +145,7 @@ Fixtures == [
                         typeCondition |-> "",
                         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                        arguments |-> <<>>,
                         selectionSet |-> <<>>
                       ]
                     >>
@@ -152,6 +160,7 @@ Fixtures == [
     fragments |-> (
       ("Named" :> [
         typeCondition |-> "SearchResult",
+        variableDefinitions |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "inlineFragment",
@@ -160,6 +169,7 @@ Fixtures == [
             typeCondition |-> "User",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -168,6 +178,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<
                   [
                     kind |-> "field",
@@ -176,6 +187,7 @@ Fixtures == [
                     typeCondition |-> "",
                     skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                     include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                    arguments |-> <<>>,
                     selectionSet |-> <<>>
                   ],
                   [
@@ -185,6 +197,7 @@ Fixtures == [
                     typeCondition |-> "",
                     skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                     include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                    arguments |-> <<>>,
                     selectionSet |-> <<>>
                   ]
                 >>
@@ -196,6 +209,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<
                   [
                     kind |-> "inlineFragment",
@@ -204,6 +218,7 @@ Fixtures == [
                     typeCondition |-> "Node",
                     skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                     include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                    arguments |-> <<>>,
                     selectionSet |-> <<
                       [
                         kind |-> "field",
@@ -212,6 +227,7 @@ Fixtures == [
                         typeCondition |-> "",
                         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                        arguments |-> <<>>,
                         selectionSet |-> <<>>
                       ]
                     >>
@@ -223,6 +239,7 @@ Fixtures == [
                     typeCondition |-> "",
                     skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                     include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                    arguments |-> <<>>,
                     selectionSet |-> <<>>
                   ],
                   [
@@ -232,6 +249,7 @@ Fixtures == [
                     typeCondition |-> "",
                     skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                     include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                    arguments |-> <<>>,
                     selectionSet |-> <<>>
                   ]
                 >>
@@ -242,6 +260,7 @@ Fixtures == [
       ]) @@
       ("Identified" :> [
         typeCondition |-> "Node",
+        variableDefinitions |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -250,12 +269,14 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
       ]) @@
       ("Titled" :> [
         typeCondition |-> "SearchResult",
+        variableDefinitions |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "inlineFragment",
@@ -264,6 +285,7 @@ Fixtures == [
             typeCondition |-> "Post",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -272,6 +294,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -346,6 +369,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -354,6 +378,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ],
           [
@@ -363,6 +388,7 @@ Fixtures == [
             typeCondition |-> "Alpha",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -371,6 +397,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -382,6 +409,7 @@ Fixtures == [
             typeCondition |-> "Beta",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -390,6 +418,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -453,6 +482,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -461,6 +491,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -469,6 +500,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -482,6 +514,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -490,6 +523,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ],
           [
@@ -499,6 +533,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -544,6 +579,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ]
     >>,
@@ -588,6 +624,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -597,6 +634,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -606,6 +644,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -615,6 +654,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -624,6 +664,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ]
     >>,
@@ -670,6 +711,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -679,6 +721,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -688,6 +731,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -697,6 +741,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -706,6 +751,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ]
     >>,
@@ -756,6 +802,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ]
     >>,
@@ -807,6 +854,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "s"],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -816,6 +864,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "i"],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -825,6 +874,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "s"],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "i"],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -834,6 +884,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "i"],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "fragmentSpread",
@@ -842,6 +893,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "s"],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -850,6 +902,7 @@ Fixtures == [
     fragments |-> (
       ("D" :> [
         typeCondition |-> "Query",
+        variableDefinitions |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -858,6 +911,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -913,6 +967,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "s"],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -922,6 +977,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "i"],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -931,6 +987,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "s"],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "i"],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -940,6 +997,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "i"],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "fragmentSpread",
@@ -948,6 +1006,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "s"],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -956,6 +1015,7 @@ Fixtures == [
     fragments |-> (
       ("D" :> [
         typeCondition |-> "Query",
+        variableDefinitions |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -964,6 +1024,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1019,6 +1080,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "s"],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -1028,6 +1090,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "i"],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -1037,6 +1100,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "s"],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "i"],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -1046,6 +1110,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "i"],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "fragmentSpread",
@@ -1054,6 +1119,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "s"],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1062,6 +1128,7 @@ Fixtures == [
     fragments |-> (
       ("D" :> [
         typeCondition |-> "Query",
+        variableDefinitions |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1070,6 +1137,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1125,6 +1193,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "s"],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -1134,6 +1203,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "i"],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -1143,6 +1213,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "s"],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "i"],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -1152,6 +1223,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "variable", value |-> FALSE, variable |-> "i"],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "fragmentSpread",
@@ -1160,6 +1232,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "s"],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1168,6 +1241,7 @@ Fixtures == [
     fragments |-> (
       ("D" :> [
         typeCondition |-> "Query",
+        variableDefinitions |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1176,6 +1250,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1185,6 +1260,602 @@ Fixtures == [
       ("s" :> TRUE) @@
       ("i" :> FALSE)
     ),
+    maxListLength |-> 0,
+    errorPropagation |-> TRUE,
+    invalidResults |-> FALSE
+  ],
+  fragmentArguments_on |-> [
+    schema |-> [
+      query |-> "Query",
+      mutation |-> "",
+      subscription |-> "",
+      types |-> (
+        ("Query" :> [
+          kind |-> "object",
+          fields |-> (
+            ("user" :> [name |-> "User", wrappers |-> <<>>]) @@
+            ("viewer" :> [name |-> "User", wrappers |-> <<>>])
+          ),
+          possibleTypes |-> {"Query"}
+        ]) @@
+        ("User" :> [
+          kind |-> "object",
+          fields |-> (
+            ("name" :> [name |-> "String", wrappers |-> <<>>]) @@
+            ("email" :> [name |-> "String", wrappers |-> <<>>]) @@
+            ("bio" :> [name |-> "String", wrappers |-> <<>>])
+          ),
+          possibleTypes |-> {"User"}
+        ]) @@
+        ("String" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("Boolean" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ])
+      )
+    ],
+    operationType |-> "query",
+    operation |-> <<
+      [
+        kind |-> "field",
+        name |-> "user",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
+        selectionSet |-> <<
+          [
+            kind |-> "fragmentSpread",
+            name |-> "Card",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<
+              [name |-> "email", kind |-> "literal", value |-> "true", variable |-> ""],
+              [name |-> "flag", kind |-> "variable", value |-> "", variable |-> "flag"]
+            >>,
+            selectionSet |-> <<>>
+          ],
+          [
+            kind |-> "field",
+            name |-> "bio",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "variable", value |-> FALSE, variable |-> "flag"],
+            arguments |-> <<>>,
+            selectionSet |-> <<>>
+          ]
+        >>
+      ],
+      [
+        kind |-> "field",
+        name |-> "viewer",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
+        selectionSet |-> <<
+          [
+            kind |-> "fragmentSpread",
+            name |-> "Card",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
+            selectionSet |-> <<>>
+          ]
+        >>
+      ]
+    >>,
+    fragments |-> (
+      ("Card" :> [
+        typeCondition |-> "User",
+        variableDefinitions |-> <<
+          [name |-> "email", nonNull |-> TRUE, hasDefault |-> TRUE, default |-> "false"],
+          [name |-> "flag", nonNull |-> TRUE, hasDefault |-> TRUE, default |-> "true"]
+        >>,
+        selectionSet |-> <<
+          [
+            kind |-> "field",
+            name |-> "name",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "flag"],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
+            selectionSet |-> <<>>
+          ],
+          [
+            kind |-> "field",
+            name |-> "email",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "variable", value |-> FALSE, variable |-> "email"],
+            arguments |-> <<>>,
+            selectionSet |-> <<>>
+          ],
+          [
+            kind |-> "fragmentSpread",
+            name |-> "Bio",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<
+              [name |-> "show", kind |-> "variable", value |-> "", variable |-> "flag"]
+            >>,
+            selectionSet |-> <<>>
+          ]
+        >>
+      ]) @@
+      ("Bio" :> [
+        typeCondition |-> "User",
+        variableDefinitions |-> <<
+          [name |-> "show", nonNull |-> TRUE, hasDefault |-> FALSE, default |-> ""]
+        >>,
+        selectionSet |-> <<
+          [
+            kind |-> "field",
+            name |-> "bio",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
+            arguments |-> <<>>,
+            selectionSet |-> <<>>
+          ]
+        >>
+      ])
+    ),
+    variables |-> (
+      ("flag" :> TRUE)
+    ),
+    maxListLength |-> 0,
+    errorPropagation |-> TRUE,
+    invalidResults |-> FALSE
+  ],
+  fragmentArguments_off |-> [
+    schema |-> [
+      query |-> "Query",
+      mutation |-> "",
+      subscription |-> "",
+      types |-> (
+        ("Query" :> [
+          kind |-> "object",
+          fields |-> (
+            ("user" :> [name |-> "User", wrappers |-> <<>>]) @@
+            ("viewer" :> [name |-> "User", wrappers |-> <<>>])
+          ),
+          possibleTypes |-> {"Query"}
+        ]) @@
+        ("User" :> [
+          kind |-> "object",
+          fields |-> (
+            ("name" :> [name |-> "String", wrappers |-> <<>>]) @@
+            ("email" :> [name |-> "String", wrappers |-> <<>>]) @@
+            ("bio" :> [name |-> "String", wrappers |-> <<>>])
+          ),
+          possibleTypes |-> {"User"}
+        ]) @@
+        ("String" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("Boolean" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ])
+      )
+    ],
+    operationType |-> "query",
+    operation |-> <<
+      [
+        kind |-> "field",
+        name |-> "user",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
+        selectionSet |-> <<
+          [
+            kind |-> "fragmentSpread",
+            name |-> "Card",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<
+              [name |-> "email", kind |-> "literal", value |-> "true", variable |-> ""],
+              [name |-> "flag", kind |-> "variable", value |-> "", variable |-> "flag"]
+            >>,
+            selectionSet |-> <<>>
+          ],
+          [
+            kind |-> "field",
+            name |-> "bio",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "variable", value |-> FALSE, variable |-> "flag"],
+            arguments |-> <<>>,
+            selectionSet |-> <<>>
+          ]
+        >>
+      ],
+      [
+        kind |-> "field",
+        name |-> "viewer",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
+        selectionSet |-> <<
+          [
+            kind |-> "fragmentSpread",
+            name |-> "Card",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
+            selectionSet |-> <<>>
+          ]
+        >>
+      ]
+    >>,
+    fragments |-> (
+      ("Card" :> [
+        typeCondition |-> "User",
+        variableDefinitions |-> <<
+          [name |-> "email", nonNull |-> TRUE, hasDefault |-> TRUE, default |-> "false"],
+          [name |-> "flag", nonNull |-> TRUE, hasDefault |-> TRUE, default |-> "true"]
+        >>,
+        selectionSet |-> <<
+          [
+            kind |-> "field",
+            name |-> "name",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "flag"],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
+            selectionSet |-> <<>>
+          ],
+          [
+            kind |-> "field",
+            name |-> "email",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "variable", value |-> FALSE, variable |-> "email"],
+            arguments |-> <<>>,
+            selectionSet |-> <<>>
+          ],
+          [
+            kind |-> "fragmentSpread",
+            name |-> "Bio",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<
+              [name |-> "show", kind |-> "variable", value |-> "", variable |-> "flag"]
+            >>,
+            selectionSet |-> <<>>
+          ]
+        >>
+      ]) @@
+      ("Bio" :> [
+        typeCondition |-> "User",
+        variableDefinitions |-> <<
+          [name |-> "show", nonNull |-> TRUE, hasDefault |-> FALSE, default |-> ""]
+        >>,
+        selectionSet |-> <<
+          [
+            kind |-> "field",
+            name |-> "bio",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "variable", value |-> FALSE, variable |-> "show"],
+            arguments |-> <<>>,
+            selectionSet |-> <<>>
+          ]
+        >>
+      ])
+    ),
+    variables |-> (
+      ("flag" :> FALSE)
+    ),
+    maxListLength |-> 0,
+    errorPropagation |-> TRUE,
+    invalidResults |-> FALSE
+  ],
+  fragmentArgumentsDetails |-> [
+    schema |-> [
+      query |-> "Query",
+      mutation |-> "",
+      subscription |-> "",
+      types |-> (
+        ("Query" :> [
+          kind |-> "object",
+          fields |-> (
+            ("user" :> [name |-> "User", wrappers |-> <<>>])
+          ),
+          possibleTypes |-> {"Query"}
+        ]) @@
+        ("User" :> [
+          kind |-> "object",
+          fields |-> (
+            ("name" :> [name |-> "String", wrappers |-> <<>>]) @@
+            ("email" :> [name |-> "String", wrappers |-> <<>>]) @@
+            ("friend" :> [name |-> "User", wrappers |-> <<>>])
+          ),
+          possibleTypes |-> {"User"}
+        ]) @@
+        ("String" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("Boolean" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ])
+      )
+    ],
+    operationType |-> "query",
+    operation |-> <<
+      [
+        kind |-> "field",
+        name |-> "user",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
+        selectionSet |-> <<
+          [
+            kind |-> "field",
+            name |-> "friend",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
+            selectionSet |-> <<
+              [
+                kind |-> "field",
+                name |-> "name",
+                alias |-> "",
+                typeCondition |-> "",
+                skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
+                selectionSet |-> <<>>
+              ]
+            >>
+          ],
+          [
+            kind |-> "fragmentSpread",
+            name |-> "Friend",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<
+              [name |-> "email", kind |-> "literal", value |-> "true", variable |-> ""]
+            >>,
+            selectionSet |-> <<>>
+          ]
+        >>
+      ]
+    >>,
+    fragments |-> (
+      ("Friend" :> [
+        typeCondition |-> "User",
+        variableDefinitions |-> <<
+          [name |-> "email", nonNull |-> TRUE, hasDefault |-> FALSE, default |-> ""]
+        >>,
+        selectionSet |-> <<
+          [
+            kind |-> "field",
+            name |-> "friend",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
+            selectionSet |-> <<
+              [
+                kind |-> "field",
+                name |-> "email",
+                alias |-> "",
+                typeCondition |-> "",
+                skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                include |-> [kind |-> "variable", value |-> FALSE, variable |-> "email"],
+                arguments |-> <<>>,
+                selectionSet |-> <<>>
+              ],
+              [
+                kind |-> "inlineFragment",
+                name |-> "",
+                alias |-> "",
+                typeCondition |-> "User",
+                skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
+                selectionSet |-> <<
+                  [
+                    kind |-> "field",
+                    name |-> "name",
+                    alias |-> "",
+                    typeCondition |-> "",
+                    skip |-> [kind |-> "variable", value |-> FALSE, variable |-> "email"],
+                    include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                    arguments |-> <<>>,
+                    selectionSet |-> <<>>
+                  ]
+                >>
+              ]
+            >>
+          ]
+        >>
+      ])
+    ),
+    variables |-> <<>>,
+    maxListLength |-> 0,
+    errorPropagation |-> TRUE,
+    invalidResults |-> FALSE
+  ],
+  fragmentArgumentsNull |-> [
+    schema |-> [
+      query |-> "Query",
+      mutation |-> "",
+      subscription |-> "",
+      types |-> (
+        ("Query" :> [
+          kind |-> "object",
+          fields |-> (
+            ("user" :> [name |-> "User", wrappers |-> <<>>]) @@
+            ("viewer" :> [name |-> "User", wrappers |-> <<>>])
+          ),
+          possibleTypes |-> {"Query"}
+        ]) @@
+        ("User" :> [
+          kind |-> "object",
+          fields |-> (
+            ("name" :> [name |-> "String", wrappers |-> <<>>]) @@
+            ("email" :> [name |-> "String", wrappers |-> <<>>])
+          ),
+          possibleTypes |-> {"User"}
+        ]) @@
+        ("String" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ]) @@
+        ("Boolean" :> [
+          kind |-> "scalar",
+          fields |-> <<>>,
+          possibleTypes |-> {}
+        ])
+      )
+    ],
+    operationType |-> "query",
+    operation |-> <<
+      [
+        kind |-> "field",
+        name |-> "user",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
+        selectionSet |-> <<
+          [
+            kind |-> "fragmentSpread",
+            name |-> "Outer",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
+            selectionSet |-> <<>>
+          ]
+        >>
+      ],
+      [
+        kind |-> "field",
+        name |-> "viewer",
+        alias |-> "",
+        typeCondition |-> "",
+        skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
+        selectionSet |-> <<
+          [
+            kind |-> "fragmentSpread",
+            name |-> "Outer",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<
+              [name |-> "show", kind |-> "literal", value |-> "null", variable |-> ""]
+            >>,
+            selectionSet |-> <<>>
+          ]
+        >>
+      ]
+    >>,
+    fragments |-> (
+      ("Outer" :> [
+        typeCondition |-> "User",
+        variableDefinitions |-> <<
+          [name |-> "show", nonNull |-> FALSE, hasDefault |-> FALSE, default |-> ""]
+        >>,
+        selectionSet |-> <<
+          [
+            kind |-> "field",
+            name |-> "name",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
+            selectionSet |-> <<>>
+          ],
+          [
+            kind |-> "fragmentSpread",
+            name |-> "Inner",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<
+              [name |-> "on", kind |-> "variable", value |-> "", variable |-> "show"]
+            >>,
+            selectionSet |-> <<>>
+          ]
+        >>
+      ]) @@
+      ("Inner" :> [
+        typeCondition |-> "User",
+        variableDefinitions |-> <<
+          [name |-> "on", nonNull |-> TRUE, hasDefault |-> TRUE, default |-> "true"]
+        >>,
+        selectionSet |-> <<
+          [
+            kind |-> "field",
+            name |-> "email",
+            alias |-> "",
+            typeCondition |-> "",
+            skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            include |-> [kind |-> "variable", value |-> FALSE, variable |-> "on"],
+            arguments |-> <<>>,
+            selectionSet |-> <<>>
+          ]
+        >>
+      ])
+    ),
+    variables |-> <<>>,
     maxListLength |-> 0,
     errorPropagation |-> TRUE,
     invalidResults |-> FALSE
@@ -1250,6 +1921,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1258,6 +1930,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ],
           [
@@ -1267,6 +1940,7 @@ Fixtures == [
             typeCondition |-> "User",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -1275,6 +1949,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -1286,6 +1961,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ],
           [
@@ -1295,6 +1971,7 @@ Fixtures == [
             typeCondition |-> "Bot",
             skip |-> [kind |-> "literal", value |-> TRUE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -1303,6 +1980,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -1314,6 +1992,7 @@ Fixtures == [
             typeCondition |-> "Node",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -1322,6 +2001,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -1333,6 +2013,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "variable", value |-> FALSE, variable |-> "withName"],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1341,6 +2022,7 @@ Fixtures == [
     fragments |-> (
       ("UserFields" :> [
         typeCondition |-> "User",
+        variableDefinitions |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1349,6 +2031,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ],
           [
@@ -1358,6 +2041,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "variable", value |-> FALSE, variable |-> "withName"],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1421,6 +2105,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -1430,6 +2115,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -1439,6 +2125,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ]
     >>,
@@ -1501,6 +2188,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1509,6 +2197,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -1517,6 +2206,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -1572,6 +2262,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1580,6 +2271,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1591,6 +2283,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ]
     >>,
@@ -1648,6 +2341,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1656,6 +2350,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1667,12 +2362,14 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ]
     >>,
     fragments |-> (
       ("ExampleFragment" :> [
         typeCondition |-> "Query",
+        variableDefinitions |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1681,6 +2378,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -1689,6 +2387,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ],
               [
@@ -1698,6 +2397,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -1709,6 +2409,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1774,6 +2475,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1782,6 +2484,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1793,6 +2496,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1801,6 +2505,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1812,6 +2517,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1820,6 +2526,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1886,6 +2593,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1894,6 +2602,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1905,6 +2614,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1913,6 +2623,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1924,6 +2635,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -1933,6 +2645,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -1942,6 +2655,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -1951,6 +2665,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "literal", value |-> TRUE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1959,6 +2674,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -1970,12 +2686,14 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "literal", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ]
     >>,
     fragments |-> (
       ("M" :> [
         typeCondition |-> "Mutation",
+        variableDefinitions |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -1984,6 +2702,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -1992,6 +2711,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -2003,12 +2723,14 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
       ]) @@
       ("Unlike" :> [
         typeCondition |-> "Mutation",
+        variableDefinitions |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -2017,6 +2739,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -2025,6 +2748,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -2076,6 +2800,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ]
     >>,
@@ -2133,6 +2858,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -2142,6 +2868,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -2150,6 +2877,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ],
           [
@@ -2159,6 +2887,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -2167,6 +2896,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -2234,6 +2964,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -2242,6 +2973,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -2250,6 +2982,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -2263,6 +2996,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ]
     >>,
@@ -2321,6 +3055,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -2330,6 +3065,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -2338,6 +3074,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ],
           [
@@ -2347,6 +3084,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ],
           [
@@ -2356,6 +3094,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -2364,6 +3103,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -2420,6 +3160,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "literal", value |-> TRUE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -2429,6 +3170,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -2438,6 +3180,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -2446,6 +3189,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -2457,6 +3201,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -2466,6 +3211,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "literal", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "literal", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -2475,6 +3221,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "literal", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "literal", value |-> TRUE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -2484,6 +3231,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "literal", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -2493,12 +3241,14 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "literal", value |-> TRUE, variable |-> ""],
         include |-> [kind |-> "literal", value |-> TRUE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ]
     >>,
     fragments |-> (
       ("Frag" :> [
         typeCondition |-> "Query",
+        variableDefinitions |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -2507,6 +3257,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ],
           [
@@ -2516,12 +3267,14 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
       ]) @@
       ("Never" :> [
         typeCondition |-> "Query",
+        variableDefinitions |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -2530,6 +3283,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -2585,6 +3339,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ],
       [
@@ -2594,6 +3349,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ]
     >>,
@@ -2657,6 +3413,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -2665,6 +3422,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ],
           [
@@ -2674,6 +3432,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -2739,6 +3498,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -2747,6 +3507,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ]
         >>
@@ -2758,12 +3519,14 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ]
     >>,
     fragments |-> (
       ("Liked" :> [
         typeCondition |-> "Subscription",
+        variableDefinitions |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -2772,6 +3535,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -2780,6 +3544,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ],
               [
@@ -2789,6 +3554,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -2860,6 +3626,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<
           [
             kind |-> "field",
@@ -2868,6 +3635,7 @@ Fixtures == [
             typeCondition |-> "",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<>>
           ],
           [
@@ -2877,6 +3645,7 @@ Fixtures == [
             typeCondition |-> "User",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -2885,6 +3654,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -2896,6 +3666,7 @@ Fixtures == [
             typeCondition |-> "Post",
             skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
             include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+            arguments |-> <<>>,
             selectionSet |-> <<
               [
                 kind |-> "field",
@@ -2904,6 +3675,7 @@ Fixtures == [
                 typeCondition |-> "",
                 skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
                 include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+                arguments |-> <<>>,
                 selectionSet |-> <<>>
               ]
             >>
@@ -2917,6 +3689,7 @@ Fixtures == [
         typeCondition |-> "",
         skip |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
         include |-> [kind |-> "absent", value |-> FALSE, variable |-> ""],
+        arguments |-> <<>>,
         selectionSet |-> <<>>
       ]
     >>,
