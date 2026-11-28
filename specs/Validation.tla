@@ -13,6 +13,14 @@
 (*   S  a schema                                                           *)
 (*   D  an executable document: a sequence of definitions                  *)
 (*                                                                         *)
+(* The rules also state the fragment arguments proposal, graphql-spec#1081 *)
+(* at dfd847524d25: a fragment definition may have variables, and a        *)
+(* fragment spread arguments. September 2026 has neither (Parser.tla       *)
+(* rejects both without the proposal), and for a document with neither     *)
+(* every rule here is September 2026's: the proposal's text only adds      *)
+(* cases for them. Where a rule's text differs, the comment quotes the     *)
+(* proposal's.                                                             *)
+(*                                                                         *)
 (* scripts/differential-validation.mjs checks graphql-js 16 and 17         *)
 (* against these operators. The test vectors at the end are the spec's own *)
 (* examples, checked by Validation.cfg.                                    *)
@@ -33,12 +41,14 @@
 (*   definition [kind, operation, name, variables, typeCondition,          *)
 (*               directives, selectionSet]                                 *)
 (*              kind \in {"operation", "fragment", "typeSystem"}; an       *)
-(*              anonymous operation has name ""                            *)
+(*              anonymous operation has name ""; a fragment's variables    *)
+(*              are its fragment variables (the proposal), else <<>>       *)
 (*   variable   [name, type, hasDefault, default, directives]              *)
 (*   selection  [kind, name, alias, arguments, directives, typeCondition,  *)
 (*               hasSelectionSet, selectionSet]                            *)
 (*              kind \in {"field", "fragmentSpread", "inlineFragment"};    *)
-(*              alias and typeCondition are "" when absent                 *)
+(*              alias and typeCondition are "" when absent; a spread's     *)
+(*              arguments are the proposal's, else <<>>                    *)
 (*   argument   [name, value]      directive  [name, arguments]            *)
 (*   value      [kind, value, items, fields]                               *)
 (*              kind \in {"int", "float", "string", "boolean", "null",     *)
@@ -272,25 +282,50 @@ AllDirectives(S, D) ==
 IsDirectiveDefined(S, name) == name \in DOMAIN S.directives
 DirectiveArgs(S, name) == IF IsDirectiveDefined(S, name) THEN S.directives[name].args ELSE <<>>
 
-\* Every argument set in a definition: a field's or a directive's arguments,
-\* with the argument definitions of that field or directive. `known` is
-\* FALSE when the field or directive itself isn't defined. `subject` names
-\* the field or directive as graphql-js does: "Type.field" or "@name".
-DefinitionArgumentSets(S, definition) ==
+VariableNames(definition) == {definition.variables[i].name : i \in DOMAIN definition.variables}
+\* The VariableDefinition named `name` (the last, when names collide).
+VariableDefinition(definition, name) ==
+  definition.variables[CHOOSE i \in DOMAIN definition.variables :
+    definition.variables[i].name = name
+      /\ \A j \in DOMAIN definition.variables : definition.variables[j].name = name => j <= i]
+
+\* A fragment's variable definitions, as the argument definitions of a
+\* spread of it. The proposal's §6.4.1: "when coercing the arguments of a
+\* fragment spread, each variable definition is used as the argument
+\* definition of the same name, providing its expected type and default
+\* value."
+SpreadArgs(fragment) ==
+  [n \in VariableNames(fragment) |->
+     [type |-> VariableDefinition(fragment, n).type, hasDefault |-> VariableDefinition(fragment, n).hasDefault]]
+
+\* Every argument set in a definition: a field's, a directive's or (the
+\* proposal) a fragment spread's arguments, with the argument definitions of
+\* that field or directive, or the variable definitions of that fragment.
+\* `of` says which of the three it is. `known` is FALSE when the field,
+\* directive or fragment itself isn't defined. `subject` names the field or
+\* directive as graphql-js does, "Type.field" or "@name", and a spread as
+\* "...name".
+DefinitionArgumentSets(S, D, definition) ==
   {[arguments |-> s.selection.arguments,
     known |-> HasField(S, s.parent, s.selection.name),
     definitions |-> IF HasField(S, s.parent, s.selection.name)
                     THEN FieldDefinition(S, s.parent, s.selection.name).args ELSE <<>>,
-    field |-> TRUE, name |-> s.selection.name, subject |-> s.parent \o "." \o s.selection.name]
+    of |-> "field", name |-> s.selection.name, subject |-> s.parent \o "." \o s.selection.name]
    : s \in {x \in DefinitionSelections(S, definition) : x.selection.kind = "field"}}
     \cup UNION {{[arguments |-> l.directives[j].arguments,
                   known |-> IsDirectiveDefined(S, l.directives[j].name),
                   definitions |-> DirectiveArgs(S, l.directives[j].name),
-                  field |-> FALSE, name |-> l.directives[j].name, subject |-> "@" \o l.directives[j].name]
+                  of |-> "directive", name |-> l.directives[j].name, subject |-> "@" \o l.directives[j].name]
                  : j \in DOMAIN l.directives}
                 : l \in DefinitionDirectiveLists(S, definition)}
+    \cup {[arguments |-> s.selection.arguments,
+           known |-> HasFragment(D, s.selection.name),
+           definitions |-> IF HasFragment(D, s.selection.name)
+                           THEN SpreadArgs(Fragment(D, s.selection.name)) ELSE <<>>,
+           of |-> "spread", name |-> s.selection.name, subject |-> "..." \o s.selection.name]
+          : s \in {x \in DefinitionSelections(S, definition) : x.selection.kind = "fragmentSpread"}}
 
-AllArgumentSets(S, D) == UNION {DefinitionArgumentSets(S, D[i]) : i \in ExecutableIndices(D)}
+AllArgumentSets(S, D) == UNION {DefinitionArgumentSets(S, D, D[i]) : i \in ExecutableIndices(D)}
 
 \* The value at a position whose expected type is `type` (NoType when
 \* unknown), and every value nested in it with its own expected type:
@@ -320,11 +355,20 @@ PositionsIn(S, value, type, hasDefault, oneOf, top) ==
                 : i \in DOMAIN value.fields}
     ELSE {}
 
+\* The proposal's §5.6.1: "For an argument provided to a named fragment
+\* spread, the type expected is the type of the fragment variable of the
+\* same name defined by the referenced fragment." A fragment variable whose
+\* type isn't an input type (§5.8.2 rejects it) gives no expected type, as
+\* for a variable's default value below.
 ArgumentPositions(S, argumentSet) ==
   LET args == argumentSet.arguments
       defs == argumentSet.definitions
+      expected(name) ==
+        IF name \notin DOMAIN defs THEN NoType
+        ELSE IF argumentSet.of = "spread" /\ ~IsInputType(S, defs[name].type) THEN NoType
+        ELSE defs[name].type
   IN UNION {PositionsIn(S, args[i].value,
-                        IF args[i].name \in DOMAIN defs THEN defs[args[i].name].type ELSE NoType,
+                        expected(args[i].name),
                         args[i].name \in DOMAIN defs /\ defs[args[i].name].hasDefault,
                         FALSE, TRUE)
             : i \in DOMAIN args}
@@ -335,29 +379,46 @@ DefaultPositions(S, definition) ==
                      FALSE, FALSE, TRUE)
          : i \in {j \in DOMAIN definition.variables : definition.variables[j].hasDefault}}
 
-DefinitionPositions(S, definition) ==
-  UNION {ArgumentPositions(S, a) : a \in DefinitionArgumentSets(S, definition)}
+DefinitionPositions(S, D, definition) ==
+  UNION {ArgumentPositions(S, a) : a \in DefinitionArgumentSets(S, D, definition)}
     \cup DefaultPositions(S, definition)
 
-AllPositions(S, D) == UNION {DefinitionPositions(S, D[i]) : i \in ExecutableIndices(D)}
+AllPositions(S, D) == UNION {DefinitionPositions(S, D, D[i]) : i \in ExecutableIndices(D)}
 
-\* The variable usages in a definition, and those "transitively included" in
-\* an operation through the fragments it references.
-DefinitionUsages(S, definition) == {p \in DefinitionPositions(S, definition) : p.value.kind = "variable"}
+\* The variable usages in a definition: in its own directives and in its
+\* selection set, "excluding traversal of named fragment spreads". A usage
+\* in the arguments of a spread is the definition's that holds the spread.
+DefinitionUsages(S, D, definition) ==
+  {p \in DefinitionPositions(S, D, definition) : p.value.kind = "variable"}
+
+\* The usages within a definition's selection set alone, without the
+\* directives on the definition itself.
+SelectionSetUsages(S, D, definition) == DefinitionUsages(S, D, [definition EXCEPT !.directives = <<>>])
+
+\* The usages "transitively included" in an operation: its own, and those
+\* of every fragment it references. Each is [usage, within]: within is the
+\* name of the fragment whose definition holds it, "" for the operation's
+\* own.
 OperationUsages(S, D, operation) ==
-  DefinitionUsages(S, operation)
-    \cup UNION {DefinitionUsages(S, Fragment(D, n)) : n \in FragmentsReferencedBy(D, operation)}
+  {[usage |-> u, within |-> ""] : u \in DefinitionUsages(S, D, operation)}
+    \cup UNION {{[usage |-> u, within |-> n] : u \in DefinitionUsages(S, D, Fragment(D, n))}
+                : n \in FragmentsReferencedBy(D, operation)}
 
-VariableNames(operation) == {operation.variables[i].name : i \in DOMAIN operation.variables}
-\* The VariableDefinition named `name` (the last, when names collide).
-VariableDefinition(operation, name) ==
-  operation.variables[CHOOSE i \in DOMAIN operation.variables :
-    operation.variables[i].name = name
-      /\ \A j \in DOMAIN operation.variables : operation.variables[j].name = name => j <= i]
+\* The proposal's §5.3.2: "A Variable references a fragment variable if the
+\* fragment definition in which it is used defines a variable of that name,
+\* otherwise it references an operation variable."
+DefinesVariable(D, fragmentName, variableName) ==
+  fragmentName # "" /\ HasFragment(D, fragmentName) /\ variableName \in VariableNames(Fragment(D, fragmentName))
+IsFragmentVariableUsage(D, u) == DefinesVariable(D, u.within, u.usage.value.value)
+
+\* The usages of operation variables among them: every usage but those
+\* "within fragments that define a variable of the same name".
+OperationVariableUsages(S, D, operation) ==
+  {u.usage : u \in {x \in OperationUsages(S, D, operation) : ~IsFragmentVariableUsage(D, x)}}
 
 \* Subjects for variables, as graphql-js names them: "Op$v", or "$v" in an
-\* anonymous operation.
-VariableSubject(operation, name) == operation.name \o "$" \o name
+\* anonymous operation. A fragment's variable is "Fragment$v".
+VariableSubject(definition, name) == definition.name \o "$" \o name
 
 -----------------------------------------------------------------------------
 (* §5.1.1 Executable Definitions *)
@@ -507,27 +568,61 @@ FieldSelections(S, D) ==
   {s.parent \o "." \o s.selection.name
    : s \in {x \in AllFields(S, D) : IsComposite(S, x.parent) /\ ~HasField(S, x.parent, x.selection.name)}}
 
-\* "the set of selections with a given response name in set including
-\* visiting fragments and inline fragments": every field reachable from
-\* `set` without entering a field's selection set, as [key, field, parent]
-\* where parent is the type the field is selected on (a fragment's type
-\* condition, inside a fragment). `visited` stops fragment cycles, as
-\* CollectFields' visitedFragments does.
-RECURSIVE FieldsIn(_, _, _, _, _)
-FieldsIn(S, D, set, parent, visited) ==
+\* What FieldsInSetCanMerge visits in `set`, "including visiting fragments
+\* and inline fragments": every field and (the proposal) every fragment
+\* spread reachable from `set` without entering a field's selection set.
+\* Each member is [of, key, selection, parent, via, home]:
+\*   of       "field" or "spread"
+\*   key      a field's response name, or a spread's fragment name: "the set
+\*            of selections with a given response name" and "the set of
+\*            fragment spreads for a given named fragment"
+\*   parent   the type a field is selected on (a fragment's type condition,
+\*            inside a fragment); "" for a spread
+\*   via      the fragment spreads the selection was visited through,
+\*            outermost first, each as [name, arguments]. The proposal:
+\*            "a selection within a fragment definition is visited via the
+\*            fragment spread which caused that fragment definition to be
+\*            visited. A selection visited via more than one fragment spread
+\*            is a distinct member of spreadsForFragment or fieldsForName
+\*            for each."
+\*   home     the fragment whose definition holds the set the visit started
+\*            from, "" for an operation's
+\* `visited` stops fragment cycles, as CollectFields' visitedFragments does.
+\*
+\* via only matters to SameVariableScope, which asks about it only for a
+\* selection whose arguments reference a fragment variable. In a document
+\* that defines none, it is left empty, so that one field visited through
+\* two spreads stays one member, as in September 2026.
+HasFragmentVariables(D) == \E i \in FragmentIndices(D) : D[i].variables # <<>>
+Through(D, via, spread) ==
+  IF HasFragmentVariables(D) THEN Append(via, [name |-> spread.name, arguments |-> spread.arguments]) ELSE via
+
+Member(of, key, selection, parent, via, home) ==
+  [of |-> of, key |-> key, selection |-> selection, parent |-> parent, via |-> via, home |-> home]
+
+RECURSIVE MembersIn(_, _, _, _, _, _, _)
+MembersIn(S, D, set, parent, visited, via, home) ==
   UNION {LET selection == set[i] IN
            IF selection.kind = "field"
-           THEN {[key |-> ResponseKey(selection), field |-> selection, parent |-> parent]}
+           THEN {Member("field", ResponseKey(selection), selection, parent, via, home)}
            ELSE IF selection.kind = "inlineFragment"
-           THEN FieldsIn(S, D, selection.selectionSet, InnerScope(S, selection, parent), visited)
-           ELSE IF selection.name \in visited \/ ~HasFragment(D, selection.name) THEN {}
-           ELSE FieldsIn(S, D, Fragment(D, selection.name).selectionSet,
-                         Fragment(D, selection.name).typeCondition, visited \cup {selection.name})
+           THEN MembersIn(S, D, selection.selectionSet, InnerScope(S, selection, parent), visited, via, home)
+           ELSE {Member("spread", selection.name, selection, "", via, home)}
+                  \cup (IF selection.name \in visited \/ ~HasFragment(D, selection.name) THEN {}
+                        ELSE MembersIn(S, D, Fragment(D, selection.name).selectionSet,
+                                       Fragment(D, selection.name).typeCondition,
+                                       visited \cup {selection.name}, Through(D, via, selection), home))
          : i \in DOMAIN set}
 
-\* The fields of a collected field's selection set, collected in turn.
-SubfieldsOf(S, D, entry) ==
-  FieldsIn(S, D, entry.field.selectionSet, FieldType(S, entry.parent, entry.field.name).name, {})
+FieldsOf(members) == {m \in members : m.of = "field"}
+SpreadsOf(members) == {m \in members : m.of = "spread"}
+
+\* The members of a collected field's selection set. The proposal: "Each
+\* selection added to mergedSet from the selection set of a field is
+\* visited via the same fragment spread as that field, if any."
+SubmembersOf(S, D, field) ==
+  MembersIn(S, D, field.selection.selectionSet,
+            FieldType(S, field.parent, field.selection.name).name, {}, field.via, field.home)
 
 \* The shape comparison of SameResponseShape's steps 3 to 5, on two types:
 \* "conflict" (return false), "same" (return true), or "composite" (go on).
@@ -560,40 +655,101 @@ MergeFuel == 6
 \* quoted string, but 1 differs from 1.0), or the coerced argument values
 \* (where 1 equals 1.0 for a Float, and an omitted argument equals its
 \* default). scripts/generate-vectors-validate.mjs leaves the vectors where
-\* the readings disagree ungraded.
+\* the readings disagree ungraded. A variable is identical to a variable of
+\* the same name; SameVariableScope below is what tells two of them apart.
 RECURSIVE ValueOf(_)
 ValueOf(value) ==
   [kind |-> value.kind, value |-> value.value,
    items |-> [i \in DOMAIN value.items |-> ValueOf(value.items[i])],
    fields |-> {[name |-> value.fields[i].name, value |-> ValueOf(value.fields[i].value)] : i \in DOMAIN value.fields}]
-ArgumentsOf(field) == {[name |-> a.name, value |-> ValueOf(a.value)] : a \in Range(field.arguments)}
+ArgumentsOf(selection) == {[name |-> a.name, value |-> ValueOf(a.value)] : a \in Range(selection.arguments)}
 
-RECURSIVE FieldsCanMerge(_, _, _, _), SameResponseShape(_, _, _, _, _)
+\* The names of the variables in a value, at any depth.
+RECURSIVE VariablesIn(_)
+VariablesIn(value) ==
+  (IF value.kind = "variable" THEN {value.value} ELSE {})
+    \cup UNION {VariablesIn(value.items[i]) : i \in DOMAIN value.items}
+    \cup UNION {VariablesIn(value.fields[i].value) : i \in DOMAIN value.fields}
 
-\* FieldsInSetCanMerge(set), on the fields collected from set:
+\* The fragment whose definition a visited selection is used in: the one
+\* the spread it was visited via refers to, or else the one that holds the
+\* set. "" in an operation.
+UsedIn(m) == IF m.via = <<>> THEN m.home ELSE m.via[Len(m.via)].name
+
+\* "no Variable within the arguments of selectionA or selectionB references
+\* a fragment variable", for one of the two.
+ReferencesFragmentVariable(D, m) ==
+  \E a \in Range(m.selection.arguments) : \E v \in VariablesIn(a.value) : DefinesVariable(D, UsedIn(m), v)
+
+\* "the fragment spread via which selectionA was visited", as a visited
+\* selection itself: it was visited via the spread before it.
+SpreadOf(m) == [selection |-> m.via[Len(m.via)], via |-> SubSeq(m.via, 1, Len(m.via) - 1), home |-> m.home]
+
+RECURSIVE SameArguments(_, _, _), SameVariableScope(_, _, _)
+
+\* The proposal's SameArguments(selectionA, selectionB), for two fields or
+\* two fragment spreads as visited:
+\* "- If selectionA and selectionB do not have identical sets of arguments,
+\*    return false.
+\*  - If no Variable within the arguments of selectionA or selectionB
+\*    references a fragment variable, return true.
+\*  - Return SameVariableScope(selectionA, selectionB)."
+SameArguments(D, a, b) ==
+  /\ ArgumentsOf(a.selection) = ArgumentsOf(b.selection)
+  /\ (ReferencesFragmentVariable(D, a) \/ ReferencesFragmentVariable(D, b)) => SameVariableScope(D, a, b)
+
+\* The proposal's SameVariableScope(selectionA, selectionB):
+\* "- Let spreadA be the fragment spread via which selectionA was visited,
+\*    if any. Let spreadB be [the same for selectionB].
+\*  - If neither spreadA nor spreadB exists, return true.
+\*  - If only one of spreadA and spreadB exists, return false.
+\*  - If spreadA and spreadB do not reference the same named fragment,
+\*    return false.
+\*  - Return SameArguments(spreadA, spreadB)."
+\* It ends: each call looks at a shorter `via`.
+SameVariableScope(D, a, b) ==
+  CASE a.via = <<>> /\ b.via = <<>> -> TRUE
+    [] a.via = <<>> \/ b.via = <<>> -> FALSE
+    [] SpreadOf(a).selection.name # SpreadOf(b).selection.name -> FALSE
+    [] OTHER -> SameArguments(D, SpreadOf(a), SpreadOf(b))
+
+RECURSIVE MembersCanMerge(_, _, _, _), SameResponseShape(_, _, _, _, _)
+
+\* FieldsInSetCanMerge(set), on the members visited in set. The proposal
+\* puts the fragment spreads first:
+\* "- Let spreadsForFragment be the set of fragment spreads for a given
+\*    named fragment in set including visiting fragments and inline
+\*    fragments.
+\*  - Given each pair of distinct members spreadA and spreadB in
+\*    spreadsForFragment: SameArguments(spreadA, spreadB) must be true."
+\* and then, as in September 2026 but for SameArguments:
 \* "Given each pair of distinct members fieldA and fieldB in fieldsForName:
 \*   - SameResponseShape(fieldA, fieldB) must be true.
 \*   - If the parent types of fieldA and fieldB are equal or if either is
 \*     not an Object Type:
 \*     - fieldA and fieldB must have identical field names.
-\*     - fieldA and fieldB must have identical sets of arguments.
+\*     - SameArguments(fieldA, fieldB) must be true.
 \*     - Let mergedSet be the result of adding the selection set of fieldA
 \*       and the selection set of fieldB.
 \*     - FieldsInSetCanMerge(mergedSet) must be true."
-FieldsCanMerge(S, D, fields, fuel) ==
-  \A a, b \in fields :
-    (a # b /\ a.key = b.key) =>
-      /\ SameResponseShape(S, D, a, b, fuel)
-      /\ (a.parent = b.parent \/ Kind(S, a.parent) # "object" \/ Kind(S, b.parent) # "object") =>
-           /\ a.field.name = b.field.name
-           /\ ArgumentsOf(a.field) = ArgumentsOf(b.field)
-           /\ fuel > 0 => FieldsCanMerge(S, D, SubfieldsOf(S, D, a) \cup SubfieldsOf(S, D, b), fuel - 1)
+\* September 2026 has "fieldA and fieldB must have identical sets of
+\* arguments" where the proposal has SameArguments, which is the same thing
+\* when no fragment defines a variable.
+MembersCanMerge(S, D, members, fuel) ==
+  /\ \A a, b \in SpreadsOf(members) : (a # b /\ a.key = b.key) => SameArguments(D, a, b)
+  /\ \A a, b \in FieldsOf(members) :
+       (a # b /\ a.key = b.key) =>
+         /\ SameResponseShape(S, D, a, b, fuel)
+         /\ (a.parent = b.parent \/ Kind(S, a.parent) # "object" \/ Kind(S, b.parent) # "object") =>
+              /\ a.selection.name = b.selection.name
+              /\ SameArguments(D, a, b)
+              /\ fuel > 0 => MembersCanMerge(S, D, SubmembersOf(S, D, a) \cup SubmembersOf(S, D, b), fuel - 1)
 
 \* SameResponseShape(fieldA, fieldB). A field that isn't defined has no
 \* return type to compare (§5.3.1 rejects it), so it has any shape.
 SameResponseShape(S, D, a, b, fuel) ==
-  LET typeA == FieldType(S, a.parent, a.field.name)
-      typeB == FieldType(S, b.parent, b.field.name)
+  LET typeA == FieldType(S, a.parent, a.selection.name)
+      typeB == FieldType(S, b.parent, b.selection.name)
       shape == IF typeA = NoType \/ typeB = NoType THEN "same" ELSE CompareShapes(S, typeA, typeB)
   IN CASE shape = "conflict" -> FALSE
        [] shape = "same" -> TRUE
@@ -604,14 +760,18 @@ SameResponseShape(S, D, a, b, fuel) ==
             \* fieldsForName: If SameResponseShape(subfieldA, subfieldB)
             \* is false, return false."
             \/ fuel = 0
-            \/ LET merged == SubfieldsOf(S, D, a) \cup SubfieldsOf(S, D, b) IN
+            \/ LET merged == FieldsOf(SubmembersOf(S, D, a) \cup SubmembersOf(S, D, b)) IN
                \A x, y \in merged : (x # y /\ x.key = y.key) => SameResponseShape(S, D, x, y, fuel - 1)
 
 \* §5.3.2 Field Selection Merging: "Let set be any selection set defined in
-\* the GraphQL document. FieldsInSetCanMerge(set) must be true."
+\* the GraphQL document. FieldsInSetCanMerge(set) must be true." A set in a
+\* fragment's definition is visited from there, via no spread.
 FieldSelectionMerging(S, D) ==
-  LET sets == UNION {SelectionSetsIn(S, D[i].selectionSet, ScopeOf(S, D[i])) : i \in ExecutableIndices(D)}
-  IN IF \A s \in sets : FieldsCanMerge(S, D, FieldsIn(S, D, s.set, s.parent, {}), MergeFuel)
+  LET sets == UNION {{[set |-> s.set, parent |-> s.parent,
+                       home |-> IF D[i].kind = "fragment" THEN D[i].name ELSE ""]
+                      : s \in SelectionSetsIn(S, D[i].selectionSet, ScopeOf(S, D[i]))}
+                     : i \in ExecutableIndices(D)}
+  IN IF \A s \in sets : MembersCanMerge(S, D, MembersIn(S, D, s.set, s.parent, {}, <<>>, s.home), MergeFuel)
      THEN {} ELSE {"conflict"}
 
 \* §5.3.3 Leaf Field Selections: "Let selectionType be the unwrapped result
@@ -632,7 +792,12 @@ LeafFieldSelections(S, D) ==
 \* §5.4.1 Argument Names: "Let argumentDefinition be the argument definition
 \* provided by the parent field or definition named argumentName.
 \* argumentDefinition must exist." Arguments of a field or directive that
-\* isn't defined are left to §5.3.1 and §5.7.1.
+\* isn't defined are left to §5.3.1 and §5.7.1. The proposal adds, "For
+\* each argument fragmentArgument provided to a named fragment spread in
+\* the document: ... Let fragment be the target of namedSpread. If no such
+\* fragment exists, continue with the next fragmentArgument. Let
+\* variableDefinition be the variable definition named variableName
+\* provided by fragment. variableDefinition must exist."
 ArgumentNames(S, D) ==
   UNION {{a.subject \o "(" \o a.arguments[i].name \o ")"
           : i \in {j \in DOMAIN a.arguments : a.arguments[j].name \notin DOMAIN a.definitions}}
@@ -640,7 +805,9 @@ ArgumentNames(S, D) ==
 
 \* §5.4.2 Argument Uniqueness: "Let arguments be all Arguments named
 \* argumentName in the Argument Set which contains argument. arguments must
-\* be the set containing only argument."
+\* be the set containing only argument." The proposal: "Fields, named
+\* fragment spreads and directives treat arguments as a mapping of argument
+\* name to value."
 ArgumentUniqueness(S, D) ==
   UNION {{a.arguments[i].name
           : i \in {j \in DOMAIN a.arguments :
@@ -650,10 +817,14 @@ ArgumentUniqueness(S, D) ==
 \* §5.4.3 Required Arguments: "If type is Non-Null and defaultValue does
 \* not exist: ... Let argument be the argument in arguments named
 \* argumentName. argument must exist. Let value be the value of argument.
-\* value must not be the null literal." Subjects are "field(arg)" or
-\* "@directive(arg)", as graphql-js names them.
+\* value must not be the null literal." The proposal reads it "For each
+\* Field, Directive, or Named Fragment Spread in the document", with "the
+\* variable definitions of the referenced Fragment" as its input
+\* definitions. Subjects are "field(arg)" or "@directive(arg)", as
+\* graphql-js names them, and "...fragment(arg)".
 RequiredArguments(S, D) ==
-  UNION {{(IF a.field THEN a.name ELSE "@" \o a.name) \o "(" \o n \o ")"
+  UNION {{(CASE a.of = "field" -> a.name [] a.of = "directive" -> "@" \o a.name [] OTHER -> "..." \o a.name)
+            \o "(" \o n \o ")"
           : n \in {m \in DOMAIN a.definitions :
                      /\ IsNonNull(a.definitions[m].type)
                      /\ ~a.definitions[m].hasDefault
@@ -874,38 +1045,56 @@ DirectivesAreUniquePerLocation(S, D) ==
 (* §5.8 Variables *)
 
 \* §5.8.1 Variable Uniqueness: "Let variables be the set of all variables
-\* named variableName on operation. variables must be a set of one."
+\* named variableName on operation. variables must be a set of one." The
+\* proposal reads it for "the set of all operation and fragment definitions
+\* in the document".
 VariableUniqueness(S, D) ==
   UNION {LET vars == D[o].variables IN
          {vars[i].name : i \in {j \in DOMAIN vars : \E k \in DOMAIN vars : k # j /\ vars[k].name = vars[j].name}}
-         : o \in OperationIndices(D)}
+         : o \in ExecutableIndices(D)}
 
 \* §5.8.2 Variables Are Input Types: "IsInputType(variableType) must be
-\* true."
+\* true." The proposal: for every variable defined on an operation or a
+\* fragment definition.
 VariablesAreInputTypes(S, D) ==
   UNION {LET vars == D[o].variables IN
          {vars[i].name : i \in {j \in DOMAIN vars : ~IsInputType(S, vars[j].type)}}
-         : o \in OperationIndices(D)}
+         : o \in ExecutableIndices(D)}
 
 \* §5.8.3 All Variable Uses Defined: "For each variableUsage in scope,
 \* variable must be in operation's variable list. Let fragments be every
 \* fragment referenced by that operation transitively. For each fragment in
 \* fragments: For each variableUsage in scope of fragment, variable must be
-\* in operation's variable list."
+\* in operation's variable list." The proposal ends it "variable must be in
+\* fragment's variable list, operation's variable list, or both": only the
+\* usages of operation variables need the operation to define them.
 AllVariableUsesDefined(S, D) ==
   UNION {LET op == D[o] IN
          {VariableSubject(op, u.value.value)
-          : u \in {x \in OperationUsages(S, D, op) : x.value.value \notin VariableNames(op)}}
+          : u \in {x \in OperationVariableUsages(S, D, op) : x.value.value \notin VariableNames(op)}}
          : o \in OperationIndices(D)}
 
 \* §5.8.4 All Variables Used: "Each variable in variables must be used at
 \* least once in either the operation scope itself or any fragment
-\* transitively referenced by that operation."
+\* transitively referenced by that operation." The proposal adds
+\* "excluding usages within fragments that define a variable of the same
+\* name", and for fragments: "For every fragment in the document: Let
+\* variables be the variables defined by that fragment. Each variable in
+\* variables must be used at least once transitively within the fragment's
+\* selection set excluding traversal of named fragment spreads." So a usage
+\* in the arguments of a spread in that selection set counts, and a usage
+\* in a directive on the fragment definition itself doesn't: it is outside
+\* "the fragment's selection set". (An operation's own directives are in
+\* "the operation scope itself".)
 AllVariablesUsed(S, D) ==
   UNION {LET op == D[o]
-             used == {u.value.value : u \in OperationUsages(S, D, op)}
+             used == {u.value.value : u \in OperationVariableUsages(S, D, op)}
          IN {VariableSubject(op, n) : n \in VariableNames(op) \ used}
          : o \in OperationIndices(D)}
+    \cup UNION {LET fragment == D[f]
+                    used == {u.value.value : u \in SelectionSetUsages(S, D, fragment)}
+                IN {VariableSubject(fragment, n) : n \in VariableNames(fragment) \ used}
+                : f \in FragmentIndices(D)}
 
 \* AreTypesCompatible(variableType, locationType)
 RECURSIVE AreTypesCompatible(_, _)
@@ -942,19 +1131,33 @@ IsVariableUsageAllowed(variableDefinition, usage) ==
              /\ AreTypesCompatible(variableType, Nullable(locationType))
      ELSE AreTypesCompatible(variableType, locationType)
 
+\* The VariableDefinition a usage refers to, in an operation that includes
+\* it. The proposal: "If the usage is within a fragment that defines a
+\* VariableDefinition for variableName: Let variableDefinition be that
+\* VariableDefinition. Otherwise, let variableDefinition be the
+\* VariableDefinition named variableName defined within operation."
+IsUsageDefined(D, op, u) == IsFragmentVariableUsage(D, u) \/ u.usage.value.value \in VariableNames(op)
+DefinitionOfUsage(D, op, u) ==
+  IF IsFragmentVariableUsage(D, u) THEN VariableDefinition(Fragment(D, u.within), u.usage.value.value)
+  ELSE VariableDefinition(op, u.usage.value.value)
+
 \* §5.8.5 All Variable Usages Are Allowed: "For each variableUsage in
 \* variableUsages: ... Let variableDefinition be the VariableDefinition
 \* named variableName defined within operation.
 \* IsVariableUsageAllowed(variableDefinition, variableUsage) must be true."
 \* A usage of a variable that isn't defined (§5.8.3), or in a position with
-\* no expected type, has nothing to compare.
+\* no expected type, has nothing to compare. The proposal: "When
+\* variableUsage is located in an Argument provided to a named fragment
+\* spread, the expected type and default value of that Argument are those
+\* of the fragment variable of the same name defined by the referenced
+\* fragment", which is what ArgumentPositions gives such a usage.
 AllVariableUsagesAreAllowed(S, D) ==
   UNION {LET op == D[o] IN
-         {u.value.value
+         {u.usage.value.value
           : u \in {x \in OperationUsages(S, D, op) :
-                     /\ x.value.value \in VariableNames(op)
-                     /\ x.type # NoType
-                     /\ ~IsVariableUsageAllowed(VariableDefinition(op, x.value.value), x)}}
+                     /\ IsUsageDefined(D, op, x)
+                     /\ x.usage.type # NoType
+                     /\ ~IsVariableUsageAllowed(DefinitionOfUsage(D, op, x), x.usage)}}
          : o \in OperationIndices(D)}
 
 \* Where §5.8.5's prose and its formal text disagree. The prose says
@@ -966,12 +1169,12 @@ AllVariableUsagesAreAllowed(S, D) ==
 \* this decides ungraded.
 OneOfProseOnly(S, D) ==
   UNION {LET op == D[o] IN
-         {u.value.value
+         {u.usage.value.value
           : u \in {x \in OperationUsages(S, D, op) :
-                     /\ x.oneOf
-                     /\ x.value.value \in VariableNames(op)
-                     /\ ~IsNonNull(VariableDefinition(op, x.value.value).type)
-                     /\ IsVariableUsageAllowed(VariableDefinition(op, x.value.value), x)}}
+                     /\ x.usage.oneOf
+                     /\ IsUsageDefined(D, op, x)
+                     /\ ~IsNonNull(DefinitionOfUsage(D, op, x).type)
+                     /\ IsVariableUsageAllowed(DefinitionOfUsage(D, op, x), x.usage)}}
          : o \in OperationIndices(D)}
 
 -----------------------------------------------------------------------------
@@ -1683,6 +1886,288 @@ Vectors ==
     @@ ("arguments" :> ArgumentVectors) @@ ("fragments" :> FragmentVectors) @@ ("values" :> ValueVectors)
     @@ ("directives" :> DirectiveVectors) @@ ("variables" :> VariableVectors)
 
+\* Fragment arguments (graphql-spec#1081 at dfd847524d25): the proposal's
+\* own examples (V), and documents this module adds beside them (Added).
+\* Kept out of Vectors, which holds September 2026's examples: none of
+\* these documents parses there.
+FragV(name, vars, cond, set) == [Frag(name, cond, set) EXCEPT !.variables = vars]
+SpreadA(name, args) == WithArgs(Spread(name), args)
+CommandT == T("DogCommand")
+Knows(value) == FA("doesKnowCommand", <<A("dogCommand", value)>>)
+Command == <<VarDef("command", NN(CommandT))>>
+CommandFragment == FragV("commandFragment", Command, "Dog", <<Knows(Var("command"))>>)
+WithFragmentArg == FragV("withFragmentArg", <<VarDef("command", CommandT)>>, "Dog", <<Knows(Var("command"))>>)
+OnDog(vars, set) == <<Q("", vars, <<FS("dog", set)>>)>>
+NonNullBoolean(value) == FA("nonNullBooleanArgField", <<A("nonNullBooleanArg", value)>>)
+HouseTrainedWithArgument ==
+  FragV("houseTrainedWithArgument", AtOtherHomes, "Dog", <<HouseTrained("atOtherHomes")>>)
+\* A fragment that forwards its variable to commandFragment.
+Forward(name, vars, value) ==
+  FragV(name, vars, "Dog", <<SpreadA("commandFragment", <<A("command", value)>>)>>)
+
+\* The example schema with a directive for variable definitions.
+WithOnce ==
+  [Examples EXCEPT !.directives =
+     @ @@ ("once" :> [locations |-> {"VARIABLE_DEFINITION"}, args |-> <<>>, repeatable |-> FALSE])]
+
+FragmentArgumentVectors == <<
+  \* §5.3.2 Field Selection Merging: "any two fragment spreads of the same
+  \* fragment which might both be encountered for that selection set are
+  \* only valid if they have the same arguments."
+  V("FieldSelectionMerging", Examples,
+    <<CommandFragment,
+      FragV("potentiallyConflictingArguments",
+            <<VarDef("commandOne", NN(CommandT)), VarDef("commandTwo", NN(CommandT))>>, "Dog",
+            <<SpreadA("commandFragment", <<A("command", Var("commandOne"))>>),
+              SpreadA("commandFragment", <<A("command", Var("commandTwo"))>>)>>)>>
+      \o OnDog(<<>>, <<SpreadA("potentiallyConflictingArguments",
+                               <<A("commandOne", Enum("SIT")), A("commandTwo", Enum("DOWN"))>>)>>), FALSE),
+  \* "the position in which the $command variable is defined for each
+  \* reference differs, and thus the arguments do not match"
+  V("FieldSelectionMerging", Examples,
+    <<CommandFragment, Forward("otherFragment", Command, Var("command")),
+      Q("KnowsCommand", Command,
+        <<FS("dog", <<SpreadA("commandFragment", <<A("command", Var("command"))>>),
+                      SpreadA("otherFragment", <<A("command", Enum("DOWN"))>>)>>)>>)>>, FALSE),
+  \* "one is visited via the fragment spread providing SIT and the other via
+  \* the fragment spread providing DOWN"
+  V("FieldSelectionMerging", Examples,
+    <<FragV("commandAndOwnerPets", Command, "Dog",
+            <<Knows(Var("command")),
+              FS("owner", <<FS("pets", <<On("Dog", <<Knows(Var("command"))>>)>>)>>)>>)>>
+      \o OnDog(<<>>, <<SpreadA("commandAndOwnerPets", <<A("command", Enum("SIT"))>>),
+                       FS("owner", <<FS("pets", <<SpreadA("commandAndOwnerPets", <<A("command", Enum("DOWN"))>>)>>)>>)>>),
+    FALSE),
+  \* The same document with one value: both spreads provide SIT.
+  Added("FieldSelectionMerging", Examples,
+    <<FragV("commandAndOwnerPets", Command, "Dog",
+            <<Knows(Var("command")),
+              FS("owner", <<FS("pets", <<On("Dog", <<Knows(Var("command"))>>)>>)>>)>>)>>
+      \o OnDog(<<>>, <<SpreadA("commandAndOwnerPets", <<A("command", Enum("SIT"))>>),
+                       FS("owner", <<FS("pets", <<SpreadA("commandAndOwnerPets", <<A("command", Enum("SIT"))>>)>>)>>)>>),
+    TRUE),
+  Added("FieldSelectionMerging", Examples,
+    <<CommandFragment>>
+      \o OnDog(<<>>, <<SpreadA("commandFragment", <<A("command", Enum("SIT"))>>),
+                       SpreadA("commandFragment", <<A("command", Enum("SIT"))>>)>>), TRUE),
+  Added("FieldSelectionMerging", Examples,
+    <<CommandFragment>>
+      \o OnDog(<<>>, <<SpreadA("commandFragment", <<A("command", Enum("SIT"))>>),
+                       SpreadA("commandFragment", <<A("command", Enum("DOWN"))>>)>>), FALSE),
+  \* A spread with no argument and one that gives the default aren't
+  \* identical sets of arguments (the reading of ArgumentsOf).
+  Added("FieldSelectionMerging", Examples,
+    <<FragV("commandFragment", <<VarDefault("command", NN(CommandT), Enum("SIT"))>>, "Dog", <<Knows(Var("command"))>>)>>
+      \o OnDog(<<>>, <<Spread("commandFragment"), SpreadA("commandFragment", <<A("command", Enum("SIT"))>>)>>), FALSE),
+  \* "Unlike field selections, this applies regardless of the parent types
+  \* of the fragment spreads": Pet.name is on both, and the two spreads are
+  \* never collected for one object.
+  Added("FieldSelectionMerging", Examples,
+    <<FragV("named", <<VarDef("with", NN(BooleanT))>>, "Pet", <<WithDirs(F("name"), <<Dir("include", <<A("if", Var("with"))>>)>>)>>),
+      Q("", <<>>, <<FS("pet", <<On("Dog", <<SpreadA("named", <<A("with", BoolV("true"))>>)>>),
+                                On("Cat", <<SpreadA("named", <<A("with", BoolV("false"))>>)>>)>>)>>)>>, FALSE),
+  \* A spread inside the fragment the other spread visits is in the same
+  \* set: its arguments must match too.
+  Added("FieldSelectionMerging", Examples,
+    <<CommandFragment, Forward("otherFragment", <<>>, Enum("DOWN"))>>
+      \o OnDog(<<>>, <<SpreadA("commandFragment", <<A("command", Enum("SIT"))>>), Spread("otherFragment")>>), FALSE),
+  \* Spreads under two fields that merge are in their merged set.
+  Added("FieldSelectionMerging", Examples,
+    <<CommandFragment,
+      Q("", <<>>, <<FS("dog", <<SpreadA("commandFragment", <<A("command", Enum("SIT"))>>)>>),
+                    FS("dog", <<SpreadA("commandFragment", <<A("command", Enum("DOWN"))>>)>>)>>)>>, FALSE),
+  \* And there the spread pair alone decides: the two `name` fields have no
+  \* arguments to compare. (§6.3.2's CollectSubfields collects each `dog`
+  \* with its own visitedFragments, so both spreads would be collected:
+  \* docs/spec-gaps.md.)
+  Added("FieldSelectionMerging", Examples,
+    <<FragV("named", <<VarDef("with", NN(BooleanT))>>, "Dog", <<WithDirs(F("name"), <<Dir("include", <<A("if", Var("with"))>>)>>)>>),
+      Q("", <<>>, <<FS("dog", <<SpreadA("named", <<A("with", BoolV("true"))>>)>>),
+                    FS("dog", <<SpreadA("named", <<A("with", BoolV("false"))>>)>>)>>)>>, FALSE),
+  \* Two fields that reference one fragment variable, visited via the same
+  \* spread, and via no spread from the fragment's own selection set.
+  Added("FieldSelectionMerging", Examples,
+    <<FragV("twice", Command, "Dog", <<Knows(Var("command")), On("Dog", <<Knows(Var("command"))>>)>>)>>
+      \o OnDog(<<>>, <<SpreadA("twice", <<A("command", Enum("SIT"))>>)>>), TRUE),
+  \* A fragment variable and the operation variable of the same name: the
+  \* arguments are written alike, and one is visited via no spread.
+  Added("FieldSelectionMerging", Examples,
+    <<CommandFragment>>
+      \o OnDog(Command, <<Knows(Var("command")), SpreadA("commandFragment", <<A("command", Enum("SIT"))>>)>>), FALSE),
+  \* Without a variable of its own, the fragment's $command is the
+  \* operation's, wherever it is visited from.
+  Added("FieldSelectionMerging", Examples,
+    <<Frag("commandFragment", "Dog", <<Knows(Var("command"))>>)>>
+      \o OnDog(Command, <<Knows(Var("command")), Spread("commandFragment")>>), TRUE),
+  \* Two fragments that define the same variable and select the same field
+  \* aren't the same named fragment, whatever they are given.
+  Added("FieldSelectionMerging", Examples,
+    <<CommandFragment, FragV("sameAgain", Command, "Dog", <<Knows(Var("command"))>>)>>
+      \o OnDog(<<>>, <<SpreadA("commandFragment", <<A("command", Enum("SIT"))>>),
+                       SpreadA("sameAgain", <<A("command", Enum("SIT"))>>)>>), FALSE),
+  \* The same forwarding spread, visited via two spreads of its fragment
+  \* with the same arguments, and with different ones.
+  Added("FieldSelectionMerging", Examples,
+    <<CommandFragment, Forward("otherFragment", Command, Var("command")),
+      Q("", <<>>, <<FS("dog", <<SpreadA("otherFragment", <<A("command", Enum("SIT"))>>)>>),
+                    FS("dog", <<SpreadA("otherFragment", <<A("command", Enum("SIT"))>>)>>)>>)>>, TRUE),
+  Added("FieldSelectionMerging", Examples,
+    <<CommandFragment, Forward("otherFragment", Command, Var("command")),
+      Q("", <<>>, <<FS("dog", <<FS("owner", <<FS("pets", <<SpreadA("otherFragment", <<A("command", Enum("SIT"))>>)>>)>>)>>),
+                    FS("dog", <<FS("owner", <<FS("pets", <<SpreadA("otherFragment", <<A("command", Enum("DOWN"))>>)>>)>>)>>)>>)>>,
+    FALSE),
+  \* Two fragments forward the same value to one fragment: their spreads of
+  \* it reference different fragments' variables.
+  Added("FieldSelectionMerging", Examples,
+    <<CommandFragment, Forward("otherFragment", Command, Var("command")), Forward("thirdFragment", Command, Var("command"))>>
+      \o OnDog(<<>>, <<SpreadA("otherFragment", <<A("command", Enum("SIT"))>>),
+                       SpreadA("thirdFragment", <<A("command", Enum("SIT"))>>)>>), FALSE),
+  \* §5.4.1 Argument Names
+  V("ArgumentNames", Examples,
+    <<WithFragmentArg, Frag("usesFragmentArg", "Dog", <<SpreadA("withFragmentArg", <<A("command", Enum("DOWN"))>>)>>)>>, TRUE),
+  V("ArgumentNames", Examples,
+    <<Frag("invalidFragmentArgName", "Dog", <<SpreadA("withFragmentArg", <<A("dogCommand", Enum("SIT"))>>)>>),
+      WithFragmentArg>>, FALSE),
+  \* "If no such fragment exists, continue with the next fragmentArgument."
+  Added("ArgumentNames", Examples,
+    <<Frag("spreadsUndefined", "Dog", <<SpreadA("undefinedFragment", <<A("command", Enum("SIT"))>>)>>)>>, TRUE),
+  \* An argument for a fragment that defines no variable.
+  Added("ArgumentNames", Examples,
+    <<Frag("nameFragment", "Dog", <<F("name")>>),
+      Frag("spreadsWithArgument", "Dog", <<SpreadA("nameFragment", <<A("command", Enum("SIT"))>>)>>)>>, FALSE),
+  \* §5.4.2 Argument Uniqueness: "Fields, named fragment spreads and
+  \* directives treat arguments as a mapping of argument name to value."
+  Added("ArgumentUniqueness", Examples,
+    <<WithFragmentArg,
+      Frag("duplicateFragmentArgs", "Dog",
+           <<SpreadA("withFragmentArg", <<A("command", Enum("SIT")), A("command", Enum("DOWN"))>>)>>)>>, FALSE),
+  Added("ArgumentUniqueness", Examples,
+    <<WithFragmentArg, Frag("oneFragmentArg", "Dog", <<SpreadA("withFragmentArg", <<A("command", Enum("SIT"))>>)>>)>>, TRUE),
+  \* §5.4.3 Required Arguments
+  V("RequiredArguments", Examples,
+    <<FragV("fragmentWithNonNullVariable", <<VarDef("arg", NN(BooleanT))>>, "Arguments", <<NonNullBoolean(Var("arg"))>>),
+      Frag("missingRequiredFragmentArg", "Arguments", <<Spread("fragmentWithNonNullVariable")>>)>>, FALSE),
+  V("RequiredArguments", Examples,
+    <<FragV("fragmentWithDefault", <<VarDefault("arg", NN(BooleanT), BoolV("true"))>>, "Arguments", <<NonNullBoolean(Var("arg"))>>),
+      Frag("goodFragmentDefault", "Arguments", <<Spread("fragmentWithDefault")>>)>>, TRUE),
+  \* "value must not be the null literal."
+  Added("RequiredArguments", Examples,
+    <<FragV("fragmentWithNonNullVariable", <<VarDef("arg", NN(BooleanT))>>, "Arguments", <<NonNullBoolean(Var("arg"))>>),
+      Frag("nullFragmentArg", "Arguments", <<SpreadA("fragmentWithNonNullVariable", <<A("arg", Null)>>)>>)>>, FALSE),
+  Added("RequiredArguments", Examples,
+    <<FragV("fragmentWithNonNullVariable", <<VarDef("arg", NN(BooleanT))>>, "Arguments", <<NonNullBoolean(Var("arg"))>>),
+      Frag("givenFragmentArg", "Arguments", <<SpreadA("fragmentWithNonNullVariable", <<A("arg", BoolV("true"))>>)>>)>>, TRUE),
+  \* A nullable fragment variable is optional.
+  Added("RequiredArguments", Examples, <<WithFragmentArg, Frag("noFragmentArg", "Dog", <<Spread("withFragmentArg")>>)>>, TRUE),
+  \* §5.6.1 Values of Correct Type: "For an argument provided to a named
+  \* fragment spread, the type expected is the type of the fragment variable
+  \* of the same name defined by the referenced fragment."
+  Added("ValuesOfCorrectType", Examples,
+    <<WithFragmentArg, Frag("goodFragmentArg", "Dog", <<SpreadA("withFragmentArg", <<A("command", Enum("SIT"))>>)>>)>>, TRUE),
+  Added("ValuesOfCorrectType", Examples,
+    <<WithFragmentArg, Frag("stringFragmentArg", "Dog", <<SpreadA("withFragmentArg", <<A("command", StrV("SIT"))>>)>>)>>, FALSE),
+  Added("ValuesOfCorrectType", Examples,
+    <<WithFragmentArg, Frag("unknownFragmentArg", "Dog", <<SpreadA("withFragmentArg", <<A("command", Enum("MEOW"))>>)>>)>>, FALSE),
+  \* A fragment variable's default value is a variable definition's.
+  Added("ValuesOfCorrectType", Examples,
+    <<FragV("badDefault", <<VarDefault("command", CommandT, IntV("1"))>>, "Dog", <<Knows(Var("command"))>>)>>, FALSE),
+  \* §5.7.2 Directives Are in Valid Locations: a fragment's variable
+  \* definition is a VariableDefinition, and the proposal adds no location.
+  Added("DirectivesAreInValidLocations", Examples,
+    <<FragV("skippedVariable", <<[VarDef("command", CommandT) EXCEPT !.directives = <<Dir("skip", <<A("if", BoolV("true"))>>)>>]>>,
+            "Dog", <<Knows(Var("command"))>>)>>, FALSE),
+  Added("DirectivesAreInValidLocations", WithOnce,
+    <<FragV("onceVariable", <<[VarDef("command", CommandT) EXCEPT !.directives = <<Dir("once", <<>>)>>]>>,
+            "Dog", <<Knows(Var("command"))>>)>>, TRUE),
+  \* §5.8.1 Variable Uniqueness: "it is valid for a fragment to define a
+  \* variable with a name that is also defined on an operation"
+  V("VariableUniqueness", Examples,
+    <<Q("C", AtOtherHomes, <<Spread("houseTrained"), As("aDog", FS("dog", <<Spread("houseTrainedWithArgument")>>))>>),
+      Frag("houseTrained", "Query", <<FS("dog", <<HouseTrained("atOtherHomes")>>)>>), HouseTrainedWithArgument>>, TRUE),
+  Added("VariableUniqueness", Examples,
+    <<FragV("twoOfOne", AtOtherHomes \o AtOtherHomes, "Dog", <<HouseTrained("atOtherHomes")>>)>>, FALSE),
+  \* §5.8.2 Variables Are Input Types, for a fragment's variables.
+  Added("VariablesAreInputTypes", Examples,
+    <<FragV("takesDog", <<VarDef("dog", T("Dog"))>>, "Dog", <<F("name")>>)>>, FALSE),
+  Added("VariablesAreInputTypes", Examples, <<WithFragmentArg>>, TRUE),
+  \* §5.8.3 All Variable Uses Defined: "variable must be in fragment's
+  \* variable list, operation's variable list, or both."
+  Added("AllVariableUsesDefined", Examples,
+    OnDog(<<>>, <<Spread("houseTrainedWithArgument")>>) \o <<HouseTrainedWithArgument>>, TRUE),
+  \* A fragment variable is "locally scoped, it may only be referenced
+  \* within that fragment (non-transitively)": a fragment spread inside
+  \* doesn't see it.
+  Added("AllVariableUsesDefined", Examples,
+    OnDog(<<>>, <<Spread("outer")>>)
+      \o <<FragV("outer", AtOtherHomes, "Dog", <<HouseTrained("atOtherHomes"), Spread("isHouseTrainedFragment")>>),
+           HouseTrainedFragment>>, FALSE),
+  \* §5.8.4 All Variables Used: "fragments that define a variable cannot use
+  \* the operation variable of the same name"
+  V("AllVariablesUsed", Examples,
+    <<Q("variableNotUsedWithinFragment", AtOtherHomes, <<FS("dog", <<Spread("shadowedVariableFragment")>>)>>),
+      FragV("shadowedVariableFragment", AtOtherHomes, "Dog", <<HouseTrained("atOtherHomes")>>)>>, FALSE),
+  \* "Fragment variables must also be used within their definitions."
+  V("AllVariablesUsed", Examples,
+    <<Q("queryWithFragmentArgUnused", AtOtherHomes,
+        <<FS("dog", <<SpreadA("fragmentArgUnused", <<A("atOtherHomes", Var("atOtherHomes"))>>)>>)>>),
+      FragV("fragmentArgUnused", AtOtherHomes, "Dog", <<F("isHouseTrained")>>)>>, FALSE),
+  \* The document of §5.8.1's example uses every variable it defines.
+  Added("AllVariablesUsed", Examples,
+    <<Q("C", AtOtherHomes, <<Spread("houseTrained"), As("aDog", FS("dog", <<Spread("houseTrainedWithArgument")>>))>>),
+      Frag("houseTrained", "Query", <<FS("dog", <<HouseTrained("atOtherHomes")>>)>>), HouseTrainedWithArgument>>, TRUE),
+  \* A variable used only as a spread's argument is used: by the operation,
+  \* and by a fragment that forwards it.
+  Added("AllVariablesUsed", Examples,
+    <<CommandFragment, Forward("otherFragment", Command, Var("command")),
+      Q("forwards", Command, <<FS("dog", <<SpreadA("otherFragment", <<A("command", Var("command"))>>)>>)>>)>>, TRUE),
+  \* A use in a directive on the fragment definition itself is outside "the
+  \* fragment's selection set".
+  Added("AllVariablesUsed", Examples,
+    <<[FragV("usedOnDefinition", <<VarDef("if", NN(BooleanT))>>, "Dog", <<F("name")>>)
+         EXCEPT !.directives = <<Dir("include", <<A("if", Var("if"))>>)>>]>>, FALSE),
+  \* §5.8.5 All Variable Usages Are Allowed: "If the usage is within a
+  \* fragment that defines a VariableDefinition for variableName: Let
+  \* variableDefinition be that VariableDefinition."
+  Added("AllVariableUsagesAreAllowed", Examples,
+    OnDog(<<>>, <<SpreadA("commandFragment", <<A("command", Enum("SIT"))>>)>>) \o <<CommandFragment>>, TRUE),
+  Added("AllVariableUsagesAreAllowed", Examples,
+    OnDog(<<>>, <<SpreadA("withFragmentArg", <<A("command", Enum("SIT"))>>)>>) \o <<WithFragmentArg>>, FALSE),
+  Added("AllVariableUsagesAreAllowed", Examples,
+    OnDog(<<>>, <<Spread("withDefault")>>)
+      \o <<FragV("withDefault", <<VarDefault("command", CommandT, Enum("SIT"))>>, "Dog", <<Knows(Var("command"))>>)>>, TRUE),
+  \* The fragment's definition decides, not the operation's of that name.
+  Added("AllVariableUsagesAreAllowed", Examples,
+    <<Q("shadowed", <<VarDef("command", T("Int"))>>,
+        <<FS("arguments", <<FA("intArgField", <<A("intArg", Var("command"))>>)>>),
+          FS("dog", <<SpreadA("commandFragment", <<A("command", Enum("SIT"))>>)>>)>>),
+      CommandFragment>>, TRUE),
+  Added("AllVariableUsagesAreAllowed", Examples,
+    <<Q("shadowed", Command,
+        <<FS("dog", <<Knows(Var("command")), SpreadA("intCommand", <<A("command", IntV("1"))>>)>>)>>),
+      FragV("intCommand", <<VarDef("command", T("Int"))>>, "Dog", <<Knows(Var("command"))>>)>>, FALSE),
+  \* "When variableUsage is located in an Argument provided to a named
+  \* fragment spread, the expected type and default value of that Argument
+  \* are those of the fragment variable of the same name".
+  Added("AllVariableUsagesAreAllowed", Examples,
+    OnDog(Command, <<SpreadA("commandFragment", <<A("command", Var("command"))>>)>>) \o <<CommandFragment>>, TRUE),
+  Added("AllVariableUsagesAreAllowed", Examples,
+    OnDog(<<VarDef("command", CommandT)>>, <<SpreadA("commandFragment", <<A("command", Var("command"))>>)>>)
+      \o <<CommandFragment>>, FALSE),
+  Added("AllVariableUsagesAreAllowed", Examples,
+    OnDog(<<VarDef("command", T("Int"))>>, <<SpreadA("withFragmentArg", <<A("command", Var("command"))>>)>>)
+      \o <<FragV("withFragmentArg", <<VarDef("command", CommandT)>>, "Dog", <<F("name"), Spread("usesIt")>>),
+           Frag("usesIt", "Dog", <<FA("isHouseTrained", <<A("atOtherHomes", BoolV("true"))>>)>>)>>, FALSE),
+  \* The fragment variable's default is the location's: a nullable variable
+  \* may be given to it.
+  Added("AllVariableUsagesAreAllowed", Examples,
+    OnDog(<<VarDef("command", CommandT)>>, <<SpreadA("withDefault", <<A("command", Var("command"))>>)>>)
+      \o <<FragV("withDefault", <<VarDefault("command", NN(CommandT), Enum("SIT"))>>, "Dog", <<Knows(Var("command"))>>)>>, TRUE),
+  \* A fragment forwards its own variable to another fragment's.
+  Added("AllVariableUsagesAreAllowed", Examples,
+    OnDog(<<>>, <<SpreadA("otherFragment", <<A("command", Enum("SIT"))>>)>>)
+      \o <<CommandFragment, Forward("otherFragment", <<VarDef("command", CommandT)>>, Var("command"))>>, FALSE)
+>>
+
 \* October 2021's Single root field (SingleRootFieldOctober2021): its own
 \* examples, and @skip and @include at the root, which September 2025 and
 \* September 2026 forbid and October 2021 applies with no variable values.
@@ -1766,6 +2251,7 @@ Init ==
   vector \in UNION {{[group |-> g, n |-> n] : n \in DOMAIN Vectors[g]} : g \in DOMAIN Vectors}
                \cup {[group |-> "october2021", n |-> n] : n \in DOMAIN October2021Vectors}
                \cup {[group |-> "ranges", n |-> n] : n \in DOMAIN RangeVectors}
+               \cup {[group |-> "fragmentArguments", n |-> n] : n \in DOMAIN FragmentArgumentVectors}
 Next == UNCHANGED vector
 
 VectorHolds(group) ==
@@ -1783,6 +2269,9 @@ VariableExamplesHold == VectorHolds("variables")
 October2021ExamplesHold ==
   vector.group = "october2021" =>
     LET v == October2021Vectors[vector.n] IN (SingleRootFieldOctober2021(WithIntrospection(v.schema), v.doc) = {}) = v.valid
+FragmentArgumentExamplesHold ==
+  vector.group = "fragmentArguments" =>
+    LET v == FragmentArgumentVectors[vector.n] IN (Check(v.rule, v.schema, v.doc) = {}) = v.valid
 RangeExamplesHold ==
   vector.group = "ranges" =>
     LET v == RangeVectors[vector.n] IN (KitCheckRule(v.rule, WithIntrospection(v.schema), v.doc) = {}) = v.valid
