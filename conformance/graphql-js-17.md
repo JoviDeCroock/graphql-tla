@@ -9,11 +9,11 @@ Generated from the conformance kit's reports. Back to the [sheet](README.md).
 
 ## Execution
 
-- **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, error-propagation-off, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
-- **Cases:** 43906 submitted, 6767 distinct, 4 malformed
+- **Capabilities:** absent-vs-null, coerce, coordinate, custom-directives, custom-scalar-literals, custom-scalar-results, deferred-items, error-propagation-off, fragment-arguments, idle, introspect, invalid-results, mutation, nested-fields, parent-values, parse, parse-sdl, request-extensions, scalar-results, schema, schema-extensions, subscription, subscription-source, subscription-stream, uncoercible-results, unvalidated, validate
+- **Cases:** 50218 submitted, 7638 distinct, 4 malformed
 - **Adapter problems:** none
-- **Checker self-test:** passed (87 negative controls)
-- **Run:** kit 240a580eae23, 2026-11-26, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
+- **Checker self-test:** passed (88 negative controls)
+- **Run:** kit d7cd666aafa3, 2026-11-28, strict, 1500 random runs per fixture (seed 1), exhaustive runs on
 
 ### Findings
 
@@ -55,9 +55,9 @@ stream:   cancelled while an event executes: kit emits event 1; result for event
 | A mutation that ran its root fields serially reports every error its earlier root fields raised (`serialErrorsKept`) | MUST (SHOULD in October 2021) | [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution) [§6.4.4](https://spec.graphql.org/September2026/#sec-Handling-Execution-Errors) | ✓ 195 |
 | A mutation's root fields execute one after another (`calledSerially`) | SHOULD | [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution) | ✓ 195 |
 | Each mutation root field the operation selects executes once, and no other mutation root field executes (`mutationFieldsOnce`) | MUST | [§6.2.2](https://spec.graphql.org/September2026/#sec-Mutation) [§6.3.2](https://spec.graphql.org/September2026/#sec-Field-Collection) [§6.3.4](https://spec.graphql.org/September2026/#sec-Normal-and-Serial-Execution) | ✓ 3390 |
-| Each field is executed once, merged selections included (mutation root fields: mutationFieldsOnce) (`callsOnce`) | INFO | — | ✓ 43870 |
-| Only fields the operation selects are executed (mutation root fields: mutationFieldsOnce) (`callsSelected`) | INFO | — | ✓ 43870 |
-| A field executes only once its parent has a value that contains it (`callsReachable`) | INFO | — | ✓ 43870 |
+| Each field is executed once, merged selections included (mutation root fields: mutationFieldsOnce) (`callsOnce`) | INFO | — | ✓ 50182 |
+| Only fields the operation selects are executed (mutation root fields: mutationFieldsOnce) (`callsSelected`) | INFO | — | ✓ 50182 |
+| A field executes only once its parent has a value that contains it (`callsReachable`) | INFO | — | ✓ 50182 |
 | A request gets a response (`responds`) | MUST | [§7](https://spec.graphql.org/September2026/#sec-Response) | ✓ 42268 |
 | A subscription event yields an execution result, even when its data is null (`eventYieldsResult`) | MUST | [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§7.1.2](https://spec.graphql.org/September2026/#sec-Response-Format.Response-Stream) | ✓ 3080 |
 | Each source event yields one execution result on the response stream, before it completes (`eventPerSourceEvent`) | MUST | [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§7.1.2](https://spec.graphql.org/September2026/#sec-Response-Format.Response-Stream) | ✓ 36 |
@@ -89,9 +89,10 @@ stream:   cancelled while an event executes: kit emits event 1; result for event
 | An error that propagated to a nullable parent keeps the full path to where it was raised (`errorPathFull`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 28182 |
 | Errors have no entries besides message, locations, path and extensions (`errorEntries`) | SHOULD | [§7.1.6](https://spec.graphql.org/September2026/#sec-Errors) | ✓ 28182 |
 | No map in the serialized response repeats a key (`uniqueKeys`) | MUST | [§7.1.1](https://spec.graphql.org/September2026/#sec-Execution-Result) [§7.2.1](https://spec.graphql.org/September2026/#sec-JSON-Serialization) [Appendix B](https://spec.graphql.org/September2026/#sec-Appendix-Notation-Conventions) | ✓ 42268 |
-| Each field's resolver is given its parent's value: the initial value at the root, a subscription event's value at its root (`parentValue`) | MUST | [§6.2.1](https://spec.graphql.org/September2026/#sec-Query) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§6.4.2](https://spec.graphql.org/September2026/#sec-Value-Resolution) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✓ 43870 |
-| The adapter follows the kit's protocol (call types, settles) (`protocol`) | ADAPTER | — | ✓ 43870 |
+| Each field's resolver is given its parent's value: the initial value at the root, a subscription event's value at its root (`parentValue`) | MUST | [§6.2.1](https://spec.graphql.org/September2026/#sec-Query) [§6.2.3.2](https://spec.graphql.org/September2026/#sec-Subscription.Response-Stream) [§6.3.3](https://spec.graphql.org/September2026/#sec-Executing-Collected-Fields) [§6.4.2](https://spec.graphql.org/September2026/#sec-Value-Resolution) [§6.4.3](https://spec.graphql.org/September2026/#sec-Value-Completion) | ✓ 50182 |
+| The adapter follows the kit's protocol (call types, settles) (`protocol`) | ADAPTER | — | ✓ 50182 |
 | With error propagation off, an error nulls the position where it happened (graphql-js 17's @experimental_disableErrorPropagation) (`disabledPropagation`) | INFO | — | ✓ 1602 |
+| With fragment arguments, a fragment's variables take the values its spread gives them (the proposal graphql-spec#1081) (`fragmentArguments`) | INFO | — | ✓ 6312 |
 
 - **Basis for `complete`:** No sentence says to respond only once execution is complete; the algorithms do. ExecuteRootSelectionSet (§6.3.1) returns {data} once ExecuteCollectedFields has run, and §6.3.3 says "Execution will recursively resolve and complete the value of every entry in the collected fields map". §7.1.5 adds: "The response data is the result of accumulating the resolved result of all response positions during execution." Positions §6.3.3 lets an implementation cancel don't hold the response back. September 2025 has the same algorithms and sentences, and October 2021's algorithms are the same.
 - **Basis for `dataMatches`:** When an error propagates to the root, §6.4.4 and §7.1.5 say data "should be null", in every release (October 2021: §6.4.4 and §7.1.1). The kit still requires null, because no other value conforms: the execution result must have a data entry (§7.1.1), {} or a partial map leaves out an entry ExecuteCollectedFields must produce (§6.3.3), and a map with null at the failed root field breaks that field's Non-Null type.
@@ -140,6 +141,7 @@ stream:   cancelled while an event executes: kit emits event 1; result for event
 - **Basis for `parentValue`:** ResolveFieldValue (§6.4.2): "Return the result of calling {resolver}, providing {objectValue} and {argumentValues}". ExecuteCollectedFields (§6.3.3) passes its {objectValue} to ExecuteField for every field; CompleteValue (§6.4.3) runs an object's subfields with {result}, the resolved value, as theirs; ExecuteRootSelectionSet passes the {initialValue} (§6.2.1: "An initial value may be provided when executing a query operation"), and §6.2.3.2: "Each event from the underlying source stream triggers execution of the subscription selection set using that event's value as the {initialValue}". Algorithm steps have the algorithm's level (Appendix A). Graded only for adapters with parent-values: the kit names each object its outcomes stand for, and each call reports the one its resolver got. September 2025 and October 2021 have the same algorithms.
 - **Basis for `protocol`:** Not a spec rule: the kit's protocol with the adapter (docs/conformance.md). A case where the adapter broke it says nothing reliable about the implementation.
 - **Basis for `disabledPropagation`:** Not a GraphQL rule: no release (October 2021, September 2025, September 2026) has execution without error propagation. §6.4.4 says: "Since Non-Null response positions cannot be null, execution errors are propagated to be handled by the parent response position." Every failure of the noPropagation fixture's response (its data and errors) counts here, never against a spec section, and never fails the run. Turning propagation off doesn't change which resolvers run, so protocol problems and the checks on calls (callsOnce, callsSelected, callsReachable, mutationFieldsOnce, calledSerially) keep their own checks.
+- **Basis for `fragmentArguments`:** Not a GraphQL rule: no release (October 2021, September 2025, September 2026) has fragment arguments. They are a proposal, graphql-spec#1081, whose CollectFields coerces a fragment spread's arguments into fragment variables (CoerceArgumentValues with the fragment's variable definitions), reads @skip and @include through GetScopedVariableValues, where a fragment's variable hides the operation's variable of the same name, and keeps each collected field with the fragment variables it was selected under (field details). Every failure of the response (its data and errors) in a fixture that uses them counts here, never against a spec section, and never fails the run. The reference takes the proposal's text at the commit docs/fragment-arguments.md names, and that page lists where the text leaves a choice: where the error goes when a spread's arguments can't be coerced is one. Protocol problems and the checks on calls (callsOnce, callsSelected, callsReachable, mutationFieldsOnce, calledSerially) keep their own checks.
 
 ### Fixtures
 
@@ -156,6 +158,10 @@ stream:   cancelled while an event executes: kit emits event 1; result for event
 | [`directives_skipped`](../fixtures/directives_skipped.graphql) | ✓ 1506 |  |
 | [`directives_excluded`](../fixtures/directives_excluded.graphql) | ✓ 1506 |  |
 | [`directives_dropped`](../fixtures/directives_dropped.graphql) | ✓ 1502 |  |
+| [`fragmentArguments_on`](../fixtures/fragmentArguments_on.graphql) | ✓ 1610 | outside the spec (the fragment arguments proposal, graphql-spec#1081): its failures are informational, under fragmentArguments, except protocol problems and the checks on resolver calls |
+| [`fragmentArguments_off`](../fixtures/fragmentArguments_off.graphql) | ✓ 1610 | outside the spec (the fragment arguments proposal, graphql-spec#1081): its failures are informational, under fragmentArguments, except protocol problems and the checks on resolver calls |
+| [`fragmentArgumentsDetails`](../fixtures/fragmentArgumentsDetails.graphql) | ✓ 1526 | outside the spec (the fragment arguments proposal, graphql-spec#1081): its failures are informational, under fragmentArguments, except protocol problems and the checks on resolver calls |
+| [`fragmentArgumentsNull`](../fixtures/fragmentArgumentsNull.graphql) | ✓ 1566 | outside the spec (the fragment arguments proposal, graphql-spec#1081): its failures are informational, under fragmentArguments, except protocol problems and the checks on resolver calls |
 | [`fragments`](../fixtures/fragments.graphql) | ✓ 1536 |  |
 | [`leaves`](../fixtures/leaves.graphql) | ✓ 1740 |  |
 | [`listPartialNull`](../fixtures/listPartialNull.graphql) | ✓ 1618 |  |
