@@ -347,7 +347,7 @@ export default [
   {
     name: "calls the source stream's resolver though its arguments can't be coerced",
     file: "Coercion.tla",
-    find: "     /\\ CoerceArgumentValues(S, selected.operation.field, selected.operation.arguments, vars.value.entries).ok",
+    find: "     /\\ CoerceFieldArgumentValues(S, selected.operation.field, selected.operation.arguments,\n                                  vars.value.entries, collected.fragmentVariables).ok",
     replace: "     /\\ TRUE",
     property: "SubscriptionExamples",
     differential: false,
@@ -376,4 +376,73 @@ export default [
     property: "SourceExamples",
     differential: false,
   },
+  // Fragment arguments (graphql-spec#1081). The differential's operations
+  // have no fragment spread, so it reaches none of these.
+  ...[
+    {
+      name: "a fragment variable with no value falls back to the operation's variable of that name",
+      find: "  {e \\in variableValues : ~DefinesVariable(fragmentVariables, e.key)} \\cup fragmentVariables.values",
+      replace: "  {e \\in variableValues : ~HasKey(fragmentVariables.values, e.key)} \\cup fragmentVariables.values",
+    },
+    {
+      name: "a fragment with variables of its own doesn't see the operation's",
+      find: "  {e \\in variableValues : ~DefinesVariable(fragmentVariables, e.key)} \\cup fragmentVariables.values",
+      replace:
+        "  IF fragmentVariables.variableDefinitions = <<>> THEN variableValues ELSE fragmentVariables.values",
+    },
+    {
+      name: "a field inside a fragment has its arguments coerced with the operation's variables only",
+      find: "                                          variableValues, collected.fragmentVariables)\n    IN IF operation.type",
+      replace: "                                          variableValues, NoFragmentVariables)\n    IN IF operation.type",
+    },
+    {
+      name: "a spread's arguments are read in the scope of the fragment it spreads, not the one it is in",
+      find: "        values == CoerceScopedArgumentValues(S, spread.definitions, spread.arguments, variableValues, fragmentVariables)",
+      replace:
+        "        values == CoerceScopedArgumentValues(S, spread.definitions, spread.arguments, variableValues, FragmentVariableValues(spread.definitions, {}))",
+    },
+    {
+      name: "a fragment's variables stay in scope in the fragments it spreads",
+      find: "                               FragmentVariableValues(spread.definitions, values.value.entries))",
+      replace:
+        "                               FragmentVariableValues(fragmentVariables.variableDefinitions \\o spread.definitions,\n                                                      {e \\in fragmentVariables.values : ~HasKey(values.value.entries, e.key)} \\cup values.value.entries))",
+    },
+    {
+      name: "a spread whose arguments can't be coerced is an error at the field inside it",
+      find: '       ELSE IF ~collected.ok THEN Outcome("spreadError", NullV)',
+      replace: '       ELSE IF ~collected.ok THEN Outcome("fieldError", NullV)',
+    },
+    {
+      name: "a spread whose arguments can't be coerced is skipped, and its field still resolves",
+      find: "    IN IF ~values.ok THEN [ok |-> FALSE, fragmentVariables |-> NoFragmentVariables, depth |-> spread.depth]",
+      replace: "    IN IF ~values.ok THEN [ok |-> TRUE, fragmentVariables |-> NoFragmentVariables, depth |-> spread.depth]",
+    },
+    {
+      name: "an error collecting a subscription's root selection set is an execution error, and the event executes",
+      find: '            ELSE IF ~collected.ok THEN Outcome("requestError", NullV)\n',
+      replace: "",
+    },
+    {
+      name: "creates the source stream though the subscription's root selection set couldn't be collected",
+      find: "     /\\ collected.ok\n",
+      replace: "",
+    },
+    {
+      name: "a spread error under a list nulls the list, not each item",
+      find: "       IN IF s.list THEN {p \\o <<i>> : p \\in PathsBelow(above, s.key), i \\in {0, 1}}\n          ELSE PathsBelow(above, s.key)",
+      replace: "       IN PathsBelow(above, s.key)",
+    },
+    {
+      name: "a spread error is at the field's own position, below the parent whose sub-selection was collected",
+      find: "      inner == IF depth = 1 THEN Fail ELSE SpreadErrorSelectionData(Tail(steps), depth - 1)",
+      replace:
+        "      inner == IF depth = 1 THEN Ok(ObjV({Entry(\"int\", NullV)})) ELSE SpreadErrorSelectionData(Tail(steps), depth - 1)",
+    },
+    {
+      name: "a spread error in the root selection set is a request error result, with no data entry",
+      find: "         /\\ response.hasData\n         /\\ Len(response.errors) > 0\n         /\\ ~response.called\n    [] outcome.kind = \"fieldError\" ->",
+      replace:
+        "         /\\ ~response.hasData\n         /\\ Len(response.errors) > 0\n         /\\ ~response.called\n    [] outcome.kind = \"fieldError\" ->",
+    },
+  ].map((mutant) => ({ ...mutant, file: "Coercion.tla", property: "FragmentArgumentExamples", differential: false })),
 ];
